@@ -19,6 +19,7 @@ import {
   contactDetailsRefused,
   conversationClosed,
   foreignClientId,
+  lockForSend,
   MESSAGE_MAX_LENGTH_KEY,
   notFound,
 } from "./conversations.ts";
@@ -181,11 +182,8 @@ async function writePhotoMessage(
   photo: { prepared: PreparedMessagePhoto; at: Date; since: Date; perDay: number },
 ): Promise<Outcome> {
   await advisoryLock(tx, `message_photo:${input.accountId}`);
-  if (!(await repo.holdLiveAccount(tx, input.accountId))) return { kind: "not_found" };
-  // Locked through the caller's participant row; without one, the state below is none too.
-  await repo.lockConversation(tx, input.accountId, input.conversationId);
-  const state = await repo.readSendState(tx, input.accountId, input.conversationId);
-  if (!state || state.hidden) return { kind: "not_found" };
+  const state = await lockForSend(tx, input.accountId, input.conversationId);
+  if (!state) return { kind: "not_found" };
   const stored = await repo.findByClientId(tx, input);
   if (stored) {
     if (stored.side !== state.side) return { kind: "foreign_client_id" };

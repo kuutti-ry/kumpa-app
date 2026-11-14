@@ -6,7 +6,7 @@ import type { Deps } from "../app.ts";
 import { staffOf } from "../lib/admin-middleware.ts";
 import type { AppEnv } from "../lib/env.ts";
 import { AppError } from "../lib/errors.ts";
-import { bearer, errorContent, json, unauthenticated } from "../lib/openapi.ts";
+import { bearer, errorContent, json, staffErrors } from "../lib/openapi.ts";
 import { accountPage } from "./accounts.ts";
 import { recordAudit } from "./audit.ts";
 
@@ -26,8 +26,7 @@ const pageRoute = createRoute({
   responses: {
     200: { description: "The page.", ...json(AdminAccount) },
     400: errorContent("Validation failed."),
-    401: unauthenticated,
-    403: errorContent("admin_forbidden: the role does not allow this."),
+    ...staffErrors,
     404: errorContent("No such account."),
   },
 });

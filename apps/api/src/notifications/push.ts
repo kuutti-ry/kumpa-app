@@ -76,8 +76,6 @@ export type PushDeps = {
   schedule?: Schedule;
   /** Waits between two requests of one delivery; tests hand in one that does not. */
   pause?: (ms: number) => Promise<void>;
-  /** The Expo project this app's tokens are of; EXPO_PROJECT unless a test says otherwise. */
-  project?: string;
 };
 
 type Token = { id: string; accountId: string; sessionId: string; token: string; locale: string };
@@ -98,7 +96,6 @@ export function inQuietHours(hour: number, from: number, to: number): boolean {
 export function createPush(deps: PushDeps) {
   const schedule = deps.schedule ?? realSchedule;
   const pause = deps.pause ?? realPause;
-  const project = deps.project ?? EXPO_PROJECT;
   // shortcut: the interval lives in this process's memory, so a restart forgets
   // it and the first message after one may push again early (ADR-055 §4); a
   // column on push_token for the last push of each conversation would lift it.
@@ -247,10 +244,10 @@ export function createPush(deps: PushDeps) {
     } catch (error) {
       const groups = error instanceof PushFailed ? error.byProject : undefined;
       if (!(error instanceof PushFailed) || error.reason !== MIXED_PROJECTS || !groups) throw error;
-      if (!Object.hasOwn(groups, project)) throw error;
+      if (!Object.hasOwn(groups, EXPO_PROJECT)) throw error;
       // A stray is a token Expo named under another project; one it named nowhere is kept.
       const foreign = new Set(
-        Object.entries(groups).flatMap(([name, tokens]) => (name === project ? [] : tokens)),
+        Object.entries(groups).flatMap(([name, tokens]) => (name === EXPO_PROJECT ? [] : tokens)),
       );
       const strays = submitted.filter(({ token }) => foreign.has(token.token));
       // No stray among this request's tokens: the refusal is the request's, as any other.
