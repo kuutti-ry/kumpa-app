@@ -143,4 +143,42 @@ describe("useOnboarding", () => {
     await act(async () => result.current.step(async () => undefined));
     expect(result.current).toMatchObject({ failed: false, failedCode: null });
   });
+
+  it("lets the later of two reads speak, whichever answers first", async () => {
+    // Each read waits until the test answers it.
+    const waiting: Array<(answer: Response) => void> = [];
+    globalThis.fetch = jest.fn(
+      () => new Promise<Response>((answer) => waiting.push(answer)),
+    ) as unknown as typeof fetch;
+    const failure = () =>
+      json({ error: { code: "internal_error", message: "x", requestId: "r" } }, 500);
+    const { result } = await renderHook(() => useOnboarding());
+    await waitFor(() => expect(waiting).toHaveLength(1));
+    await act(async () => focus());
+    await waitFor(() => expect(waiting).toHaveLength(2));
+    await act(async () => waiting[1]?.(json(status([]))));
+    await waitFor(() =>
+      expect(result.current.state).toMatchObject({ onboarding: { complete: true } }),
+    );
+    // The earlier read answers last, with a step the later one found done: it is not shown.
+    await act(async () => waiting[0]?.(json(status(["photos"]))));
+    await act(async () => new Promise((resolve) => setTimeout(resolve, 0)));
+    expect(result.current.state).toMatchObject({ onboarding: { complete: true } });
+    // Nor is an earlier read's failure, which would put the could-not-load screen over a step.
+    await act(async () => focus());
+    await act(async () => focus());
+    await waitFor(() => expect(waiting).toHaveLength(4));
+    await act(async () => waiting[3]?.(json(status([]))));
+    await act(async () => waiting[2]?.(failure()));
+    await act(async () => new Promise((resolve) => setTimeout(resolve, 0)));
+    expect(result.current.state).toMatchObject({
+      status: "ready",
+      onboarding: { complete: true },
+    });
+    // A read that is the latest still says it failed.
+    await act(async () => focus());
+    await waitFor(() => expect(waiting).toHaveLength(5));
+    await act(async () => waiting[4]?.(failure()));
+    await waitFor(() => expect(result.current.state.status).toBe("error"));
+  });
 });
