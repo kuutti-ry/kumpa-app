@@ -7,7 +7,7 @@ import { staffOf } from "../lib/admin-middleware.ts";
 import type { AppEnv } from "../lib/env.ts";
 import { finnishDay } from "../lib/finnish-day.ts";
 import { matchingConfigNumber } from "../lib/matching-config.ts";
-import { bearer, errorContent, json, unauthenticated } from "../lib/openapi.ts";
+import { bearer, json, staffErrors } from "../lib/openapi.ts";
 import { queueSummary } from "../media/index.ts";
 import { AUTO_SHADOW_BAN_REVIEW_HOURS_KEY, automaticBanSummary } from "./automatic.ts";
 import { feedbackSummary } from "./feedback.ts";
@@ -42,8 +42,7 @@ const overviewRoute = createRoute({
       description: "The queues.",
       ...json(AdminOverview),
     },
-    401: unauthenticated,
-    403: errorContent("admin_forbidden: the role does not allow this."),
+    ...staffErrors,
   },
 });
 

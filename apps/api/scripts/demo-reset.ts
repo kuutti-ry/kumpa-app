@@ -132,6 +132,21 @@ async function recount(
   console.log(JSON.stringify({ msg: "demo reset: the cast's stories", ...cast }));
 }
 
+/**
+ * The stories' conversations, then the photos sent in them, once the histories
+ * are written: the same two steps locally and on staging.
+ */
+async function talk(
+  deps: Parameters<typeof givePhotoMessages>[0],
+  results: readonly HistoryResult[],
+  now: () => Date,
+) {
+  const talked = await giveConversations(deps.db, results, now());
+  console.log(JSON.stringify({ msg: "demo reset: conversations", ...talked }));
+  const photos = await givePhotoMessages(deps, results, now());
+  console.log(JSON.stringify({ msg: "demo reset: photos in conversations", ...photos }));
+}
+
 function sparedOrThrow(reset: ResetResult): void {
   if (reset.spared.length > 0) {
     throw new DemoError(
@@ -261,14 +276,7 @@ async function localReset(): Promise<void> {
         console.log(JSON.stringify({ msg: "demo reset: history", ...given }));
         results.push(given);
       }
-      const talked = await giveConversations(pool, results, now());
-      console.log(JSON.stringify({ msg: "demo reset: conversations", ...talked }));
-      const photos = await givePhotoMessages(
-        { db: pool, logger, ...(store ? { media: store } : {}), assets },
-        results,
-        now(),
-      );
-      console.log(JSON.stringify({ msg: "demo reset: photos in conversations", ...photos }));
+      await talk({ db: pool, logger, ...(store ? { media: store } : {}), assets }, results, now);
     }
     await recount(pool, logger, now, results);
     sparedOrThrow(reset);
@@ -335,14 +343,11 @@ async function stagingReset(): Promise<void> {
       for (const given of results) {
         console.log(JSON.stringify({ msg: "demo reset: history", ...given }));
       }
-      const talked = await giveConversations(pool, results, now());
-      console.log(JSON.stringify({ msg: "demo reset: conversations", ...talked }));
-      const photos = await givePhotoMessages(
+      await talk(
         { db: pool, logger, ...(media.deps ? { media: media.deps } : {}), assets },
         results,
-        now(),
+        now,
       );
-      console.log(JSON.stringify({ msg: "demo reset: photos in conversations", ...photos }));
     }
     await recount(pool, logger, now, results);
     sparedOrThrow(reset);

@@ -4,7 +4,7 @@ import { StaffList } from "@kuutti/schema";
 import type { MiddlewareHandler } from "hono";
 import type { Deps } from "../app.ts";
 import type { AppEnv } from "../lib/env.ts";
-import { bearer, errorContent, json, unauthenticated } from "../lib/openapi.ts";
+import { bearer, json, staffErrors } from "../lib/openapi.ts";
 
 // The staff list (#310), admins only: who holds a role, since when, from
 // whom, and their last sign-in to the panel, so the access policy can be
@@ -45,8 +45,7 @@ const staffRoute = createRoute({
   ...bearer,
   responses: {
     200: { description: "The staff.", ...json(StaffList) },
-    401: unauthenticated,
-    403: errorContent("admin_forbidden: the role does not allow this."),
+    ...staffErrors,
   },
 });
 
