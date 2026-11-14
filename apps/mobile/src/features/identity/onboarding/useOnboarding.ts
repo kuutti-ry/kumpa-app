@@ -22,6 +22,7 @@ export function useOnboarding() {
   /** The code of the API's refusal of the last step, "unknown" for anything else; null while nothing failed. */
   const [failedCode, setFailedCode] = useState<string | null>(null);
   const mounted = useRef(true);
+  const asked = useRef(0);
   useEffect(() => {
     mounted.current = true;
     return () => {
@@ -31,12 +32,17 @@ export function useOnboarding() {
 
   /** Reads the status, and hands back what it read: null if that failed. */
   const reload = useCallback(async (): Promise<OnboardingStatus | null> => {
+    asked.current += 1;
+    const mine = asked.current;
+    // Of two reads under way the later one speaks: a focus read that answers
+    // after a step's own would show a step already done, or its failure.
+    const current = () => mounted.current && mine === asked.current;
     try {
       const onboarding = await fetchOnboarding();
-      if (mounted.current) setState({ status: "ready", onboarding });
+      if (current()) setState({ status: "ready", onboarding });
       return onboarding;
     } catch (error) {
-      if (mounted.current) setState({ status: "error", error });
+      if (current()) setState({ status: "error", error });
       return null;
     }
   }, []);
