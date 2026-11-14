@@ -198,7 +198,7 @@ export function ConversationScreen({ id }: { id: string }) {
   const live = useChatLive();
   const here = live.conversations[id];
   const arrived = here?.messages;
-  const { report } = live;
+  const { report: reportCursors } = live;
   const contactsChanged = here?.contacts ?? 0;
   const { opened } = live;
 
@@ -366,8 +366,8 @@ export function ConversationScreen({ id }: { id: string }) {
   // The newest held is what the socket's next resume names.
   const newestSeq = view.status === "ready" ? (view.messages.at(-1)?.seq ?? 0) : null;
   useEffect(() => {
-    if (newestSeq !== null) report({ [id]: newestSeq });
-  }, [id, newestSeq, report]);
+    if (newestSeq !== null) reportCursors({ [id]: newestSeq });
+  }, [id, newestSeq, reportCursors]);
 
   // A photo without URLs (the socket's copy, rules/api.md) or with an expired
   // URL: the message read again over HTTP signs them, and the
