@@ -4,7 +4,6 @@ import type { MiddlewareHandler } from "hono";
 import type { Deps } from "../app.ts";
 import { callerOf } from "../lib/auth-middleware.ts";
 import type { AppEnv } from "../lib/env.ts";
-import { retryAfterOf } from "../lib/errors.ts";
 import { bearer, errorContent, json, unauthenticated } from "../lib/openapi.ts";
 import { filteringDealBreakers, type OwnFieldsReader } from "./deal-breakers.ts";
 import type { CardOf, Matches, RoundDeps } from "./rounds.ts";
@@ -130,20 +129,14 @@ export function starRoutes(
 
   app.openapi(openRoute, async (c) => {
     const { accountId } = callerOf(c);
-    try {
-      // The caller's own deal-breakers that filter now, for the card's "did not answer" (ADR-042 §8).
-      const dealBreakers = await filteringDealBreakers(deps.db, accountId, readOwnFields);
-      const answer = await openStar(rounds(), matches, stars, cardOf, dealBreakers, {
-        accountId,
-        id: c.req.valid("param").id,
-      });
-      await read(accountId);
-      return c.json(answer, 200);
-    } catch (error) {
-      const wait = retryAfterOf(error);
-      if (wait !== undefined) c.header("Retry-After", String(wait));
-      throw error;
-    }
+    // The caller's own deal-breakers that filter now, for the card's "did not answer" (ADR-042 §8).
+    const dealBreakers = await filteringDealBreakers(deps.db, accountId, readOwnFields);
+    const answer = await openStar(rounds(), matches, stars, cardOf, dealBreakers, {
+      accountId,
+      id: c.req.valid("param").id,
+    });
+    await read(accountId);
+    return c.json(answer, 200);
   });
 
   return app;

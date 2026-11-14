@@ -5,7 +5,7 @@ import {
   ConversationReportRequest,
   ReportRequest,
 } from "@kuutti/schema";
-import type { Context, MiddlewareHandler } from "hono";
+import type { MiddlewareHandler } from "hono";
 import type { Deps } from "../app.ts";
 import { REPORT_AFTER_CLOSE_DAYS_KEY } from "../chat/index.ts";
 import { callerOf } from "../lib/auth-middleware.ts";
@@ -143,12 +143,16 @@ export function reportRoutes(deps: Deps, guard: MiddlewareHandler<AppEnv>) {
 
   /**
    * The cap's refusal, from a card or a conversation alike, logged with how
-   * many and until when, never whom or why; the wait goes in Retry-After.
+   * many and until when, never whom or why; the wait it names is its Retry-After
+   * (`onError`).
    */
-  const overBudget = (
-    c: Context<AppEnv>,
-    input: { accountId: string; used: number; limit: number; at: Date; end: Date },
-  ): AppError => {
+  const overBudget = (input: {
+    accountId: string;
+    used: number;
+    limit: number;
+    at: Date;
+    end: Date;
+  }): AppError => {
     const retryAfterSeconds = secondsUntil(input.end, input.at);
     deps.logger.warn(
       {
@@ -160,7 +164,6 @@ export function reportRoutes(deps: Deps, guard: MiddlewareHandler<AppEnv>) {
       },
       "report refused",
     );
-    c.header("Retry-After", String(retryAfterSeconds));
     return new AppError(429, "report_budget_exceeded", "The day's reports are filed", {
       retryAfterSeconds,
     });
@@ -196,7 +199,7 @@ export function reportRoutes(deps: Deps, guard: MiddlewareHandler<AppEnv>) {
     });
     if (record.outcome === "not_found") throw new AppError(404, "not_found", "No such card");
     if (record.outcome === "over_budget") {
-      throw overBudget(c, { accountId, used: record.used, limit, at, end: day.end });
+      throw overBudget({ accountId, used: record.used, limit, at, end: day.end });
     }
     if (record.outcome === "filed") await afterFiled(record.reportedAccountId);
     return c.body(null, 204);
@@ -239,7 +242,7 @@ export function reportRoutes(deps: Deps, guard: MiddlewareHandler<AppEnv>) {
       throw new AppError(409, "report_window_closed", "The conversation can no longer be reported");
     }
     if (record.outcome === "over_budget") {
-      throw overBudget(c, { accountId, used: record.used, limit, at, end: day.end });
+      throw overBudget({ accountId, used: record.used, limit, at, end: day.end });
     }
     if (record.outcome === "filed") await afterFiled(record.reportedAccountId);
     return c.body(null, 204);

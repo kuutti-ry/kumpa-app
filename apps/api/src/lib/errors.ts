@@ -6,7 +6,10 @@ import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { ERROR_MESSAGE_KEYS, isLocalisedErrorCode, type LocalisedErrorCode, tOf } from "./i18n.ts";
 import type { Logger } from "./logger.ts";
 
-/** A failure the route chose to signal. Detail is logged, never returned. */
+/**
+ * A failure the route chose to signal. Detail is logged, never returned, but for
+ * the wait a refusal names in it, which `onError` answers as Retry-After.
+ */
 export class AppError extends Error {
   constructor(
     readonly status: ContentfulStatusCode,
@@ -19,11 +22,15 @@ export class AppError extends Error {
   }
 }
 
-/** The wait a budget's refusal names (`detail.retryAfterSeconds`), for its Retry-After; undefined for any other error. */
+/**
+ * The wait a budget's refusal names (`detail.retryAfterSeconds`), for its
+ * Retry-After; undefined for any other error. Only a whole number of seconds
+ * above zero is a wait, since `onError` answers it as a header.
+ */
 export function retryAfterOf(error: unknown): number | undefined {
-  return error instanceof AppError
-    ? (error.detail as { retryAfterSeconds?: number } | undefined)?.retryAfterSeconds
-    : undefined;
+  if (!(error instanceof AppError)) return undefined;
+  const wait = (error.detail as { retryAfterSeconds?: unknown } | undefined)?.retryAfterSeconds;
+  return typeof wait === "number" && Number.isInteger(wait) && wait > 0 ? wait : undefined;
 }
 
 /**
@@ -67,6 +74,9 @@ export function onError<E extends Env>(
     const requestId = requestIdOf(c);
     if (err instanceof AppError) {
       logger.warn({ requestId, code: err.code, detail: err.detail }, err.message);
+      // A refusal that names its wait answers with it, whichever route it came through.
+      const wait = retryAfterOf(err);
+      if (wait !== undefined) c.header("Retry-After", String(wait));
       // A code with a catalogue message answers in the request's language; any
       // other code returns the route's own English message until it gets a key.
       const body = isLocalisedErrorCode(err.code)
