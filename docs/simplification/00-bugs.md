@@ -6,7 +6,7 @@ All sixteen are fixed by #671 (`d8ca1e71`, on `main` since 13/11/2026), each wit
 
 - **B1, the seed.** It recognises both spellings of the environment flag and every production flag, and asks the server what it is before it writes anything, a tunnel included. A managed database is refused, except a pull request's preview named on purpose (`packages/db/src/cli/seed.ts`).
 - **B2, the moderator command.** A flag no longer overrides `APP_ENV=production`, and taking a role away and ending its sessions is one transaction (`packages/db/src/cli/moderator.ts`). It stays a tool for production (ADR-006 §5).
-- **B7, `pnpm env:up` and `env:down`.** A process is ours only inside this checkout's own path, read from its working directory and its parents'. The script never stops a database it did not start: it refuses and names who holds the port, and `down` leaves a shared Homebrew PostgreSQL running (`scripts/dev-env.ts`).
+- **B7, `pnpm env:up` and `env:down`.** A process is ours only inside this checkout's own path, read from its working directory and its parents'. `up` never stops a database to take its port: it refuses and names who holds it. `down` stops this checkout's compose stack and leaves anything else on the port running, a shared Homebrew PostgreSQL included (`scripts/dev-env.ts`).
 
 ## The API
 

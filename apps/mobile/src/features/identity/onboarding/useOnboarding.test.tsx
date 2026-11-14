@@ -181,4 +181,28 @@ describe("useOnboarding", () => {
     await act(async () => waiting[4]?.(failure()));
     await waitFor(() => expect(result.current.state.status).toBe("error"));
   });
+
+  it("shows an earlier read's answer while a later one is still out", async () => {
+    const waiting: Array<(answer: Response) => void> = [];
+    globalThis.fetch = jest.fn(
+      () => new Promise<Response>((answer) => waiting.push(answer)),
+    ) as unknown as typeof fetch;
+    const { result } = await renderHook(() => useOnboarding());
+    await waitFor(() => expect(waiting).toHaveLength(1));
+    await act(async () => focus());
+    await waitFor(() => expect(waiting).toHaveLength(2));
+    // The later read stalls: the earlier one's answer is not held back for it.
+    await act(async () => waiting[0]?.(json(status(["photos"]))));
+    await waitFor(() =>
+      expect(result.current.state).toMatchObject({
+        status: "ready",
+        onboarding: { missing: ["photos"] },
+      }),
+    );
+    // When the later one answers after all, it is the one shown.
+    await act(async () => waiting[1]?.(json(status([]))));
+    await waitFor(() =>
+      expect(result.current.state).toMatchObject({ onboarding: { complete: true } }),
+    );
+  });
 });

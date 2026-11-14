@@ -231,6 +231,9 @@ describe("the wait a refusal names", () => {
     app.get("/spent", () => {
       throw new AppError(429, "budget", "spent", { retryAfterSeconds: 30 });
     });
+    app.get("/last-second", () => {
+      throw new AppError(429, "budget", "spent", { retryAfterSeconds: 1 });
+    });
     app.get("/taken", () => {
       throw new AppError(409, "taken", "taken", { other: 1 });
     });
@@ -248,6 +251,8 @@ describe("the wait a refusal names", () => {
     expect(spent.headers.get("Retry-After")).toBe("30");
     // The wait is the header's alone: the body stays the envelope.
     expect(ErrorResponse.parse(await spent.json()).error.code).toBe("budget");
+    // One second is the least a refusal names (`secondsUntil`), and is a wait.
+    expect((await app.request("/last-second")).headers.get("Retry-After")).toBe("1");
     for (const path of ["/taken", "/bare", "/gone", "/broken"]) {
       expect((await app.request(path)).headers.get("Retry-After")).toBeNull();
     }

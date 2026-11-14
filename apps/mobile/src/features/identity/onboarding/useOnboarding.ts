@@ -23,6 +23,7 @@ export function useOnboarding() {
   const [failedCode, setFailedCode] = useState<string | null>(null);
   const mounted = useRef(true);
   const asked = useRef(0);
+  const shown = useRef(0);
   useEffect(() => {
     mounted.current = true;
     return () => {
@@ -34,15 +35,21 @@ export function useOnboarding() {
   const reload = useCallback(async (): Promise<OnboardingStatus | null> => {
     asked.current += 1;
     const mine = asked.current;
-    // Of two reads under way the later one speaks: a focus read that answers
-    // after a step's own would show a step already done, or its failure.
-    const current = () => mounted.current && mine === asked.current;
+    // A read speaks unless a later one already has: a focus read that answers
+    // after a step's own would show a step already done, or its failure. Until
+    // the later one answers, the earlier still counts, so a read that stalls
+    // (no request has a deadline) holds no answer back.
+    const speaks = () => {
+      if (!mounted.current || mine < shown.current) return false;
+      shown.current = mine;
+      return true;
+    };
     try {
       const onboarding = await fetchOnboarding();
-      if (current()) setState({ status: "ready", onboarding });
+      if (speaks()) setState({ status: "ready", onboarding });
       return onboarding;
     } catch (error) {
-      if (current()) setState({ status: "error", error });
+      if (speaks()) setState({ status: "error", error });
       return null;
     }
   }, []);

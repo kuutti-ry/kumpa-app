@@ -21,7 +21,7 @@ import { z } from "zod";
 import type { Deps } from "../app.ts";
 import { callerOf } from "../lib/auth-middleware.ts";
 import type { AppEnv } from "../lib/env.ts";
-import { AppError, localisedEnvelope } from "../lib/errors.ts";
+import { AppError, localisedEnvelope, retryAfterOf } from "../lib/errors.ts";
 import { matchingConfigNumber } from "../lib/matching-config.ts";
 import { bearer, errorContent, json, unauthenticated } from "../lib/openapi.ts";
 import { personOf, rateLimit } from "../lib/rate-limit.ts";
@@ -450,9 +450,15 @@ export function chatRoutes(
       if (sent.created) pushed?.(accountId, id, sent.message.seq);
       return sent.created ? c.json(sent.message, 201) : c.json(sent.message, 200);
     } catch (error) {
-      // The wait goes in the header, as a limiter's refusal says it.
-      const wait = error instanceof AppError ? retryAfterOf(error) : null;
-      if (wait !== null) c.header("Retry-After", String(wait));
+      // A busy pipeline names no wait of its own: five seconds, as the upload
+      // says it. A refusal that names its wait is `onError`'s to answer.
+      if (
+        error instanceof AppError &&
+        error.code === "media_busy" &&
+        retryAfterOf(error) === undefined
+      ) {
+        c.header("Retry-After", String(RETRY_AFTER_SECONDS));
+      }
       throw error;
     }
   });
@@ -509,12 +515,4 @@ export function chatRoutes(
   });
 
   return app;
-}
-
-/** The wait a refusal carries: the day's photos, or a busy pipeline or check. */
-function retryAfterOf(error: AppError): number | null {
-  const detail = error.detail as { retryAfterSeconds?: unknown } | undefined;
-  if (typeof detail?.retryAfterSeconds === "number") return detail.retryAfterSeconds;
-  if (error.code === "media_busy") return RETRY_AFTER_SECONDS;
-  return null;
 }

@@ -21,8 +21,8 @@ Phases 2 (the checks and hooks of a pull request) and 4 (the tests) have no file
 ## Where the changes are
 
 - #660, #661, #670 and #671 reached `main` on their own.
-- #672 to #676, #678 and #679 were gathered on the branch `refactor/657-simplification` on 14/11/2026 and reached `main` together, as #680.
+- #672 to #676, #678 and #679 were gathered on the branch `refactor/657-simplification` on 14/11/2026 and reached `main` together, as #680's one commit. #680 also carries what a review of the whole found: the onboarding guard made sturdier, and the last route's copy of the `Retry-After` rule removed.
 
 ## How the items were weighed
 
-The maintainer's word of 14/11/2026: the code is written and kept by agents, so fewer lines, fewer words or easier reading by a person is no gain by itself; no existing test is modified unless its code is removed; and a change that goes against a decision made earlier is not built. What counted was one place for one rule, a real defect, a statement that is false today, and code nothing uses.
+The maintainer's word of 14/11/2026: the code is written and kept by agents, so fewer lines, fewer words or easier reading by a person is no gain by itself; no existing test is modified unless its code is removed (one was, on his word: three title assertions of the panel's `app.test.tsx` wait for the title, a flake that failed #675's checks, with no expected value changed); and a change that goes against a decision made earlier is not built. What counted was one place for one rule, a real defect, a statement that is false today, and code nothing uses.

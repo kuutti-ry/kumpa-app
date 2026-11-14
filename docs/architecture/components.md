@@ -152,7 +152,7 @@ Besides the slices, the API has `health/`, `jobs/` (the nightly timer, and what 
 4. **pond**: the one pond, a person's home (ADR-061), the pond counter, and the switch that opens matching. In all three apps (the admin panel's Matching screen); specs in `features/pond`.
 5. **matching**: the queue and its day's log, deal-breakers, likes, the fish, the match. API and phone app; specs in `features/matching`.
 6. **chat**: conversations, messages, the socket, contacts shared, the archive. API and phone app; specs in `features/chat`.
-7. **safety**: reports, blocks, sanctions, the audit log, the automatic shadow bans, velocity. In all three apps; the admin panel's screens are in this slice, but for the photo queue, the Matching switch and the announcements. Specs in `features/safety`.
+7. **safety**: reports, blocks, sanctions, the audit log, the automatic shadow bans, velocity. In all three apps; the admin panel's screens are in this slice, but for the staff sign-in, the photo queue, the Matching switch and the announcements. Specs in `features/safety`.
 8. **research**: the event registry's one door (`track`), the `research_id` mapping, the partitions and the research copy. The API alone has code; the phone app's directory holds a README only.
 9. **rewards**: invitations and the reward ledger. API and phone app.
 10. **notifications**: the notification choices, the notices in the app and the push (#102, ADR-055): whom to tell of a message or a match, and the devices' tokens; and the announcements to everybody (#573, ADR-068). In all three apps (the admin panel's Announcements screen); specs in `features/notifications`.
