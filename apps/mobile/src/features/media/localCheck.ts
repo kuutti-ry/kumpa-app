@@ -6,7 +6,7 @@
  * sent: the caller stops and shows one plain text.
  *
  * The classifier itself is native (a small model behind a TFLite or ONNX
- * runtime, the maintainer's choice) and arrives with the October native batch.
+ * runtime, the maintainer's choice) and arrives with the native batch (#184).
  * Until then, and on the web preview always, every picture passes. Whatever
  * lands registers itself with setLocalCheck at start-up; the screen never
  * knows which implementation answered.

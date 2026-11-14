@@ -14,8 +14,8 @@ import * as repo from "./repo.ts";
 
 // The notification choices and the notices in the app (#176, ADR-032). A
 // choice is the person's switch per kind, on until switched off; nothing is
-// sent from here: the senders come later and read the choice (#102 the
-// message). A notice is what must reach the person even without a push, the
+// sent from here: the senders read the choice (the push of #102, in
+// `push.ts`). A notice is what must reach the person even without a push, the
 // first of them a moderator's warning (ADR-024 §7), the second an invitation
 // of theirs that counted (#107, ADR-044 §9).
 

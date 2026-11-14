@@ -237,7 +237,6 @@ export function SignInScreen({ code, error, until }: SignInParams) {
           {t("signIn.title")}
         </Text>
 
-        {/* Right after a break began on this device (#170): why the sign-in is back. */}
         {/* Right after the lock signed this phone out (#418): why, and that the lock is off now. */}
         {session.status === "signed-out" && session.notice === "lock" && (
           <Card className="w-full max-w-md">
@@ -250,6 +249,7 @@ export function SignInScreen({ code, error, until }: SignInParams) {
           </Card>
         )}
 
+        {/* Right after a break began on this device (#170): why the sign-in is back. */}
         {session.status === "signed-out" && session.notice === "paused" && (
           <Card className="w-full max-w-md">
             <View accessibilityLabel={t("signIn.paused.title")} className="gap-6">

@@ -6,9 +6,8 @@ import { type Queryable, transaction } from "../pool.ts";
  * talking for a few days, a match nobody wrote in, which the night has
  * archived (TD-13), the contact share's pair, two days into theirs (#103),
  * and the report's pair, a day into theirs (#351). Written as rows, as the
- * match's record: no route opens a
- * conversation until #100 writes one from the second like, and the stories
- * will then like instead. The demo commands call the writer after the
+ * match's record, not through the second like that opens a conversation for
+ * a person (#100). The demo commands call the writer after the
  * histories, with the accounts the histories were given to.
  *
  * The times are hours before the stories run, so the open conversation's

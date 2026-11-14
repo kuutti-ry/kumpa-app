@@ -792,13 +792,6 @@ async function passedBefore(
   return rows.length > 0;
 }
 
-/**
- * The short pool's side that reads across slices (#99, ADR-042 §4, §5): the
- * round builder's, which lives with the jobs and reads the pond as it does,
- * handed in by app.ts. `offers` is what the queue may relax today, null with no
- * round today; `candidates` whom a relaxation lets in today, in the order they
- * would come, null for one the offers would not list.
- */
 /** Somebody a relaxation lets in, with the day's other relaxations their filters still need (ADR-042 §5) and how far they live, written with the card (ADR-061 §5). */
 export type RelaxedCandidate = {
   candidateId: string;
@@ -806,6 +799,13 @@ export type RelaxedCandidate = {
   distance: DistanceBand;
 };
 
+/**
+ * The short pool's side that reads across slices (#99, ADR-042 §4, §5): the
+ * round builder's, which lives with the jobs and reads the pond as it does,
+ * handed in by app.ts. `offers` is what the queue may relax today, null with no
+ * round today; `candidates` whom a relaxation lets in today, in the order they
+ * would come, null for one the offers would not list.
+ */
 export type ShortPool = {
   offers: (accountId: string) => Promise<{ short: boolean; offers: RelaxationOffer[] } | null>;
   /**
