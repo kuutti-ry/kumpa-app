@@ -57,12 +57,10 @@ export type LockApi = {
 
 const LockContext = React.createContext<LockApi | null>(null);
 
-/**
- * A moment by the wall clock and by a clock nobody sets, performance.now.
- * shortcut: that one stops while the phone sleeps, so a wall clock set back
- * in sleep to a time after the departure goes unseen; a native read of the
- * time since boot lifts it (ADR-045 §4, Open 7).
- */
+// shortcut: performance.now stops while the phone sleeps, so a wall clock set
+// back in sleep to a time after the departure goes unseen; a native read of
+// the time since boot lifts it (ADR-045 §4, Open 7).
+/** A moment by the wall clock and by a clock nobody sets, performance.now. */
 const now = () => ({ wall: Date.now(), steady: performance.now() });
 
 /**

@@ -49,11 +49,12 @@ import * as repo from "./repo.ts";
 import { visibleState } from "./standing.ts";
 
 // Erasure and export of the caller's own account (#51, TD-7, ADR-007). The
-// erasure table of rules/db.md, applied to what exists in M3: sessions, login
+// erasure table of rules/db.md, applied: sessions with their push tokens, login
 // attempts, photos with their review rows and objects, the fetch log, and the
 // age on the account row, which stays as an anonymised tombstone. Kept: the
 // identity row (with one more deletion and the cooldown), the audit log,
-// staff rows. Likes, matches and push tokens join here as their slices land, and
+// staff rows. The person's rounds go, and the entries in which they are
+// somebody's card, others' likes on them included (#96), and
 // TD-7's bookmarks are the stars (#575, ADR-064): those the person put and those
 // put on them go. The research_id mapping goes (#50), the events keyed by it stay.
 // The photo check's notes (#253) go too, and are in the export in plain words.

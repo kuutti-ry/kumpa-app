@@ -15,8 +15,8 @@ import { photo } from "./media.ts";
 
 /**
  * The chat (#348, ADR-031): a conversation is the record of a match (#100
- * writes it from the second like; until then the demo stories and the tests
- * do), its two participants, and the messages in it. A message belongs to
+ * writes it from the second like; the demo stories and the tests write
+ * theirs as rows), its two participants, and the messages in it. A message belongs to
  * the conversation (TD-1): nothing here is deleted when a conversation closes,
  * and erasure cuts the person's link (`account_id` null) and closes the
  * conversation, keeping the words for the counterpart (TD-7's kept side).

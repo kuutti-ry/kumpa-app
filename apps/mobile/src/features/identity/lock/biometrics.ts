@@ -13,6 +13,16 @@ export type Biometrics = "face" | "fingerprint" | "either";
 /** What the phone answers: a way in, none, or an iPhone keeping Face ID from Kuutti. */
 export type PhoneBiometrics = Biometrics | "denied" | null;
 
+// shortcut: on Android the kind is the hardware the phone declares (the
+// module reads the package manager's features), not what is enrolled or what
+// the prompt takes. A face that only unlocks the phone, as the Pixel 7's,
+// still makes it "either", whose button then names a face the prompt will
+// not take; the "either" refusals say "or" and claim neither (#464).
+// Android 12's BiometricManager.Strings, behind a native module, lifts it.
+//
+// shortcut: a Touch ID sensor that has failed answers as "denied" does, and
+// the words then name Face ID. The module does not tell them apart; a native
+// read of biometryNotAvailable's own reason would, if iOS ever gives one.
 /**
  * What this phone can open the lock with, or null when nothing is enrolled
  * (#418). On Android "enrolled" counts the weak class too, where some phones'
@@ -27,17 +37,6 @@ export type PhoneBiometrics = Biometrics | "denied" | null;
  * question, Kuutti's Face ID switch off in the phone's settings, or now and
  * then neither. The kind says nothing here, as biometryType is reported to
  * read none after a refusal (ADR-045 §5).
- *
- * shortcut: on Android the kind is the hardware the phone declares (the
- * module reads the package manager's features), not what is enrolled or what
- * the prompt takes. A face that only unlocks the phone, as the Pixel 7's,
- * still makes it "either", whose button then names a face the prompt will
- * not take; the "either" refusals say "or" and claim neither (#464).
- * Android 12's BiometricManager.Strings, behind a native module, lifts it.
- *
- * shortcut: a Touch ID sensor that has failed answers as "denied" does, and
- * the words then name Face ID. The module does not tell them apart; a native
- * read of biometryNotAvailable's own reason would, if iOS ever gives one.
  */
 export async function biometricsOnThisPhone(): Promise<PhoneBiometrics> {
   if (Platform.OS === "web") return null;

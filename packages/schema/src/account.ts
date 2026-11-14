@@ -34,7 +34,6 @@ import { ExportedSanction } from "./sanction.ts";
  * account only (rule 6); nothing here names another account.
  */
 
-/** A body, so a stray call cannot erase an account; the app shows its own confirmation first. */
 /**
  * The optional e-mail (#148, TD-18): a way for Kuutti to stay in touch
  * (#385), never a login, never shown to anybody. Confirmed by a code sent to
@@ -80,6 +79,7 @@ export type AccountEmailConfirmation = z.infer<typeof AccountEmailConfirmation>;
 const confirmation = (description: string) =>
   z.object({ confirm: z.literal(true).meta({ description }) }).strict();
 
+/** A body, so a stray call cannot erase an account; the app shows its own confirmation first. */
 export const AccountDeletionRequest = confirmation(
   "Must be true: the person confirmed in the app.",
 ).meta({ id: "AccountDeletionRequest" });
@@ -125,15 +125,15 @@ export const ExportedPhotoCheck = z
   .meta({ id: "ExportedPhotoCheck" });
 export type ExportedPhotoCheck = z.infer<typeof ExportedPhotoCheck>;
 
+/** The API's version string: `0.16.0-37a837c`, or the tag of a release (CLAUDE.md Git). */
+export const EXPORTED_BY_MAX = 100;
+
 /**
  * Everything Kuutti holds about the person, as of now. What it does not hold
  * is as telling as what it does: no name, no date of birth beyond year and
  * month, no personal identity code (only its keyed hash, which is omitted
  * because it identifies nothing without the key).
  */
-/** The API's version string: `0.16.0-37a837c`, or the tag of a release (CLAUDE.md Git). */
-export const EXPORTED_BY_MAX = 100;
-
 export const AccountExport = z
   .object({
     exportedAt: z.iso.datetime(),
