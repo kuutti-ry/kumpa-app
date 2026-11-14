@@ -61,9 +61,7 @@ export type RoundNotice =
       | "round.star.first"
       | "load.failed.press"
       | "round.short.nobody"
-      | "load.failed.press"
       | "round.gone"
-      | "load.failed.press"
     >
   | { waiting: number };
 

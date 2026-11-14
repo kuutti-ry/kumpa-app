@@ -1,6 +1,7 @@
 import { formatDateTime } from "@kuutti/i18n";
 import { useT } from "@kuutti/i18n/react";
 import {
+  CONFIG_REASON_MAX,
   ConfigChange,
   type ConfigKey,
   ConfigList as ConfigPage,
@@ -313,7 +314,7 @@ function Tunable({
                   <Textarea
                     id={`${ids}-reason`}
                     required
-                    maxLength={500}
+                    maxLength={CONFIG_REASON_MAX}
                     rows={2}
                     value={reason}
                     onChange={(event) => setReason(event.target.value)}
