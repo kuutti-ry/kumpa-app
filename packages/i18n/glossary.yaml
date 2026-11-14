@@ -17,7 +17,7 @@ distance bands:
   definition: How far another person lives, always one of four words, nearest first - Nearby, Close, Around, Far. They stand alone on a card and on the buttons of a filter, and never mean a number of kilometres, which is a setting behind them. Far says only that; it must not read as a judgement of the person.
 
 round:
-  definition: The small, fixed set of profiles a member receives once a day. There is no feed and nothing loads after it; the word should sound finite and calm.
+  definition: A member's queue of profiles for the day, read one card at a time, as far as they like, and the day's record of it. It has no fixed size and it ends; there is no feed. The word should sound finite and calm.
 
 like:
   definition: Telling the app you would like to talk to someone. A noun and a verb in English; never a score, never a count shown to others.
