@@ -284,7 +284,8 @@ describe("App", () => {
     );
     // Loading the panel is not the person's move: nothing takes the focus.
     expect(front).not.toHaveFocus();
-    expect(document.title).toBe("Overview · Kuutti admin");
+    // The title is an effect's, after the heading is in the page: waited for, as below.
+    await waitFor(() => expect(document.title).toBe("Overview · Kuutti admin"));
     expect(await frontPageLink("Photos")).toBeInTheDocument();
     expect(calls).toContain("GET /admin/overview");
     expect(calls).not.toContain("GET /admin/photos/queue");
@@ -509,7 +510,7 @@ describe("App", () => {
     ).toEqual(["Overview", "Reports", "Automatic shadow bans", "Photos", "Feedback", "A person"]);
     expect(within(menu).queryByRole("link", { name: "Tunables" })).toBeNull();
     expect(screen.queryByText("Loading…")).toBeNull();
-    expect(document.title).toBe("Tunables · Kuutti admin");
+    await waitFor(() => expect(document.title).toBe("Tunables · Kuutti admin"));
     // The menu still works from here, and the panel never asked for the tunables.
     fireEvent.click(within(menu).getByRole("link", { name: "Feedback" }));
     expect(await screen.findByRole("heading", { level: 2, name: "Feedback" })).toBeInTheDocument();
@@ -594,7 +595,7 @@ describe("App", () => {
       expect(within(menu).queryByRole("link", { name: "Announcements" })).toBeNull();
       expect(screen.queryByRole("form", { name: "Filters" })).toBeNull();
       expect(screen.queryByRole("button", { name: "Refresh" })).toBeNull();
-      expect(document.title).toBe(`${title} · Kuutti admin`);
+      await waitFor(() => expect(document.title).toBe(`${title} · Kuutti admin`));
       // The menu still works from here, and the panel asked for neither screen.
       fireEvent.click(within(menu).getByRole("link", { name: "Feedback" }));
       expect(
