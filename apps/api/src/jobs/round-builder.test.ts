@@ -2191,4 +2191,16 @@ describe("filters at once (ADR-062 §8)", () => {
     await seeks(ctx.client, b, ["man"]);
     expect((await readToday(app, ctx.client, a)).entries).toEqual([]);
   });
+
+  test("somebody nobody is shown fits nobody, and still reads who fits them", async ({ ctx }) => {
+    const { a, b } = await aPair(ctx, "test-fits-shadow-banned");
+    const now = { now: () => NOON };
+    expect(await fitsNow(now, ctx.client, a, [b])).toEqual(new Set([b]));
+
+    await ctx.client.query("UPDATE account SET state = 'shadow_banned' WHERE id = $1", [b]);
+    // Whoever asks, and however well the two fit.
+    expect(await fitsNow(now, ctx.client, a, [b])).toEqual(new Set());
+    // Their own queue goes on as before the ban (ADR-024 §7).
+    expect(await fitsNow(now, ctx.client, b, [a])).toEqual(new Set([a]));
+  });
 });
