@@ -21,7 +21,7 @@ Phases 2 (the checks and hooks of a pull request) and 4 (the tests) have no file
 ## Where the changes are
 
 - #660, #661, #670 and #671 reached `main` on their own.
-- #672 to #676, #678 and #679 were gathered on the branch `refactor/657-simplification` on 14/11/2026 and reached `main` together, as one pull request.
+- #672 to #676, #678 and #679 were gathered on the branch `refactor/657-simplification` on 14/11/2026 and reached `main` together, as #680.
 
 ## How the items were weighed
 
