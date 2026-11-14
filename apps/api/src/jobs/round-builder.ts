@@ -572,7 +572,7 @@ export async function fitsNow(
   return new Set(fitting.map((subject) => subject.id));
 }
 
-/** The people `fitsNow` names, as subjects: the Starred list also asks whether they are seen by others (ADR-064 §6). */
+/** The people `fitsNow` names, as subjects, each of them seen by others: the queue's reads and the Starred list ask the same (ADR-064 §6). */
 export async function fittingNow(
   deps: Pick<BuilderDeps, "now">,
   db: Queryable,
@@ -600,11 +600,15 @@ export async function fittingNow(
   const waived = new Map(likes.map((like) => [like.id, waivedAs(like.waived)]));
   const relaxed = (await relaxationsOf(db, accountId, day))?.relaxed ?? [];
   const person = { ...owner, person: relaxedBy(owner.person, relaxed) };
-  return subjects.filter((subject) =>
-    mayMeet(person, {
-      ...subject,
-      person: relaxedBy(subject.person, waived.get(subject.id) ?? []),
-    }),
+  // Somebody nobody is shown (a shadow ban, ADR-024 §7) fits nobody, whoever
+  // asks. Their own queue goes on: the owner is not among those asked here.
+  return subjects.filter(
+    (subject) =>
+      subject.visible &&
+      mayMeet(person, {
+        ...subject,
+        person: relaxedBy(subject.person, waived.get(subject.id) ?? []),
+      }),
   );
 }
 
