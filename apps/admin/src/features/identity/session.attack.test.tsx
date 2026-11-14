@@ -9,9 +9,6 @@ import { restoreReturnPath } from "./return-path.ts";
 import { SignIn } from "./SignIn.tsx";
 import { StaffSessionProvider, useStaffSession } from "./session.tsx";
 
-// What goes through today (#380): a hole, which its contract forbids.
-const HOLE = "#380";
-
 // Attacks on the staff session (#380, #49, #250, #302): the way back from the
 // bank, the exchange of the one-time code, the check of a stored session,
 // tried the wrong way beside a control that does the same thing rightly.
@@ -56,9 +53,8 @@ async function settle() {
 }
 
 /**
- * The session's own requests are not caught where they are made, so a fetch
- * that fails outright rejects a promise nobody holds, and Vitest fails the
- * whole run on an unhandled rejection. Only the exact error the attempt
+ * These attacks inject network rejections. A regression in the session
+ * catch may leave one unhandled; only the exact error the attempt
  * injects may go unhandled, at most once. Zero is allowed: a future fix can
  * catch it, and the attack then judges what the panel showed. Every other
  * rejection still fails the test, even if the screen stays as it was.
@@ -179,8 +175,6 @@ async function exchangeUnanswered(failsOutright: boolean) {
 attack(
   "session: an exchange that fails outright leaves the sign-in loading without saying it did not complete",
   {
-    // Goes through today: the exchange has no catch for a request that fails outright.
-    open: HOLE,
     attempt: () => exchangeUnanswered(true),
     control: () => exchangeUnanswered(false),
     succeeds: (seen) => expect(seen.said).toBe(false),
@@ -206,8 +200,6 @@ async function checkUnanswered(failsOutright: boolean) {
 
 // session.tsx: "A stored token is checked against the API before anything is shown with it."
 attack("session: a stored session whose check fails outright stays signed in, never checked", {
-  // Goes through today: the check of a stored session has no catch for a request that fails outright.
-  open: HOLE,
   attempt: () => checkUnanswered(true),
   control: () => checkUnanswered(false),
   succeeds: (seen) => expect(seen.state).toBe("signed-in admin"),
@@ -255,8 +247,6 @@ for (const [what, path, legitimate] of smuggled) {
   attack(
     `return path: a remembered path with ${what} after its slash, which leads to another host, is put back`,
     {
-      // Goes through today, for all three: the guard reads the path before the browser drops tabs and line breaks from it.
-      open: HOLE,
       attempt: () => restored(path),
       control: () => restored(legitimate),
       succeeds: (hosts) => expect(hosts).toHaveLength(1),

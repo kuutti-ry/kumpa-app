@@ -403,6 +403,37 @@ describe("one conversation", () => {
     expect(router.back).toHaveBeenCalled();
   });
 
+  it.each(["detail", "messages"])(
+    "keeps an empty conversation and its draft when a background %s refresh fails",
+    async (failedRead) => {
+      let failing = false;
+      api(({ path }) => {
+        if (failing && path.endsWith(failedRead === "detail" ? ID : "/messages")) {
+          throw new TypeError("Network request failed");
+        }
+        return path.endsWith("/messages") ? json({ messages: [] }) : json(detail());
+      });
+      await renderWithTheme(<ConversationScreen id={ID} />);
+      await screen.findByLabelText("Message");
+      await type("Hei");
+      failing = true;
+      await act(async () => focus());
+      await settle();
+      expect(composer().props.value).toBe("Hei");
+      expect(screen.queryByText(FAILED_TO_LOAD)).toBeNull();
+    },
+  );
+
+  it("shows a failure when the first message page cannot be read", async () => {
+    api(({ path }) => {
+      if (path.endsWith("/messages")) throw new TypeError("Network request failed");
+      return json(detail());
+    });
+    await renderWithTheme(<ConversationScreen id={ID} />);
+    expect(await screen.findByText(FAILED_TO_LOAD)).toBeTruthy();
+    expect(screen.queryByLabelText("Message")).toBeNull();
+  });
+
   it("keeps the newest in sight as the list grows, and once more a frame later, when the new size has reached the screen", async () => {
     conversation(detail(), [[message(1, "theirs", "Moi", DAY_1)]]);
     await renderWithTheme(<ConversationScreen id={ID} />);
@@ -450,6 +481,29 @@ describe("one conversation", () => {
     await settle();
     expect(screen.queryByText("Sending…")).toBeNull();
     expect(said("You", DAY_2, "Nähdään!")).toBeTruthy();
+  });
+
+  it("keeps the next draft when an earlier send fails", async () => {
+    let fail: (reason: Error) => void = () => undefined;
+    conversation(
+      detail(),
+      [[]],
+      () =>
+        new Promise<Response>((_resolve, reject) => {
+          fail = reject;
+        }),
+    );
+    await renderWithTheme(<ConversationScreen id={ID} />);
+    await screen.findByLabelText("Message");
+    await type("First message");
+    await userEvent.setup().press(sendButton());
+    await type("Next message");
+    await act(async () => fail(new TypeError("Network request failed")));
+    await settle();
+    expect(composer().props.value).toBe("Next message");
+    expect(
+      screen.getByText("The message was not sent. Check your connection and send it again."),
+    ).toBeTruthy();
   });
 
   it("says each refusal in words under the composer and keeps the words", async () => {
@@ -2346,86 +2400,66 @@ describe("a photo in a conversation (#350)", () => {
     expect(screen.getByRole("button", { name: `You, ${timeOf("en", DAY_2)}, Photo` })).toBeTruthy();
   });
 
-  it("says each refusal in words under the field and keeps the words, taking off a picture the check, the day or the file refused", async () => {
-    conversation(detail(), [[]]);
-    await renderWithTheme(<ConversationScreen id={ID} />);
-    await screen.findByLabelText("Message");
-    const refusals = [
-      [
-        "photo_rejected_nudity",
-        400,
-        "Not sent. Photos with nudity cannot be sent on Kuutti.",
-        false,
-      ],
-      [
-        "photo_rejected_violence",
-        400,
-        "Not sent. Photos with violence or weapons cannot be sent on Kuutti.",
-        false,
-      ],
-      [
-        "photo_rejected_other",
-        400,
-        "Not sent. This photo cannot be sent on Kuutti; try another one.",
-        false,
-      ],
-      [
-        "message_photo_budget_exceeded",
-        429,
-        "You have tried to send many photos today. You can send photos again after midnight.",
-        false,
-      ],
-      [
-        "photo_unsupported",
-        415,
-        "This file is not a photo Kuutti can use. Choose a JPEG, PNG or WebP picture.",
-        false,
-      ],
-      ["photo_invalid", 422, "The photo could not be read. Try another picture.", false],
-      ["photo_too_many_pixels", 422, "The photo is too large. Choose a smaller picture.", false],
-      ["payload_too_large", 413, "The photo is too large. Choose a smaller picture.", false],
-      ["media_unavailable", 503, "Photos are not available right now.", false],
-      ["contact_details", 400, CONTACT_DETAILS, true],
-      [
-        "message_too_long",
-        400,
-        "The message is too long. Make it shorter and send it again.",
-        true,
-      ],
-      [
-        "message_budget_exceeded",
-        429,
-        "You are sending messages very fast. Wait a moment and send again.",
-        true,
-      ],
-      [
-        "media_busy",
-        503,
-        "Many photos are being processed right now. Try again in a moment.",
-        true,
-      ],
-    ] as const;
-    for (const [code, status, words, keeps] of refusals) {
-      if (!attached()) {
-        picks();
-        await press("Add photo");
-      }
+  // Each refusal starts with its own attached photo. Independent cases also give each
+  // failure its own name and deadline instead of sharing one timeout across all thirteen.
+  it.each([
+    ["photo_rejected_nudity", 400, "Not sent. Photos with nudity cannot be sent on Kuutti.", false],
+    [
+      "photo_rejected_violence",
+      400,
+      "Not sent. Photos with violence or weapons cannot be sent on Kuutti.",
+      false,
+    ],
+    [
+      "photo_rejected_other",
+      400,
+      "Not sent. This photo cannot be sent on Kuutti; try another one.",
+      false,
+    ],
+    [
+      "message_photo_budget_exceeded",
+      429,
+      "You have tried to send many photos today. You can send photos again after midnight.",
+      false,
+    ],
+    [
+      "photo_unsupported",
+      415,
+      "This file is not a photo Kuutti can use. Choose a JPEG, PNG or WebP picture.",
+      false,
+    ],
+    ["photo_invalid", 422, "The photo could not be read. Try another picture.", false],
+    ["photo_too_many_pixels", 422, "The photo is too large. Choose a smaller picture.", false],
+    ["payload_too_large", 413, "The photo is too large. Choose a smaller picture.", false],
+    ["media_unavailable", 503, "Photos are not available right now.", false],
+    ["contact_details", 400, CONTACT_DETAILS, true],
+    ["message_too_long", 400, "The message is too long. Make it shorter and send it again.", true],
+    [
+      "message_budget_exceeded",
+      429,
+      "You are sending messages very fast. Wait a moment and send again.",
+      true,
+    ],
+    ["media_busy", 503, "Many photos are being processed right now. Try again in a moment.", true],
+  ] as const)(
+    "says %s in words under the field and handles the photo without losing the caption",
+    async (code, status, words, keeps) => {
+      conversation(detail(), [[]]);
+      await renderWithTheme(<ConversationScreen id={ID} />);
+      await screen.findByLabelText("Message");
+      picks();
+      await press("Add photo");
       await type("Kuvateksti");
       await userEvent.setup().press(sendButton());
       await act(async () =>
-        uploads()
-          .at(-1)
-          ?.answer(status, { error: { code, message: "x", requestId: "r" } }),
+        uploads()[0]?.answer(status, { error: { code, message: "x", requestId: "r" } }),
       );
       await settle();
-      expect([code, screen.getByText(words).props.accessibilityLiveRegion]).toEqual([
-        code,
-        "assertive",
-      ]);
+      expect(screen.getByText(words).props.accessibilityLiveRegion).toBe("assertive");
       expect(composer().props.value).toBe("Kuvateksti");
-      expect([code, attached() !== null]).toEqual([code, keeps]);
-    }
-  });
+      expect(attached() !== null).toBe(keeps);
+    },
+  );
 
   it("keeps the photo and its id after a failure and sends them again; without the photo, the words take a new id", async () => {
     const calls = conversation(detail(), [[]], (call) =>
