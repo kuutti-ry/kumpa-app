@@ -15,7 +15,7 @@ import { bodyLimit } from "hono/body-limit";
 import type { Deps } from "../app.ts";
 import { callerOf } from "../lib/auth-middleware.ts";
 import type { AppEnv } from "../lib/env.ts";
-import { AppError, localisedEnvelope, retryAfterOf } from "../lib/errors.ts";
+import { AppError, localisedEnvelope } from "../lib/errors.ts";
 import { bearer, errorContent, json, unauthenticated } from "../lib/openapi.ts";
 import {
   appealPhoto,
@@ -245,17 +245,10 @@ export function photoRoutes(
   app.openapi(urlRoute, async (c) => {
     const { id, variant } = c.req.valid("param");
     const { accountId } = callerOf(c);
-    try {
-      const url = await issuePhotoUrl(serviceDeps(), { accountId, photoId: id, variant });
-      // A thumb never counts (othersPhotoFetchesSince), so it is not checked.
-      if (variant !== "thumb") await fetched(accountId);
-      return c.json(url, 200);
-    } catch (error) {
-      if (error instanceof AppError && error.code === "photo_budget_exceeded") {
-        c.header("Retry-After", String(retryAfterOf(error) ?? 1));
-      }
-      throw error;
-    }
+    const url = await issuePhotoUrl(serviceDeps(), { accountId, photoId: id, variant });
+    // A thumb never counts (othersPhotoFetchesSince), so it is not checked.
+    if (variant !== "thumb") await fetched(accountId);
+    return c.json(url, 200);
   });
 
   return app;

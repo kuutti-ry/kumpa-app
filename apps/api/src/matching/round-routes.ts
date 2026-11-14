@@ -15,7 +15,6 @@ import type { MiddlewareHandler } from "hono";
 import type { Deps } from "../app.ts";
 import { callerOf } from "../lib/auth-middleware.ts";
 import type { AppEnv } from "../lib/env.ts";
-import { retryAfterOf } from "../lib/errors.ts";
 import { bearer, errorContent, json, unauthenticated } from "../lib/openapi.ts";
 import { filteringDealBreakers, type OwnFieldsReader } from "./deal-breakers.ts";
 import {
@@ -203,16 +202,10 @@ export function roundRoutes(
 
   app.openapi(todayRoute, async (c) => {
     const { accountId } = callerOf(c);
-    try {
-      const dealBreakers = await filtering(accountId);
-      const round = await readQueue(rounds(), matches, queue, accountId, cardOf, dealBreakers);
-      await read(accountId);
-      return c.json(round, 200);
-    } catch (error) {
-      const wait = retryAfterOf(error);
-      if (wait !== undefined) c.header("Retry-After", String(wait));
-      throw error;
-    }
+    const dealBreakers = await filtering(accountId);
+    const round = await readQueue(rounds(), matches, queue, accountId, cardOf, dealBreakers);
+    await read(accountId);
+    return c.json(round, 200);
   });
 
   app.openapi(seenRoute, async (c) => {
@@ -224,19 +217,13 @@ export function roundRoutes(
   app.openapi(decisionRoute, async (c) => {
     const { day, position } = c.req.valid("param");
     const { decision } = c.req.valid("json");
-    try {
-      const { match, ...budgets } = await decide(rounds(), matches, queue, {
-        accountId: callerOf(c).accountId,
-        day,
-        position,
-        decision,
-      });
-      return c.json({ match: match ? { conversationId: match } : null, ...budgets }, 200);
-    } catch (error) {
-      const wait = retryAfterOf(error);
-      if (wait !== undefined) c.header("Retry-After", String(wait));
-      throw error;
-    }
+    const { match, ...budgets } = await decide(rounds(), matches, queue, {
+      accountId: callerOf(c).accountId,
+      day,
+      position,
+      decision,
+    });
+    return c.json({ match: match ? { conversationId: match } : null, ...budgets }, 200);
   });
 
   app.openapi(relaxationsRoute, async (c) => {
@@ -256,22 +243,16 @@ export function roundRoutes(
       day,
       relaxation: c.req.valid("json"),
     });
-    try {
-      const entries = await readAdded(
-        rounds(),
-        queue,
-        accountId,
-        day,
-        positions,
-        cardOf,
-        await filtering(accountId),
-      );
-      return c.json({ entries }, 200);
-    } catch (error) {
-      const wait = retryAfterOf(error);
-      if (wait !== undefined) c.header("Retry-After", String(wait));
-      throw error;
-    }
+    const entries = await readAdded(
+      rounds(),
+      queue,
+      accountId,
+      day,
+      positions,
+      cardOf,
+      await filtering(accountId),
+    );
+    return c.json({ entries }, 200);
   });
 
   app.openapi(undoRelaxRoute, async (c) => {

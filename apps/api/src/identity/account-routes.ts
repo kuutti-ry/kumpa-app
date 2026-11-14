@@ -13,7 +13,6 @@ import type { MiddlewareHandler } from "hono";
 import type { Deps } from "../app.ts";
 import { callerOf } from "../lib/auth-middleware.ts";
 import type { AppEnv } from "../lib/env.ts";
-import { AppError, retryAfterOf } from "../lib/errors.ts";
 import { tOf } from "../lib/i18n.ts";
 import { bearer, errorContent, json, unauthenticated } from "../lib/openapi.ts";
 import {
@@ -264,15 +263,7 @@ export function accountRoutes(deps: Deps, requireSession: MiddlewareHandler<AppE
   });
 
   app.openapi(sendCodeRoute, async (c) => {
-    try {
-      return c.json(await sendEmailCode(emailDeps, callerOf(c).accountId, tOf(c)), 200);
-    } catch (error) {
-      // The wait until the day rolls, as the export and the feedback say it.
-      if (error instanceof AppError && error.code === "email_code_budget_exceeded") {
-        c.header("Retry-After", String(retryAfterOf(error) ?? 1));
-      }
-      throw error;
-    }
+    return c.json(await sendEmailCode(emailDeps, callerOf(c).accountId, tOf(c)), 200);
   });
 
   app.openapi(confirmRoute, async (c) => {
@@ -307,21 +298,12 @@ export function accountRoutes(deps: Deps, requireSession: MiddlewareHandler<AppE
   });
 
   app.openapi(exportRoute, async (c) => {
-    let archive: Awaited<ReturnType<typeof exportArchive>>;
-    try {
-      archive = await exportArchive(
-        { ...erasureDeps, version: deps.config.APP_VERSION },
-        callerOf(c).accountId,
-        tOf(c),
-        c.get("locale"),
-      );
-    } catch (error) {
-      // The wait until the day rolls, as the photo and card routes say it.
-      if (error instanceof AppError && error.code === "export_budget_exceeded") {
-        c.header("Retry-After", String(retryAfterOf(error) ?? 1));
-      }
-      throw error;
-    }
+    const archive = await exportArchive(
+      { ...erasureDeps, version: deps.config.APP_VERSION },
+      callerOf(c).accountId,
+      tOf(c),
+      c.get("locale"),
+    );
     c.header("Content-Type", "application/zip");
     c.header("Content-Disposition", `attachment; filename="${archive.name}"`);
     return c.body(archive.bytes, 200);
