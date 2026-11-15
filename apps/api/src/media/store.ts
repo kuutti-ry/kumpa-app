@@ -13,7 +13,7 @@ import { PHOTO_VARIANTS, type PhotoVariant } from "@kuutti/schema";
 // store never sees an original (rule 4).
 
 /** One object as the bucket lists it: its key and when it was last written. */
-export type StoredObject = { key: string; lastModified: Date };
+type StoredObject = { key: string; lastModified: Date };
 
 export type MediaStore = {
   put(key: string, body: Uint8Array, contentType: string): Promise<void>;
