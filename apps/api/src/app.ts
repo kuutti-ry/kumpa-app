@@ -137,7 +137,7 @@ export const PUBLIC_ROUTES = new Set([
   "GET /health",
   "GET /openapi.json",
   "GET /docs",
-  // Aggregates per pond, once a day, nothing below k (#54, ADR-013).
+  // One aggregate, the country's, once a day, nothing below k (#54, ADR-013).
   "GET /ponds/counter",
   "GET /auth/start",
   "GET /auth/callback",

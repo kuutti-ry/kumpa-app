@@ -1,53 +1,30 @@
-import { randomUUID } from "node:crypto";
 import { describe, expect } from "vitest";
+import { matchingOpen } from "../lib/matching-config.ts";
 import { signedInAccount } from "../test/account.ts";
-import { test } from "../test/harness.ts";
-import { pondNamed } from "../test/people.ts";
-import {
-  findHomeOfAccount,
-  findPondOfAccount,
-  listPonds,
-  listPondsForAdmin,
-  lockHomeOfAccount,
-  setMatchingOpen,
-  writeHomeOfAccount,
-} from "./repo.ts";
+import { type TestContext, test } from "../test/harness.ts";
+import { findHomeOfAccount, lockHomeOfAccount, turnMatching, writeHomeOfAccount } from "./repo.ts";
 
-// The pond slice's rows (#46, #500, #514): the pond and the home of an account,
-// the write that sets them, and the switch. Each statement about a person
-// carries that person's account id (rule 6).
+// The pond slice's rows (#46, #500, #514, #607): the home of an account, the
+// write that sets it, and the switch. Each statement about a person carries
+// that person's account id (rule 6).
 
-describe("the pond and the home of an account", () => {
-  test("the ponds are listed by name", async ({ ctx }) => {
-    const zeta = await pondNamed(ctx.client, "test-repo-zeta");
-    const alpha = await pondNamed(ctx.client, "test-repo-alpha");
-    const ponds = (await listPonds(ctx.client)).map((pond) => pond.id);
-    expect(ponds.indexOf(alpha)).toBeLessThan(ponds.indexOf(zeta));
-  });
-
-  test("an account's pond is its own, and nothing before the home set it", async ({ ctx }) => {
+describe("the home of an account", () => {
+  test("an account's home is its own, and there is none before the write", async ({ ctx }) => {
     const a = await signedInAccount(ctx.client, "a");
     const b = await signedInAccount(ctx.client, "b");
-    expect(await findPondOfAccount(ctx.client, a.accountId)).toBeNull();
-    await writeHomeOfAccount(ctx.client, a.accountId, { place: "00530", showsArea: false });
-    expect(await findPondOfAccount(ctx.client, a.accountId)).toEqual({
-      id: expect.any(String),
-      slug: "suomi",
-      name: "Suomi",
+    expect(await findHomeOfAccount(ctx.client, a.accountId)).toEqual({
+      place: null,
+      showsArea: false,
     });
-    expect(await findPondOfAccount(ctx.client, b.accountId)).toBeNull();
+    await writeHomeOfAccount(ctx.client, a.accountId, { place: "00530", showsArea: false });
+    expect(await findHomeOfAccount(ctx.client, a.accountId)).toEqual({
+      place: "00530",
+      showsArea: false,
+    });
     expect(await findHomeOfAccount(ctx.client, b.accountId)).toEqual({
       place: null,
       showsArea: false,
     });
-  });
-
-  test("the write leaves a pond already held", async ({ ctx }) => {
-    const a = await signedInAccount(ctx.client);
-    const pondId = await pondNamed(ctx.client, "test-repo-held");
-    await ctx.client.query("UPDATE account SET pond_id = $2 WHERE id = $1", [a.accountId, pondId]);
-    await writeHomeOfAccount(ctx.client, a.accountId, { place: "00530", showsArea: true });
-    expect(await findPondOfAccount(ctx.client, a.accountId)).toMatchObject({ id: pondId });
   });
 
   test("a write with no place leaves the kept place, and sets what the card shows", async ({
@@ -78,35 +55,46 @@ describe("the pond and the home of an account", () => {
   });
 });
 
-describe("the switch of a pond, as a row (#500, ADR-060 §2)", () => {
-  test("every pond is listed with its switch, closed until it is turned", async ({ ctx }) => {
-    const pondId = await pondNamed(ctx.client, "test-repo-switch");
-    const listed = (await listPondsForAdmin(ctx.client)).find((pond) => pond.id === pondId);
-    expect(listed).toMatchObject({ slug: "test-repo-switch", matchingOpen: false });
+describe("the switch, as a row of matching_config (#500, #607, ADR-060 §2)", () => {
+  /** Every version of the switch after the one the migrations wrote. */
+  const turns = async (ctx: TestContext) =>
+    (
+      await ctx.client.query(
+        `SELECT id, version, value, created_by, reason FROM matching_config
+          WHERE key = 'matching_open' AND version > 1 ORDER BY version`,
+      )
+    ).rows;
+
+  test("a press that meets the switch as it asks writes nothing", async ({ ctx }) => {
+    expect(await turnMatching(ctx.client, false, "test-a")).toBeNull();
+    expect(await matchingOpen(ctx.client)).toBe(false);
+    expect(await turns(ctx)).toEqual([]);
   });
 
-  test("a press changes the switch once, says so, and says when there is no such pond", async ({
+  test("a press writes the next version, by whoever pressed and with no reason, and names its row", async ({
     ctx,
   }) => {
-    const pondId = await pondNamed(ctx.client, "test-repo-press");
-    const other = await pondNamed(ctx.client, "test-repo-other");
-    expect(await setMatchingOpen(ctx.client, pondId, false)).toMatchObject({
-      pond: { id: pondId, matchingOpen: false },
-      changed: false,
-    });
-    expect(await setMatchingOpen(ctx.client, pondId, true)).toMatchObject({
-      pond: { id: pondId, slug: "test-repo-press", matchingOpen: true },
-      changed: true,
-    });
-    expect(await setMatchingOpen(ctx.client, pondId, true)).toMatchObject({ changed: false });
-    expect(await setMatchingOpen(ctx.client, pondId, false)).toMatchObject({
-      pond: { matchingOpen: false },
-      changed: true,
-    });
-    expect(await setMatchingOpen(ctx.client, randomUUID(), true)).toBeNull();
-    const { rows } = await ctx.client.query("SELECT matching_open FROM ponds WHERE id = $1", [
-      other,
+    const opened = await turnMatching(ctx.client, true, "test-a");
+    expect(await matchingOpen(ctx.client)).toBe(true);
+    expect(await turnMatching(ctx.client, true, "test-b")).toBeNull();
+    const closed = await turnMatching(ctx.client, false, "test-b");
+    expect(await matchingOpen(ctx.client)).toBe(false);
+    expect(await turns(ctx)).toEqual([
+      { id: opened, version: 2, value: true, created_by: "test-a", reason: null },
+      { id: closed, version: 3, value: false, created_by: "test-b", reason: null },
     ]);
-    expect(rows).toEqual([{ matching_open: false }]);
+    expect(opened).not.toBe(closed);
+  });
+
+  test("a press changes no tunable but the switch", async ({ ctx }) => {
+    const others = async () =>
+      (
+        await ctx.client.query(
+          "SELECT key, version FROM matching_config WHERE key <> 'matching_open' ORDER BY key, version",
+        )
+      ).rows;
+    const before = await others();
+    await turnMatching(ctx.client, true, "test-a");
+    expect(await others()).toEqual(before);
   });
 });

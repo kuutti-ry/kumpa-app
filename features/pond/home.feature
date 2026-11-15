@@ -15,8 +15,8 @@ Feature: The home
   (features/matching/rounds.feature), and a move works on the next read, as every
   change of what fits does; that a person can narrow down an area by moving, the
   maintainer accepted on 01/11/2026 (ADR-062 §8). A filter on distance is
-  features/matching/filters.feature's. There is one pond, the country (ADR-061
-  §8), and the write that sets a home sets it.
+  features/matching/filters.feature's. There is no pond to be in: a home is what
+  puts a person among the others (ADR-061 §8; the maintainer, 15/11/2026, #607).
 
   Scenario: The home is a required step, asked after the age window
     Given a registered account that answered every step before the home
@@ -129,20 +129,12 @@ Feature: The home
     When they give a third one and ask to show its area in the same request
     Then the answer shows that area
 
-  # Changing it, and the pond it sets (ADR-061 §1 and §8).
+  # Changing it (ADR-061 §1).
 
   Scenario: A home changes whenever the person likes, and the earlier one is gone
     Given a person with a home
     When they give another postal code, and another straight after
     Then both are taken, and only the last home is held anywhere
-    And their pond is as it was
-
-  Scenario: The home write sets the one pond, and reading the status sets nothing
-    Given the one pond
-    When a registered account reads its onboarding status
-    Then it has no pond, and no step asks for one
-    When it gives a postal code from the list
-    Then it is in that pond
 
   Scenario: An active account without a home is in nobody's pool, and the step opens
     Given an active account with a finished profile and no home

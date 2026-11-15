@@ -26,7 +26,7 @@ The steps in the order the sheet asks them (ADR-010, #146), one screen each, "Co
 8. "Where do you live?": "Your postal code tells Kuutti how far people are. Others see a town or your area by name, never the digits." Type five digits; the names under the field come from a list on the phone, so a half-typed home never reaches the server. Then "What should your card show?": the town or, where her area is large enough to keep, the area, which she may choose. Where none is, "On your card:" and the town stand in the question's place. Say what happened: what is kept is a place of at least three thousand people, and the home changes whenever she likes (ADR-061).
 9. "Two photos of you": the grid on the step itself, "Add a photo" at least twice, then "Continue". From the camera roll: two or more of Aino's five pictures (the runbook put them there). Each goes through the pipeline: resized, EXIF stripped, three variants, a blurhash, the check. Locally the check queues everything, so the grid shows them "In review"; on staging Rekognition approves a face within seconds.
 10. "A few words": two questions of twelve, or a bio of fifty characters.
-11. The home screen comes at once. Writing the postal code also set the pond, of which there is one, the whole country; there is no pond step.
+11. The home screen comes at once. Having a home is what puts her in the pond, of which there is one, the whole country; there is no pond step.
 
 The account is active once the four matching answers and the two consents are there (ADR-010 §6); the profile steps may be finished later.
 

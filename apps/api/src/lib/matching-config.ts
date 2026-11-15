@@ -1,6 +1,6 @@
 import type { Queryable } from "@kuutti/db";
 import type { DistanceEdges } from "@kuutti/schema";
-import type { z } from "zod";
+import { z } from "zod";
 import { AppError } from "./errors.ts";
 
 /**
@@ -72,6 +72,20 @@ export async function matchingConfigNumbers<K extends string>(
     out[key] = asNumber(key, latest.get(key));
   }
   return out;
+}
+
+/**
+ * The switch that opens matching (ADR-060 §1): one boolean among these rows,
+ * for the whole country, with no pond behind it (ADR-061 §8, #607). Its
+ * versions are the history of when it stood open. Only the panel's Matching
+ * screen and the seed turn it (pond/repo.ts, ADR-060 §2, §10); the tunables'
+ * screen neither lists nor writes it (safety/config.ts).
+ */
+export const MATCHING_OPEN_KEY = "matching_open";
+
+/** Whether matching is open: the switch's latest version, read on every ask like any tunable. */
+export function matchingOpen(db: Queryable): Promise<boolean> {
+  return matchingConfigOf(db, MATCHING_OPEN_KEY, z.boolean(), "a boolean");
 }
 
 /** Each band's outer edge (ADR-061 §5), read once where a pool is read. */

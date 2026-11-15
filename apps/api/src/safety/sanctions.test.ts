@@ -25,7 +25,7 @@ import { interleavedAfter as interleaved } from "../test/chat.ts";
 import { exportOf } from "../test/export.ts";
 import { captureLogger, count, type TestContext, test, testConfig } from "../test/harness.ts";
 import { testMediaDeps } from "../test/media.ts";
-import { people, pondNamed } from "../test/people.ts";
+import { people } from "../test/people.ts";
 import {
   applySanction,
   deleteSanctionsOfAccount,
@@ -284,7 +284,7 @@ async function identityOf(ctx: TestContext, accountId: string): Promise<string> 
 /** An erased account, a tombstone, of the same identity as `accountId` or of a new one. */
 async function tombstone(ctx: TestContext, identityId?: string): Promise<string> {
   if (!identityId) {
-    const [id] = await people(ctx.client, null, 1, { state: "deleted" });
+    const [id] = await people(ctx.client, 1, { state: "deleted" });
     if (!id) throw new Error("no tombstone written");
     return id;
   }
@@ -548,8 +548,7 @@ describe("Sanctions", () => {
     ctx,
   }) => {
     const { app } = await appFor(ctx);
-    const pondId = await pondNamed(ctx.client, "test-sanctions-307");
-    const [accountId] = await people(ctx.client, pondId, 1, {
+    const [accountId] = await people(ctx.client, 1, {
       complete: true,
       consented: true,
       gender: "woman",

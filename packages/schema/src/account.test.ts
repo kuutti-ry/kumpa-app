@@ -161,11 +161,6 @@ function anExport(): Record<string, unknown> {
       birthYear: 1990,
       birthMonth: 5,
       gender: "woman",
-      pond: {
-        id: uuid(2),
-        slug: "suomi",
-        name: "Suomi",
-      },
       home: { place: "Kallio", shownOnCard: "Helsinki" },
       stateChangedAt: null,
       genderChangedAt: null,
@@ -358,7 +353,6 @@ describe("the account export", () => {
       birthYear: null,
       birthMonth: null,
       gender: null,
-      pond: null,
       home: null,
     };
     erased.preferences = { seeks: null, ageWindow: null };

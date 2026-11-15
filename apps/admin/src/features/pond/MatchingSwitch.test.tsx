@@ -11,10 +11,11 @@ import { MatchingSwitch } from "./MatchingSwitch.tsx";
 // in place, and every refusal in the step's own words. Requests are answered by
 // a fake fetch keyed on method and path.
 
-const SUOMI = "3c9d0f5e-1a2b-4c3d-8e9f-0a1b2c3d4e5f";
-
-const pond = (matchingOpen: boolean) => ({
-  id: SUOMI,
+/** The switch as the API answers it: which way, and nothing else (#607). */
+const pond = (open: boolean) => ({ open });
+/** What the routes answered while the switch was a pond's row: no longer the contract. */
+const pondRow = (matchingOpen: boolean) => ({
+  id: "3c9d0f5e-1a2b-4c3d-8e9f-0a1b2c3d4e5f",
   slug: "suomi",
   name: "Suomi",
   matchingOpen,
@@ -43,12 +44,12 @@ function fetchMock(handlers: Handler[]) {
   return calls;
 }
 const path = (req: Request) => new URL(req.url).pathname;
-const isList = (req: Request) => req.method === "GET" && path(req) === "/admin/ponds";
-const isPress = (req: Request) => req.method === "POST" && path(req).endsWith("/matching");
+const isList = (req: Request) => req.method === "GET" && path(req) === "/admin/matching";
+const isPress = (req: Request) => req.method === "POST" && path(req) === "/admin/matching";
 const listing =
-  (...items: unknown[]): Handler =>
+  (body: unknown): Handler =>
   (req) =>
-    isList(req) ? json({ items }) : null;
+    isList(req) ? json(body) : null;
 const pressing =
   (respond: (req: Request) => Response | Promise<Response>): Handler =>
   (req) =>
@@ -101,17 +102,11 @@ describe("the switch", () => {
     },
   );
 
-  it("offers no press when the list holds no pond", async () => {
-    const calls = fetchMock([listing()]);
-    show();
-    await waitFor(() => expect(calls.filter(isList)).toHaveLength(1));
-    await waitFor(() => expect(screen.queryByText("Loading…")).toBeNull());
-    expect(screen.queryByRole("button", { name: "Open matching" })).toBeNull();
-  });
-
   it.each([
     ["the API fails", () => failure("internal_error", 500)],
-    ["the answer is not the contract", () => json({ items: [{ id: "suomi" }] })],
+    ["the answer is not the contract", () => json({ open: "yes" })],
+    ["the answer is a list of ponds, as it was", () => json({ items: [pondRow(false)] })],
+    ["the answer carries more than the switch", () => json({ ...pondRow(false), open: false })],
   ])("says the switch could not be loaded when %s", async (_, respond) => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     fetchMock([(req) => (isList(req) ? respond() : null)]);
@@ -122,7 +117,7 @@ describe("the switch", () => {
 
   it("reads the switch again on Refresh, and shows what is true now", async () => {
     let open = false;
-    const calls = fetchMock([(req) => (isList(req) ? json({ items: [pond(open)] }) : null)]);
+    const calls = fetchMock([(req) => (isList(req) ? json(pond(open)) : null)]);
     show();
     expect(await screen.findByText("Closed")).toBeInTheDocument();
     open = true;
@@ -149,7 +144,7 @@ describe("turning the switch", () => {
 
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     const press = calls.find(isPress);
-    expect(press && path(press)).toBe(`/admin/ponds/${SUOMI}/matching`);
+    expect(press && path(press)).toBe("/admin/matching");
     expect(await press?.clone().json()).toEqual({ open: true });
     expect(await screen.findByText("Open")).toBeInTheDocument();
     expect(screen.getByText("Matching is now open.")).toBeInTheDocument();
@@ -226,8 +221,8 @@ describe("turning the switch", () => {
 
   it.each([
     ["the API fails", () => failure("internal_error", 500)],
-    ["the pond is gone", () => failure("not_found", 404)],
-    ["the answer is not the contract", () => json({ id: SUOMI })],
+    ["the route is gone", () => failure("not_found", 404)],
+    ["the answer is not the contract", () => json(pondRow(true))],
   ])("says that it did not go through when %s, and changes nothing", async (_, respond) => {
     fetchMock([listing(pond(false)), pressing(respond)]);
     show();

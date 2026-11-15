@@ -10,7 +10,7 @@ Data dictionary of `pnpm demo:population` (#73, ADR-014 §8 to §10). The popula
 pnpm demo:population
 ```
 
-Writes three hundred people into the database of the local environment, replacing the synthetic population that was there. The pond is the one every database has (the migrations write it). The pictures are a release of the public photos repository (`docs/demo/photo-prompts.md`), fetched and verified by `pnpm demo:assets` into `~/.cache/kuutti-demo-photos/v3`; this repository holds the manifest (`packages/db/src/seed/photos-manifest.ts`) and never a picture.
+Writes three hundred people into the database of the local environment, replacing the synthetic population that was there. There is one pond, everybody with a home, and no row for it. The pictures are a release of the public photos repository (`docs/demo/photo-prompts.md`), fetched and verified by `pnpm demo:assets` into `~/.cache/kuutti-demo-photos/v3`; this repository holds the manifest (`packages/db/src/seed/photos-manifest.ts`) and never a picture.
 
 After a write or a removal the public counter (#54) is counted anew over what is in the database now, so `GET /ponds/counter` and the card in the app show the population at once. Left to itself the counter would not move: it counts once a day and moves in steps of ten people, which is right among people and would leave a demo showing yesterday's figures. What may be said of a pond is decided as ever.
 
@@ -19,7 +19,7 @@ After a write or a removal the public counter (#54) is counted anew over what is
 | `-- --size 5000` | as many people as asked, 1 to 5,000. From 250 people up the population shows everything it is there for, the bar among it, whatever the seed; a smaller one is written too, and may show no bar (the command's `bar` says what it filled, below) |
 | `-- --seed 7` | other people in the same pond, in other homes |
 | `-- --photos` | faces of the release for the people, drawn by seed (none, a few or the whole grid), through the upload pipeline like anybody's; `pnpm demo:assets` fetches the release first. Locally the faces are approved as a moderator would (the local check queues everything); on staging Rekognition decides. With them come the cast (below), each with faces of their own |
-| `-- --dry-run` | prints the counts per pond and writes nothing; it does not connect |
+| `-- --dry-run` | prints the counts of the people who onboard, by gender, and writes nothing; it does not connect |
 | `-- --remove` | removes the synthetic population and writes nobody |
 | `-- --env preview` | for a pull request's own database, `kuutti_pr_<n>` |
 | `--env staging` | on staging, from inside the API's container only (`--remove` there reports the personas' rows as `spared`: they carry the mark but not a label's hash, ADR-014 §9, and the reset is what forgets them): `node dist/demo-population.js --env staging` (ADR-018; `infra/README.md` says how to reach the container). The database is read from staging's own parameter store, never given |
@@ -34,16 +34,16 @@ Three hundred accounts that look bank-verified, among real people, would enter t
 
 ## Who lives where, and why
 
-One pond, the whole country (ADR-061 §8): everybody who onboarded is in Suomi. Where in the country each of them lives is their home, below.
+One pond, the whole country (ADR-061 §8): everybody who onboarded has a home and so is in it. Where in the country each of them lives is their home, below.
 
-| pond | people | women | men | non-binary | why |
+| home | people | women | men | non-binary | why |
 |---|---|---|---|---|---|
-| Suomi | 276 | 88 | 171 | 17 | the whole country, so everybody who onboarded is here |
-| none | 24 | | | | registered at the bank and gone before the first onboarding step: no gender, no pond, no home, no consent |
+| somewhere in Finland | 276 | 88 | 171 | 17 | the whole country, so everybody who onboarded is here |
+| none | 24 | | | | registered at the bank and gone before the first onboarding step: no gender, no home, no consent |
 
-These are exact counts, apportioned from shares by largest remainder, not draws. At another size 8 % never onboarded and the rest is in Suomi with the same gender shares.
+These are exact counts, apportioned from shares by largest remainder, not draws. At another size 8 % never onboarded and the rest have a home, with the same gender shares.
 
-Everybody with a pond has a gender and a home: the app asks for the gender before the home, and writing the home is what sets the pond (ADR-061 §8).
+Everybody with a home has a gender: the app asks for the gender before the home, and having a home is what puts a person in the pond (ADR-061 §8).
 
 ### Where the homes are
 

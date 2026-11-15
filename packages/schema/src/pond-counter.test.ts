@@ -323,26 +323,24 @@ describe("the bar", () => {
 });
 
 describe("the response", () => {
-  const pond = {
-    id: "0b1c1c4e-9a8e-4a0b-9c3a-0c8d1e2f3a01",
-    slug: "suomi",
-    name: "Suomi",
-  };
-  const hidden = { pond, day: null, finished: null, seeks: null };
-  const accepts = (entry: unknown) =>
-    PondCounterResponse.safeParse({ k: 10, ponds: [entry] }).success;
+  const hidden = { day: null, finished: null, seeks: null };
+  const accepts = (answer: unknown) =>
+    PondCounterResponse.safeParse({ k: 10, ...(answer as object) }).success;
 
-  it("carries a day, never a time, and no id but the pond's", () => {
-    const parsed = PondCounterResponse.parse({
-      k: 10,
-      ponds: [hidden, { ...hidden, day: "2026-09-27", finished: 25 }],
-    });
-    expect(parsed.ponds).toHaveLength(2);
+  it("carries a day, never a time, and names nobody and no pond (#607)", () => {
+    const said = { k: 10, ...hidden, day: "2026-09-27", finished: 25 };
+    expect(PondCounterResponse.parse(said)).toEqual(said);
+    expect(accepts(hidden)).toBe(true);
     expect(accepts({ ...hidden, day: "2026-09-27T04:00:00Z" })).toBe(false);
-    expect(PondCounterResponse.safeParse({ ...parsed, takenAt: "x" }).success).toBe(false);
+    expect(accepts({ ...said, takenAt: "x" })).toBe(false);
+    for (const pond of [{ id: "0b1c1c4e-9a8e-4a0b-9c3a-0c8d1e2f3a01" }, { slug: "suomi" }]) {
+      expect(accepts({ ...said, pond })).toBe(false);
+    }
+    // The list of one the answer was until #607: an app that still expects it is told so by the parse.
+    expect(PondCounterResponse.safeParse({ k: 10, ponds: [] }).success).toBe(false);
   });
 
-  it("has a place for the bar on every pond, shares or null", () => {
+  it("has a place for the bar, shares or null", () => {
     const seeks = { men: 30, everyone: 20, women: 50 };
     expect(accepts({ ...hidden, seeks })).toBe(true);
     expect(accepts({ ...hidden, seeks: null })).toBe(true);
@@ -353,8 +351,8 @@ describe("the response", () => {
   });
 
   it("cannot carry a number under the floor, or a k under it", () => {
-    expect(PondCounterResponse.safeParse({ k: 9, ponds: [] }).success).toBe(false);
-    expect(PondCounterResponse.safeParse({ k: 10, ponds: [] }).success).toBe(true);
+    expect(PondCounterResponse.safeParse({ ...hidden, k: 9 }).success).toBe(false);
+    expect(PondCounterResponse.safeParse({ ...hidden, k: 10 }).success).toBe(true);
     for (const finished of [null, 10, 11, 5000]) {
       expect(accepts({ ...hidden, finished })).toBe(true);
     }
@@ -363,9 +361,11 @@ describe("the response", () => {
     }
   });
 
-  it("asks every pond for its number, even when it is null", () => {
-    const { finished: _left, ...without } = hidden;
-    expect(accepts(without)).toBe(false);
+  it("asks for the number and its day, even when they are null", () => {
+    const { finished: _number, ...noNumber } = hidden;
+    expect(accepts(noNumber)).toBe(false);
+    const { day: _day, ...noDay } = hidden;
+    expect(accepts(noDay)).toBe(false);
   });
 
   it("has no place for a total, a gender split or the number finishing (#581)", () => {

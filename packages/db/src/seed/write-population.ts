@@ -47,7 +47,7 @@ const OLDER_WORDING = "demo-older-wording";
 /** `spared`: identities that carry the mark and are not synthetic; never touched. */
 export type RemoveResult = { removed: number; spared: number };
 
-export type WriteResult = RemoveResult & { written: number; ponds: Record<string, number> };
+export type WriteResult = RemoveResult & { written: number; onboarded: number };
 
 /** The tables that hold rows of an account, in an order in which they can be emptied. */
 const ACCOUNT_TABLES = [
@@ -226,24 +226,13 @@ export async function writePopulation(
       throw new Error(`not a synthetic person: ${person.label}`);
     }
     // In nobody's pool, with nothing to say so (ADR-061 §1): refused, not written.
-    if (person.pond !== null && person.home === null) {
+    if (person.gender !== null && person.home === null) {
       throw new Error(`${person.label} has no home: generatePopulation needs the places`);
     }
   }
   return transaction(db, async (tx) => {
     const { removed, spared } = await removePopulation(tx);
-    const pondIds = new Map(
-      (await tx.query<{ id: string; slug: string }>("SELECT id, slug FROM ponds")).rows.map((r) => [
-        r.slug,
-        r.id,
-      ]),
-    );
-    const ponds: Record<string, number> = {};
     for (const person of people) {
-      const pondId = person.pond === null ? null : pondIds.get(person.pond);
-      if (pondId === undefined) throw new Error(`no pond ${person.pond} in this database`);
-      if (person.pond !== null) ponds[person.pond] = (ponds[person.pond] ?? 0) + 1;
-
       const identity = await tx.query<{ id: string }>(
         `INSERT INTO identity (hetu_hmac, standing, broker_subject, created_at)
          VALUES ($1, 'ok', $2, $3) RETURNING id`,
@@ -251,9 +240,9 @@ export async function writePopulation(
       );
       const account = await tx.query<{ id: string }>(
         `INSERT INTO account
-           (identity_id, state, state_changed_at, birth_year, birth_month, gender, pond_id,
+           (identity_id, state, state_changed_at, birth_year, birth_month, gender,
             home_place, home_shows_area, registered_at)
-         VALUES ($1, $2::account_state, $3, $4, $5, $6::gender, $7, $8, $9, $10) RETURNING id`,
+         VALUES ($1, $2::account_state, $3, $4, $5, $6::gender, $7, $8, $9) RETURNING id`,
         [
           identity.rows[0]?.id,
           person.state,
@@ -261,7 +250,6 @@ export async function writePopulation(
           person.birthYear,
           person.birthMonth,
           person.gender,
-          pondId,
           person.home?.place ?? null,
           person.home?.showsArea ?? false,
           person.registeredAt,
@@ -328,6 +316,11 @@ export async function writePopulation(
         );
       }
     }
-    return { removed, spared, written: people.length, ponds };
+    return {
+      removed,
+      spared,
+      written: people.length,
+      onboarded: people.filter((person) => person.gender !== null).length,
+    };
   });
 }

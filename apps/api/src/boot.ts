@@ -195,7 +195,7 @@ export async function boot({
   }
 
   // Previews are always seeded (rules/db.md); the seed is idempotent, so every
-  // boot converges on the same ponds and matching_config.
+  // boot converges on the same matching_config, with matching open (ADR-060 §10).
   if (config.preview) {
     const seeded = await seed(pool, `preview-pr-${config.preview.prNumber}`);
     logger.info(seeded, "seed");

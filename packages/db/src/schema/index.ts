@@ -63,7 +63,6 @@ export {
   pushToken,
 } from "./notifications.ts";
 export { pondCounter } from "./pond-counter.ts";
-export { ponds } from "./ponds.ts";
 export {
   preferenceMode,
   preferences,

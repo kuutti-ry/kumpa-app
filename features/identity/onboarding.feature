@@ -7,8 +7,8 @@ Feature: Onboarding and consents
   special-category consent that the seek answer needs (ADR-019 §4). The
   account becomes active when everything required is there; the steps of
   the field sheet (name, intent, photos, prompts or a bio) are asked in the
-  same flow and keep it incomplete until done (#46, #146, ADR-010). The home,
-  and the pond its write sets, are features/pond/home.feature's (ADR-061).
+  same flow and keep it incomplete until done (#46, #146, ADR-010). The home is
+  features/pond/home.feature's (ADR-061).
 
   The app asks the norms, the terms and the privacy summary before the
   bank login (#418, ADR-010 §15). With no account yet, it holds the answers in
@@ -62,15 +62,15 @@ Feature: Onboarding and consents
     Given a registered account with every required answer and no research consent
     Then the account is active and the status shows no research opt-in
 
-  Scenario: Erasure removes the preferences and the consents and blanks gender and pond
+  Scenario: Erasure removes the preferences and the consents and blanks the gender
     Given an onboarded account
     When the account is deleted
-    Then its preference rows and its consent rows are gone and the tombstone has neither gender nor pond
+    Then its preference rows and its consent rows are gone and the tombstone has no gender
 
-  Scenario: The export lists gender, pond, preferences and every consent
+  Scenario: The export lists gender, preferences and every consent
     Given an onboarded account with a withdrawn research consent
     When it downloads its export
-    Then the export carries the gender, the pond, the two hard preferences and every consent row
+    Then the export carries the gender, the two hard preferences and every consent row
 
   Scenario: The research opt-in creates the research_id mapping and withdrawal removes it
     Given the account gave the research consent

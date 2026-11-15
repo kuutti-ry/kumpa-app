@@ -29,6 +29,27 @@
       "when": 1794331596564,
       "tag": "0003_session_attest_key",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794743998716,
+      "tag": "0004_matching_open_key",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794744088179,
+      "tag": "0005_no_pond_columns",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794744096311,
+      "tag": "0006_no_ponds",
+      "breakpoints": true
     }
   ]
 }

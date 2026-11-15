@@ -46,8 +46,8 @@ async function accountRow(ctx: TestContext, accountId: string) {
 async function holdings(ctx: TestContext, accountId: string) {
   const per = async (table: string) =>
     count(ctx, `SELECT count(*) AS n FROM ${table} WHERE account_id = $1`, [accountId]);
-  const { rows } = await ctx.client.query<{ gender: string | null; pond_id: string | null }>(
-    "SELECT gender, pond_id FROM account WHERE id = $1",
+  const { rows } = await ctx.client.query<{ gender: string | null; home_place: string | null }>(
+    "SELECT gender, home_place FROM account WHERE id = $1",
     [accountId],
   );
   return {
@@ -56,7 +56,7 @@ async function holdings(ctx: TestContext, accountId: string) {
     preferences: await per("preferences"),
     consent: await per("consent"),
     gender: rows[0]?.gender,
-    pond: rows[0]?.pond_id,
+    home: rows[0]?.home_place,
   };
 }
 
@@ -81,14 +81,10 @@ describe("taking a break", () => {
       second.sessionId,
     ]);
     await ctx.client.query("DELETE FROM account WHERE id = $1", [second.accountId]);
-    const pond = await ctx.client.query<{ id: string }>(
-      "INSERT INTO ponds (slug, name_nominative) VALUES ('break-pond', 'Pond') RETURNING id",
+    await ctx.client.query(
+      "UPDATE account SET gender = 'woman', home_place = '00530' WHERE id = $1",
+      [a.accountId],
     );
-    const pondId = pond.rows[0]?.id;
-    await ctx.client.query("UPDATE account SET gender = 'woman', pond_id = $2 WHERE id = $1", [
-      a.accountId,
-      pondId,
-    ]);
     await ctx.client.query(
       `INSERT INTO profile (account_id, display_name, bio, fields, prompts)
        VALUES ($1, 'Aino', null, '{"intent":"long_term"}'::jsonb, '[]'::jsonb)`,

@@ -11,7 +11,7 @@ import { eraseAccount, exportAccount } from "../identity/index.ts";
 import { starPlace } from "../jobs/stars.ts";
 import { finnishDay } from "../lib/finnish-day.ts";
 import { ensureEventPartitions } from "../research/index.ts";
-import { joinStudy, signInAs, withMatchingConfig } from "../test/account.ts";
+import { joinStudy, openMatchingHere, signInAs, withMatchingConfig } from "../test/account.ts";
 import { errorCode } from "../test/answers.ts";
 import { cardShown } from "../test/cards.ts";
 import {
@@ -23,7 +23,7 @@ import {
   test,
   testConfig,
 } from "../test/harness.ts";
-import { openPond, people, pondNamed } from "../test/people.ts";
+import { people } from "../test/people.ts";
 import { FITTING } from "../test/queue.ts";
 import { pidOf, waitsFor, watched, withTwoConnections } from "../test/races.ts";
 import { block, type LoggedCard, logged, shownAt } from "../test/rounds.ts";
@@ -31,8 +31,8 @@ import { block, type LoggedCard, logged, shownAt } from "../test/rounds.ts";
 // The stars (#575, ADR-064, features/matching/stars.feature): a star on a card, the
 // queue leaving a starred person out, the list and whoever it leaves out, a card
 // opened from it, a like or a pass taking the star off, the caller's own stars
-// only, erasure of both sides and the export. Everybody here is in an open pond of
-// their own, and fits everybody else there.
+// only, erasure of both sides and the export. Matching is open for everybody here,
+// and each of a test's people fits the others.
 
 /** Noon in Helsinki on a Tuesday. */
 const NOON = new Date("2026-10-20T09:00:00.000Z");
@@ -57,14 +57,10 @@ async function appOn(db: Queryable, now: () => Date = ticking()): Promise<App> {
   return createApp({ config: testConfig(), logger, db, now });
 }
 
-let ponds = 0;
-
-/** `count` people who fit each other, in a pond of their own that is open, each signed in. */
+/** `count` people who fit each other, with matching open, each signed in. */
 async function cast(db: Queryable, count: number): Promise<Person[]> {
-  ponds += 1;
-  const pond = await pondNamed(db, `test-stars-${ponds}-${Math.floor(NOON.getTime() / 1000)}`);
-  await openPond(db, pond);
-  const ids = await people(db, pond, count, FITTING);
+  await openMatchingHere(db);
+  const ids = await people(db, count, FITTING);
   return Promise.all(ids.map((id) => signInAs(db, id)));
 }
 
@@ -392,8 +388,7 @@ describe("the cap", () => {
     await withMatchingConfig(ctx.client, { stars_max: 0 });
     await queued(ctx.client, a, [b.accountId, c.accountId]);
     // All but one of the ceiling, on people the list leaves out: no profile, so quick to write.
-    const pond = await pondNamed(ctx.client, "test-stars-ceiling");
-    const others = await people(ctx.client, pond, STARS_CEILING - 1);
+    const others = await people(ctx.client, STARS_CEILING - 1);
     await ctx.client.query(
       "INSERT INTO star (account_id, candidate_id) SELECT $1, unnest($2::uuid[])",
       [a.accountId, others],
@@ -765,7 +760,7 @@ describe("the list", () => {
     expect(await listOf(app, a)).toEqual([]);
     expect(await statementsOfList(ctx.client, a)).toEqual(below);
     // Nor by the person's pool: the answer's time says nothing of anybody's pile (ADR-064 §6).
-    expect(below.filter((statement) => /WHERE pond_id = /.test(statement))).toEqual([]);
+    expect(below.filter((statement) => /WHERE home_place IS NOT NULL/.test(statement))).toEqual([]);
     expect(id).toEqual(expect.any(String));
   });
 
@@ -783,18 +778,14 @@ describe("the list", () => {
     const { app, who } = await scene(ctx, 2);
     const [a, b] = [person(who, 0), person(who, 1)];
     const id = await starredYesterday(ctx.client, a, b);
-    const pond = async (open: boolean) =>
-      ctx.client.query(
-        "UPDATE ponds SET matching_open = $2 WHERE id = (SELECT pond_id FROM account WHERE id = $1)",
-        [a.accountId, open],
-      );
+    const matching = (open: boolean) => withMatchingConfig(ctx.client, { matching_open: open });
 
-    await pond(false);
+    await matching(false);
     expect(await listOf(app, a)).toEqual([]);
     expect((await open(app, a, id)).status).toBe(404);
     expect(await starsOf(ctx.client, a)).toEqual([b.accountId]);
 
-    await pond(true);
+    await matching(true);
     expect((await listOf(app, a)).map((item) => item.id)).toEqual([id]);
   });
 });
@@ -982,6 +973,19 @@ describe("a card opened from the list", () => {
     );
 
     expect(place?.reason).toBe("seen_before");
+  });
+
+  // The route asks the list first, which is empty while matching is closed; the place says so on its own too.
+  test("There is no place while matching is closed", async ({ ctx }) => {
+    const { who } = await scene(ctx, 2);
+    const [a, b] = [person(who, 0), person(who, 1)];
+    const { logger } = await captureLogger();
+    const place = () =>
+      starPlace({ db: ctx.client, logger, now: () => NOON }, a.accountId, b.accountId);
+
+    expect((await place())?.reason).toBe("seen_before");
+    await withMatchingConfig(ctx.client, { matching_open: false });
+    expect(await place()).toBeNull();
   });
 
   test("A star opened through today's relaxation carries it, and its like arrives", async ({

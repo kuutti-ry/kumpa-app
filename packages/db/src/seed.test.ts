@@ -4,13 +4,13 @@ import { postalMatches } from "@kuutti/schema/postal-areas";
 import { describe, expect, it } from "vitest";
 import { migrate } from "./migrate.ts";
 import { createPool } from "./pool.ts";
-import { MATCHING_CONFIG_V1, SEED_PONDS, seed } from "./seed.ts";
+import { MATCHING_CONFIG_V1, openMatching, seed } from "./seed.ts";
 import { withTemporaryDatabase } from "./test/temporary-database.ts";
 
 const MIGRATIONS = resolve(import.meta.dirname, "..", "drizzle");
 
 describe("seed", () => {
-  it("is idempotent and writes the one pond and matching_config's version 1", async () => {
+  it("is idempotent and writes matching_config's version 1, and no later version but the switch's", async () => {
     await withTemporaryDatabase(async (url) => {
       const pool = createPool({ connectionString: url, max: 2 });
       try {
@@ -19,14 +19,7 @@ describe("seed", () => {
         const second = await seed(pool);
         expect(second).toEqual(first);
 
-        const pondCount = await pool.query<{ n: string }>("SELECT count(*) AS n FROM ponds");
-        expect(Number(pondCount.rows[0]?.n)).toBe(SEED_PONDS.length);
-
-        const pondRows = await pool.query("SELECT slug, name_nominative FROM ponds");
-        // One pond, the country (ADR-061 §8): a second row here would come back on every preview's boot.
-        expect(pondRows.rows).toEqual([{ slug: "suomi", name_nominative: "Suomi" }]);
-
-        const config = await pool.query<{ key: string; value: number; version: number }>(
+        const config = await pool.query<{ key: string; value: unknown; version: number }>(
           "SELECT key, value, version FROM matching_config ORDER BY key, version",
         );
         const byKey = Object.fromEntries(
@@ -107,6 +100,8 @@ describe("seed", () => {
           message_photos_per_day: 10,
           messages_per_minute: 30,
           pond_counter_k: 10,
+          // #607: the switch is born closed (ADR-060 §1); the seed opens it as version 2, below.
+          matching_open: false,
           change_cadence_days: 30,
           deal_breakers_max: 7,
           // #514: the home and the distance, the maintainer's of 31/10/2026.
@@ -126,14 +121,16 @@ describe("seed", () => {
           stars_max: 10,
         });
         expect(byKey).toEqual(MATCHING_CONFIG_V1);
-        expect(config.rows.filter((r) => r.version > 1)).toEqual([]);
+        expect(config.rows.filter((r) => r.version > 1)).toEqual([
+          { key: "matching_open", value: true, version: 2 },
+        ]);
       } finally {
         await pool.end();
       }
     });
   });
 
-  it("gives the seeded live account a home on the list and the pond the home's route would set, and nobody else one (ADR-061 §2, §8)", async () => {
+  it("gives the seeded live account a home on the list, and nobody else one (ADR-061 §2)", async () => {
     await withTemporaryDatabase(async (url) => {
       const pool = createPool({ connectionString: url, max: 2 });
       try {
@@ -143,14 +140,8 @@ describe("seed", () => {
           state: string;
           home_place: string | null;
           home_shows_area: boolean;
-          slug: string | null;
-        }>(
-          `SELECT a.state, a.home_place, a.home_shows_area, p.slug
-           FROM account a LEFT JOIN ponds p ON p.id = a.pond_id`,
-        );
-        expect(rows).toEqual([
-          { state: "active", home_place: "00530", home_shows_area: false, slug: "suomi" },
-        ]);
+        }>("SELECT state, home_place, home_shows_area FROM account");
+        expect(rows).toEqual([{ state: "active", home_place: "00530", home_shows_area: false }]);
         expect(postalMatches(rows[0]?.home_place ?? "", 1)).toHaveLength(1);
       } finally {
         await pool.end();
@@ -198,23 +189,64 @@ describe("seed", () => {
     });
   });
 
-  it("opens the ponds it writes on every run, the one a migration wrote among them (#500, ADR-060 §10)", async () => {
+  it("opens matching on every run where it stands closed, as the switch's next version, and writes none where it stands open (#500, #607, ADR-060 §10)", async () => {
     await withTemporaryDatabase(async (url) => {
       const pool = createPool({ connectionString: url, max: 1 });
-      const open = async () =>
+      const versions = async () =>
         (
-          await pool.query<{ slug: string; matching_open: boolean }>(
-            "SELECT slug, matching_open FROM ponds ORDER BY slug",
+          await pool.query<{ version: number; value: unknown; created_by: string }>(
+            `SELECT version, value, created_by FROM matching_config
+             WHERE key = 'matching_open' ORDER BY version`,
           )
         ).rows;
       try {
         await migrate(pool, MIGRATIONS);
-        expect(await open()).toEqual([{ slug: "suomi", matching_open: false }]);
+        const born = { version: 1, value: false, created_by: "migration:0004" };
+        expect(await versions()).toEqual([born]);
         await seed(pool);
-        expect(await open()).toEqual([{ slug: "suomi", matching_open: true }]);
-        await pool.query("UPDATE ponds SET matching_open = false");
+        const opened = { version: 2, value: true, created_by: "seed" };
+        expect(await versions()).toEqual([born, opened]);
         await seed(pool);
-        expect((await open()).every((pond) => pond.matching_open)).toBe(true);
+        expect(await versions()).toEqual([born, opened]);
+
+        // An admin closes it; a preview's next boot seeds again.
+        const closed = { version: 3, value: false, created_by: "an admin" };
+        await pool.query(
+          `INSERT INTO matching_config (version, key, value, created_by)
+           VALUES (3, 'matching_open', 'false'::jsonb, 'an admin')`,
+        );
+        await seed(pool, "the next boot");
+        expect(await versions()).toEqual([
+          born,
+          opened,
+          closed,
+          { version: 4, value: true, created_by: "the next boot" },
+        ]);
+      } finally {
+        await pool.end();
+      }
+    });
+  });
+
+  it("says whether it turned the switch, and turns nothing where the migrations wrote no switch", async () => {
+    await withTemporaryDatabase(async (url) => {
+      const pool = createPool({ connectionString: url, max: 1 });
+      const count = async () =>
+        Number(
+          (
+            await pool.query<{ n: string }>(
+              "SELECT count(*) AS n FROM matching_config WHERE key = 'matching_open'",
+            )
+          ).rows[0]?.n,
+        );
+      try {
+        await migrate(pool, MIGRATIONS);
+        expect(await openMatching(pool, "a command")).toBe(true);
+        expect(await openMatching(pool, "a command")).toBe(false);
+        expect(await count()).toBe(2);
+        await pool.query("DELETE FROM matching_config WHERE key = 'matching_open'");
+        expect(await openMatching(pool, "a command")).toBe(false);
+        expect(await count()).toBe(0);
       } finally {
         await pool.end();
       }

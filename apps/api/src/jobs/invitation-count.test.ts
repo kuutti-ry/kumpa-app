@@ -276,7 +276,7 @@ describe("the night's count of invitations", () => {
     ctx,
   }) => {
     const { a, id } = await countablePair(ctx);
-    const [other] = await people(ctx.client, null, 1);
+    const [other] = await people(ctx.client, 1);
     if (!other) throw new Error("friend not written");
     const waits = await invitationOf(ctx.client, a.accountId, { redeemedBy: other });
 
@@ -293,7 +293,7 @@ describe("the night's count of invitations", () => {
     const a = await signedInAccount(ctx.client);
     await completed(ctx.client, a.accountId);
     const open = await invitationOf(ctx.client, a.accountId);
-    const [done] = await people(ctx.client, null, 1);
+    const [done] = await people(ctx.client, 1);
     await completed(ctx.client, done as string);
     const before = new Date("2026-10-01T01:00:00.000Z");
     const counted = await invitationOf(ctx.client, a.accountId, {
@@ -425,7 +425,7 @@ describe("the night's count of invitations", () => {
 
   test("An erasure of the inviter while the night counts waits for the count, and takes what it wrote of theirs", async () => {
     await withTwoConnections("kuutti-107-count", async (pool, counting, erasing) => {
-      const [a, friend] = await people(pool, null, 2);
+      const [a, friend] = await people(pool, 2);
       if (!a || !friend) throw new Error("cast not written");
       await completed(pool, a);
       await completed(pool, friend);

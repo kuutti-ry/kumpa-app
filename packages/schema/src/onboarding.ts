@@ -59,16 +59,6 @@ export type PreferencesResponse = z.infer<typeof PreferencesResponse>;
 export const GenderUpdate = z.object({ gender: Gender }).strict().meta({ id: "GenderUpdate" });
 export type GenderUpdate = z.infer<typeof GenderUpdate>;
 
-/** The pond, the one row there is (ADR-061 §8): it says the same to everybody. */
-export const PondSummary = z
-  .object({
-    id: z.uuid(),
-    slug: z.string().min(1).max(60),
-    name: z.string().min(1).max(80),
-  })
-  .meta({ id: "PondSummary" });
-export type PondSummary = z.infer<typeof PondSummary>;
-
 /**
  * A home postal code as it is typed (ADR-061 §1): five digits, never an enum
  * of the list, which would put 3,018 values into the contract and into every
@@ -189,8 +179,7 @@ export type ConsentsResponse = z.infer<typeof ConsentsResponse>;
  * The steps of onboarding in the order the app asks them (#146, the field
  * sheet): the two consents on the welcome screen, the name, the gender, whom
  * one seeks (with the special-category consent), the intent, the age window,
- * the home, three photos, two prompts or a bio. Writing the home also sets the
- * pond, of which there is one (ADR-061 §8). Research is never one of them.
+ * the home, three photos, two prompts or a bio. Research is never one of them.
  */
 export const ONBOARDING_STEPS = [
   "terms",

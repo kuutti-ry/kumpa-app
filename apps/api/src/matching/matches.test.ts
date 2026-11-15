@@ -25,7 +25,6 @@ import {
   logged,
   MATCHES,
   peopleWhoFit,
-  pondOfPerson,
   shownAt,
 } from "../test/rounds.ts";
 import { decide } from "./rounds.ts";
@@ -532,7 +531,7 @@ describe("a second match (ADR-062 §7)", () => {
 describe("the your-turn limit (ADR-062 §5)", () => {
   /** "A" in a round of today, with as many conversations on their turn. */
   async function waitingOn(db: Queryable, a: Person, waiting: number) {
-    return conversationsWaiting(db, await pondOfPerson(db, a.accountId), a.accountId, waiting);
+    return conversationsWaiting(db, a.accountId, waiting);
   }
 
   describe("A new like at the your-turn limit is refused, whatever the card", () => {
@@ -757,7 +756,7 @@ describe("the same moment", () => {
     await withTwoConnections("kuutti-502-limit", async (pool, first, second) => {
       const [a, b, c] = await peopleWhoFit(pool, 3);
       if (!a || !b || !c) throw new Error("cast not written");
-      await conversationsWaiting(pool, await pondOfPerson(pool, a), a, 7);
+      await conversationsWaiting(pool, a, 7);
       await shownAt(pool, daysBefore(1), b, a, "like");
       await shownAt(pool, daysBefore(1), c, a, "like");
       await logged(pool, a, TODAY, [

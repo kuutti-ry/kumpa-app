@@ -1,9 +1,10 @@
 import type { Queryable } from "@kuutti/db";
 import type { StarredPerson } from "@kuutti/schema";
 import { finnishDay } from "../lib/finnish-day.ts";
+import { matchingOpen } from "../lib/matching-config.ts";
 import { bandBetween, type Place, relaxationsOf } from "../matching/index.ts";
 import { ageInYears } from "../profile/index.ts";
-import { openPondOf, subjectsAmong } from "./pool.ts";
+import { subjectsAmong } from "./pool.ts";
 import {
   type BuilderDeps,
   fittingNow,
@@ -33,7 +34,7 @@ export async function starsShown(
   candidateIds: readonly string[],
 ): Promise<ReadonlySet<string>> {
   if (candidateIds.length === 0) return new Set();
-  if (!(await openPondOf(db, accountId))) return new Set();
+  if (!(await matchingOpen(db))) return new Set();
   const fitting = (await fittingNow(deps, db, accountId, candidateIds)).map(
     (subject) => subject.id,
   );
@@ -57,9 +58,8 @@ export async function starPlace(
   candidateId: string,
 ): Promise<Place | null> {
   const at = deps.now();
-  const pondId = await openPondOf(deps.db, accountId);
-  if (!pondId) return null;
-  const subjects = await subjectsAmong(deps.db, pondId, [accountId, candidateId], at);
+  if (!(await matchingOpen(deps.db))) return null;
+  const subjects = await subjectsAmong(deps.db, [accountId, candidateId], at);
   const owner = subjects.find((subject) => subject.id === accountId);
   const candidate = subjects.find((subject) => subject.id === candidateId);
   if (!owner || !candidate) return null;

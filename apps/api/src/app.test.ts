@@ -115,9 +115,9 @@ const STAFF_ROLES: { what: string; roles: string[]; keys: string[] }[] = [
     keys: ["GET /admin/sanctions/automatic"],
   },
   {
-    what: "the ponds and their switch to the admin role (#500, ADR-060 §2)",
+    what: "the matching switch to the admin role (#500, #607, ADR-060 §2)",
     roles: ADMINS,
-    keys: ["GET /admin/ponds", "POST /admin/ponds/:id/matching"],
+    keys: ["GET /admin/matching", "POST /admin/matching"],
   },
   {
     what: "the announcements, written, listed, approved by a second admin and deleted as drafts, to the admin role (#573, ADR-068 §2)",

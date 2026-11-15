@@ -16,7 +16,7 @@ import { errorCode } from "../test/answers.ts";
 import { CHALLENGE, VERIFIER } from "../test/attempt.ts";
 import { captureLogger, type TestContext, test, testConfig } from "../test/harness.ts";
 import { completed, invitationOf } from "../test/invitations.ts";
-import { HOME, people, pondNamed } from "../test/people.ts";
+import { HOME, people } from "../test/people.ts";
 import { pidOf, type Watched, waitsFor, watched, withTwoConnections } from "../test/races.ts";
 import { deriveArtificialIdentity, registerArtificial } from "./artificial.ts";
 import type { BrokerIdentity, IdentityBroker } from "./broker.ts";
@@ -143,13 +143,11 @@ async function accountRow(ctx: TestContext, accountId: string) {
     state: string;
     email: string | null;
     gender: string | null;
-    pond_id: string | null;
     home_place: string | null;
     home_shows_area: boolean;
-  }>(
-    "SELECT state, email, gender, pond_id, home_place, home_shows_area FROM account WHERE id = $1",
-    [accountId],
-  );
+  }>("SELECT state, email, gender, home_place, home_shows_area FROM account WHERE id = $1", [
+    accountId,
+  ]);
   return rows[0];
 }
 
@@ -271,7 +269,7 @@ describe("an erasure that commits between the session guard and the handler", ()
       expect(await accountRow(ctx, me.accountId), label).toMatchObject({
         state: "deleted",
         gender: null,
-        pond_id: null,
+        home_place: null,
       });
       const consents = await ctx.client.query<{ withdrawn: boolean }>(
         "SELECT withdrawn_at IS NOT NULL AS withdrawn FROM consent WHERE account_id = $1 AND kind = 'research'",
@@ -282,9 +280,7 @@ describe("an erasure that commits between the session guard and the handler", ()
       expect(consents.rows, label).toEqual([]);
       expect(
         logs().filter((l) =>
-          ["gender declared", "consent given", "consent withdrawn", "pond assigned"].includes(
-            l.msg ?? "",
-          ),
+          ["gender declared", "consent given", "consent withdrawn"].includes(l.msg ?? ""),
         ),
         label,
       ).toEqual([]);
@@ -317,8 +313,7 @@ describe("an erasure that commits between the session guard and the handler", ()
 describe("the status read racing another request", () => {
   /** A registered account with every answer activation waits for (#146): only the profile steps are open. */
   async function readyToActivate(ctx: TestContext) {
-    const pondId = await pondNamed(ctx.client, `race-${Math.floor(NOW.getTime() / 1000)}`);
-    const [accountId = ""] = await people(ctx.client, pondId, 1, {
+    const [accountId = ""] = await people(ctx.client, 1, {
       state: "registered",
       gender: "woman",
       consented: true,
@@ -428,7 +423,6 @@ describe("the status read racing another request", () => {
     expect(logs().filter((l) => l.msg === "home set")).toEqual([]);
     expect(await accountRow(ctx, me.accountId)).toMatchObject({
       state: "deleted",
-      pond_id: null,
       home_place: null,
       home_shows_area: false,
     });
@@ -448,7 +442,6 @@ describe("the status read racing another request", () => {
     expect(db.ran()).toBe(true);
     expect(await accountRow(ctx, me.accountId)).toMatchObject({
       state: "deleted",
-      pond_id: null,
       home_place: null,
       home_shows_area: false,
     });
@@ -1270,7 +1263,7 @@ describe("an erasure racing the night's count of invitations", () => {
 
   /** An inviter and the friend who used their code, both complete. */
   async function invitedPair(db: Queryable) {
-    const [inviter, friend] = await people(db, null, 2);
+    const [inviter, friend] = await people(db, 2);
     if (!inviter || !friend) throw new Error("cast not written");
     await completed(db, inviter);
     await completed(db, friend);
@@ -1391,7 +1384,7 @@ describe("an erasure racing the night's count of invitations", () => {
 
   test("two erasures of a counted invitation's two people take turns, and the later takes the row away", async () => {
     await withTwoConnections("kuutti-503-both-go", async (pool, earlier, later) => {
-      const [inviter, friend] = await people(pool, null, 2);
+      const [inviter, friend] = await people(pool, 2);
       if (!inviter || !friend) throw new Error("cast not written");
       await invitationOf(pool, inviter, { redeemedBy: friend, countedAt: NIGHT });
       const { logger } = await captureLogger();

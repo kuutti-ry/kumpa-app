@@ -65,7 +65,7 @@ export type SnapshotRows = {
   gender: string | null;
   birthYear: number | null;
   birthMonth: number | null;
-  /** The pond's slug, or null before the person has a home. */
+  /** The one pond there is, by the name the events have always carried, or null before the person has a home. */
   pond: string | null;
   /** The stored profile document's fields, as written; the registry filter decides what enters. */
   fields: unknown;
@@ -77,9 +77,12 @@ export type SnapshotRows = {
  * rest of the caller's transaction, so a withdrawal or an erasure that races
  * the event waits for it and then deletes the row, and no event lands after
  * the consent ended (the events table has no foreign key to catch that).
- * `ponds` and `profile` are shared vocabulary from packages/db; they are read
- * here, read-only, so that the profile slice can emit events without the
- * research slice importing it back (rules/layout.md).
+ * `profile` is shared vocabulary from packages/db; it is read here,
+ * read-only, so that the profile slice can emit events without the research
+ * slice importing it back (rules/layout.md). There is no pond's row (ADR-061
+ * §8, #607): an event of somebody with a home says `suomi`, as every event has,
+ * and the column stays until the privacy notice is next revised (the
+ * maintainer, 15/11/2026).
  */
 export async function snapshotRows(db: Queryable, accountId: string): Promise<SnapshotRows | null> {
   const { rows } = await db.query<{
@@ -92,10 +95,9 @@ export async function snapshotRows(db: Queryable, accountId: string): Promise<Sn
     fields: unknown;
   }>(
     `SELECT s.research_id, s.consent_version, a.gender, a.birth_year, a.birth_month,
-            p.slug AS pond, pr.fields
+            CASE WHEN a.home_place IS NOT NULL THEN 'suomi' END AS pond, pr.fields
      FROM research_subject s
      JOIN account a ON a.id = s.account_id
-     LEFT JOIN ponds p ON p.id = a.pond_id
      LEFT JOIN profile pr ON pr.account_id = a.id
      WHERE s.account_id = $1 AND a.state <> 'deleted'
      FOR SHARE OF s`,

@@ -16,7 +16,6 @@ import {
   testConfig,
 } from "../test/harness.ts";
 import { testMediaDeps } from "../test/media.ts";
-import { pondNamed } from "../test/people.ts";
 import { recorder } from "../test/recorder.ts";
 import { accountPage } from "./accounts.ts";
 import { applySanction, liftSanction } from "./sanctions.ts";
@@ -226,7 +225,7 @@ async function registered(ctx: TestContext, accountId: string): Promise<void> {
 
 /**
  * A person with everything the page shows and everything it must not: an
- * identity with the broker's ids, an e-mail, a research id, a pond, a profile
+ * identity with the broker's ids, an e-mail, a research id, a profile
  * with special-category answers, two photos (one rejected with a check note),
  * two feedback rows (one handled through the panel), a shadow ban applied and
  * lifted, a suspension that stays, and a moderator's look at the rejected
@@ -234,14 +233,12 @@ async function registered(ctx: TestContext, accountId: string): Promise<void> {
  */
 async function seededPerson(ctx: TestContext, api: Api, moderator: Staff) {
   const person = await signedInAccount(ctx.client);
-  const pondSlug = `p306-${randomBytes(4).toString("hex")}`;
-  const pondId = await pondNamed(ctx.client, pondSlug);
   await registered(ctx, person.accountId);
   // October: the month of the clock, which counts as had (36, not 35).
   await ctx.client.query(
-    `UPDATE account SET birth_year = 1990, birth_month = 10, gender = 'woman', pond_id = $2, email = $3
+    `UPDATE account SET birth_year = 1990, birth_month = 10, gender = 'woman', email = $2
      WHERE id = $1`,
-    [person.accountId, pondId, EMAIL],
+    [person.accountId, EMAIL],
   );
   const { hetu_hmac: hetuHmac } = await one<{ hetu_hmac: string }>(
     ctx,

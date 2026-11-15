@@ -1,13 +1,13 @@
 import { z } from "zod";
-import { PondSummary } from "./onboarding.ts";
 
 /**
- * The pond counter (#54, #581, ADR-013): per pond, how many of the people who
- * count there have completed their profiles. Nothing here says that any other
- * profile exists. Public, so it is coarse on purpose, in two ways:
+ * The pond counter (#54, #581, ADR-013): how many of the people who count have
+ * completed their profiles. There is one pond, the country, so there is one
+ * number (ADR-061 §8, #607). Nothing here says that any other profile exists.
+ * Public, so it is coarse on purpose, in two ways:
  * - the number is published only where at least k people stand behind it
  *   (`publishCounts`);
- * - the published number of a pond moves only once at least k people have
+ * - the published number moves only once at least k people have
  *   come or gone since it was last said (`moveFigures`), so one person
  *   coming or going changes nothing that is said. What this does not stop is
  *   in ADR-013, "What stays possible".
@@ -84,29 +84,20 @@ export const PondSeeks = z
   .meta({ id: "PondSeeks" });
 export type PondSeeks = z.infer<typeof PondSeeks>;
 
-export const PondCounterPond = z
-  .object({
-    pond: PondSummary,
-    /** The Finnish calendar day the pond's number last moved; null when none is published. */
-    day: z.iso.date().nullable(),
-    /** The finished profiles. Null below k: the pond is listed, its size is not said. */
-    finished: z.int().min(POND_COUNTER_K_MIN).nullable(),
-    /**
-     * Whom the pond's people seek, said to them alone: null but for the pond
-     * of the session that asks, and there until every band is at least k
-     * (ADR-013 §13, §18).
-     */
-    seeks: PondSeeks.nullable(),
-  })
-  .strict()
-  .meta({ id: "PondCounterPond" });
-export type PondCounterPond = z.infer<typeof PondCounterPond>;
-
 export const PondCounterResponse = z
   .object({
     /** The threshold in force, so a reader knows what a missing number means. */
     k: z.int().min(POND_COUNTER_K_MIN),
-    ponds: z.array(PondCounterPond).max(500),
+    /** The Finnish calendar day the number last moved; null when none is published. */
+    day: z.iso.date().nullable(),
+    /** The finished profiles. Null below k: how many there are is not said. */
+    finished: z.int().min(POND_COUNTER_K_MIN).nullable(),
+    /**
+     * Whom people seek, said to them alone: null without a session and to
+     * somebody who has told no home, and until every band is at least k
+     * (ADR-013 §13, §18).
+     */
+    seeks: PondSeeks.nullable(),
   })
   .strict()
   .meta({ id: "PondCounterResponse" });

@@ -12,12 +12,12 @@ import { MatchingSwitch } from "./MatchingSwitch.tsx";
 // and its press through a confirm step, tried the wrong way beside a control
 // that does the same thing rightly.
 
-const SUOMI = "3c9d0f5e-1a2b-4c3d-8e9f-0a1b2c3d4e5f";
-const PONDS = "/admin/ponds";
-const PRESS = `/admin/ponds/${SUOMI}/matching`;
+// One path, read and pressed (#607).
+const PONDS = "/admin/matching";
+const PRESS = "/admin/matching";
 
-const pond = (matchingOpen: boolean) => ({ id: SUOMI, slug: "suomi", name: "Suomi", matchingOpen });
-const closedPond = () => json({ items: [pond(false)] });
+const pond = (open: boolean) => ({ open });
+const closedPond = () => json(pond(false));
 const failure = (code: string, status: number) =>
   json({ error: { code, message: "x", requestId: "r" } }, status);
 

@@ -8,8 +8,8 @@ import { type Queryable, transaction } from "../pool.ts";
  * One thing in it no route does, written as rows, as the conversations are:
  * a like on the day before (a decision is taken on the day it is of, and the
  * day has ended). The day itself is opened by the queue's builder (#502) in the
- * API's demo commands, in a pond they have opened (`openPonds`), as the day's
- * first read would.
+ * API's demo commands, once they have opened matching (`openMatching`), as the
+ * day's first read would.
  */
 export type PersonaRound = {
   /** Whose round the day has, by persona key. */
@@ -48,18 +48,6 @@ function dayBefore(day: string): string {
   const at = new Date(`${day}T12:00:00Z`);
   at.setUTCDate(at.getUTCDate() - 1);
   return at.toISOString().slice(0, 10);
-}
-
-/**
- * Opens every pond, for the demo commands: their people need rounds (ADR-014,
- * ADR-060 Open 1). Never an admin's switch: the commands refuse production. How
- * many ponds it opened.
- */
-export async function openPonds(db: Queryable): Promise<number> {
-  const { rowCount } = await db.query(
-    "UPDATE ponds SET matching_open = true WHERE NOT matching_open",
-  );
-  return rowCount ?? 0;
 }
 
 /**

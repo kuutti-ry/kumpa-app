@@ -74,13 +74,12 @@ export {
   DEMO_SEED,
   DEMO_SIZE,
   DEMO_SIZE_MAX,
+  GENDER_SHARES,
   generatePopulation,
   type HomePlaces,
   NEVER_ONBOARDED_SHARE,
-  POND_PLANS,
-  type PondPlan,
   type PopulationOptions,
-  plannedPonds,
+  plannedPeople,
   planSizes,
   type SyntheticHome,
   type SyntheticPerson,
@@ -88,7 +87,6 @@ export {
   summarise,
 } from "./population.ts";
 export {
-  openPonds,
   PERSONA_ROUNDS,
   type PersonaRound,
   type RoundsResult,

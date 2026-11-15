@@ -37,7 +37,7 @@ type Person = { accountId: string; headers: { authorization: string } };
 type App = ReturnType<typeof createApp>;
 
 async function person(ctx: TestContext): Promise<Person> {
-  const [accountId] = await people(ctx.client, null, 1, { complete: true });
+  const [accountId] = await people(ctx.client, 1, { complete: true });
   if (!accountId) throw new Error("no person");
   return { accountId, headers: (await signInAs(ctx.client, accountId)).headers };
 }

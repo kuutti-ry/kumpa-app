@@ -41,7 +41,7 @@ async function person(
   name: string,
   options: PeopleOptions = {},
 ): Promise<Person> {
-  const [accountId] = await people(ctx.client, null, 1, { complete: true, ...options });
+  const [accountId] = await people(ctx.client, 1, { complete: true, ...options });
   if (!accountId) throw new Error("no person");
   await ctx.client.query("UPDATE profile SET display_name = $2 WHERE account_id = $1", [
     accountId,

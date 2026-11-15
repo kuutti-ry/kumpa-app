@@ -111,7 +111,7 @@ attack("research copy: a second run the same night puts a day's file again", {
 async function releasedWith(withdrawn: number) {
   return rolledBack(async (db) => {
     await months(db);
-    const accounts = await people(db, null, RESEARCH_K_MIN, { state: "active" });
+    const accounts = await people(db, RESEARCH_K_MIN, { state: "active" });
     const { rows } = await db.query<{ account_id: string; research_id: string }>(
       `INSERT INTO research_subject (account_id, consent_version, enrolled_at)
        SELECT id, 'research-attack', '2019-01-01T00:00:00Z' FROM unnest($1::uuid[]) AS id

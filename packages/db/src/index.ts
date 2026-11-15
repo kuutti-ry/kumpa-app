@@ -12,8 +12,8 @@ export {
 export * from "./schema/index.ts";
 export {
   MATCHING_CONFIG_V1,
+  openMatching,
   SEED_IDENTITIES,
-  SEED_PONDS,
   type SeedResult,
   seed,
 } from "./seed.ts";

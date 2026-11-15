@@ -19,7 +19,7 @@ const ago = (ms: number) => new Date(NIGHT.getTime() - ms);
 /** One session of a new person, ended at `revokedAt` (or live), refresh good for sixty days more; whether the night removed it. */
 async function sessionSwept(revokedAt: Date | null, state: "active" | "deleted" = "active") {
   return rolledBack(async (db) => {
-    const [accountId] = await people(db, null, 1, { state: "active" });
+    const [accountId] = await people(db, 1, { state: "active" });
     if (!accountId) throw new Error("person not written");
     const { rows } = await db.query<{ id: string }>(
       `INSERT INTO session (account_id, platform, access_hash, access_expires_at, refresh_hash,

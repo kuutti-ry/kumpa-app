@@ -16,15 +16,12 @@ import { track } from "./track.ts";
 // consent, a coarse snapshot with it, refusals before any write, and a failure
 // that never reaches the caller.
 
-/** Gender, a pond and a profile document with a closed-list value, a text value and a retired option. */
+/** Gender, a home and a profile document with a closed-list value, a text value and a retired option. */
 async function onboarded(ctx: TestContext, accountId: string) {
-  const pond = await ctx.client.query<{ id: string }>(
-    "INSERT INTO ponds (slug, name_nominative) VALUES ('test-research-pond', 'Pond') RETURNING id",
+  await ctx.client.query(
+    "UPDATE account SET gender = 'woman', home_place = '00530' WHERE id = $1",
+    [accountId],
   );
-  await ctx.client.query("UPDATE account SET gender = 'woman', pond_id = $2 WHERE id = $1", [
-    accountId,
-    pond.rows[0]?.id,
-  ]);
   await ctx.client.query(
     `INSERT INTO profile (account_id, display_name, bio, fields, prompts)
      VALUES ($1, 'Aino', null, $2::jsonb, '[]'::jsonb)`,
@@ -106,7 +103,8 @@ describe("track", () => {
     const row = rows[0];
     expect(row).toMatchObject({
       consent_version: CURRENT_CONSENT_VERSIONS.research,
-      pond: "test-research-pond",
+      // The one pond's name, said of everybody with a home and of nobody else (ADR-061 §8, #607).
+      pond: "suomi",
       age_band: "35-39",
       snapshot: { gender: "woman", fields: { intent: "long_term" } },
       props: { complete: true, approvedPhotos: 3 },
@@ -123,7 +121,7 @@ describe("track", () => {
     await joinStudy(ctx.app, a.headers);
     const rows = await eventsOf(ctx, a.accountId, "research_opt_in");
     expect(rows).toHaveLength(1);
-    expect(rows[0]?.pond).toBeNull(); // consent before the pond: null, not a made-up value
+    expect(rows[0]?.pond).toBeNull(); // consent before the home: null, not a made-up value
     const props = rows[0]?.props as
       | { accountActive: boolean; sinceRegistrationD: number }
       | undefined;

@@ -42,7 +42,7 @@ const REGISTER: Record<string, Entry> = {
     by: "tombstoneAccount",
     stays: "id identity_id state state_changed_at registered_at deleted_at",
     cleared:
-      "birth_month birth_year email email_confirmed_at found_them_answered gender gender_changed_at home_place home_shows_area paused_from pond_id sanctioned_from",
+      "birth_month birth_year email email_confirmed_at found_them_answered gender gender_changed_at home_place home_shows_area paused_from sanctioned_from",
     exported: ["account"],
   },
   account_export: { erasure: "goes", by: "deleteExportsOfAccount", exported: ["exports"] },
@@ -176,7 +176,6 @@ const REGISTER: Record<string, Entry> = {
       "appealed_at checked_at decided_at decided_by decision description faces flagged labels model_version photo_id reason",
     exported: ["photos"],
   },
-  ponds: { erasure: "nobody", why: "The one pond, the country, and its switch." },
   preferences: {
     erasure: "goes",
     by: "deletePreferencesOfAccount",
@@ -212,7 +211,10 @@ const REGISTER: Record<string, Entry> = {
   },
   session: { erasure: "goes", by: "deleteAccountSessions", exported: ["sessions"] },
   star: { erasure: "goes", by: "eraseStarsOf", exported: ["stars"] },
-  pond_counter: { erasure: "nobody", why: "A pond's counts, one row each, no history (ADR-013)." },
+  pond_counter: {
+    erasure: "nobody",
+    why: "The counts of everybody, one row, no history (ADR-013).",
+  },
 };
 
 /** The calls of eraseAccount that erase nothing themselves. */

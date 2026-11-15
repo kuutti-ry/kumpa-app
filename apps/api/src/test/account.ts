@@ -126,6 +126,24 @@ export async function withMatchingConfig(
   }
 }
 
+/**
+ * Opens matching for a test, inside its transaction (ADR-060 §1, #607). The
+ * switch is one key, and its next version is the same number in every test:
+ * (key, version) is unique, so a test in another worker would wait at that
+ * insert until this test's transaction is rolled back, and time out behind a
+ * long one. The version here is taken past the connection's own number, which
+ * no other open connection has, so a test that opens matching waits for nobody
+ * (harness.test.ts). The seed's `openMatching` and the panel's `turnMatching`
+ * write the next version, and have their own tests.
+ */
+export async function openMatchingHere(db: Queryable): Promise<void> {
+  await db.query(
+    `INSERT INTO matching_config (version, key, value, created_by)
+     SELECT greatest(max(version), pg_backend_pid() * 100) + 1, 'matching_open', 'true'::jsonb, 'test'
+       FROM matching_config WHERE key = 'matching_open'`,
+  );
+}
+
 export type Staff = {
   identityId: string;
   sessionId: string;

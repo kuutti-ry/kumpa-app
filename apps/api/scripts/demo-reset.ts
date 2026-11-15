@@ -2,7 +2,7 @@
  * Returns the twenty-five personas to where they begin (#73, ADR-014 §12; on
  * staging #141, ADR-018): everybody erased through the erasure path and
  * forgotten, then the nineteen with a history given it anew, with their
- * conversations (#348) and, once the ponds are open, Iida's round for the day
+ * conversations (#348) and, once matching is open, Iida's round for the day
  * (#379).
  *
  *   pnpm demo:reset                  reset, then the histories
@@ -31,13 +31,12 @@
  * the environment's own.
  */
 import { networkInterfaces } from "node:os";
-import { createPool } from "@kuutti/db";
+import { createPool, openMatching } from "@kuutti/db";
 import {
   assertDemoTarget,
   assertStagingProcess,
   DemoCommandError,
   describeTarget,
-  openPonds,
   PERSONA_HISTORIES,
   renewPopulationConsents,
 } from "@kuutti/db/demo";
@@ -102,8 +101,8 @@ if (envArg !== undefined && process.env.APP_ENV !== undefined && envArg !== proc
 
 /**
  * The population's consents to the wordings in force, the counter after the
- * people changed, the ponds opened, then the round of the stories, which needs
- * its pond open (#379): the same steps locally and on staging.
+ * people changed, matching opened, then the round of the stories, which needs
+ * the switch on (#379): the same steps locally and on staging.
  */
 async function recount(
   pool: ReturnType<typeof createPool>,
@@ -117,14 +116,15 @@ async function recount(
   // again (#560).
   const renewed = await renewPopulationConsents(pool, CURRENT_CONSENT_VERSIONS, now());
   console.log(JSON.stringify({ msg: "demo reset: consents renewed", ...renewed }));
-  // The ponds have other people in them now: the counter of #54 is counted
+  // There are other people now: the counter of #54 is counted
   // anew, as after a write of the population (demo-population.ts says why).
   await pool.query("DELETE FROM pond_counter");
   const counted = await takeSnapshot({ db: pool, logger, now });
   console.log(JSON.stringify({ msg: "demo reset: counter recounted", ...counted }));
-  // And the ponds open, so that the personas have rounds (ADR-060 Open 1).
-  const opened = await openPonds(pool);
-  console.log(JSON.stringify({ msg: "demo reset: ponds opened", opened }));
+  // And matching open, so that the personas have rounds (ADR-060 Open 1): the
+  // switch's next version by this command's name, where it stands closed.
+  const opened = await openMatching(pool, "demo-reset");
+  console.log(JSON.stringify({ msg: "demo reset: matching opened", opened }));
   if (results.length === 0) return;
   const rounds = await giveRounds({ db: pool, logger, now }, results);
   console.log(JSON.stringify({ msg: "demo reset: rounds", ...rounds }));

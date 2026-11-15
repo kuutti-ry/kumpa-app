@@ -48,7 +48,6 @@ const accountFrom = (r: Row): Account => ({
   birthYear: (r.birth_year as number | null) ?? null,
   birthMonth: (r.birth_month as number | null) ?? null,
   gender: (r.gender as Account["gender"]) ?? null,
-  pondId: (r.pond_id as string | null) ?? null,
   homePlace: (r.home_place as string | null) ?? null,
   homeShowsArea: r.home_shows_area === true,
   genderChangedAt: (r.gender_changed_at as Date | null) ?? null,
@@ -922,7 +921,7 @@ export async function tombstoneAccount(
 ): Promise<boolean> {
   const result = await db.query(
     `UPDATE account SET state = 'deleted', state_changed_at = $2, deleted_at = $2,
-       birth_year = NULL, birth_month = NULL, gender = NULL, pond_id = NULL,
+       birth_year = NULL, birth_month = NULL, gender = NULL,
        home_place = NULL, home_shows_area = false, gender_changed_at = NULL, email = NULL, email_confirmed_at = NULL,
        paused_from = NULL, sanctioned_from = NULL, found_them_answered = false
      WHERE id = $1 AND state <> 'deleted'`,

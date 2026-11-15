@@ -653,6 +653,8 @@ describe("GET /admin/audit", () => {
     ["a report", { subjectType: "report", subjectId: ACCOUNT_2 }, "report"],
     ["an id of no named type", { subjectId: ACCOUNT_2 }, "any"],
     ["an id of a type no row names", { subjectType: "identity", subjectId: ACCOUNT_2 }, "any"],
+    // The switch's rows before #607 name a pond; a new one names its version among the settings.
+    ["a pond, the type no new row names", { subjectType: "pond", subjectId: ACCOUNT_2 }, "any"],
   ] as const)(
     "a read narrowed to %s writes audit.read about it before it reads, and shows it",
     async ([, query, recorded], { ctx }) => {

@@ -314,7 +314,7 @@ describe("boot", () => {
     expect((await pool.query("SELECT 1 AS one")).rows).toEqual([{ one: 1 }]);
   });
 
-  it("counts the ponds of a database with no figures yet, last, and does not count it again", async () => {
+  it("counts the people of a database with no figures yet, last, and does not count it again", async () => {
     const admin = createPool({ connectionString: databaseUrl, max: 1 });
     try {
       await admin.query("DELETE FROM pond_counter");
@@ -323,7 +323,7 @@ describe("boot", () => {
       expect(line(first.lines, "pond counter")).toMatchObject({ counted: true });
       expect(messages.indexOf("pond counter")).toBeGreaterThan(messages.indexOf("media"));
       const { rows } = await admin.query<{ n: string }>("SELECT count(*) AS n FROM pond_counter");
-      expect(Number(rows[0]?.n)).toBeGreaterThan(0);
+      expect(Number(rows[0]?.n)).toBe(1);
 
       const second = await booted();
       expect(second.lines().filter((l) => /^pond counter/.test(l.msg ?? ""))).toEqual([]);
@@ -755,12 +755,15 @@ describe("boot: a pull-request preview (#9)", () => {
     // Nor a research copy, which would write into staging's bucket (ADR-029 §12).
     expect(first.jobs.map((j) => j.name)).not.toContain("research-export");
     expect(line(first.lines, "migrations")).toMatchObject({ state: "applied" });
-    const { rows } = await first.pool.query<{ db: string; ponds: string; config: string }>(
-      `SELECT current_database() AS db, (SELECT count(*) FROM ponds) AS ponds,
+    const { rows } = await first.pool.query<{ db: string; open: boolean; config: string }>(
+      `SELECT current_database() AS db,
+              (SELECT value = 'true'::jsonb FROM matching_config
+                WHERE key = 'matching_open' ORDER BY version DESC LIMIT 1) AS open,
               (SELECT count(*) FROM matching_config) AS config`,
     );
     expect(rows[0]?.db).toBe(database);
-    expect(Number(rows[0]?.ponds)).toBeGreaterThan(0);
+    // The seed ran: it is what opens matching in a preview (ADR-060 §10).
+    expect(rows[0]?.open).toBe(true);
     expect(Number(rows[0]?.config)).toBeGreaterThan(0);
     // A preview has no bank: the login sends the app back with a reason, not a 503.
     const res = await startLogin(first.app);

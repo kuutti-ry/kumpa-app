@@ -741,7 +741,6 @@ export function castPeople(keep: (postalCode: string) => string | null): Synthet
       birthYear: person.born.year,
       birthMonth: person.born.month,
       registeredAt,
-      pond: "suomi",
       home: {
         place,
         showsArea: person.showsArea === true && place.length === POSTAL_CODE_LENGTH,

@@ -23,7 +23,7 @@ const ago = (ms: number) => new Date(NIGHT.getTime() - ms);
 const LONG_AGO = ago(400 * DAY);
 
 async function two(db: Queryable): Promise<[string, string]> {
-  const [a, b] = await people(db, null, 2, { state: "active" });
+  const [a, b] = await people(db, 2, { state: "active" });
   if (!a || !b) throw new Error("people not written");
   return [a, b];
 }
