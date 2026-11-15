@@ -4,7 +4,7 @@ import { migrate } from "../migrate.ts";
 import { createPool, type Queryable } from "../pool.ts";
 import { withTemporaryDatabase } from "../test/temporary-database.ts";
 import { PERSONA_HISTORIES } from "./histories.ts";
-import { openPonds, PERSONA_ROUNDS, writeRounds, writeWaitingLikes } from "./rounds.ts";
+import { PERSONA_ROUNDS, writeRounds, writeWaitingLikes } from "./rounds.ts";
 
 // The round of the stories (#379): Henna's like of Iida on the day before, and
 // the ponds the demo commands open. Whether the cast pass each other's filters is the
@@ -30,36 +30,16 @@ describe("the round of the stories", () => {
   });
 });
 
-describe("the demo commands' ponds", () => {
-  it("opens every pond, and says how many it opened (#500, ADR-060)", async () => {
-    await withTemporaryDatabase(async (url) => {
-      const pool = createPool({ connectionString: url, max: 2 });
-      try {
-        await migrate(pool, MIGRATIONS);
-        await pool.query(
-          "INSERT INTO ponds (slug, name_nominative) VALUES ('paakaupunkiseutu', 'Pääkaupunkiseutu')",
-        );
-        expect(await openPonds(pool)).toBe(2);
-        const ponds = await pool.query("SELECT DISTINCT matching_open FROM ponds");
-        expect(ponds.rows).toEqual([{ matching_open: true }]);
-        expect(await openPonds(pool)).toBe(0);
-      } finally {
-        await pool.end();
-      }
-    });
-  });
-});
-
 describe("writing the round of the stories", () => {
-  const account = async (db: Queryable, hash: string, pondId: string) => {
+  const account = async (db: Queryable, hash: string) => {
     const identity = await db.query<{ id: string }>(
       "INSERT INTO identity (hetu_hmac, broker_subject) VALUES ($1, $1) RETURNING id",
       [hash],
     );
     const { rows } = await db.query<{ id: string }>(
-      `INSERT INTO account (identity_id, state, birth_year, birth_month, pond_id)
-       VALUES ($1, 'active', 1990, 1, $2) RETURNING id`,
-      [identity.rows[0]?.id, pondId],
+      `INSERT INTO account (identity_id, state, birth_year, birth_month)
+       VALUES ($1, 'active', 1990, 1) RETURNING id`,
+      [identity.rows[0]?.id],
     );
     return rows[0]?.id as string;
   };
@@ -69,10 +49,8 @@ describe("writing the round of the stories", () => {
       const pool = createPool({ connectionString: url, max: 2 });
       try {
         await migrate(pool, MIGRATIONS);
-        const pond = await pool.query<{ id: string }>("SELECT id FROM ponds WHERE slug = 'suomi'");
-        const pondId = pond.rows[0]?.id as string;
-        const iida = await account(pool, "hash-iida", pondId);
-        const henna = await account(pool, "hash-henna", pondId);
+        const iida = await account(pool, "hash-iida");
+        const henna = await account(pool, "hash-henna");
         const accounts = new Map([
           ["iida", iida],
           ["henna", henna],
@@ -134,12 +112,10 @@ describe("writing the round of the stories", () => {
       const pool = createPool({ connectionString: url, max: 2 });
       try {
         await migrate(pool, MIGRATIONS);
-        const pond = await pool.query<{ id: string }>("SELECT id FROM ponds WHERE slug = 'suomi'");
-        const pondId = pond.rows[0]?.id as string;
-        const sanna = await account(pool, "hash-sanna", pondId);
-        const noa = await account(pool, "hash-noa", pondId);
-        const jere = await account(pool, "hash-jere", pondId);
-        const risto = await account(pool, "hash-risto", pondId);
+        const sanna = await account(pool, "hash-sanna");
+        const noa = await account(pool, "hash-noa");
+        const jere = await account(pool, "hash-jere");
+        const risto = await account(pool, "hash-risto");
         const accounts = new Map([
           ["sanna", sanna],
           ["noa", noa],
@@ -215,10 +191,8 @@ describe("writing the round of the stories", () => {
       const pool = createPool({ connectionString: url, max: 2 });
       try {
         await migrate(pool, MIGRATIONS);
-        const pond = await pool.query<{ id: string }>("SELECT id FROM ponds WHERE slug = 'suomi'");
-        const pondId = pond.rows[0]?.id as string;
-        const iida = await account(pool, "hash-iida", pondId);
-        const henna = await account(pool, "hash-henna", pondId);
+        const iida = await account(pool, "hash-iida");
+        const henna = await account(pool, "hash-henna");
         const result = await writeRounds(
           pool,
           new Map([

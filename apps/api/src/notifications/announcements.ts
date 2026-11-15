@@ -164,7 +164,7 @@ export async function approveAnnouncement(
 }
 
 /** The least time between two emails of one announcement: ten a second at most (ADR-068 §5). */
-export const MAIL_SPACING_MS = 100;
+const MAIL_SPACING_MS = 100;
 
 /**
  * The email of an announcement (ADR-068 §5): to everybody its notice reached

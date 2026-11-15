@@ -4,11 +4,6 @@ import { fetchGate, fetchPondCounter } from "./client";
 // The pond as the app reads it (#54, #94): each route parsed by its
 // contract, and an answer without data an ApiError with the status.
 
-const POND = {
-  id: "0b1c1c4e-9a8e-4a0b-9c3a-0c8d1e2f3a01",
-  slug: "suomi",
-  name: "Suomi",
-};
 const token = (seed: string) => (seed + "x".repeat(43)).slice(0, 43);
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
@@ -39,10 +34,9 @@ beforeEach(async () => {
 });
 
 describe("the pond client", () => {
-  it("reads the counter with the session, which is what gives the person's pond its bar", async () => {
+  it("reads the counter with the session, which is what gives the person its bar", async () => {
     const seeks = { men: 30, everyone: 20, women: 50 };
-    const entry = { pond: POND, day: null, finished: null, seeks };
-    const counter = { k: 10, ponds: [entry] };
+    const counter = { k: 10, day: null, finished: null, seeks };
     const seen = answering(json(counter), refusal(503));
     expect(await fetchPondCounter()).toEqual(counter);
     expect(pathOf(seen[0])).toBe("/ponds/counter");
@@ -66,29 +60,42 @@ describe("the pond client", () => {
 
   it("refuses shares that break the contract", async () => {
     const seeks = { men: 0, everyone: 20, women: 80 };
-    const entry = { pond: POND, day: null, finished: null, seeks };
-    answering(json({ k: 10, ponds: [entry] }));
+    answering(json({ k: 10, day: null, finished: null, seeks }));
     await expect(fetchPondCounter()).rejects.toThrow();
   });
 
   it("refuses a number under the floor", async () => {
-    const entry = { pond: POND, day: "2026-10-05", finished: 9, seeks: null };
-    answering(json({ k: 10, ponds: [entry] }));
+    answering(json({ k: 10, day: "2026-10-05", finished: 9, seeks: null }));
     await expect(fetchPondCounter()).rejects.toThrow();
   });
 
   // A bundle older than the API meets this answer until it takes the update (#581, the update
   // follows the API): outdated, which the card answers with the update, never a number made up.
-  it("refuses an answer of the shape before the one number", async () => {
-    const entry = {
-      pond: POND,
-      day: "2026-10-05",
-      verified: 42,
-      split: null,
-      finishing: 17,
-      seeks: null,
-    };
-    answering(json({ k: 10, ponds: [entry] }));
+  it.each([
+    [
+      "before the one number",
+      { k: 10, day: "2026-10-05", verified: 42, split: null, finishing: 17, seeks: null },
+    ],
+    [
+      "that listed ponds (#607)",
+      {
+        k: 10,
+        ponds: [
+          {
+            pond: { id: "0b1c1c4e-9a8e-4a0b-9c3a-0c8d1e2f3a01", slug: "suomi", name: "Suomi" },
+            day: "2026-10-05",
+            finished: 150,
+            seeks: null,
+          },
+        ],
+      },
+    ],
+    [
+      "with a pond beside the number",
+      { k: 10, day: null, finished: null, seeks: null, pond: "suomi" },
+    ],
+  ])("refuses an answer of the shape %s", async (_, body) => {
+    answering(json(body));
     // The name is what picks the way out: `failureKind` calls a ZodError outdated.
     await expect(fetchPondCounter()).rejects.toMatchObject({ name: "ZodError" });
   });

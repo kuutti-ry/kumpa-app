@@ -2,6 +2,7 @@ import { execFile } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { resolve } from "node:path";
 import { promisify } from "node:util";
+import { openMatching } from "@kuutti/db";
 import {
   assertDemoTarget,
   assertStagingProcess,
@@ -9,7 +10,6 @@ import {
   DEMO_SUBJECT_PREFIX,
   DemoCommandError,
   OLDER_TERMS_VERSION,
-  openPonds,
   PERSONA_HISTORIES,
   parseDemoCommand,
   personaHetu,
@@ -202,36 +202,34 @@ describe("the stories through the services", () => {
     const sanna = await loginWouldBe(ctx, hmacKey, "sanna");
     const { rows: accounts } = await ctx.client.query<{
       state: string;
-      slug: string | null;
       home: string | null;
       hide: boolean | null;
       terms: string | null;
     }>(
-      `SELECT a.state, p.slug, a.home_place AS home,
+      `SELECT a.state, a.home_place AS home,
               (SELECT (pr.fields->>'hideFromField')::boolean FROM profile pr WHERE pr.account_id = a.id) AS hide,
               (SELECT c.version FROM consent c WHERE c.account_id = a.id AND c.kind = 'terms' LIMIT 1) AS terms
-       FROM account a LEFT JOIN ponds p ON p.id = a.pond_id WHERE a.identity_id = $1`,
+       FROM account a WHERE a.identity_id = $1`,
       [sanna.identity?.id],
     );
     expect(accounts).toEqual([
-      { state: "active", slug: "suomi", home: "02100", hide: null, terms: expect.any(String) },
+      { state: "active", home: "02100", hide: null, terms: expect.any(String) },
     ]);
     // What the route keeps of what each typed (ADR-061 §2): an area too small
     // for it goes to its municipality, one too small to the nearest that is
     // not, and Onni left before the step.
-    const kept: [string, string | null, string | null][] = [
-      ["kerttu", "149", "suomi"],
-      ["helmi", "505", "suomi"],
-      ["onni", null, null],
+    const kept: [string, string | null][] = [
+      ["kerttu", "149"],
+      ["helmi", "505"],
+      ["onni", null],
     ];
-    for (const [key, home, slug] of kept) {
+    for (const [key, home] of kept) {
       const { identity } = await loginWouldBe(ctx, hmacKey, key);
       const { rows } = await ctx.client.query(
-        `SELECT a.home_place AS home, p.slug FROM account a LEFT JOIN ponds p ON p.id = a.pond_id
-         WHERE a.identity_id = $1`,
+        "SELECT home_place AS home FROM account WHERE identity_id = $1",
         [identity?.id],
       );
-      expect(rows, key).toEqual([{ home, slug }]);
+      expect(rows, key).toEqual([{ home }]);
     }
     const noa = await loginWouldBe(ctx, hmacKey, "noa");
     const { rows: noaRows } = await ctx.client.query<{ hide: boolean }>(
@@ -429,9 +427,9 @@ describe("the stories through the services", () => {
       missing: 1,
       standing: 0,
     });
-    // The commands' order: the ponds opened, then one call, which writes the
+    // The commands' order: matching opened, then one call, which writes the
     // like and builds the round on it.
-    await openPonds(ctx.client);
+    await openMatching(ctx.client, "test");
     expect(await giveRounds({ db: ctx.client, logger, now }, results)).toEqual({
       liked: 1,
       already: 0,

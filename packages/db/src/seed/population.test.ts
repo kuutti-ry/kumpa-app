@@ -20,7 +20,7 @@ import {
   DEMO_SIZE_MAX,
   generatePopulation,
   type HomePlaces,
-  plannedPonds,
+  plannedPeople,
   planSizes,
   type SyntheticPerson,
   summarise,
@@ -107,9 +107,7 @@ describe("the synthetic population", () => {
       expect(made).toHaveLength(size);
       expect(new Set(made.map((p) => p.label)).size).toBe(size);
       const sizes = planSizes(size);
-      expect(Object.values(sizes.ponds).reduce((s, n) => s + n, 0) + sizes.neverOnboarded).toBe(
-        size,
-      );
+      expect(sizes.onboarded + sizes.neverOnboarded).toBe(size);
     }
     expect(people[0]?.label).toBe("demo-0001");
     for (const size of [0, -1, 1.5, DEMO_SIZE_MAX + 1]) {
@@ -117,28 +115,25 @@ describe("the synthetic population", () => {
     }
   });
 
-  it("puts everybody who onboarded in the one pond, in the planned shares", () => {
-    const ponds = summarise(people);
-    // The one pond (ADR-061 §8).
-    expect(ponds.suomi).toMatchObject({
+  it("gives everybody who onboarded a gender, in the planned shares", () => {
+    expect(summarise(people)).toEqual({
       people: 276,
       woman: 88,
       man: 171,
       non_binary: 17,
     });
-    expect(Object.keys(ponds)).toEqual(["suomi"]);
-    expect(people.filter((p) => p.pond === null)).toHaveLength(24);
+    expect(people.filter((p) => p.gender === null)).toHaveLength(24);
   });
 
   it("draws the people it plans, at any size", () => {
     for (const size of [1, 26, 100, 300, 1234]) {
-      expect(summarise(generatePopulation({ size })), String(size)).toEqual(plannedPonds(size));
+      expect(summarise(generatePopulation({ size })), String(size)).toEqual(plannedPeople(size));
     }
   });
 
   it("passes the contracts a person's own answers pass", () => {
     for (const person of people) {
-      if (person.pond === null) {
+      if (person.gender === null) {
         expect(person).toMatchObject({
           state: "registered",
           home: null,
@@ -253,7 +248,7 @@ describe("the synthetic population", () => {
     expect(profiles.some((p) => p.bio === null && p.bioPreset === null)).toBe(true);
     expect(profiles.some((p) => p.prompts.length === 0)).toBe(true);
     expect(profiles.some((p) => p.prompts.length === 3)).toBe(true);
-    expect(people.some((p) => p.pond !== null && p.profile === null)).toBe(true);
+    expect(people.some((p) => p.gender !== null && p.profile === null)).toBe(true);
     expect(profiles.some((p) => /[åäöÅÄÖ]/.test(p.displayName))).toBe(true);
     // The fields of ADR-019, each answered by some and left by others.
     expect(profiles.every((p) => p.fields.intent !== undefined)).toBe(true);
@@ -338,12 +333,12 @@ describe("the homes of the population", () => {
     }
   });
 
-  it("go to everybody with a pond and nobody else, and to nobody without the places", () => {
+  it("go to everybody who onboarded and nobody else, and to nobody without the places", () => {
     // Whatever the seed, as the dates above.
     for (let seed = 0; seed < 20; seed += 1) {
       for (const person of generatePopulation({ seed, size: 120, homes: HOMES })) {
         const who = `seed ${seed}, ${person.label}`;
-        expect(person.home === null, who).toBe(person.pond === null);
+        expect(person.home === null, who).toBe(person.gender === null);
         if (person.home) expect(Object.keys(HOMES), who).toContain(person.home.place);
       }
     }
@@ -405,7 +400,7 @@ describe("writing the population", () => {
           removed: 0,
           spared: 0,
           written: 300,
-          ponds: { suomi: 276 },
+          onboarded: 276,
         });
         expect(await marked()).toBe(300);
         // The key as it was drawn, directly: nobody here types a code (ADR-061 §2).
@@ -461,15 +456,15 @@ describe("writing the population", () => {
             [`${DEMO_SUBJECT_PREFIX}%`],
           ),
         ).toBe(0);
-        // The population's own people in the pond; the seed's account lives there too (ADR-010 §11) and is nobody else's to count.
-        const inThePond = await pool.query<{ gender: string; n: string }>(
+        // The population's own people with a home; the seed's account has one too (ADR-010 §11) and is nobody else's to count.
+        const withAHome = await pool.query<{ gender: string; n: string }>(
           `SELECT a.gender, count(*) AS n FROM account a
-           JOIN ponds p ON p.id = a.pond_id JOIN identity i ON i.id = a.identity_id
-           WHERE p.slug = 'suomi' AND i.broker_subject LIKE $1
+           JOIN identity i ON i.id = a.identity_id
+           WHERE a.home_place IS NOT NULL AND i.broker_subject LIKE $1
            GROUP BY a.gender ORDER BY a.gender`,
           [`${DEMO_SUBJECT_PREFIX}%`],
         );
-        expect(inThePond.rows).toEqual([
+        expect(withAHome.rows).toEqual([
           { gender: "woman", n: "88" },
           { gender: "man", n: "171" },
           { gender: "non_binary", n: "17" },
@@ -663,7 +658,7 @@ describe("writing the population", () => {
         await sanction(erased, "suspend", { endsAt: new Date("2026-11-01T22:00:00Z") });
         await pool.query(
           `UPDATE account SET state = 'deleted', state_changed_at = $2, deleted_at = $2,
-             birth_year = NULL, birth_month = NULL, gender = NULL, pond_id = NULL,
+             birth_year = NULL, birth_month = NULL, gender = NULL,
              home_place = NULL, home_shows_area = false
            WHERE id = $1`,
           [erased.id, at],
@@ -856,7 +851,7 @@ describe("writing the population", () => {
     });
   });
 
-  it("refuses anybody who is not synthetic, anybody with a pond and no home, and a pond the database has not", async () => {
+  it("refuses anybody who is not synthetic and anybody who onboarded and has no home, and writes nothing", async () => {
     await withTemporaryDatabase(async (url) => {
       const pool = createPool({ connectionString: url, max: 2 });
       try {
@@ -870,10 +865,7 @@ describe("writing the population", () => {
         await expect(writePopulation(pool, [{ ...person, home: null }], VERSIONS)).rejects.toThrow(
           "demo-0001 has no home: generatePopulation needs the places",
         );
-        // The migrations' pond is there, with or without a seed; another is not: nothing is written, not even the identity.
-        await expect(
-          writePopulation(pool, [{ ...person, pond: "nowhere" }], VERSIONS),
-        ).rejects.toThrow("no pond nowhere in this database");
+        // Nothing is written, not even the identity.
         const { rows } = await pool.query("SELECT 1 FROM identity");
         expect(rows).toHaveLength(0);
       } finally {

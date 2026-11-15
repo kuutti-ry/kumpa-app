@@ -132,7 +132,7 @@ describe("the caller's invitations", () => {
       [a.accountId],
     );
     // A redeemed one that has not counted is not said anywhere: it left the open list, that is all.
-    const [friend] = await people(ctx.client, null, 1);
+    const [friend] = await people(ctx.client, 1);
     await invitationOf(ctx.client, a.accountId, { redeemedBy: friend });
     expect(await listOf(app, a)).toMatchObject({
       open: [],
@@ -618,7 +618,7 @@ describe("the night's count, held to the people it locked", () => {
 describe("races on committed rows", () => {
   /** An inviter whose profile is complete and two people who gave the consents, committed. */
   async function cast(db: Queryable) {
-    const [a, n, m] = await people(db, null, 3);
+    const [a, n, m] = await people(db, 3);
     if (!a || !n || !m) throw new Error("cast not written");
     await completed(db, a);
     await consented(db, n);

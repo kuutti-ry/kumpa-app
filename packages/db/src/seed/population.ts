@@ -52,28 +52,13 @@ export const DEMO_LABEL_PREFIX = "demo-";
 
 type GenderShares = Readonly<Record<Gender, number>>;
 
-export type PondPlan = {
-  slug: string;
-  /** The pond's share of the people who onboarded. */
-  people: { share: number };
-  genders: GenderShares;
-  why: string;
-};
-
 /**
- * Who lives where, and why: the data dictionary of docs/demo/population.md in
- * code. One pond, the whole country (ADR-061 §8).
+ * Who onboarded, by gender: the data dictionary of docs/demo/population.md in
+ * code. Where each of them lives is their home (ADR-061).
  */
-export const POND_PLANS: readonly PondPlan[] = [
-  {
-    slug: "suomi",
-    people: { share: 1 },
-    genders: { woman: 0.32, man: 0.62, non_binary: 0.06 },
-    why: "the whole country, so everybody who onboarded is here",
-  },
-];
+export const GENDER_SHARES: GenderShares = { woman: 0.32, man: 0.62, non_binary: 0.06 };
 
-/** Registered at the bank and gone before the first onboarding step: no gender, no pond, no home. */
+/** Registered at the bank and gone before the first onboarding step: no gender, no home. */
 export const NEVER_ONBOARDED_SHARE = 0.08;
 
 /** How old people are, in years at the epoch: a young pond with a long tail. */
@@ -140,10 +125,9 @@ export type SyntheticPerson = {
   birthYear: number;
   birthMonth: number;
   registeredAt: Date;
-  /** Null for somebody who never onboarded. */
-  pond: string | null;
-  /** Null with the pond, and for everybody where no list was handed in (`HomePlaces`). */
+  /** Null for somebody who never onboarded, and for everybody where no list was handed in (`HomePlaces`). */
   home: SyntheticHome | null;
+  /** Null for somebody who never onboarded. */
   gender: Gender | null;
   preferences: { seeks: Gender[]; ageWindow: { min: number; max: number } } | null;
   consents: SyntheticConsent[];
@@ -185,14 +169,13 @@ export function apportion<K extends string>(total: number, shares: Readonly<Reco
   return Object.fromEntries(keys.map((k, i) => [k, counts[i] ?? 0])) as Record<K, number>;
 }
 
-/** How many people each pond gets, and how many never onboarded. */
-export function planSizes(size: number): { ponds: Record<string, number>; neverOnboarded: number } {
+/** How many people onboarded, and how many never did. */
+export function planSizes(size: number): { onboarded: number; neverOnboarded: number } {
   if (!Number.isInteger(size) || size < 1 || size > DEMO_SIZE_MAX) {
     throw new Error(`a population is 1 to ${DEMO_SIZE_MAX} people, not ${size}`);
   }
   const neverOnboarded = Math.round(size * NEVER_ONBOARDED_SHARE);
-  const shares = Object.fromEntries(POND_PLANS.map((plan) => [plan.slug, plan.people.share]));
-  return { ponds: apportion(size - neverOnboarded, shares), neverOnboarded };
+  return { onboarded: size - neverOnboarded, neverOnboarded };
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -315,13 +298,7 @@ function drawProfile(
   };
 }
 
-function onboarded(
-  random: Random,
-  label: string,
-  pond: string,
-  gender: Gender,
-  epoch: Date,
-): SyntheticPerson {
+function onboarded(random: Random, label: string, gender: Gender, epoch: Date): SyntheticPerson {
   const age = drawAge(random);
   const born = bornFor(age, random, epoch);
   const registeredAt = new Date(
@@ -350,7 +327,6 @@ function onboarded(
     birthYear: born.year,
     birthMonth: born.month,
     registeredAt,
-    pond,
     home: null,
     gender,
     preferences: { seeks, ageWindow },
@@ -414,7 +390,7 @@ const SHOWS_AREA_SHARE = 0.2;
 function giveHomes(people: readonly SyntheticPerson[], homes: HomePlaces, seed: number): void {
   const random = createRandom((seed ^ 0x85ebca6b) >>> 0);
   for (const person of people) {
-    if (person.pond === null) continue;
+    if (person.gender === null) continue;
     const place = random.weighted(homes);
     const area = place.length === POSTAL_CODE_LENGTH;
     person.home = { place, showsArea: area && random.chance(SHOWS_AREA_SHARE) };
@@ -487,12 +463,10 @@ export function generatePopulation(options: PopulationOptions = {}): SyntheticPe
   const people: SyntheticPerson[] = [];
   const label = () => `${DEMO_LABEL_PREFIX}${String(people.length + 1).padStart(width, "0")}`;
 
-  for (const plan of POND_PLANS) {
-    const counts = apportion(sizes.ponds[plan.slug] ?? 0, plan.genders);
-    for (const gender of GENDERS) {
-      for (let i = 0; i < counts[gender]; i += 1) {
-        people.push(onboarded(random, label(), plan.slug, gender, epoch));
-      }
+  const counts = apportion(sizes.onboarded, GENDER_SHARES);
+  for (const gender of GENDERS) {
+    for (let i = 0; i < counts[gender]; i += 1) {
+      people.push(onboarded(random, label(), gender, epoch));
     }
   }
   for (let i = 0; i < sizes.neverOnboarded; i += 1) {
@@ -508,7 +482,6 @@ export function generatePopulation(options: PopulationOptions = {}): SyntheticPe
           random.int(0, 20) * DAY_MS -
           random.int(0, 1439) * 60_000,
       ),
-      pond: null,
       home: null,
       gender: null,
       preferences: null,
@@ -522,34 +495,22 @@ export function generatePopulation(options: PopulationOptions = {}): SyntheticPe
   return people;
 }
 
-export type PondSummary = Record<Gender, number> & { people: number };
+/** The people who onboarded, by gender and in all. */
+export type OnboardedSummary = Record<Gender, number> & { people: number };
 
 /** The same counts as `summarise(generatePopulation({ size }))`, without drawing anybody. */
-export function plannedPonds(size: number): Record<string, PondSummary> {
-  const sizes = planSizes(size);
-  const ponds: Record<string, PondSummary> = {};
-  for (const plan of POND_PLANS) {
-    const people = sizes.ponds[plan.slug] ?? 0;
-    if (people === 0) continue;
-    ponds[plan.slug] = { ...apportion(people, plan.genders), people };
-  }
-  return ponds;
+export function plannedPeople(size: number): OnboardedSummary {
+  const people = planSizes(size).onboarded;
+  return { ...apportion(people, GENDER_SHARES), people };
 }
 
-/** People per pond and gender. */
-export function summarise(people: readonly SyntheticPerson[]): Record<string, PondSummary> {
-  const ponds: Record<string, PondSummary> = {};
+/** The people who onboarded, by gender. */
+export function summarise(people: readonly SyntheticPerson[]): OnboardedSummary {
+  const summary: OnboardedSummary = { woman: 0, man: 0, non_binary: 0, people: 0 };
   for (const person of people) {
-    if (person.pond === null || person.gender === null) continue;
-    const pond = ponds[person.pond] ?? {
-      woman: 0,
-      man: 0,
-      non_binary: 0,
-      people: 0,
-    };
-    ponds[person.pond] = pond;
-    pond[person.gender] += 1;
-    pond.people += 1;
+    if (person.gender === null) continue;
+    summary[person.gender] += 1;
+    summary.people += 1;
   }
-  return ponds;
+  return summary;
 }

@@ -27,7 +27,7 @@ import {
   exportNotifications,
   exportPushTokens,
 } from "../notifications/index.ts";
-import { exportHome, findPondOfAccount } from "../pond/index.ts";
+import { exportHome } from "../pond/index.ts";
 import { eraseProfileOfAccount, exportProfile } from "../profile/index.ts";
 import { exportResearch, removeResearchSubject } from "../research/index.ts";
 import { eraseInvitationsOf, exportInvitations } from "../rewards/index.ts";
@@ -185,7 +185,7 @@ export async function eraseAccount(deps: ErasureDeps, accountId: string): Promis
     // Not in the summary: the line that logs it carries the account id.
     await deletePhotoCheckNotesOfAccount(tx, accountId);
     const profileRows = await eraseProfileOfAccount(tx, accountId);
-    // The two hard rows go (TD-7), and the tombstone keeps neither gender, pond nor home.
+    // The two hard rows go (TD-7), and the tombstone keeps neither gender nor home.
     const preferences = await deletePreferencesOfAccount(tx, accountId);
     // The person's rounds, and the entries in which they are somebody's card,
     // others' likes on them included (TD-7, #96).
@@ -336,7 +336,6 @@ export async function exportAccount(
     await currentConsent(deps.db, accountId, "special_category"),
   );
   const [
-    pond,
     home,
     preferences,
     consents,
@@ -355,7 +354,6 @@ export async function exportAccount(
     stars,
     invitations,
   ] = await Promise.all([
-    findPondOfAccount(deps.db, accountId),
     exportHome(deps.db, accountId, locale),
     readPreferences(deps.db, accountId),
     exportConsents(deps.db, accountId),
@@ -394,7 +392,6 @@ export async function exportAccount(
       birthYear: account.birthYear,
       birthMonth: account.birthMonth,
       gender: account.gender,
-      pond,
       home,
       genderChangedAt: account.genderChangedAt?.toISOString() ?? null,
       email: account.email,

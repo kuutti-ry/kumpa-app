@@ -3,7 +3,13 @@ import { GateResponse, REPORT_NOTE_MAX } from "@kuutti/schema";
 import { describe, expect, it } from "vitest";
 import { CURRENT_CONSENT_VERSIONS } from "../identity/index.ts";
 import { dayWindow } from "../media/index.ts";
-import { signedInAccount, signInAs, staffSession, withMatchingConfig } from "../test/account.ts";
+import {
+  openMatchingHere,
+  signedInAccount,
+  signInAs,
+  staffSession,
+  withMatchingConfig,
+} from "../test/account.ts";
 import { errorCode } from "../test/answers.ts";
 import { cardShown } from "../test/cards.ts";
 import { exportOf } from "../test/export.ts";
@@ -15,7 +21,7 @@ import {
   type TestContext,
   test,
 } from "../test/harness.ts";
-import { openPond, type PeopleOptions, people, pondNamed } from "../test/people.ts";
+import { type PeopleOptions, people } from "../test/people.ts";
 import { pruneReports, REPORT_RETENTION_DAYS, recordReport } from "./reports.ts";
 
 // features/safety/reports.feature (#84, ADR-030): the route, the reasons, the
@@ -202,9 +208,8 @@ describe("what a report tells, and to whom", () => {
   });
 
   test("The reported person learns nothing from any route", async ({ ctx }) => {
-    const pond = await pondNamed(ctx.client, "test-report-learns-nothing");
-    await openPond(ctx.client, pond);
-    const [a, b] = (await people(ctx.client, pond, 2, ALIKE)) as [string, string];
+    await openMatchingHere(ctx.client);
+    const [a, b] = (await people(ctx.client, 2, ALIKE)) as [string, string];
     await cardShown(ctx.client, a, b);
     const asA = (await signInAs(ctx.client, a)).headers;
     const asB = (await signInAs(ctx.client, b)).headers;

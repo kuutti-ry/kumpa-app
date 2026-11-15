@@ -24,7 +24,7 @@
  * from the release in the container's cache, where there is one; the
  * container's own check decides on them.
  */
-import { createPool } from "@kuutti/db";
+import { createPool, openMatching } from "@kuutti/db";
 import {
   assertArtificial,
   assertDemoTarget,
@@ -32,7 +32,6 @@ import {
   DEMO_PERSONAS,
   DemoCommandError,
   describeTarget,
-  openPonds,
 } from "@kuutti/db/demo";
 import { hmacKeyFromHex } from "../src/identity/index.ts";
 import { takeSnapshot } from "../src/jobs/pond-counter.ts";
@@ -121,14 +120,14 @@ try {
     now(),
   );
   console.log(JSON.stringify({ msg: "demo stories: photos in conversations", ...photos }));
-  // The pond has other people in it now (ADR-018: nobody on staging is
+  // There are other people now (ADR-018: nobody on staging is
   // anybody, so the counter of #54 is counted anew, as the population does).
   await pool.query("DELETE FROM pond_counter");
   const counted = await takeSnapshot({ db: pool, logger, now });
   console.log(JSON.stringify({ msg: "demo stories: counter recounted", ...counted }));
-  const opened = await openPonds(pool);
-  console.log(JSON.stringify({ msg: "demo stories: ponds opened", opened }));
-  // Iida's round for the day (#379), once her pond is open; told before, it stays.
+  const opened = await openMatching(pool, "demo-stories");
+  console.log(JSON.stringify({ msg: "demo stories: matching opened", opened }));
+  // Iida's round for the day (#379), once matching is open; told before, it stays.
   const rounds = await giveRounds({ db: pool, logger, now }, results);
   console.log(JSON.stringify({ msg: "demo stories: rounds", ...rounds }));
   const cast = await giveCastStories(pool, results, now());

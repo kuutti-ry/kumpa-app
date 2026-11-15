@@ -41,7 +41,7 @@ async function archivedAt({
 }: Quiet) {
   return rolledBack(async (db) => {
     await withMatchingConfig(db, { silent_match_archive_days: 7 });
-    const [a, b] = await people(db, null, 2, { state: "active" });
+    const [a, b] = await people(db, 2, { state: "active" });
     if (!a || !b) throw new Error("people not written");
     const id = await conversationBetween(db, a, b, {
       openedAt: opened,

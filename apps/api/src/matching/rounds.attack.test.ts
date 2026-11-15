@@ -15,7 +15,7 @@ const NIGHT = new Date("2026-10-16T01:00:00.000Z");
 /** A person's round of `day` with one card and one relaxation, pruned at `at`: what is left of it. */
 async function roundPruned(day: string, at: Date) {
   return rolledBack(async (db) => {
-    const [owner, card] = await people(db, null, 2, { state: "active" });
+    const [owner, card] = await people(db, 2, { state: "active" });
     const { rows } = await db.query<{ id: string }>(
       "INSERT INTO rounds (account_id, day) VALUES ($1, $2) RETURNING id",
       [owner, day],

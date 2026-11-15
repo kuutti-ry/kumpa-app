@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { MATCHING_CONFIG_V1 } from "@kuutti/db";
+import { MATCHING_CONFIG_V1, openMatching } from "@kuutti/db";
 import {
   CAST,
   CAST_CONVERSATIONS,
@@ -7,7 +7,6 @@ import {
   type CastPerson,
   DEMO_PERSONAS,
   DEMO_SUBJECT_PREFIX,
-  openPonds,
   PERSONA_HISTORIES,
   personaBirth,
   renewPopulationConsents,
@@ -284,7 +283,7 @@ describe("what the cast gives the members", () => {
         WHERE a.id = $1 OR i.broker_subject LIKE $2`,
       [sanna, `${DEMO_SUBJECT_PREFIX}demo-cast-%`],
     );
-    await openPonds(ctx.client);
+    await openMatching(ctx.client, "test");
 
     expect(await giveCastStories(ctx.client, results, now())).toEqual({
       cast: CAST.length,
@@ -386,9 +385,6 @@ describe("the cast after a new wording", () => {
         WHERE i.broker_subject LIKE $1`,
       [`${DEMO_SUBJECT_PREFIX}demo-cast-%`],
     );
-    const { rows: ponds } = await ctx.client.query<{ id: string }>("SELECT id FROM ponds");
-    const pond = ponds[0]?.id;
-    if (!pond) throw new Error("no pond");
     const { rows } = await ctx.client.query<{ id: string }>(
       `SELECT a.id FROM account a JOIN identity i ON i.id = a.identity_id WHERE i.broker_subject LIKE $1`,
       [`${DEMO_SUBJECT_PREFIX}demo-cast-%`],
@@ -397,13 +393,13 @@ describe("the cast after a new wording", () => {
     expect(cast).toHaveLength(CAST.length);
     const night = new Date("2026-11-07T00:17:00Z");
 
-    expect(await subjectsAmong(ctx.client, pond, cast, night)).toEqual([]);
+    expect(await subjectsAmong(ctx.client, cast, night)).toEqual([]);
     expect(await renewPopulationConsents(ctx.client, CURRENT_CONSENT_VERSIONS, night)).toEqual({
       terms: CAST.length,
       privacy: 0,
       special_category: 0,
     });
-    const back = await subjectsAmong(ctx.client, pond, cast, night);
+    const back = await subjectsAmong(ctx.client, cast, night);
     expect(new Set(back.map((subject) => subject.id))).toEqual(new Set(cast));
   });
 });

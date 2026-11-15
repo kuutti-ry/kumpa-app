@@ -4,7 +4,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
-import { DEMO_SIZE_MAX, PHOTOS_MANIFEST } from "@kuutti/db/demo";
+import { DEMO_SIZE_MAX, PHOTOS_MANIFEST, plannedPeople } from "@kuutti/db/demo";
 import { describe, expect, it } from "vitest";
 import { API_DIR, command, scratch } from "./run-command.ts";
 
@@ -140,7 +140,9 @@ describe.concurrent("demo:population", () => {
         size: 40,
         seed: 7,
       });
-      expect(Object.keys(plan.ponds as object).length).toBeGreaterThan(0);
+      // The counts by gender and in all, of the forty asked for; nothing about a pond (#607).
+      expect(plan.people).toEqual(plannedPeople(40));
+      expect(plan).not.toHaveProperty("ponds");
     },
     TIMEOUT,
   );

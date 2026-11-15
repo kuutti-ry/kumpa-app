@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import type { Queryable } from "@kuutti/db";
 import {
   type DistanceBand,
@@ -20,7 +19,7 @@ import { signInAs } from "./account.ts";
 import { conversationBetween } from "./chat.ts";
 import { STOPPED_CLOCK } from "./global-setup.ts";
 import { captureLogger, testConfig } from "./harness.ts";
-import { type PeopleOptions, people, pondNamed } from "./people.ts";
+import { type PeopleOptions, people } from "./people.ts";
 import { FITTING } from "./queue.ts";
 
 /**
@@ -42,19 +41,17 @@ export type LoggedCard =
     };
 
 /**
- * `count` people who all fit each other, in a pond of their own nobody has
- * opened: a read asks them the filters (ADR-062 §8) and serves what a test wrote
- * into their logs, and adds nobody. People of two calls never fit each other.
+ * `count` people who all fit each other, and everybody else `FITTING` makes.
+ * While the test leaves matching closed, as a fresh database is, a read asks
+ * them the filters (ADR-062 §8) and serves what a test wrote into their logs,
+ * and adds nobody.
  */
 export async function peopleWhoFit(
   db: Queryable,
   count: number,
   options: PeopleOptions = {},
 ): Promise<string[]> {
-  return people(db, await pondNamed(db, `test-fit-${randomUUID()}`), count, {
-    ...FITTING,
-    ...options,
-  });
+  return people(db, count, { ...FITTING, ...options });
 }
 
 /**
@@ -149,29 +146,17 @@ export async function endedConversation(
   return id;
 }
 
-/** `count` matches nobody has said anything in, each on the person's turn (ADR-062 §5), with people of this pond; those people. */
+/** `count` matches nobody has said anything in, each on the person's turn (ADR-062 §5), with new people who fit; those people. */
 export async function conversationsWaiting(
   db: Queryable,
-  pondId: string,
   accountId: string,
   count: number,
 ): Promise<string[]> {
-  const others = await people(db, pondId, count, FITTING);
+  const others = await people(db, count, FITTING);
   for (const other of others) {
     await conversationBetween(db, accountId, other, { openedAt: new Date("2026-01-01") });
   }
   return others;
-}
-
-/** The pond a person is in. */
-export async function pondOfPerson(db: Queryable, accountId: string): Promise<string> {
-  const { rows } = await db.query<{ pond_id: string | null }>(
-    "SELECT pond_id FROM account WHERE id = $1",
-    [accountId],
-  );
-  const pond = rows[0]?.pond_id;
-  if (!pond) throw new Error("nobody in a pond");
-  return pond;
 }
 
 /** What `decide` is handed of the chat slice, as app.ts hands it. */

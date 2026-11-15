@@ -12,5 +12,4 @@ export {
   pointOf,
   shownPlace,
 } from "./places.ts";
-export { findPondOfAccount, listPonds } from "./repo.ts";
 export { pondRoutes } from "./routes.ts";

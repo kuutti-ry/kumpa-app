@@ -29,7 +29,7 @@ type Queued = {
 async function rejected({ uploaded, appealed, purpose = "profile", limitDays = 14 }: Queued) {
   return rolledBack(async (db) => {
     await withMatchingConfig(db, { photo_queue_reject_days: limitDays });
-    const [owner] = await people(db, null, 1, { state: "active" });
+    const [owner] = await people(db, 1, { state: "active" });
     const { rows } = await db.query<{ id: string }>(
       `INSERT INTO photo (account_id, key, blurhash, width, height, state, purpose, position, created_at)
        VALUES ($1, 'attack-queued', 'LEHV6nWB2yk8pyo0adR*.7kCMdnj', 800, 1067, 'queued', $2::photo_purpose,

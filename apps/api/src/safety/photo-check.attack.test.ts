@@ -16,7 +16,7 @@ const NIGHT = new Date("2026-10-16T01:00:00.000Z");
 /** One note of the check's at `at`; whether the night of `night` pruned it. */
 async function pruned(at: Date, night: Date) {
   return rolledBack(async (db) => {
-    const [accountId] = await people(db, null, 1, { state: "active" });
+    const [accountId] = await people(db, 1, { state: "active" });
     await db.query(
       "INSERT INTO photo_check_note (account_id, kind, at) VALUES ($1, 'nudity', $2)",
       [accountId, at],

@@ -95,8 +95,9 @@ describe("GET /admin/config", () => {
     const response = await list(api, staff.headers);
     expect(response.status).toBe(200);
     const { items } = ConfigList.parse(await response.json());
+    // Every key but the switch that opens matching, which is no tunable (#607).
     const { rows } = await ctx.client.query<{ key: string }>(
-      "SELECT DISTINCT key FROM matching_config ORDER BY key",
+      "SELECT DISTINCT key FROM matching_config WHERE key <> 'matching_open' ORDER BY key",
     );
     expect(items.map((i) => i.key)).toEqual(rows.map((r) => r.key));
     expect(items.find((i) => i.key === "deal_breakers_max")).toMatchObject({
@@ -393,7 +394,7 @@ describe("POST /admin/config/{key}", () => {
     // and before it writes: both want version 2.
     const db = interleaved(
       ctx.client,
-      /FROM matching_config WHERE key = \$1 ORDER BY version DESC LIMIT 1/,
+      /FROM matching_config WHERE key = \$1 AND key <> \$2 ORDER BY version DESC LIMIT 1/,
       async () => {
         const theirs = await change(api, second.headers, "pass_cooldown_days", {
           value: 60,

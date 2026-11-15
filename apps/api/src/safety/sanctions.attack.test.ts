@@ -36,7 +36,7 @@ const give = (db: Queryable, accountId: string, kind: SanctionKind, endsOn?: str
 
 /** A person suspended until the start of `endsOn` in Finland, as the panel leaves them. */
 async function suspended(db: Queryable, endsOn = ENDS_ON): Promise<string> {
-  const [accountId] = await people(db, null, 1, { state: "active" });
+  const [accountId] = await people(db, 1, { state: "active" });
   if (!accountId) throw new Error("person not written");
   await give(db, accountId, "suspend", endsOn);
   return accountId;

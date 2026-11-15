@@ -11,13 +11,13 @@ import { inEachOthersPool, type PoolPerson } from "../matching/index.ts";
 import { memoryMediaStore, objectKey, sweepPendingPhotos } from "../media/index.ts";
 import { createPush } from "../notifications/index.ts";
 import { enrolResearchSubject, removeResearchSubject, track } from "../research/index.ts";
-import { signedInAccount, signInAs, withMatchingConfig } from "./account.ts";
+import { openMatchingHere, signedInAccount, signInAs, withMatchingConfig } from "./account.ts";
 import { errorCode } from "./answers.ts";
 import { cardShown } from "./cards.ts";
 import { conversationBetween } from "./chat.ts";
 import { captureLogger, jsonHeaders, testConfig } from "./harness.ts";
 import { checked, scriptedModerator } from "./media.ts";
-import { openPond, people, pondNamed } from "./people.ts";
+import { people } from "./people.ts";
 import { deviceOf, heldSchedule, memoryPusher } from "./push.ts";
 import { rolledBack } from "./rolled-back.ts";
 
@@ -202,9 +202,8 @@ describe("Gate attacks cannot announce matching before its prerequisites", () =>
         missing,
         (control: boolean) =>
           rolledBack(async (db) => {
-            const pond = await pondNamed(db, `attack-gate-${missing}`);
-            if (control || missing !== "closed_pond") await openPond(db, pond);
-            const [accountId] = await people(db, pond, 1, {
+            if (control || missing !== "closed_pond") await openMatchingHere(db);
+            const [accountId] = await people(db, 1, {
               complete: true,
               gender: "woman",
               consented: true,
@@ -331,7 +330,7 @@ describe("Photo check attacks cannot turn a definite refusal into approval", () 
         kind,
         (control: boolean) =>
           rolledBack(async (db) => {
-            const [accountId] = await people(db, null, 1);
+            const [accountId] = await people(db, 1);
             if (!accountId) throw new Error("photo owner not written");
             const key = "e".repeat(64);
             const written = await db.query<{ id: string }>(
@@ -376,7 +375,7 @@ describe("Erasure attacks cannot keep the person's private rows", () => {
         table,
         (control: boolean) =>
           rolledBack(async (db) => {
-            const [accountId] = await people(db, null, 1, { complete: true });
+            const [accountId] = await people(db, 1, { complete: true });
             if (!accountId) throw new Error("erasure account not written");
             await signInAs(db, accountId);
             await db.query(
@@ -405,7 +404,7 @@ describe("Push attacks cannot bypass the person's delivery restrictions", () => 
         kind,
         (control: boolean) =>
           rolledBack(async (db) => {
-            const [accountId] = await people(db, null, 1, { complete: true });
+            const [accountId] = await people(db, 1, { complete: true });
             if (!accountId) throw new Error("push account not written");
             await withMatchingConfig(db, { push_quiet_from_hour: 22, push_quiet_to_hour: 8 });
             const device = await deviceOf(db, accountId, {
@@ -456,7 +455,7 @@ describe("Research attacks cannot record without a live consent mapping", () => 
         kind,
         (control: boolean) =>
           rolledBack(async (db) => {
-            const [accountId] = await people(db, null, 1, { complete: true });
+            const [accountId] = await people(db, 1, { complete: true });
             if (!accountId) throw new Error("research account not written");
             const { logger } = await captureLogger();
             if (control || kind !== "no_consent") await enrolled(db, accountId);

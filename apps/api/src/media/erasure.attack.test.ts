@@ -73,7 +73,7 @@ attack(
  */
 async function heldPhoto(held: boolean) {
   return rolledBack(async (db) => {
-    const [reporter, sender] = await people(db, null, 2, { state: "active" });
+    const [reporter, sender] = await people(db, 2, { state: "active" });
     if (!reporter || !sender) throw new Error("people not written");
     const conversationId = await conversationBetween(db, reporter, sender, { openedAt: WEEK_AGO });
     const store = memoryMediaStore(() => WEEK_AGO);

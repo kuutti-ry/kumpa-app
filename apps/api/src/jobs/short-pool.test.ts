@@ -12,7 +12,7 @@ import { vi } from "vitest";
 import { type App, createApp } from "../app.ts";
 import { exportAccount } from "../identity/index.ts";
 import { finnishDay } from "../lib/finnish-day.ts";
-import { signInAs, withMatchingConfig } from "../test/account.ts";
+import { openMatchingHere, signInAs, withMatchingConfig } from "../test/account.ts";
 import { errorCode as codeOf } from "../test/answers.ts";
 import {
   captureLogger,
@@ -24,7 +24,7 @@ import {
   test,
   testConfig,
 } from "../test/harness.ts";
-import { HOME, HOMES, openPond, type PeopleOptions, people, pondNamed } from "../test/people.ts";
+import { HOME, HOMES, type PeopleOptions, people } from "../test/people.ts";
 import { endedConversation, shownAt } from "../test/rounds.ts";
 import { fillQueue } from "./round-builder.ts";
 
@@ -90,19 +90,16 @@ async function hidden(db: Queryable, ids: readonly (string | undefined)[], field
 /** "A", one woman with a deal-breaker on smoking, and the men of the pond; everybody's matching open. */
 async function pondWith(
   ctx: TestContext,
-  slug: string,
   groups: { fields: ProfileFields; count: number }[],
   includeUnknown = false,
 ) {
-  const pond = await pondNamed(ctx.client, slug);
-  const [a] = await people(ctx.client, pond, 1, HER);
+  const [a] = await people(ctx.client, 1, HER);
   if (!a) throw new Error("A not written");
   await dealBreaker(ctx.client, a, "smoking", ["never"], includeUnknown);
   const of: string[][] = [];
-  for (const group of groups)
-    of.push(await people(ctx.client, pond, group.count, men(group.fields)));
-  await openPond(ctx.client, pond);
-  return { pond, a, of };
+  for (const group of groups) of.push(await people(ctx.client, group.count, men(group.fields)));
+  await openMatchingHere(ctx.client);
+  return { a, of };
 }
 
 type Card = { candidate_id: string; reason: string; relaxed_field: string | null };
@@ -188,9 +185,7 @@ const ASIDE = { field: "smoking", kind: "aside" } as const;
 
 describe("coming back", () => {
   test("Everybody new comes before anybody shown before", async ({ ctx }) => {
-    const { a, of } = await pondWith(ctx, "test-short-new-first", [
-      { fields: { smoking: "never" }, count: 3 },
-    ]);
+    const { a, of } = await pondWith(ctx, [{ fields: { smoking: "never" }, count: 3 }]);
     const [b, c, d] = of[0] ?? [];
     if (!b || !c || !d) throw new Error("people not written");
     await shownBefore(ctx.client, a, c, 45, null);
@@ -208,9 +203,7 @@ describe("coming back", () => {
   test("Earlier people come back skipped first, then passed, then liked with no answer, then former conversations, each shown longest ago first", async ({
     ctx,
   }) => {
-    const { a, of } = await pondWith(ctx, "test-short-order", [
-      { fields: { smoking: "never" }, count: 8 },
-    ]);
+    const { a, of } = await pondWith(ctx, [{ fields: { smoking: "never" }, count: 8 }]);
     const [skippedFirst, skippedLater, passedFirst, passedLater, likedFirst, likedLater] =
       of[0] ?? [];
     const [endedFirst, endedLater] = of[0]?.slice(6) ?? [];
@@ -257,9 +250,7 @@ describe("coming back", () => {
   test("a former conversation whose rounds have gone comes back by the day it ended, and stays one", async ({
     ctx,
   }) => {
-    const { a, of } = await pondWith(ctx, "test-short-former", [
-      { fields: { smoking: "never" }, count: 3 },
-    ]);
+    const { a, of } = await pondWith(ctx, [{ fields: { smoking: "never" }, count: 3 }]);
     const [first, later, liked] = of[0] ?? [];
     if (!first || !later || !liked) throw new Error("people not written");
     await endedConversation(ctx.client, a, later, daysAgo(100), "closed");
@@ -277,9 +268,7 @@ describe("coming back", () => {
   });
 
   test("somebody shown twice comes back by the later showing and its decision", async ({ ctx }) => {
-    const { a, of } = await pondWith(ctx, "test-short-twice-shown", [
-      { fields: { smoking: "never" }, count: 2 },
-    ]);
+    const { a, of } = await pondWith(ctx, [{ fields: { smoking: "never" }, count: 2 }]);
     const [c, d] = of[0] ?? [];
     if (!c || !d) throw new Error("people not written");
     // C was passed long ago and left undecided since: the latest showing puts C among the skipped.
@@ -295,7 +284,7 @@ describe("coming back", () => {
 
 describe("relaxing a deal-breaker for the day", () => {
   test("A round is short once no new person is left in the queue", async ({ ctx }) => {
-    const { a } = await pondWith(ctx, "test-short-when", [
+    const { a } = await pondWith(ctx, [
       { fields: { smoking: "never" }, count: QUEUE_PAGE + 1 },
       { fields: {}, count: 1 },
     ]);
@@ -321,7 +310,7 @@ describe("relaxing a deal-breaker for the day", () => {
   });
 
   test("somebody seen before keeps no round from being short", async ({ ctx }) => {
-    const { a, of } = await pondWith(ctx, "test-short-seen", [
+    const { a, of } = await pondWith(ctx, [
       { fields: { smoking: "never" }, count: 11 },
       { fields: {}, count: 1 },
     ]);
@@ -338,7 +327,7 @@ describe("relaxing a deal-breaker for the day", () => {
   test("A short round offers each deal-breaker relaxed, with the pool's growth in steps", async ({
     ctx,
   }) => {
-    const { a } = await pondWith(ctx, "test-short-offers", [
+    const { a } = await pondWith(ctx, [
       { fields: {}, count: 12 },
       { fields: { smoking: "regularly" }, count: 10 },
     ]);
@@ -357,7 +346,7 @@ describe("relaxing a deal-breaker for the day", () => {
   });
 
   test("Reading the offers relaxes nothing", async ({ ctx }) => {
-    const { a } = await pondWith(ctx, "test-short-read-only", [{ fields: {}, count: 3 }]);
+    const { a } = await pondWith(ctx, [{ fields: {}, count: 3 }]);
     await opens(ctx.client, a);
     const app = await appAt(ctx.client);
     const { headers } = await signInAs(ctx.client, a);
@@ -387,7 +376,7 @@ describe("relaxing a deal-breaker for the day", () => {
   test("A relaxation adds a page of the people it lets in, labelled with the field, and the queue goes on to the rest", async ({
     ctx,
   }) => {
-    const { a, of } = await pondWith(ctx, "test-short-relax", [
+    const { a, of } = await pondWith(ctx, [
       { fields: { smoking: "never" }, count: 1 },
       { fields: {}, count: QUEUE_PAGE + 2 },
     ]);
@@ -424,9 +413,7 @@ describe("relaxing a deal-breaker for the day", () => {
   });
 
   test("the rest of a relaxation carries every relaxation of the day it needs", async ({ ctx }) => {
-    const { a, of } = await pondWith(ctx, "test-short-rest-needs", [
-      { fields: { hasKids: "no" }, count: QUEUE_PAGE + 1 },
-    ]);
+    const { a, of } = await pondWith(ctx, [{ fields: { hasKids: "no" }, count: QUEUE_PAGE + 1 }]);
     await dealBreaker(ctx.client, a, "hasKids", ["yes_with_me"], false);
     await opens(ctx.client, a);
     const app = await appAt(ctx.client);
@@ -451,7 +438,7 @@ describe("relaxing a deal-breaker for the day", () => {
   });
 
   test("One tap undoes a relaxation, and takes back its undecided cards only", async ({ ctx }) => {
-    const { a } = await pondWith(ctx, "test-short-undo", [
+    const { a } = await pondWith(ctx, [
       { fields: { smoking: "never" }, count: 1 },
       { fields: {}, count: 4 },
     ]);
@@ -478,7 +465,7 @@ describe("relaxing a deal-breaker for the day", () => {
   });
 
   test("A change to a deal-breaker keeps the day's relaxation of its field", async ({ ctx }) => {
-    const { a, of } = await pondWith(ctx, "test-short-changed", [
+    const { a, of } = await pondWith(ctx, [
       { fields: { smoking: "never" }, count: 1 },
       { fields: { smoking: "regularly" }, count: 1 },
     ]);
@@ -511,7 +498,7 @@ describe("relaxing a deal-breaker for the day", () => {
   });
 
   test("Tomorrow's queue reads the deal-breakers as stored", async ({ ctx }) => {
-    const { a, of } = await pondWith(ctx, "test-short-tomorrow", [
+    const { a, of } = await pondWith(ctx, [
       { fields: { smoking: "never" }, count: 1 },
       { fields: {}, count: 6 },
     ]);
@@ -531,7 +518,7 @@ describe("relaxing a deal-breaker for the day", () => {
   test("relaxations add up, and undoing the first takes back a card that needed both", async ({
     ctx,
   }) => {
-    const { a, of } = await pondWith(ctx, "test-short-stacked", [
+    const { a, of } = await pondWith(ctx, [
       { fields: { hasKids: "yes_with_me" }, count: 1 },
       { fields: { hasKids: "no" }, count: 1 },
     ]);
@@ -558,7 +545,7 @@ describe("relaxing a deal-breaker for the day", () => {
   test("undoing the first relaxation keeps a later one's card that did not need it", async ({
     ctx,
   }) => {
-    const { a, of } = await pondWith(ctx, "test-short-stacked-keep", [
+    const { a, of } = await pondWith(ctx, [
       { fields: { hasKids: "yes_with_me" }, count: 1 },
       { fields: { smoking: "never", hasKids: "no" }, count: 1 },
     ]);
@@ -583,7 +570,7 @@ describe("relaxing a deal-breaker for the day", () => {
   test("a person whose profile no longer counts as complete is offered nothing, and relaxes nothing", async ({
     ctx,
   }) => {
-    const { a } = await pondWith(ctx, "test-short-incomplete", [{ fields: {}, count: 2 }]);
+    const { a } = await pondWith(ctx, [{ fields: {}, count: 2 }]);
     await opens(ctx.client, a);
     const app = await appAt(ctx.client);
     const { headers } = await signInAs(ctx.client, a);
@@ -602,22 +589,20 @@ describe("relaxing a deal-breaker for the day", () => {
   test("a round in a pond closed since is offered nothing, and relaxes nothing (ADR-060 §1)", async ({
     ctx,
   }) => {
-    const { a, pond } = await pondWith(ctx, "test-short-closed", [{ fields: {}, count: 2 }]);
+    const { a } = await pondWith(ctx, [{ fields: {}, count: 2 }]);
     await opens(ctx.client, a);
     const app = await appAt(ctx.client);
     const { headers } = await signInAs(ctx.client, a);
     expect((await offers(app, headers)).offers).not.toEqual([]);
 
-    await ctx.client.query("UPDATE ponds SET matching_open = false WHERE id = $1", [pond]);
+    await withMatchingConfig(ctx.client, { matching_open: false });
 
     expect(await offers(app, headers)).toEqual({ short: false, offers: [], relaxed: [] });
     expect((await relax(app, headers, ASIDE)).status).toBe(404);
   });
 
   test("a like on a card two relaxations let in reaches its person", async ({ ctx }) => {
-    const { a, of } = await pondWith(ctx, "test-short-stacked-like", [
-      { fields: { hasKids: "no" }, count: 1 },
-    ]);
+    const { a, of } = await pondWith(ctx, [{ fields: { hasKids: "no" }, count: 1 }]);
     const [b] = of[0] ?? [];
     if (!b) throw new Error("people not written");
     await dealBreaker(ctx.client, a, "hasKids", ["yes_with_me"], false);
@@ -639,7 +624,7 @@ describe("relaxing a deal-breaker for the day", () => {
   test("somebody whose like waits on the person never comes in by a relaxation", async ({
     ctx,
   }) => {
-    const { a, of } = await pondWith(ctx, "test-short-waiting", [{ fields: {}, count: 2 }]);
+    const { a, of } = await pondWith(ctx, [{ fields: {}, count: 2 }]);
     const [liker, other] = of[0] ?? [];
     if (!liker || !other) throw new Error("people not written");
     // The liker's like of yesterday waits on A, whose smoking deal-breaker keeps the liker away.
@@ -657,7 +642,7 @@ describe("relaxing a deal-breaker for the day", () => {
   test("a relaxation adds nobody within their clock, and new people before those seen", async ({
     ctx,
   }) => {
-    const { a, of } = await pondWith(ctx, "test-short-cooling", [{ fields: {}, count: 4 }]);
+    const { a, of } = await pondWith(ctx, [{ fields: {}, count: 4 }]);
     const [passed, liked, skipped, fresh] = of[0] ?? [];
     if (!passed || !liked || !skipped || !fresh) throw new Error("people not written");
     await shownBefore(ctx.client, a, passed, 2, "pass");
@@ -675,7 +660,7 @@ describe("relaxing a deal-breaker for the day", () => {
   test("A relaxation never lets in somebody whose own filters exclude the person", async ({
     ctx,
   }) => {
-    const { a, of } = await pondWith(ctx, "test-short-rule-7", [
+    const { a, of } = await pondWith(ctx, [
       { fields: { hasKids: "no" }, count: 1 },
       { fields: {}, count: 1 },
     ]);
@@ -694,7 +679,7 @@ describe("relaxing a deal-breaker for the day", () => {
   });
 
   test("A like on a relaxed card reaches its person", async ({ ctx }) => {
-    const { a, of } = await pondWith(ctx, "test-short-relaxed-like", [{ fields: {}, count: 1 }]);
+    const { a, of } = await pondWith(ctx, [{ fields: {}, count: 1 }]);
     const [b] = of[0] ?? [];
     if (!b) throw new Error("people not written");
     await opens(ctx.client, a);
@@ -717,7 +702,7 @@ describe("relaxing a deal-breaker for the day", () => {
   test("A like on a relaxed card goes through while the day's relaxation stands", async ({
     ctx,
   }) => {
-    const { a, of } = await pondWith(ctx, "test-short-like-relaxed", [{ fields: {}, count: 2 }]);
+    const { a, of } = await pondWith(ctx, [{ fields: {}, count: 2 }]);
     const [b] = of[0] ?? [];
     if (!b) throw new Error("people not written");
     await opens(ctx.client, a);
@@ -734,7 +719,7 @@ describe("relaxing a deal-breaker for the day", () => {
   test("a card that needs a relaxation is gone with it, and its place answers not_found", async ({
     ctx,
   }) => {
-    const { a } = await pondWith(ctx, "test-short-like-undone", [{ fields: {}, count: 1 }]);
+    const { a } = await pondWith(ctx, [{ fields: {}, count: 1 }]);
     await opens(ctx.client, a);
     const app = await appAt(ctx.client);
     const { headers } = await signInAs(ctx.client, a);
@@ -749,7 +734,7 @@ describe("relaxing a deal-breaker for the day", () => {
   });
 
   test("The same deal-breaker is relaxed once a day", async ({ ctx }) => {
-    const { a } = await pondWith(ctx, "test-short-twice", [{ fields: {}, count: 4 }]);
+    const { a } = await pondWith(ctx, [{ fields: {}, count: 4 }]);
     await opens(ctx.client, a);
     const app = await appAt(ctx.client);
     const { headers } = await signInAs(ctx.client, a);
@@ -768,7 +753,6 @@ describe("relaxing a deal-breaker for the day", () => {
   }) => {
     const { a, of } = await pondWith(
       ctx,
-      "test-short-not-answered",
       [
         { fields: {}, count: 1 },
         { fields: { smoking: "never" }, count: 1 },
@@ -793,7 +777,6 @@ describe("relaxing a deal-breaker for the day", () => {
   test("A hidden answer reads on a card as one not given", async ({ ctx }) => {
     const { a, of } = await pondWith(
       ctx,
-      "test-short-hidden-label",
       [
         { fields: {}, count: 1 },
         { fields: { smoking: "never" }, count: 1 },
@@ -818,12 +801,7 @@ describe("relaxing a deal-breaker for the day", () => {
   });
 
   test("A card names no deal-breaker that waits for the person's own answer", async ({ ctx }) => {
-    const { a, of } = await pondWith(
-      ctx,
-      "test-short-paused-label",
-      [{ fields: {}, count: 1 }],
-      true,
-    );
+    const { a, of } = await pondWith(ctx, [{ fields: {}, count: 1 }], true);
     const [b] = of[0] ?? [];
     if (!b) throw new Error("people not written");
     // A has not answered wantsKids herself, so this one waits: it filters nobody and says nothing.
@@ -845,18 +823,16 @@ describe("the inbox stop and the short pool (ADR-062 §4)", () => {
   const STOP = 30;
 
   /** A woman's likes of `liked` until their inbox is at the stop. */
-  async function pileOn(ctx: TestContext, pond: string, liked: string) {
-    const likers = await people(ctx.client, pond, STOP, HER);
+  async function pileOn(ctx: TestContext, liked: string) {
+    const likers = await people(ctx.client, STOP, HER);
     for (const liker of likers) await shownBefore(ctx.client, liker, liked, 1, "like");
   }
 
   test("The stop holds a person out of what a relaxation lets in", async ({ ctx }) => {
-    const { pond, a, of } = await pondWith(ctx, "test-stop-relaxed", [
-      { fields: {}, count: QUEUE_PAGE + 3 },
-    ]);
+    const { a, of } = await pondWith(ctx, [{ fields: {}, count: QUEUE_PAGE + 3 }]);
     const [held, ...others] = of[0] ?? [];
     if (!held) throw new Error("people not written");
-    await pileOn(ctx, pond, held);
+    await pileOn(ctx, held);
     await opens(ctx.client, a);
     const app = await appAt(ctx.client);
     const { headers } = await signInAs(ctx.client, a);
@@ -872,13 +848,13 @@ describe("the inbox stop and the short pool (ADR-062 §4)", () => {
   });
 
   test("somebody held is no new person left: the round is short, and offers", async ({ ctx }) => {
-    const { pond, a, of } = await pondWith(ctx, "test-stop-short", [
+    const { a, of } = await pondWith(ctx, [
       { fields: { smoking: "never" }, count: 1 },
       { fields: {}, count: 1 },
     ]);
     const [held] = of[0] ?? [];
     if (!held) throw new Error("people not written");
-    await pileOn(ctx, pond, held);
+    await pileOn(ctx, held);
     await opens(ctx.client, a);
     const app = await appAt(ctx.client);
     const { headers } = await signInAs(ctx.client, a);
@@ -896,12 +872,10 @@ describe("the inbox stop and the short pool (ADR-062 §4)", () => {
   test("a relaxation that would let in nobody but somebody held is not offered", async ({
     ctx,
   }) => {
-    const { pond, a, of } = await pondWith(ctx, "test-stop-not-offered", [
-      { fields: {}, count: 1 },
-    ]);
+    const { a, of } = await pondWith(ctx, [{ fields: {}, count: 1 }]);
     const [held] = of[0] ?? [];
     if (!held) throw new Error("people not written");
-    await pileOn(ctx, pond, held);
+    await pileOn(ctx, held);
     await opens(ctx.client, a);
     const app = await appAt(ctx.client);
     const { headers } = await signInAs(ctx.client, a);
@@ -917,7 +891,6 @@ describe("A hidden answer counts under a deal-breaker as a shown one does", () =
   ] as const)("%s people who did not answer", async ([, includeUnknown], { ctx }) => {
     const { a, of } = await pondWith(
       ctx,
-      `test-short-hidden-counts-${includeUnknown}`,
       [
         { fields: { smoking: "regularly" }, count: 1 },
         { fields: { smoking: "never" }, count: 1 },
@@ -936,7 +909,7 @@ describe("A hidden answer counts under a deal-breaker as a shown one does", () =
 
 describe("a person's own hidden answer", () => {
   test("Hiding one's own answer leaves a deal-breaker on it in force", async ({ ctx }) => {
-    const { a, of } = await pondWith(ctx, "test-short-hidden-own", [
+    const { a, of } = await pondWith(ctx, [
       { fields: { smoking: "regularly" }, count: 1 },
       { fields: { smoking: "never" }, count: 1 },
     ]);
@@ -957,23 +930,22 @@ describe("a person's own hidden answer", () => {
 
 describe("a deal-breaker on height through the night (#508)", () => {
   /** "A", a woman of 170 cm who asks for somebody taller and lets through who did not answer, and the men of the pond. */
-  async function taller(ctx: TestContext, slug: string) {
-    const pond = await pondNamed(ctx.client, slug);
-    const [a] = await people(ctx.client, pond, 1, { ...HER, fields: { height: 170 } });
+  async function taller(ctx: TestContext) {
+    const [a] = await people(ctx.client, 1, { ...HER, fields: { height: 170 } });
     if (!a) throw new Error("A not written");
     await dealBreaker(ctx.client, a, "height", ["taller"], true);
-    const [tall] = await people(ctx.client, pond, 1, men({ height: 171 }));
-    const [same] = await people(ctx.client, pond, 1, men({ height: 170 }));
-    const [open] = await people(ctx.client, pond, 1, men({}));
+    const [tall] = await people(ctx.client, 1, men({ height: 171 }));
+    const [same] = await people(ctx.client, 1, men({ height: 170 }));
+    const [open] = await people(ctx.client, 1, men({}));
     if (!tall || !same || !open) throw new Error("people not written");
-    await openPond(ctx.client, pond);
+    await openMatchingHere(ctx.client);
     return { a, tall, same, open };
   }
 
   test("holds in the round both ways, and a card says a person did not answer height", async ({
     ctx,
   }) => {
-    const { a, tall, same, open } = await taller(ctx, "test-height-round");
+    const { a, tall, same, open } = await taller(ctx);
     for (const id of [a, same, tall]) await opens(ctx.client, id);
 
     const hers = (await roundOf(ctx.client, a)).map((e) => e.candidate_id);
@@ -991,7 +963,7 @@ describe("a deal-breaker on height through the night (#508)", () => {
   });
 
   test("a height hidden from the card is compared all the same (#515)", async ({ ctx }) => {
-    const { a, tall, same, open } = await taller(ctx, "test-height-hidden");
+    const { a, tall, same, open } = await taller(ctx);
     await hidden(ctx.client, [tall, same], "height");
     await opens(ctx.client, a);
 
@@ -1007,7 +979,7 @@ describe("a deal-breaker on height through the night (#508)", () => {
   });
 
   test("a short round offers to set it aside for the day", async ({ ctx }) => {
-    const { a, same } = await taller(ctx, "test-height-relaxed");
+    const { a, same } = await taller(ctx);
     await opens(ctx.client, a);
     const app = await appAt(ctx.client);
     const { headers } = await signInAs(ctx.client, a);
@@ -1025,18 +997,17 @@ describe("a deal-breaker on distance through the night (#514, ADR-061 §7)", () 
   const SET_ASIDE = { field: "distance", kind: "aside" } as const;
 
   /** "A" in Kallio who accepts nearby, and men at these homes; everybody's matching open. */
-  async function nearbyOnly(ctx: TestContext, slug: string, homes: readonly string[]) {
-    const pond = await pondNamed(ctx.client, slug);
-    const [a] = await people(ctx.client, pond, 1, HER);
+  async function nearbyOnly(ctx: TestContext, homes: readonly string[]) {
+    const [a] = await people(ctx.client, 1, HER);
     if (!a) throw new Error("A not written");
     await dealBreaker(ctx.client, a, "distance", ["nearby"], true);
     const men: string[] = [];
     for (const home of homes) {
-      const [man] = await people(ctx.client, pond, 1, { ...MEN, home });
+      const [man] = await people(ctx.client, 1, { ...MEN, home });
       if (!man) throw new Error("a man not written");
       men.push(man);
     }
-    await openPond(ctx.client, pond);
+    await openMatchingHere(ctx.client);
     return { a, men };
   }
 
@@ -1045,7 +1016,6 @@ describe("a deal-breaker on distance through the night (#514, ADR-061 §7)", () 
   }) => {
     const { a } = await nearbyOnly(
       ctx,
-      "test-distance-offer",
       Array.from({ length: 12 }, () => HOMES.close),
     );
     await opens(ctx.client, a);
@@ -1068,7 +1038,7 @@ describe("a deal-breaker on distance through the night (#514, ADR-061 §7)", () 
   test("A distance deal-breaker set aside lets in people beyond it, never against their own filters", async ({
     ctx,
   }) => {
-    const { a, men } = await nearbyOnly(ctx, "test-distance-aside", [HOMES.close, HOMES.around]);
+    const { a, men } = await nearbyOnly(ctx, [HOMES.close, HOMES.around]);
     const [b, c] = men;
     if (!b || !c) throw new Error("people not written");
     await dealBreaker(ctx.client, b, "distance", ["nearby"], true);
@@ -1088,7 +1058,7 @@ describe("a deal-breaker on distance through the night (#514, ADR-061 §7)", () 
 
   test("A move closes nothing: the offers read the pool as it stands", async ({ ctx }) => {
     // The offer is on smoking, and the one man it would let in lives in Kallio.
-    const { a } = await pondWith(ctx, "test-short-moved", [{ fields: {}, count: 1 }]);
+    const { a } = await pondWith(ctx, [{ fields: {}, count: 1 }]);
     await dealBreaker(ctx.client, a, "distance", ["nearby", "close", "around"], true);
     await opens(ctx.client, a);
     const app = await appAt(ctx.client);
@@ -1112,7 +1082,7 @@ describe("a deal-breaker on distance through the night (#514, ADR-061 §7)", () 
   test("set aside, it is undone as any other, and tomorrow's round filters again", async ({
     ctx,
   }) => {
-    const { a, men } = await nearbyOnly(ctx, "test-distance-undo", [HOMES.close]);
+    const { a, men } = await nearbyOnly(ctx, [HOMES.close]);
     const [b] = men;
     await opens(ctx.client, a);
     const app = await appAt(ctx.client);
@@ -1129,7 +1099,7 @@ describe("a deal-breaker on distance through the night (#514, ADR-061 §7)", () 
   });
 
   test("a like on a card a distance set aside let in reaches its person", async ({ ctx }) => {
-    const { a, men } = await nearbyOnly(ctx, "test-distance-like", [HOMES.close]);
+    const { a, men } = await nearbyOnly(ctx, [HOMES.close]);
     const [b] = men;
     if (!b) throw new Error("people not written");
     await opens(ctx.client, a);
@@ -1147,7 +1117,7 @@ describe("a deal-breaker on distance through the night (#514, ADR-061 §7)", () 
   });
 
   test("A card never says that its person did not answer a distance", async ({ ctx }) => {
-    const { a, men } = await nearbyOnly(ctx, "test-distance-card", [HOMES.nearby]);
+    const { a, men } = await nearbyOnly(ctx, [HOMES.nearby]);
     const [b] = men;
     await opens(ctx.client, a);
     const app = await appAt(ctx.client);
@@ -1162,12 +1132,11 @@ describe("a deal-breaker on distance through the night (#514, ADR-061 §7)", () 
   test("Every entry is written with its band, whichever way it came into the round", async ({
     ctx,
   }) => {
-    const pond = await pondNamed(ctx.client, "test-distance-every-way");
-    const [a] = await people(ctx.client, pond, 1, HER);
+    const [a] = await people(ctx.client, 1, HER);
     if (!a) throw new Error("A not written");
     await dealBreaker(ctx.client, a, "smoking", ["never"], true);
     const man = async (home: string, fields: ProfileFields = {}) => {
-      const [id] = await people(ctx.client, pond, 1, { ...men(fields), home });
+      const [id] = await people(ctx.client, 1, { ...men(fields), home });
       if (!id) throw new Error("a man not written");
       return id;
     };
@@ -1175,7 +1144,7 @@ describe("a deal-breaker on distance through the night (#514, ADR-061 §7)", () 
     const waited = await man(HOMES.far);
     const seen = await man(HOMES.nearby);
     const relaxedIn = await man(HOMES.around, { smoking: "regularly" });
-    await openPond(ctx.client, pond);
+    await openMatchingHere(ctx.client);
     await shownBefore(ctx.client, waited, a, 1, "like");
     await shownBefore(ctx.client, a, seen, 45, null);
     await opens(ctx.client, a);
@@ -1230,7 +1199,7 @@ describe("the routes' edges", () => {
   ] as const)(
     "a relaxation with %s is refused before anything is read",
     async ([, body], { ctx }) => {
-      const { a } = await pondWith(ctx, "test-short-invalid", [{ fields: {}, count: 1 }]);
+      const { a } = await pondWith(ctx, [{ fields: {}, count: 1 }]);
       await opens(ctx.client, a);
       const app = await appAt(ctx.client);
       const { headers } = await signInAs(ctx.client, a);
@@ -1245,7 +1214,7 @@ describe("the routes' edges", () => {
   test("a day that has ended answers round_expired, and one not begun is not found", async ({
     ctx,
   }) => {
-    const { a } = await pondWith(ctx, "test-short-days", [{ fields: {}, count: 1 }]);
+    const { a } = await pondWith(ctx, [{ fields: {}, count: 1 }]);
     await opens(ctx.client, a);
     const later = await appAt(ctx.client, new Date("2026-10-21T09:00:00.000Z"));
     const { headers } = await signInAs(ctx.client, a);
@@ -1263,8 +1232,7 @@ describe("the routes' edges", () => {
   });
 
   test("with no round today, nothing is offered, relaxed or undone", async ({ ctx }) => {
-    const pond = await pondNamed(ctx.client, "test-short-no-round");
-    const [a] = await people(ctx.client, pond, 1, HER);
+    const [a] = await people(ctx.client, 1, HER);
     if (!a) throw new Error("A not written");
     await dealBreaker(ctx.client, a, "smoking", ["never"], false);
     const app = await appAt(ctx.client);
@@ -1282,15 +1250,14 @@ describe("the routes' edges", () => {
   ] as const)(
     "%s is no relaxation to offer, and nothing is written",
     async ([, field, kind, includeUnknown, answered], { ctx }) => {
-      const pond = await pondNamed(ctx.client, "test-short-not-offered");
-      const [a] = await people(ctx.client, pond, 1, {
+      const [a] = await people(ctx.client, 1, {
         ...HER,
         fields: answered ? HER.fields : { hasKids: "yes_with_me" },
       });
-      await people(ctx.client, pond, 2, men({}));
+      await people(ctx.client, 2, men({}));
       if (!a) throw new Error("A not written");
       await dealBreaker(ctx.client, a, "smoking", ["never"], includeUnknown);
-      await openPond(ctx.client, pond);
+      await openMatchingHere(ctx.client);
       await opens(ctx.client, a);
       const app = await appAt(ctx.client);
       const { headers } = await signInAs(ctx.client, a);
@@ -1308,9 +1275,7 @@ describe("the routes' edges", () => {
   test("a round that is not short offers nothing, and a relaxation that finds nobody adds no card", async ({
     ctx,
   }) => {
-    const { a } = await pondWith(ctx, "test-short-full", [
-      { fields: { smoking: "never" }, count: QUEUE_PAGE + 1 },
-    ]);
+    const { a } = await pondWith(ctx, [{ fields: { smoking: "never" }, count: QUEUE_PAGE + 1 }]);
     await opens(ctx.client, a);
     const app = await appAt(ctx.client);
     const { headers } = await signInAs(ctx.client, a);
@@ -1326,7 +1291,7 @@ describe("the routes' edges", () => {
   test("offers neither a deal-breaker relaxed today nor a paused one, and keeps offering the others", async ({
     ctx,
   }) => {
-    const { a } = await pondWith(ctx, "test-short-offers-left", [
+    const { a } = await pondWith(ctx, [
       { fields: { hasKids: "no" }, count: 12 },
       { fields: {}, count: 12 },
     ]);
@@ -1351,7 +1316,7 @@ describe("the routes' edges", () => {
   test("a relaxation past a ceiling set in the panel is kept, its cards in the round, and says so with the wait", async ({
     ctx,
   }) => {
-    const { a } = await pondWith(ctx, "test-short-card-budget", [{ fields: {}, count: 2 }]);
+    const { a } = await pondWith(ctx, [{ fields: {}, count: 2 }]);
     await opens(ctx.client, a);
     await withMatchingConfig(ctx.client, { exposure_cards_per_day: 1 });
     const app = await appAt(ctx.client);
@@ -1366,7 +1331,7 @@ describe("the routes' edges", () => {
   });
 
   test("the routes take the clock of the day when the app is given none", async ({ ctx }) => {
-    const { a } = await pondWith(ctx, "test-short-clock", [{ fields: {}, count: 1 }]);
+    const { a } = await pondWith(ctx, [{ fields: {}, count: 1 }]);
     await opens(ctx.client, a);
     const { headers } = await signInAs(ctx.client, a);
     // The harness's app passes no now, so the routes read the clock: frozen at noon of the round's day.
@@ -1388,7 +1353,7 @@ describe("the routes' edges", () => {
     ["DELETE", `/rounds/${DAY}/relaxations/intent`],
     ["DELETE", "/rounds/today/relaxations/smoking"],
   ] as const)("%s %s is refused before anything is read", async ([method, path], { ctx }) => {
-    const { a } = await pondWith(ctx, "test-short-params", [{ fields: {}, count: 1 }]);
+    const { a } = await pondWith(ctx, [{ fields: {}, count: 1 }]);
     await opens(ctx.client, a);
     const app = await appAt(ctx.client);
     const { headers } = await signInAs(ctx.client, a);
@@ -1407,7 +1372,7 @@ describe("the routes' edges", () => {
   test("a paused person's round offers nothing, and nothing in it can be relaxed", async ({
     ctx,
   }) => {
-    const { a } = await pondWith(ctx, "test-short-paused-owner", [{ fields: {}, count: 2 }]);
+    const { a } = await pondWith(ctx, [{ fields: {}, count: 2 }]);
     await opens(ctx.client, a);
     await ctx.client.query("UPDATE account SET state = 'paused' WHERE id = $1", [a]);
     const app = await appAt(ctx.client);
@@ -1419,7 +1384,7 @@ describe("the routes' edges", () => {
   });
 
   test("undoing what was not relaxed today is not found", async ({ ctx }) => {
-    const { a } = await pondWith(ctx, "test-short-undo-none", [{ fields: {}, count: 1 }]);
+    const { a } = await pondWith(ctx, [{ fields: {}, count: 1 }]);
     await opens(ctx.client, a);
     const app = await appAt(ctx.client);
     const { headers } = await signInAs(ctx.client, a);
@@ -1431,11 +1396,11 @@ describe("the routes' edges", () => {
   });
 
   test("a person's relaxation changes only their own round", async ({ ctx }) => {
-    const { pond, a, of } = await pondWith(ctx, "test-short-own", [{ fields: {}, count: 3 }]);
-    const [other] = await people(ctx.client, pond, 1, HER);
+    const { a, of } = await pondWith(ctx, [{ fields: {}, count: 3 }]);
+    const [other] = await people(ctx.client, 1, HER);
     if (!other) throw new Error("other not written");
     await dealBreaker(ctx.client, other, "smoking", ["never"], false);
-    await openPond(ctx.client, pond);
+    await openMatchingHere(ctx.client);
     await opens(ctx.client, a);
     await opens(ctx.client, other);
     const app = await appAt(ctx.client);
@@ -1451,7 +1416,7 @@ describe("the routes' edges", () => {
   });
 
   test("the person's export names the field a relaxed card came in by", async ({ ctx }) => {
-    const { a } = await pondWith(ctx, "test-short-export", [{ fields: {}, count: 1 }]);
+    const { a } = await pondWith(ctx, [{ fields: {}, count: 1 }]);
     await opens(ctx.client, a);
     const app = await appAt(ctx.client);
     const { headers } = await signInAs(ctx.client, a);

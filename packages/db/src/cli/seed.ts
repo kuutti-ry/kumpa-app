@@ -1,5 +1,5 @@
 /**
- * Seeds ponds and matching_config version 1. Idempotent.
+ * Seeds matching_config version 1 and the seeded identities, and opens matching. Idempotent.
  *   pnpm --filter @kuutti/db seed -- --env development
  * Refuses production before opening a connection, when either --env or
  * APP_ENV names it: a flag never talks the seed past the environment it runs

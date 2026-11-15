@@ -25,7 +25,8 @@ const AUDIT_ACTIONS = [
   "report.view",
   "conversation.view",
   "report.decide",
-  // A pond's switch turned in the panel (#500, ADR-060 §2): `detail` says which way.
+  // The switch that opens matching turned in the panel (#500, ADR-060 §2): `detail` says which
+  // way, and the row is about the switch's new version in `matching_config` (#607).
   "pond.matching",
   // An announcement to everybody (#573, ADR-068 §2): written, approved by a
   // second admin (`detail` says how many notices it wrote), or deleted as a
@@ -41,15 +42,7 @@ export type AuditEntry = {
   actorIdentityId: string | null;
   action: AuditAction;
   /** "any": an audit read narrowed to a subject id of no named type (#309). */
-  subjectType:
-    | "photo"
-    | "feedback"
-    | "account"
-    | "config"
-    | "report"
-    | "pond"
-    | "announcement"
-    | "any";
+  subjectType: "photo" | "feedback" | "account" | "config" | "report" | "announcement" | "any";
   subjectId: string;
   detail?: Record<string, string | number | boolean | null>;
 };

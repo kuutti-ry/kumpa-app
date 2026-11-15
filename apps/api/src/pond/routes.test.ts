@@ -9,7 +9,12 @@ import {
 import type { QueryResultRow } from "pg";
 import { describe, expect } from "vitest";
 import { createApp } from "../app.ts";
-import { signedInAccount, signInAs, withMatchingConfig } from "../test/account.ts";
+import {
+  openMatchingHere,
+  signedInAccount,
+  signInAs,
+  withMatchingConfig,
+} from "../test/account.ts";
 import {
   captureLogger,
   jsonHeaders as json,
@@ -17,7 +22,7 @@ import {
   test,
   testConfig,
 } from "../test/harness.ts";
-import { HOME, openPond, people, pondNamed } from "../test/people.ts";
+import { HOME, people } from "../test/people.ts";
 import { readHome } from "./home.ts";
 
 // PUT /account/home (#514, ADR-061, features/pond/home.feature) and the gate's
@@ -45,8 +50,7 @@ const homeRow = async (ctx: TestContext, accountId: string) =>
     await ctx.client.query<{
       home_place: string | null;
       home_shows_area: boolean;
-      pond_id: string | null;
-    }>("SELECT home_place, home_shows_area, pond_id FROM account WHERE id = $1", [accountId])
+    }>("SELECT home_place, home_shows_area FROM account WHERE id = $1", [accountId])
   ).rows[0];
 
 /** The database as it is, with every statement and its values kept to read back. */
@@ -66,7 +70,7 @@ const HELSINKI = { fi: "Helsinki", sv: "Helsingfors" };
 const JOENSUU = { fi: "Joensuu", sv: "Joensuu" };
 
 describe("the home's write", () => {
-  test("keeps the area, answers in names and sets the one pond", async ({ ctx }) => {
+  test("keeps the area and answers in names", async ({ ctx }) => {
     const { app, logs } = await appWith(ctx);
     const a = await signedInAccount(ctx.client, undefined, { state: "registered" });
     const res = await putHome(app, a.headers, { postalCode: "00530" });
@@ -130,7 +134,6 @@ describe("the home's write", () => {
     expect(await homeRow(ctx, a.accountId)).toEqual({
       home_place: null,
       home_shows_area: false,
-      pond_id: null,
     });
   });
 
@@ -275,13 +278,12 @@ describe("the pond routes' guard", () => {
     ctx,
   }) => {
     const { app } = await appWith(ctx);
-    const pondId = await pondNamed(ctx.client, "test-gate-route");
-    const [open] = await people(ctx.client, pondId, 1, {
+    const [open] = await people(ctx.client, 1, {
       complete: true,
       consented: true,
       gender: "woman",
     });
-    await openPond(ctx.client, pondId);
+    await openMatchingHere(ctx.client);
     const theirs = await signInAs(ctx.client, open ?? "");
     const mine = await signedInAccount(ctx.client);
 
@@ -433,8 +435,7 @@ describe("the features of the home", () => {
 
   test("A home changes whenever the person likes, and the earlier one is gone", async ({ ctx }) => {
     const { app } = await appWith(ctx);
-    const pondId = await pondNamed(ctx.client, "test-home-moves");
-    const [person] = await people(ctx.client, pondId, 1, {
+    const [person] = await people(ctx.client, 1, {
       complete: true,
       consented: true,
       gender: "woman",
@@ -457,35 +458,8 @@ describe("the features of the home", () => {
       "home_place",
       "home_shows_area",
     ]);
-    expect(row.pond_id).toBe(pondId);
-  });
-
-  test("The home write sets the one pond, and reading the status sets nothing", async ({ ctx }) => {
-    const { app, logs } = await appWith(ctx);
-    const a = await signedInAccount(ctx.client, undefined, { state: "registered" });
-    const read = async () => (await app.request("/onboarding", { headers: a.headers })).json();
-    const first = OnboardingStatus.parse(await read());
-    expect(first.missing).toContain("home");
-    expect(first.missing).not.toContain("pond");
-    expect((await homeRow(ctx, a.accountId))?.pond_id).toBeNull();
-
-    expect((await putHome(app, a.headers, { postalCode: "00530" })).status).toBe(200);
-    const { rows } = await ctx.client.query<{ id: string }>(
-      "SELECT id FROM ponds WHERE slug = 'suomi'",
-    );
-    expect((await homeRow(ctx, a.accountId))?.pond_id).toBe(rows[0]?.id);
-    // The status names no pond, before or after: the home card reads the counter's (#500).
-    expect(await read()).not.toHaveProperty("pond");
-    expect(logs().some((l) => l.msg === "pond assigned")).toBe(false);
-  });
-
-  test("a pond held stays", async ({ ctx }) => {
-    const { app } = await appWith(ctx);
-    const pondId = await pondNamed(ctx.client, "test-home-pond-held");
-    const a = await signedInAccount(ctx.client);
-    await ctx.client.query("UPDATE account SET pond_id = $2 WHERE id = $1", [a.accountId, pondId]);
-    expect((await putHome(app, a.headers, { postalCode: "00530" })).status).toBe(200);
-    expect((await homeRow(ctx, a.accountId))?.pond_id).toBe(pondId);
+    // And no pond beside it: the home is what puts a person among the others (ADR-061 §8, #607).
+    expect(Object.keys(row).filter((column) => column.includes("pond"))).toEqual([]);
   });
 
   test("The home of another account is never served", async ({ ctx }) => {

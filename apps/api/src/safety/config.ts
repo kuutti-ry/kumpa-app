@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { type Queryable, transaction } from "@kuutti/db";
 import { type ConfigChange, type ConfigKey, ConfigValue, InvitationReward } from "@kuutti/schema";
 import { AppError } from "../lib/errors.ts";
+import { MATCHING_OPEN_KEY } from "../lib/matching-config.ts";
 import { recordAudit } from "./audit.ts";
 
 // The tunables in the panel (#304, #305): every key of matching_config with
@@ -11,6 +12,9 @@ import { recordAudit } from "./audit.ts";
 // here, and a change keeps the value's shape, so no reader gets a type it
 // does not expect. Raw parameterised SQL through Queryable, as the slices'
 // repositories, so the test harness's rolled-back transaction passes through.
+// One key of the table is no tunable: the switch that opens matching has a
+// screen and a confirm step of its own and nothing else turns it (ADR-060 §2,
+// #607), so it is neither listed nor written here.
 
 type Row = {
   id: string;
@@ -26,7 +30,8 @@ type Row = {
 export async function listConfig(db: Queryable): Promise<ConfigKey[]> {
   const { rows } = await db.query<Row>(
     `SELECT id, key, version, value, valid_from, created_by, reason
-     FROM matching_config ORDER BY key, version DESC`,
+     FROM matching_config WHERE key <> $1 ORDER BY key, version DESC`,
+    [MATCHING_OPEN_KEY],
   );
   const keys = new Map<string, ConfigKey>();
   for (const row of rows) {
@@ -113,12 +118,12 @@ export async function changeConfig(
 ): Promise<ConfigChange> {
   const { rows: latest } = await db.query<Row>(
     `SELECT id, key, version, value, valid_from, created_by, reason
-     FROM matching_config WHERE key = $1 ORDER BY version DESC LIMIT 1`,
-    [input.key],
+     FROM matching_config WHERE key = $1 AND key <> $2 ORDER BY version DESC LIMIT 1`,
+    [input.key, MATCHING_OPEN_KEY],
   );
   const current = latest[0];
   if (!current) throw new AppError(404, "not_found", "No such key; keys are born in migrations");
-  // Only an admin's row has a reason (the column's comment), so this is a migration's or the seed's.
+  // Only a tunable's row by an admin has a reason (the column's comment), so this is a migration's or the seed's.
   const { rows: unchanged } = await db.query<{ value: unknown }>(
     "SELECT value FROM matching_config WHERE key = $1 AND reason IS NULL ORDER BY version DESC LIMIT 1",
     [input.key],

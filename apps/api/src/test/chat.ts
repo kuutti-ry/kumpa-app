@@ -152,7 +152,7 @@ export function interleavedAfter(
 export type ChatPerson = { accountId: string; headers: Record<string, string> };
 
 export async function person(ctx: TestContext, name: string): Promise<ChatPerson> {
-  const [accountId] = await people(ctx.client, null, 1, { complete: true });
+  const [accountId] = await people(ctx.client, 1, { complete: true });
   if (!accountId) throw new Error("no person");
   await ctx.client.query("UPDATE profile SET display_name = $2 WHERE account_id = $1", [
     accountId,

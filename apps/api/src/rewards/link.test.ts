@@ -91,7 +91,7 @@ describe("the one link", () => {
   test("a code that is somebody's invitation is answered as one that is nobody's", async ({
     ctx,
   }) => {
-    const [inviter] = await people(ctx.client, null, 1);
+    const [inviter] = await people(ctx.client, 1);
     await invitationOf(ctx.client, inviter as string, { codeHash: hashOf("ABCDEFGHJK") });
     const { app } = await appWith(ctx, STORES);
     const real = new URL((await follow(app, "/i/ABCDE-FGHJK", UA.android)).location ?? "");

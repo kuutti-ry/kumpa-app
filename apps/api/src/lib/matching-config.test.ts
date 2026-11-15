@@ -6,9 +6,11 @@ import { AppError } from "./errors.ts";
 import {
   asHour,
   distanceEdges,
+  MATCHING_OPEN_KEY,
   matchingConfigNumber,
   matchingConfigNumbers,
   matchingConfigOf,
+  matchingOpen,
   readMatchingConfig,
 } from "./matching-config.ts";
 
@@ -193,6 +195,43 @@ describe("the queue's numbers (ADR-062)", () => {
       card: 0,
       full: 60,
     });
+  });
+});
+
+describe("matchingOpen (ADR-060 §1, #607)", () => {
+  test("a database nobody has opened stands closed, and the switch's latest version wins", async ({
+    ctx,
+  }) => {
+    expect(MATCHING_OPEN_KEY).toBe("matching_open");
+    expect(await matchingOpen(ctx.client)).toBe(false);
+    await row(ctx.client, MATCHING_OPEN_KEY, 2, true);
+    expect(await matchingOpen(ctx.client)).toBe(true);
+    await row(ctx.client, MATCHING_OPEN_KEY, 3, false);
+    expect(await matchingOpen(ctx.client)).toBe(false);
+  });
+
+  test.for([
+    ["a string", "true"],
+    ["a number", 1],
+    ["nothing", null],
+  ] as const)(
+    "a switch that is %s is a broken deployment, never open",
+    async ([_, value], { ctx }) => {
+      await row(ctx.client, MATCHING_OPEN_KEY, 2, value);
+      const error = await refusal(matchingOpen(ctx.client));
+      expect(error).toMatchObject({
+        status: 500,
+        code: "internal_error",
+        detail: { key: "matching_open" },
+      });
+      expect(error.message).toBe("matching_config matching_open is not a boolean");
+    },
+  );
+
+  test("a database without the switch's row fails as a missing tunable does", async ({ ctx }) => {
+    await ctx.client.query("DELETE FROM matching_config WHERE key = $1", [MATCHING_OPEN_KEY]);
+    const error = await refusal(matchingOpen(ctx.client));
+    expect(error.message).toBe("matching_config has no row for matching_open");
   });
 });
 

@@ -2,7 +2,6 @@ import { resolve } from "node:path";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { migrate } from "../migrate.ts";
 import { createPool, type Pool } from "../pool.ts";
-import { SEED_PONDS } from "../seed.ts";
 import { withTemporaryDatabase } from "../test/temporary-database.ts";
 import { NOWHERE, run } from "./run-in-process.ts";
 
@@ -109,7 +108,6 @@ describe("pnpm --filter @kuutti/db seed", () => {
         expect(JSON.parse(result.out[0] ?? "{}")).toEqual({
           msg: "seed",
           env,
-          ponds: SEED_PONDS.length,
           matchingConfig: expect.any(Number),
           identities: 3,
         });
@@ -121,7 +119,7 @@ describe("pnpm --filter @kuutti/db seed", () => {
     await withTemporaryDatabase(async (url) => {
       const result = await run("seed", [], { DATABASE_URL: url });
       expect(result.code).toBe(1);
-      expect(result.err.join("\n")).toMatch(/Failed query: insert into "ponds"/);
+      expect(result.err.join("\n")).toMatch(/Failed query: insert into "matching_config"/);
     });
   });
 });

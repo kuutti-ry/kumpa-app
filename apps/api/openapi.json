@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Kuutti API",
-    "version": "0.121.0",
+    "version": "0.120.12",
     "description": "Free, non-commercial dating app for Finland. Every account is verified through a Finnish bank. Source: AGPL-3.0 with App Store exception."
   },
   "components": {
@@ -64,9 +64,6 @@
               "gender": {
                 "$ref": "#/components/schemas/Gender"
               },
-              "pond": {
-                "$ref": "#/components/schemas/PondSummary"
-              },
               "home": {
                 "type": "object",
                 "nullable": true,
@@ -112,7 +109,6 @@
               "birthYear",
               "birthMonth",
               "gender",
-              "pond",
               "home",
               "genderChangedAt",
               "email",
@@ -395,31 +391,6 @@
           "man",
           "non_binary",
           null
-        ]
-      },
-      "PondSummary": {
-        "type": "object",
-        "nullable": true,
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "slug": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 60
-          },
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 80
-          }
-        },
-        "required": [
-          "id",
-          "slug",
-          "name"
         ]
       },
       "PreferencesResponse": {
@@ -6722,50 +6693,7 @@
           "lastSignInAt"
         ]
       },
-      "AdminPondList": {
-        "type": "object",
-        "properties": {
-          "items": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/AdminPond"
-            },
-            "maxItems": 200
-          }
-        },
-        "required": [
-          "items"
-        ]
-      },
-      "AdminPond": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "slug": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 60
-          },
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 80
-          },
-          "matchingOpen": {
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "id",
-          "slug",
-          "name",
-          "matchingOpen"
-        ]
-      },
-      "PondMatchingChange": {
+      "MatchingSwitchState": {
         "type": "object",
         "properties": {
           "open": {
@@ -6930,26 +6858,6 @@
             "type": "integer",
             "minimum": 10
           },
-          "ponds": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/PondCounterPond"
-            },
-            "maxItems": 500
-          }
-        },
-        "required": [
-          "k",
-          "ponds"
-        ],
-        "additionalProperties": false
-      },
-      "PondCounterPond": {
-        "type": "object",
-        "properties": {
-          "pond": {
-            "$ref": "#/components/schemas/PondSummary"
-          },
           "day": {
             "type": "string",
             "nullable": true,
@@ -6965,7 +6873,7 @@
           }
         },
         "required": [
-          "pond",
+          "k",
           "day",
           "finished",
           "seeks"
@@ -13089,10 +12997,10 @@
         }
       }
     },
-    "/admin/ponds": {
+    "/admin/matching": {
       "get": {
-        "summary": "Every pond with its switch",
-        "description": "Each pond and whether matching is open in it. Admins only.",
+        "summary": "Whether matching is open",
+        "description": "The switch that opens matching, for the whole country. Admins only.",
         "security": [
           {
             "session": []
@@ -13100,11 +13008,11 @@
         ],
         "responses": {
           "200": {
-            "description": "The ponds.",
+            "description": "The switch as it stands.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AdminPondList"
+                  "$ref": "#/components/schemas/MatchingSwitchState"
                 }
               }
             }
@@ -13130,26 +13038,13 @@
             }
           }
         }
-      }
-    },
-    "/admin/ponds/{id}/matching": {
+      },
       "post": {
-        "summary": "Open or close matching in a pond",
-        "description": "Sets the switch of the one pond, which stands for the whole country (ADR-061 §8). Open, each complete person reads their queue from their next read, and their matching card says so; closed, nobody new joins a queue, cards already queued stay for the day, and conversations go on (ADR-060, ADR-062). Nothing else turns it. A press that finds the switch as it asks changes nothing and writes nothing. Admins only; written to audit_log.",
+        "summary": "Open or close matching",
+        "description": "Sets the one switch, which stands for the whole country (ADR-061 §8). Open, each complete person reads their queue from their next read, and their matching card says so; closed, nobody new joins a queue, cards already queued stay for the day, and conversations go on (ADR-060, ADR-062). Nothing else turns it. A press that finds the switch as it asks changes nothing and writes nothing. Admins only; written to audit_log.",
         "security": [
           {
             "session": []
-          }
-        ],
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "required": true,
-            "name": "id",
-            "in": "path"
           }
         ],
         "requestBody": {
@@ -13157,18 +13052,18 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PondMatchingChange"
+                "$ref": "#/components/schemas/MatchingSwitchState"
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "The pond as it now stands.",
+            "description": "The switch as it now stands.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AdminPond"
+                  "$ref": "#/components/schemas/MatchingSwitchState"
                 }
               }
             }
@@ -13195,16 +13090,6 @@
           },
           "403": {
             "description": "admin_forbidden: the role does not allow this.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "No such pond.",
             "content": {
               "application/json": {
                 "schema": {
@@ -13484,7 +13369,7 @@
     "/gate": {
       "get": {
         "summary": "Whether matching is open for the caller",
-        "description": "Between a finished profile and the first read of the queue: incomplete while the profile or onboarding lacks something, closed once it is finished and matching has not opened in the caller's pond yet, open once it has. An admin opens a pond; nothing here counts anybody.",
+        "description": "Between a finished profile and the first read of the queue: incomplete while the profile or onboarding lacks something, closed once it is finished and matching has not opened yet, open once it has. An admin opens matching; nothing here counts anybody.",
         "security": [
           {
             "session": []
@@ -13517,7 +13402,7 @@
     "/ponds/counter": {
       "get": {
         "summary": "The pond counter",
-        "description": "Per pond: how many bank-verified people with the pond as theirs have completed their profiles. The number is published only where at least k people stand behind it (k is in the answer), and it moves only once at least k people have come or gone since it was last said. Counted once a day. No session needed. With one, the answer is the caller's and is not cached, and the caller's own pond also says whom its people seek: percentages in steps of five of three bands of finished profiles, those who seek men, those who seek both women and men, and those who seek women, null until every band holds at least k people.",
+        "description": "How many bank-verified people who have told their home have completed their profiles. The number is published only where at least k people stand behind it (k is in the answer), and it moves only once at least k people have come or gone since it was last said. Counted once a day. No session needed. With one, the answer is the caller's and is not cached, and to a caller who has told their home it also says whom people seek: percentages in steps of five of three bands of finished profiles, those who seek men, those who seek both women and men, and those who seek women, null until every band holds at least k people.",
         "security": [
           {},
           {
@@ -13526,7 +13411,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Every pond with what may be said of it.",
+            "description": "What may be said of the people on Kuutti.",
             "content": {
               "application/json": {
                 "schema": {
@@ -13551,7 +13436,7 @@
     "/account/home": {
       "put": {
         "summary": "Set the caller's home, or what their card shows of it",
-        "description": "A postal code of five digits, whether the card shows the area instead of the town, or both. What is kept is a place of at least matching_config home_min_inhabitants people: the postal area, else its municipality, else the nearest municipality that has them. A new postal code starts from the town again unless the same request says otherwise, and showArea stays false where no area is kept. The home changes whenever the person likes. The write sets the account's pond if it has none. The answer names places and never carries digits.",
+        "description": "A postal code of five digits, whether the card shows the area instead of the town, or both. What is kept is a place of at least matching_config home_min_inhabitants people: the postal area, else its municipality, else the nearest municipality that has them. A new postal code starts from the town again unless the same request says otherwise, and showArea stays false where no area is kept. The home changes whenever the person likes. The answer names places and never carries digits.",
         "security": [
           {
             "session": []

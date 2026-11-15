@@ -1,7 +1,9 @@
 # features/pond/counter.feature
 Feature: The pond counter
-  The number of a pond: the people who count there, bank-verified accounts with
-  that pond as theirs (TD-10), with an active account and a complete profile. It
+  The number of the pond: the people who count, bank-verified accounts that
+  have told their home (TD-10, ADR-061), with an active account and a complete
+  profile. There is one pond, the country, so there is one number (the
+  maintainer, 15/11/2026, #607). It
   is public, so it is coarse on purpose: it is said only where at least k people
   stand behind it, and it moves only once at least k people have come or gone,
   so one person coming or going changes nothing that is said (#54, #581,
@@ -10,10 +12,10 @@ Feature: The pond counter
   Scenario: A pond below k publishes no number
     Given a pond with nine finished profiles and k is ten
     When the figures are taken and the counter is read
-    Then the pond is listed with no number and no day
+    Then the counter says no number and no day
 
-  Scenario: Only live accounts with a pond are counted, a shadow-banned one like any other
-    Given a pond with nine finished profiles and a shadow-banned one, and beside them a paused, a suspended and a deleted account, one whose identity is banned, and one that has no pond yet, each with a finished profile
+  Scenario: Only live accounts with a home are counted, a shadow-banned one like any other
+    Given a pond with nine finished profiles and a shadow-banned one, and beside them a paused, a suspended and a deleted account, one whose identity is banned, and one that has told no home yet, each with a finished profile
     When the figures are taken
     Then the pond's number is ten
 
@@ -43,7 +45,7 @@ Feature: The pond counter
 
   Scenario: The counter answers without a session and names nobody
     When anybody asks for the counter
-    Then the answer carries k and every pond, may be cached, and holds no account, no time of day and nothing from a profile
+    Then the answer carries k and the one number, may be cached, and holds no account, no time of day and nothing from a profile
 
   Scenario: The counter says one number and nothing of gender or of a profile that is not complete
     Given a pond with ten women and ten men with finished profiles and ten people whose profiles are not complete
@@ -115,8 +117,8 @@ Feature: The pond counter
     When a person of the pond asks
     Then they hear its shares, never cached, with no count of any band
 
-  Scenario: Nobody hears a bar without a pond or without a session
-    When somebody with no pond asks
+  Scenario: Nobody hears a bar without a home or without a session
+    When somebody who has told no home asks
     Then the bar is not said
     When somebody asks without a session
     Then the bar is not said
