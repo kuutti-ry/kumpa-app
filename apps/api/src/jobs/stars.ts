@@ -34,9 +34,9 @@ export async function starsShown(
 ): Promise<ReadonlySet<string>> {
   if (candidateIds.length === 0) return new Set();
   if (!(await openPondOf(db, accountId))) return new Set();
-  const fitting = (await fittingNow(deps, db, accountId, candidateIds))
-    .filter((subject) => subject.visible)
-    .map((subject) => subject.id);
+  const fitting = (await fittingNow(deps, db, accountId, candidateIds)).map(
+    (subject) => subject.id,
+  );
   const held = await heldFromStars(deps, db, accountId, fitting);
   return new Set(fitting.filter((id) => !held.has(id)));
 }

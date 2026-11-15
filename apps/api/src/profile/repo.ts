@@ -17,9 +17,9 @@ import {
 // the test harness hands a rolled-back transaction through. Every statement
 // about the caller's own profile carries the caller's account id in its WHERE
 // clause (rule 6). The one read by another account's id, findCardSubject, is
-// the card: what the round builder of M4 serves after the matching rules
-// chose the subject, and what the owner previews for themselves; no route
-// serves another person's card in M3 (ADR-009).
+// the card: what the queue and the Starred list serve after the matching
+// rules chose the subject (`cardOf` in app.ts), and what the owner previews
+// for themselves (ADR-009).
 
 type Row = Record<string, unknown>;
 

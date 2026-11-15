@@ -140,9 +140,9 @@ Code inside each app is organised by slice, never by layer (`.claude/rules/layou
 | matching | yes | yes | no directory | yes | heavy, heavy, none |
 | chat | yes | yes | no directory | yes | heavy, heavy, none |
 | safety | yes | yes | yes: the overview, reports, accounts, sanctions, automatic bans, feedback, staff, the audit log, matching_config | yes | medium, thin, heavy |
-| research | yes | a README only | no directory | no | medium, none, none |
+| research | yes | a README only | no directory | its attack pile only | medium, none, none |
 | rewards | yes | yes | no directory | no | light, light, none |
-| notifications | yes | yes | no directory | no | light, light, none |
+| notifications | yes | yes | yes: announcements to everybody | yes | light, light, announcements |
 
 Besides the slices, the API has `health/`, `jobs/` (the nightly timer, and what reads across slices: the pond counter and the invitation count, which the night runs, and who of a pond is complete, the queue's builder and the Starred list, which the routes ask), `lib/` and `test/`; the phone app has `home/` and `settings/` among its features, and `src/lib/`; the admin panel has `src/lib/` and `src/components/ui/` (shadcn/ui's components, ADR-050).
 
@@ -152,10 +152,10 @@ Besides the slices, the API has `health/`, `jobs/` (the nightly timer, and what 
 4. **pond**: the one pond, a person's home (ADR-061), the pond counter, and the switch that opens matching. In all three apps (the admin panel's Matching screen); specs in `features/pond`.
 5. **matching**: the queue and its day's log, deal-breakers, likes, the fish, the match. API and phone app; specs in `features/matching`.
 6. **chat**: conversations, messages, the socket, contacts shared, the archive. API and phone app; specs in `features/chat`.
-7. **safety**: reports, blocks, sanctions, the audit log, the automatic shadow bans, velocity. In all three apps; the admin panel's screens are in this slice, but for the photo queue and the Matching switch. Specs in `features/safety`.
+7. **safety**: reports, blocks, sanctions, the audit log, the automatic shadow bans, velocity. In all three apps; the admin panel's screens are in this slice, but for the staff sign-in, the photo queue, the Matching switch and the announcements. Specs in `features/safety`.
 8. **research**: the event registry's one door (`track`), the `research_id` mapping, the partitions and the research copy. The API alone has code; the phone app's directory holds a README only.
 9. **rewards**: invitations and the reward ledger. API and phone app.
-10. **notifications**: the notification choices, the notices in the app and the push (#102, ADR-055): whom to tell of a message or a match, and the devices' tokens. API and phone app.
+10. **notifications**: the notification choices, the notices in the app and the push (#102, ADR-055): whom to tell of a message or a match, and the devices' tokens; and the announcements to everybody (#573, ADR-068). In all three apps (the admin panel's Announcements screen); specs in `features/notifications`.
 
 ## Part 4: the import boundary
 
@@ -202,7 +202,7 @@ flowchart LR
 - The boundary: `biome.json` (overrides), `.claude/rules/layout.md`, `package.json` (`lint`)
 - The generated client: `apps/api/scripts/openapi.ts`, `apps/api/openapi.json`, `.github/workflows/ci.yml` (the drift check)
 - The web target: `.github/workflows/preview.yml` (the export and the EAS Hosting alias)
-- Specs: `features/identity`, `features/media`, `features/pond`, `features/matching`, `features/chat`, `features/safety`
+- Specs: `features/identity`, `features/media`, `features/pond`, `features/matching`, `features/chat`, `features/safety`, `features/notifications`
 - ADRs: [ADR-003](../adr/003-types-across-the-client-server-boundary.md) (the generated client), [ADR-014](../adr/014-demo-mode.md) (the mock bank and the demo tools), [ADR-017](../adr/017-tunnistus-oidc-package.md) §6 (the kit's own repository), [ADR-021](../adr/021-tests-at-every-level.md) (the levels the packages carry), [ADR-026](../adr/026-limits-per-person-and-sign-in-doors.md) (the limiters), [ADR-031](../adr/031-chat.md) §9 (the socket in the process)
 - Issues: #1 and #2 (the slices and their boundary), #44 (the kit to npm), #349 (the socket), #416 (the notices package)
 

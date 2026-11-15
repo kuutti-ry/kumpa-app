@@ -51,8 +51,8 @@ export type ChatDeps = {
 
 /**
  * How the conversation stands for the caller. Closed when it was closed, when
- * a block stands between the two (#351 writes the close; until then, and in
- * the moment between, the block alone closes it), or when the counterpart is
+ * a block stands between the two (#351 writes the close; in the moment
+ * between, the block alone closes it), or when the counterpart is
  * erased. Erasure reads as such; everything else as an ended conversation.
  */
 function stateOf(row: {

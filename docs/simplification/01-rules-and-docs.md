@@ -1,6 +1,6 @@
 # Phase 1: the agents' rules
 
-What was done here is narrow: sentences in the rules files that were false against the code were corrected (#672, `a393677d`). `CLAUDE.md` and the rules files otherwise stand as they were, in their length and their wording.
+What was done here is narrow: sentences in the rules files that were false against the code were corrected (#672). `CLAUDE.md` and the rules files otherwise stand as they were, in their length and their wording, but for the `pnpm env:down` sentence of `CLAUDE.md`, which B7's fix (#671) corrected.
 
 | File | It said | It says now |
 |---|---|---|

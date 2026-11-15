@@ -80,7 +80,6 @@ export function feedbackRoutes(deps: Deps, guard: MiddlewareHandler<AppEnv>) {
         { accountId, used: record.used, limit, retryAfterSeconds, reason: "budget" },
         "feedback refused",
       );
-      c.header("Retry-After", String(retryAfterSeconds));
       throw new AppError(429, "feedback_budget_exceeded", "The day's feedback is sent", {
         retryAfterSeconds,
       });

@@ -316,7 +316,7 @@ export async function giveHistory(
 
 /**
  * The stories' conversations (#348): between the accounts the histories were
- * just given to, as rows until #100 writes them from the second like. A
+ * just given to, as rows, not through the second like of #100. A
  * persona whose story ended in a refusal, or that was left alone, has none.
  */
 export function giveConversations(db: Queryable, results: readonly HistoryResult[], at: Date) {

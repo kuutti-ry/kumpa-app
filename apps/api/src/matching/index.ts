@@ -1,6 +1,7 @@
 // Public surface of the matching slice in apps/api. Other slices import from here only.
 // #46 brings the two hard rows of onboarding; #94 what they mean between two
-// people; the rounds and their rules are the rest of M4.
+// people; the queue and its rounds (#96, #502), the stars (#575) and their
+// rules are the rest.
 
 // The round builder reads every person's deal-breakers as the person's own read does (#87).
 export {

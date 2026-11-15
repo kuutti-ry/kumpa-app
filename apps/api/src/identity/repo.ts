@@ -1330,14 +1330,14 @@ export async function activeConsents(db: Queryable, accountId: string): Promise<
   return rows.map(consentFrom);
 }
 
+/** Research consents given within a day before the next is refused: the rows are kept for good, so churn is capped. */
+export const CONSENT_CHURN_PER_DAY = 10;
+
 /**
  * One row per consent given: the same kind and version, still active, is
  * not written twice; a withdrawn research consent given again is a new row.
  * A tombstone takes none (#51).
  */
-/** Research consents given within a day before the next is refused: the rows are kept for good, so churn is capped. */
-export const CONSENT_CHURN_PER_DAY = 10;
-
 export async function recordConsent(
   db: Queryable,
   accountId: string,

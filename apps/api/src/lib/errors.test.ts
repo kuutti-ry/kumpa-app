@@ -222,3 +222,65 @@ describe("errorName", () => {
     expect(errorName(null)).toBe("unknown");
   });
 });
+
+describe("the wait a refusal names", () => {
+  test("is answered as Retry-After whichever route throws it, and never where no wait is named", async () => {
+    const { logger } = await captureLogger();
+    const app = new Hono<AppEnv>();
+    app.onError(onError<AppEnv>(logger));
+    app.get("/spent", () => {
+      throw new AppError(429, "budget", "spent", { retryAfterSeconds: 30 });
+    });
+    app.get("/last-second", () => {
+      throw new AppError(429, "budget", "spent", { retryAfterSeconds: 1 });
+    });
+    app.get("/taken", () => {
+      throw new AppError(409, "taken", "taken", { other: 1 });
+    });
+    app.get("/bare", () => {
+      throw new AppError(429, "budget", "spent");
+    });
+    app.get("/gone", () => {
+      throw new HTTPException(404);
+    });
+    app.get("/broken", () => {
+      throw Object.assign(new Error("x"), { detail: { retryAfterSeconds: 9 } });
+    });
+    const spent = await app.request("/spent");
+    expect(spent.status).toBe(429);
+    expect(spent.headers.get("Retry-After")).toBe("30");
+    // The wait is the header's alone: the body stays the envelope.
+    expect(ErrorResponse.parse(await spent.json()).error.code).toBe("budget");
+    // One second is the least a refusal names (`secondsUntil`), and is a wait.
+    expect((await app.request("/last-second")).headers.get("Retry-After")).toBe("1");
+    for (const path of ["/taken", "/bare", "/gone", "/broken"]) {
+      expect((await app.request(path)).headers.get("Retry-After")).toBeNull();
+    }
+  });
+
+  test("is a whole number of seconds above zero, or no header at all", async () => {
+    const { logger } = await captureLogger();
+    const app = new Hono<AppEnv>();
+    app.onError(onError<AppEnv>(logger));
+    const waits: unknown[] = [
+      "30",
+      1.5,
+      0,
+      -5,
+      Number.NaN,
+      Number.POSITIVE_INFINITY,
+      null,
+      "1\r\nX: y",
+    ];
+    app.get("/:nth", (c) => {
+      throw new AppError(429, "budget", "spent", {
+        retryAfterSeconds: waits[Number(c.req.param("nth"))],
+      });
+    });
+    for (const nth of waits.keys()) {
+      const answer = await app.request(`/${nth}`);
+      expect(answer.status).toBe(429);
+      expect(answer.headers.get("Retry-After")).toBeNull();
+    }
+  });
+});

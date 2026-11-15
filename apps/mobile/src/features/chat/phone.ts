@@ -19,6 +19,10 @@ export type PhoneRead =
   | { e164: string; region: Region }
   | { refused: "short" | "long" | "invalid" };
 
+// shortcut: libphonenumber-js/min validates by a number's length and first
+// digits, not every range a country has given out; /max metadata, about
+// twice the size, would refuse more and is not needed for a contact the
+// other person reads with their own eyes.
 /**
  * A number as a person types it, read under the country code chosen (#511):
  * with or without the 0 a country dials at home (040 660 1234 and 40 660
@@ -29,11 +33,6 @@ export type PhoneRead =
  * them. The answer is E.164, which the API's own rule (normaliseContact)
  * accepts; a refusal says whether a digit is missing, one too many, or the
  * number is no number under that code.
- *
- * shortcut: libphonenumber-js/min validates by a number's length and first
- * digits, not every range a country has given out; /max metadata, about
- * twice the size, would refuse more and is not needed for a contact the
- * other person reads with their own eyes.
  */
 export function readPhone(text: string, region: Region): PhoneRead {
   const raw = text.normalize("NFKC").trim();
