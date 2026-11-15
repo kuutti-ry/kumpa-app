@@ -212,4 +212,4 @@ flowchart TB
 - 2026-11-03 (#507, PR #585): the sensitive-answers consent names the bar, only answers given under that wording count in it, and the bar is counted in production too.
 - 2026-11-05 (#581, PR #596): People on Kuutti says one number, the finished profiles, over one continuous bar in colours; the split by gender, the total and the profiles still being finished go.
 - 2026-11-05 (#581, PR #602): home puts what there is to do first: the matching card under the notices, then Your profile and Conversations, and People on Kuutti last.
-- 2026-11-15 (#607): no row stands for the pond any more. The switch is a setting of its own, read and turned at `/admin/matching`, and the counter answers one set of figures and no list. Nothing a person or an admin sees or does changes.
+- 2026-11-15 (#607, PR #683): no row stands for the pond any more. The switch is a setting of its own, read and turned at `/admin/matching`, and the counter answers one set of figures and no list. Nothing a person or an admin sees or does changes.
