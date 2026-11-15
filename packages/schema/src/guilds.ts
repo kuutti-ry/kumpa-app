@@ -8,7 +8,16 @@
  *
  * A guild's name is the association's own, as the register spells it, the
  * same in every language: it is data here and no messages.yaml key (ADR-019
- * §3). Its id is kept for good. A renamed association keeps its id and takes
+ * §3). One thing is left off it: the school's name, where it stands before
+ * the guild's own and says only whose guild it is. A guild is only ever
+ * shown under its school's name or beside its school's chip, so
+ * "Aalto-yliopiston Arkkitehtikilta ry" reads "Arkkitehtikilta ry" (the
+ * maintainer, 15/11/2026). Six names, each with the register's in a comment
+ * beside it, for the next reading. It stays where the school is part of the
+ * name ("Aalto Accounting", "Yliopiston farmasiakunta", a union standing as
+ * a guild), where it sits inside a description after a dash, and where what
+ * would be left is no name ("Helsingin yliopiston kemistit ry"). Its id is
+ * kept for good. A renamed association keeps its id and takes
  * the new name; one that is gone needs a migration that takes it out of the
  * stored answers first, since the reader drops a whole answer that names an
  * option the list has lost (ADR-009 §1).
@@ -81,7 +90,11 @@ type Listed = {
   groups?: readonly GuildGroup[];
 };
 
-/** Each school's guilds in its register's order. Mythos and Orbis stand under two faculties there. */
+/**
+ * Each school's guilds in its register's order, a name that lost its school's
+ * where it now reads: Sähköinsinöörikilta among the S's, where it is looked
+ * for. Mythos and Orbis stand under two faculties in their register.
+ */
 const GUILDS = {
   helsinki: [
     {
@@ -296,9 +309,9 @@ const GUILDS = {
     { id: "aalto_finance", name: "Aalto Finance" },
     { id: "aalto_management", name: "Aalto Management" },
     { id: "aalto_marketing_society", name: "Aalto Marketing Society", known: "AMS" },
-    { id: "aalto_arkkitehtikilta", name: "Aalto-yliopiston Arkkitehtikilta ry", known: "AK" },
+    // The register's: Aalto-yliopiston Arkkitehtikilta ry.
+    { id: "aalto_arkkitehtikilta", name: "Arkkitehtikilta ry", known: "AK" },
     { id: "aalto_ky", name: "KY - Aalto-yliopiston kauppatieteiden ylioppilaat" },
-    { id: "aalto_sahkoinsinoorikilta", name: "Aalto-yliopiston Sähköinsinöörikilta ry" },
     {
       id: "aalto_automaatio_ja_systeemitekniikan_kilta",
       name: "Automaatio- ja systeemitekniikan kilta ry",
@@ -326,6 +339,8 @@ const GUILDS = {
     { id: "aalto_prosessiteekkarit", name: "Prosessiteekkarit ry" },
     { id: "aalto_puunjalostajakilta", name: "Puunjalostajakilta ry", known: "PJK" },
     { id: "aalto_rakennusinsinoorikilta", name: "Rakennusinsinöörikilta ry", known: "IK" },
+    // The register's: Aalto-yliopiston Sähköinsinöörikilta ry, which it lists among the A's.
+    { id: "aalto_sahkoinsinoorikilta", name: "Sähköinsinöörikilta ry" },
     { id: "aalto_tokyo", name: "TOKYO" },
     { id: "aalto_teknologforeningen", name: "Teknologföreningen", known: "TF" },
     { id: "aalto_tietokilta", name: "Tietotekniikan kilta – Tietokilta ry", known: "TiK" },
@@ -378,10 +393,11 @@ const GUILDS = {
   ],
   haaga_helia: [{ id: "haaga_helia_helga", name: "Haaga-Helian opiskelijakunta Helga" }],
   laurea: [
-    { id: "laurea_lare", name: "Laurean restonomiopiskelijayhdistys LARE ry" },
-    { id: "laurea_lato", name: "Laurean Tradenomiopiskelijat LATO ry" },
-    { id: "laurea_laso", name: "Laurean Sosiaalialojen Opiskelijat LASO ry" },
-    { id: "laurea_jenkins", name: "Laurean Tietojenkäsittelyopiskelijat Jenkins ry" },
+    // The register's four each begin "Laurean": "Laurean restonomiopiskelijayhdistys LARE ry".
+    { id: "laurea_lare", name: "Restonomiopiskelijayhdistys LARE ry" },
+    { id: "laurea_lato", name: "Tradenomiopiskelijat LATO ry" },
+    { id: "laurea_laso", name: "Sosiaalialojen Opiskelijat LASO ry" },
+    { id: "laurea_jenkins", name: "Tietojenkäsittelyopiskelijat Jenkins ry" },
   ],
   arcada: [{ id: "arcada_ask", name: "Arcada studerandekår – ASK" }],
   diak: [{ id: "diak_odiako", name: "Diakonia-ammattikorkeakoulun opiskelijakunta O'Diako" }],

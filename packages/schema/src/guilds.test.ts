@@ -127,7 +127,7 @@ describe("the schools and their guilds (#677)", () => {
   // 15/11/2026): one more is added when its register is read, never from memory.
   it.each([
     ["aalto_marketing_society", "Aalto Marketing Society (AMS)"],
-    ["aalto_arkkitehtikilta", "Aalto-yliopiston Arkkitehtikilta ry (AK)"],
+    ["aalto_arkkitehtikilta", "Arkkitehtikilta ry (AK)"],
     [
       "aalto_automaatio_ja_systeemitekniikan_kilta",
       "Automaatio- ja systeemitekniikan kilta ry (AS)",
@@ -156,6 +156,41 @@ describe("the schools and their guilds (#677)", () => {
     expect(new Set(known.map((guild) => guild.known)).size).toBe(12);
   });
 
+  // A guild is only ever shown under its school's name or beside its school's
+  // chip, so the school's name before a guild's own says nothing (the
+  // maintainer, 15/11/2026).
+  it.each([
+    ["aalto_arkkitehtikilta", "Arkkitehtikilta ry (AK)"],
+    ["aalto_sahkoinsinoorikilta", "Sähköinsinöörikilta ry"],
+    ["laurea_lare", "Restonomiopiskelijayhdistys LARE ry"],
+    ["laurea_lato", "Tradenomiopiskelijat LATO ry"],
+    ["laurea_laso", "Sosiaalialojen Opiskelijat LASO ry"],
+    ["laurea_jenkins", "Tietojenkäsittelyopiskelijat Jenkins ry"],
+  ] as const)("writes %s without its school's name before its own: %s", (id, words) => {
+    expect(guildName(id)).toBe(words);
+  });
+
+  it("begins no guild of a school's own list with the school's name, but the chemists, whose own is no name", () => {
+    const schools =
+      /^(Aalto-yliopiston|Aalto University|Helsingin yliopiston|Taideyliopiston|Metropolian|Metropolia Ammattikorkeakoulun|Laurean|Laurea-ammattikorkeakoulun) /;
+    // A union standing as its school's one guild is the school's by its name.
+    const ofLists = listed.filter((guild) => guildsOf(guild.university).length > 1);
+    expect(ofLists.filter((guild) => schools.test(guild.name)).map((guild) => guild.id)).toEqual([
+      "helsinki_helsingin_yliopiston_kemistit",
+    ]);
+    // Where the school is part of the name it stays: "Accounting" alone names nothing.
+    expect(guildName("aalto_accounting")).toBe("Aalto Accounting");
+    expect(guildName("helsinki_yliopiston_farmasiakunta")).toBe("Yliopiston farmasiakunta");
+  });
+
+  it("lists a guild that lost its school's name where it now reads", () => {
+    const aalto = guildsOf("aalto").map((guild) => guild.id);
+    expect(aalto.indexOf("aalto_sahkoinsinoorikilta")).toBe(
+      aalto.indexOf("aalto_rakennusinsinoorikilta") + 1,
+    );
+    expect(aalto.indexOf("aalto_tokyo")).toBe(aalto.indexOf("aalto_sahkoinsinoorikilta") + 1);
+  });
+
   it("stands the union as the one guild of a school whose union lists none", () => {
     for (const university of ["hanken", "haaga_helia", "arcada", "diak", "humak"] as const) {
       expect(guildsOf(university), university).toHaveLength(1);
@@ -168,7 +203,7 @@ describe("the schools and their guilds (#677)", () => {
     expect(names).not.toMatch(/Aallonhuiput|UADoRe|Queerpolia/i);
     expect(names).not.toMatch(/osakun|\bnation\b/i);
     // The neighbours of what was left out are still there: the lists were cut, not shortened.
-    expect(names).toContain("Aalto-yliopiston Arkkitehtikilta ry");
+    expect(names).toContain("Arkkitehtikilta ry");
     expect(names).toContain("Peritia Vestio ry");
     expect(names).toContain("TeaK-jaosto");
   });

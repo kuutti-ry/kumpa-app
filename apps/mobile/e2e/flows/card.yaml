@@ -78,7 +78,7 @@ name: The card leads with the name, the photo and the key facts, and opens the r
     direction: DOWN
     centerElement: true
     timeout: 60000
-- assertVisible: "(.*: )?Aalto-yliopiston Arkkitehtikilta ry \\(AK\\)"
+- assertVisible: "(.*: )?Arkkitehtikilta ry \\(AK\\)"
 - scrollUntilVisible:
     element: "(.*: )?(Swimming|Uinti|Simning)"
     direction: DOWN

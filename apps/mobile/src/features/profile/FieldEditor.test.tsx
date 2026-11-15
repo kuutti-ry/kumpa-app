@@ -685,10 +685,10 @@ describe("FieldEditor: the school and the guild (#677)", () => {
     "Swedish School of Social Science",
   ];
   const LAUREA = [
-    "Laurean restonomiopiskelijayhdistys LARE ry",
-    "Laurean Tradenomiopiskelijat LATO ry",
-    "Laurean Sosiaalialojen Opiskelijat LASO ry",
-    "Laurean Tietojenkäsittelyopiskelijat Jenkins ry",
+    "Restonomiopiskelijayhdistys LARE ry",
+    "Tradenomiopiskelijat LATO ry",
+    "Sosiaalialojen Opiskelijat LASO ry",
+    "Tietojenkäsittelyopiskelijat Jenkins ry",
   ];
   const SHS = "Svenska Handelshögskolans Studentkår";
 
