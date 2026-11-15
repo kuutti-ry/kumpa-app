@@ -3,6 +3,7 @@ import {
   type CardPhoto,
   type Completeness,
   cardFields,
+  guildName,
   type ProfileCard,
   type ProfileDocument,
   type ProfileFields,
@@ -50,22 +51,31 @@ export type CardDeps = {
 
 /**
  * What both the viewer and the subject answered (#150): the hobbies and
- * languages the card marks as shared (#644). Computed at build time from the
- * viewer's document and what the subject's card shows, so a hidden answer is
- * never told this way (#515); never stored, never a count or a score (the
- * matching document's invariant 6); nothing for the owner's own preview.
+ * languages the card marks as shared (#644), and a school and a guild both
+ * named (#677), "another guild" never, since two of those need not be one
+ * guild. Computed at build time from the viewer's document and what the
+ * subject's card shows, so a hidden answer is never told this way (#515);
+ * never stored, never a count or a score (the matching document's invariant
+ * 6); nothing for the owner's own preview.
  */
 export function sharedAnswers(
   viewer: ProfileFields | null,
   subject: ProfileFields,
 ): ProfileCard["shared"] {
-  const both = (key: "hobbies" | "languages"): string[] => {
+  const both = (key: "hobbies" | "languages" | "university"): string[] => {
     const mine: readonly string[] = viewer?.[key] ?? [];
     const theirs: readonly string[] = subject[key] ?? [];
     return theirs.filter((option) => mine.includes(option));
   };
-  if (!viewer) return { hobbies: [], languages: [] };
-  return { hobbies: both("hobbies"), languages: both("languages") };
+  if (!viewer) return { hobbies: [], languages: [], university: [], guild: [] };
+  return {
+    hobbies: both("hobbies"),
+    languages: both("languages"),
+    university: both("university"),
+    guild: (subject.guild ?? []).filter(
+      (guild) => guildName(guild) !== null && viewer.guild?.includes(guild),
+    ),
+  };
 }
 
 /**

@@ -348,7 +348,7 @@ describe("the profile client", () => {
       bio: null,
       bioPreset: null,
       prompts: [],
-      shared: { hobbies: [], languages: [] },
+      shared: { hobbies: [], languages: [], university: [], guild: [] },
     };
     answering(json({ card, completeness: { complete: true, missing: [] } }));
     expect((await fetchCardPreview()).card?.photos[0]?.description).toEqual(description);

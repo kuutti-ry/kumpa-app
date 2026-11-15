@@ -72,6 +72,13 @@ name: The card leads with the name, the photo and the key facts, and opens the r
     direction: DOWN
     centerElement: true
     timeout: 60000
+# Her school in the reader's language, and her guild by its own name in every one (#677).
+- scrollUntilVisible:
+    element: "(.*: )?(Aalto University|Aalto-yliopisto|Aalto-universitetet)"
+    direction: DOWN
+    centerElement: true
+    timeout: 60000
+- assertVisible: "(.*: )?Arkkitehtikilta ry \\(AK\\)"
 - scrollUntilVisible:
     element: "(.*: )?(Swimming|Uinti|Simning)"
     direction: DOWN

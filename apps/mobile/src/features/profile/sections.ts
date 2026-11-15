@@ -18,7 +18,15 @@ export const PROFILE_SECTIONS = [
   { id: "relationship", items: ["monogamy", "hasKids", "wantsKids"] },
   {
     id: "work",
-    items: ["education", "field", "hideFromField", "occupation", "occupationTitle"],
+    items: [
+      "education",
+      "field",
+      "hideFromField",
+      "occupation",
+      "occupationTitle",
+      "university",
+      "guild",
+    ],
   },
   {
     id: "lifestyle",

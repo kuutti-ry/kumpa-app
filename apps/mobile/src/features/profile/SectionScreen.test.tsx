@@ -162,6 +162,58 @@ describe("SectionScreen", () => {
     expect(screen.queryByLabelText("Name on your card")).toBeNull();
   });
 
+  describe("the school and the guild, with the work and the education (#677)", () => {
+    it("asks the school after the job title, and the guild only once a school is named", async () => {
+      fakeApi();
+      await show(<SectionScreen section="work" />);
+      await waitFor(() => expect(screen.getByLabelText("Job title")).toBeTruthy());
+      expect(screen.getByText("University")).toBeTruthy();
+      expect(screen.queryByText("Guild or student association")).toBeNull();
+      await press(screen.getByRole("button", { name: "Hanken School of Economics" }));
+      expect(screen.getByText("Guild or student association")).toBeTruthy();
+      expect(
+        screen.getByRole("button", { name: "Svenska Handelshögskolans Studentkår" }),
+      ).toBeTruthy();
+      const found = pressables(screen.toJSON() as HostNode);
+      expect(found.flatMap((node) => a11yProblems(node))).toEqual([]);
+    });
+
+    it("saves the school and the guild on leaving, the rest of the document with them", async () => {
+      const { puts } = fakeApi({ profile: stored({ education: "maisteri" }) });
+      const view = await show(<SectionScreen section="work" />);
+      await waitFor(() => expect(screen.getByText("University")).toBeTruthy());
+      await press(screen.getByRole("button", { name: "Aalto University" }));
+      await press(screen.getByRole("button", { name: "Teknologföreningen (TF)" }));
+      await press(screen.getByRole("button", { name: "Another guild" }));
+      await leaveAndGo(view);
+      expect(puts).toHaveLength(1);
+      expect((puts[0] as { fields: unknown }).fields).toEqual({
+        education: "maisteri",
+        university: ["aalto"],
+        guild: ["aalto_teknologforeningen", "aalto_other"],
+      });
+    });
+
+    it("saves a school taken back without its guilds: an update names no guild of a school it does not name", async () => {
+      const { puts } = fakeApi({
+        profile: stored({
+          university: ["aalto", "hanken"],
+          guild: ["aalto_teknologforeningen", "hanken_shs"],
+        }),
+      });
+      const view = await show(<SectionScreen section="work" />);
+      await waitFor(() => expect(screen.getByText("University")).toBeTruthy());
+      await press(screen.getByRole("button", { name: "Aalto University" }));
+      expect(screen.queryByRole("button", { name: "Teknologföreningen (TF)" })).toBeNull();
+      await leaveAndGo(view);
+      expect(puts).toHaveLength(1);
+      expect((puts[0] as { fields: unknown }).fields).toEqual({
+        university: ["hanken"],
+        guild: ["hanken_shs"],
+      });
+    });
+  });
+
   it("stars the name in the basics, says under the bio that a bio or the questions are enough, and what the star means (#616)", async () => {
     fakeApi();
     await show(<SectionScreen section="basics" />);

@@ -1,6 +1,7 @@
 import { createI18n, typedT } from "@kuutti/i18n";
 import { PROFILE_FIELD_KEYS } from "@kuutti/schema";
 import {
+  findSection,
   LISTED_SECTIONS,
   PROFILE_SECTIONS,
   type SectionItem,
@@ -36,6 +37,20 @@ describe("sectionOf", () => {
 
   it("holds what one is here for in a section of its own, out of the relationship (#542)", () => {
     expect(sectionOf("intent")).toBe("intent");
+  });
+
+  it("holds the school and the guild with the work and the education, after the job title (#677)", () => {
+    expect(sectionOf("university")).toBe("work");
+    expect(sectionOf("guild")).toBe("work");
+    expect(findSection("work")?.items).toEqual([
+      "education",
+      "field",
+      "hideFromField",
+      "occupation",
+      "occupationTitle",
+      "university",
+      "guild",
+    ]);
   });
 
   it("refuses an item no section holds", () => {

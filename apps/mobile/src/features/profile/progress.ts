@@ -16,11 +16,16 @@ export const isDone = ({ answered, total }: Progress) => answered >= total;
  * Whether a field's answer is one a part of the profile waits for: every
  * choice and number. Not a setting (hide me from my field), which off is a
  * choice and not a gap, and not a free text (the job title), so a student or
- * a retired person is not left short forever. The list's marks and the later
- * screens' walk both read it (#239).
+ * a retired person is not left short forever. Nor the school and the guild
+ * (#677): the lists hold the capital area's schools, so most people have
+ * neither to name. The list's marks and the later screens' walk both read it
+ * (#239).
  */
+const NEVER_A_GAP: readonly ProfileFieldKey[] = ["university", "guild"];
 export const countsAsAnswer = (field: ProfileFieldKey): boolean =>
-  PROFILE_FIELDS[field].kind !== "flag" && PROFILE_FIELDS[field].kind !== "text";
+  PROFILE_FIELDS[field].kind !== "flag" &&
+  PROFILE_FIELDS[field].kind !== "text" &&
+  !NEVER_A_GAP.includes(field);
 
 /** The prompts that hold an answer: what a save keeps (useProfile leaves an empty one out). */
 export const answeredPrompts = (prompts: ProfileUpdate["prompts"]): number =>

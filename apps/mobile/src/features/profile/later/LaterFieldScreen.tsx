@@ -27,37 +27,36 @@ export const laterAnswerPath = (field: ProfileFieldKey) =>
 /**
  * Whether a later screen still asks something: its field is unanswered, or a
  * companion whose answer counts is (other nicotine on the smoking screen; not
- * the job title or hide-me-from-my-field). Without the companion, someone who
- * had answered smoking before other nicotine existed was never asked it here
- * (#239).
+ * the job title, hide-me-from-my-field, or the school and the guild beside
+ * the education, #677). Without the companion, someone who had answered
+ * smoking before other nicotine existed was never asked it here (#239).
  */
 export function screenOpen(fields: Record<string, unknown>, key: ProfileFieldKey): boolean {
-  const companion = LATER_COMPANIONS[key];
+  const companions = LATER_COMPANIONS[key] ?? [];
   return (
     fields[key] === undefined ||
-    (companion !== undefined && countsAsAnswer(companion) && fields[companion] === undefined)
+    companions.some((companion) => countsAsAnswer(companion) && fields[companion] === undefined)
   );
 }
 
 /**
- * The fields a later screen draws: its own and its companion, or only the half
- * still open where both count and one is answered (#616): someone who answered
- * smoking before other nicotine existed is asked other nicotine alone, and took
- * smoking shown again, already chosen, for a mistake. Read off the stored
- * document, so that a half answered on the screen stays in view. A screen
- * opened for its one answer (`once`) draws both, its field being the reason it
- * was opened, as does the profile's own section.
+ * The fields a later screen draws: its own and its companions, or only the
+ * part still open where all of them count and some are answered (#616):
+ * someone who answered smoking before other nicotine existed is asked other
+ * nicotine alone, and took smoking shown again, already chosen, for a mistake.
+ * Read off the stored document, so that a half answered on the screen stays
+ * in view. A screen opened for its one answer (`once`) draws them all, its
+ * field being the reason it was opened, as does the profile's own section.
  */
 export function laterFieldsShown(
   saved: Record<string, unknown>,
   key: ProfileFieldKey,
   once: boolean,
 ): readonly ProfileFieldKey[] {
-  const companion = LATER_COMPANIONS[key];
-  if (companion === undefined) return [key];
-  if (once || !countsAsAnswer(companion)) return [key, companion];
-  const open = [key, companion].filter((field) => saved[field] === undefined);
-  return open.length === 1 ? open : [key, companion];
+  const all = [key, ...(LATER_COMPANIONS[key] ?? [])];
+  if (once || !all.slice(1).every(countsAsAnswer)) return all;
+  const open = all.filter((field) => saved[field] === undefined);
+  return open.length > 0 && open.length < all.length ? open : all;
 }
 
 /** The first later screen after the index that still asks something; none when every one is done. */

@@ -1,5 +1,11 @@
 import { resolve } from "node:path";
-import { bioOrPromptsComplete, Gender, PreferencesUpdate, ProfileUpdate } from "@kuutti/schema";
+import {
+  bioOrPromptsComplete,
+  Gender,
+  PreferencesUpdate,
+  ProfileUpdate,
+  universityOfGuild,
+} from "@kuutti/schema";
 import { ageFromYearMonth } from "@kuutti-ry/tunnistus-oidc/hetu";
 import { describe, expect, it } from "vitest";
 import { migrate } from "../migrate.ts";
@@ -253,6 +259,56 @@ describe("the synthetic population", () => {
     expect(profiles.some((p) => p.fields.height !== undefined)).toBe(true);
     expect(profiles.some((p) => p.fields.occupationTitle !== undefined)).toBe(true);
     expect(profiles.some((p) => p.fields.hobbies === undefined)).toBe(true);
+  });
+
+  it("names a school only where the education could have been at one, and a guild only of a school named (#677)", () => {
+    const applied = ["metropolia", "haaga_helia", "laurea", "arcada", "diak", "humak"];
+    for (const [size, seed] of [
+      [300, undefined],
+      [1234, 7],
+      [DEMO_SIZE_MAX, undefined],
+    ] as const) {
+      const profiles = generatePopulation({ size, seed }).flatMap((p) =>
+        p.profile ? [p.profile.fields] : [],
+      );
+      const named = profiles.filter((fields) => fields.university !== undefined);
+      for (const fields of named) {
+        const schools = fields.university ?? [];
+        expect(["amk", "kandi", "maisteri", "tohtori"], String(size)).toContain(fields.education);
+        expect(
+          schools.every((school) => applied.includes(school) === (fields.education === "amk")),
+          `${fields.education}: ${schools.join(", ")}`,
+        ).toBe(true);
+        expect(new Set(schools).size).toBe(schools.length);
+        // One guild of each school, or none at all: never one of a school not named.
+        expect((fields.guild ?? schools.map(() => "")).length).toBe(schools.length);
+        expect((fields.guild ?? []).map(universityOfGuild)).toEqual(fields.guild ? schools : []);
+      }
+      expect(profiles.every((f) => f.guild === undefined || f.university !== undefined)).toBe(true);
+      // Each state a card can be in: a school alone, a guild, another guild, and nothing.
+      const higher = profiles.filter((f) => f.education === "amk" || f.education === "maisteri");
+      expect(
+        higher.some((f) => f.university === undefined),
+        String(size),
+      ).toBe(true);
+      expect(
+        named.some((f) => f.guild === undefined),
+        String(size),
+      ).toBe(true);
+      expect(named.some((f) => f.guild?.some((guild) => !guild.endsWith("_other")))).toBe(true);
+      if (size < 1000) continue;
+      expect(named.some((f) => f.guild?.some((guild) => guild.endsWith("_other")))).toBe(true);
+      expect(named.some((f) => f.university?.length === 2)).toBe(true);
+      // Roughly six in ten of those who could, and six in ten of those a guild.
+      const could = profiles.filter(
+        (f) => f.education !== undefined && !["peruskoulu", "toinen_aste"].includes(f.education),
+      );
+      expect(named.length / could.length).toBeGreaterThan(0.5);
+      expect(named.length / could.length).toBeLessThan(0.7);
+      const withGuild = named.filter((f) => f.guild !== undefined).length;
+      expect(withGuild / named.length).toBeGreaterThan(0.5);
+      expect(withGuild / named.length).toBeLessThan(0.7);
+    }
   });
 });
 

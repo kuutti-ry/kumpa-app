@@ -3,6 +3,7 @@ import {
   CARD_FIELD_KEYS,
   DEAL_BREAKER_FIELDS,
   type DistanceBand,
+  type GuildOption,
   HOBBY_GROUPS,
   type HobbyGroup,
   PROFILE_FIELDS,
@@ -32,7 +33,15 @@ import { DECORATIVE, MINIMUM_TARGET } from "@/theme/a11y";
 import { useHapticTap } from "@/theme/haptics";
 import { FIELD_ICONS, HOBBY_GROUP_ICONS } from "./fieldIcons";
 import { OptionGlyph, optionGlyph } from "./glyphs";
-import { fieldLabelKey, genderKey, optionKey, placeName, presetKey, promptKey } from "./keys";
+import {
+  fieldLabelKey,
+  genderKey,
+  guildWords,
+  optionKey,
+  placeName,
+  presetKey,
+  promptKey,
+} from "./keys";
 import { PROFILE_SECTIONS, type SectionItem, sectionTitleKey } from "./sections";
 
 /** The card's own accessibility action, by name; its label is the heard one. */
@@ -229,11 +238,21 @@ export function ProfileCardView({
           ? [{ option: null, text: formatHeight(locale, Number(value)) }]
           : (Array.isArray(value) ? value : [value]).map((option) => ({
               option: String(option),
-              text: t(optionKey(key, String(option))),
+              text:
+                key === "guild"
+                  ? guildWords(t, option as GuildOption)
+                  : t(optionKey(key, String(option))),
             }));
+    // "Another guild" of two schools is one chip: the card does not say whose (#677).
+    const once =
+      key === "guild"
+        ? answers.filter((a, i) => answers.findIndex((b) => b.text === a.text) === i)
+        : answers;
     const shared: readonly string[] =
-      key === "hobbies" ? card.shared.hobbies : key === "languages" ? card.shared.languages : [];
-    return answers.map((answer) => ({
+      key === "hobbies" || key === "languages" || key === "university" || key === "guild"
+        ? card.shared[key]
+        : [];
+    return once.map((answer) => ({
       ...answer,
       id: `${key}.${answer.option ?? "value"}`,
       field: key,
@@ -474,17 +493,24 @@ function FactChip({ chip }: { chip: Chip }) {
   const inner = (
     <>
       {chip.option !== null && optionGlyph(chip.field, chip.option) !== null ? (
-        // Only hobbies and languages are ever shared, and neither has a glyph.
+        // What can be shared (hobbies, languages, a school, a guild) has no glyph.
         <OptionGlyph field={chip.field} option={chip.option} className="h-4 w-4 text-foreground" />
       ) : (
+        // The icon keeps its size beside a name that wraps, a guild's (#677); a browser would squeeze it.
         <Icon
           as={group ? HOBBY_GROUP_ICONS[group] : FIELD_ICONS[chip.field]}
           size={16}
+          className="shrink-0"
           testID={group ? `hobby-group-icon-${group}` : `field-icon-${chip.field}`}
         />
       )}
       {chip.withWork && (
-        <Icon as={FIELD_ICONS.occupation} size={16} testID="field-icon-occupation" />
+        <Icon
+          as={FIELD_ICONS.occupation}
+          size={16}
+          className="shrink-0"
+          testID="field-icon-occupation"
+        />
       )}
       <Text className="shrink">{chip.text}</Text>
     </>
@@ -495,7 +521,9 @@ function FactChip({ chip }: { chip: Chip }) {
       accessibilityLabel={chip.heard}
       testID={`chip-${chip.id}`}
       className={cn(
-        "max-w-full flex-row items-center gap-1.5 rounded-full border px-3 py-1",
+        // A pill while its words fit a line or two. A full pill's curve would cross the words of a
+        // name on three lines at the largest text, a guild's (#677), so the corner stops here.
+        "max-w-full flex-row items-center gap-1.5 rounded-3xl border px-3 py-1",
         // The outline stays on a shared chip: the high-contrast sets' fill is their
         // background, and there the bold alone tells it, still a chip.
         "border-border",

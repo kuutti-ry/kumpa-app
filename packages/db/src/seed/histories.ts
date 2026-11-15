@@ -66,6 +66,10 @@ export const PERSONA_HISTORIES: readonly PersonaHistory[] = [
         field: ["arts"],
         occupation: ["arts_culture"],
         occupationTitle: "Arkkitehti",
+        // The school and the guild of #677 on one persona, and a school alone
+        // on another (Noa), so the demo can show both.
+        university: ["aalto"],
+        guild: ["aalto_arkkitehtikilta"],
         hobbies: ["hiking", "birdwatching", "swimming"],
         height: 171,
       },
@@ -100,6 +104,7 @@ export const PERSONA_HISTORIES: readonly PersonaHistory[] = [
         hideFromField: true,
         occupation: ["science"],
         occupationTitle: "Doctoral researcher",
+        university: ["aalto"],
         hobbies: ["climbing", "cooking", "reading"],
       },
       prompts: [{ key: "hidden_talent", answer: "I can name a tree by its bark." }],

@@ -6,7 +6,9 @@ import {
   bioOrPromptsComplete,
   GENDERS,
   type Gender,
+  guildsOf,
   HOBBIES,
+  otherGuildOf,
   POLITICS_OPTIONS,
   PROFILE_FIELDS,
   PROMPT_KEYS,
@@ -15,6 +17,7 @@ import {
   type PromptAnswer,
   type SeeksBands,
   seeksBand,
+  type University,
 } from "@kuutti/schema";
 import { POSTAL_CODE_LENGTH } from "@kuutti/schema/postal-areas";
 import { ageFromYearMonth } from "@kuutti-ry/tunnistus-oidc/hetu";
@@ -394,6 +397,61 @@ function giveHomes(people: readonly SyntheticPerson[], homes: HomePlaces, seed: 
   }
 }
 
+/**
+ * The schools of the capital area by where their students are, roughly
+ * (#677): a university of applied sciences for somebody whose education is
+ * one, a university for a bachelor, a master or a doctor.
+ */
+const UAS_WEIGHTS = {
+  metropolia: 40,
+  haaga_helia: 26,
+  laurea: 20,
+  arcada: 6,
+  diak: 5,
+  humak: 3,
+} as const satisfies Partial<Record<University, number>>;
+const UNIVERSITY_WEIGHTS = {
+  helsinki: 48,
+  aalto: 34,
+  hanken: 8,
+  uniarts: 10,
+} as const satisfies Partial<Record<University, number>>;
+/** Of those with a higher education, how many name a school; of those, a second one, and a guild of each; docs/demo/population.md says the same in words. */
+const SCHOOL_SHARE = 0.6;
+const SECOND_SCHOOL_SHARE = 0.1;
+const GUILD_SHARE = 0.6;
+const OTHER_GUILD_SHARE = 0.15;
+
+/**
+ * A school, and for most a guild of it, for those whose education could have
+ * been at one (#677). A stream of its own and after everything else, as the
+ * homes have: the two fields arrived when the population existed, and nobody
+ * is anybody else for them. A guild only of a school named, as the API has it.
+ */
+function giveSchools(people: readonly SyntheticPerson[], seed: number): void {
+  const random = createRandom((seed ^ 0xc2b2ae35) >>> 0);
+  for (const person of people) {
+    const fields = person.profile?.fields;
+    const education = fields?.education;
+    if (!fields || !education || education === "peruskoulu" || education === "toinen_aste") {
+      continue;
+    }
+    if (!random.chance(SCHOOL_SHARE)) continue;
+    const school = (): University =>
+      education === "amk" ? random.weighted(UAS_WEIGHTS) : random.weighted(UNIVERSITY_WEIGHTS);
+    const schools = [school()];
+    if (random.chance(SECOND_SCHOOL_SHARE)) {
+      const second = school();
+      if (second !== schools[0]) schools.push(second);
+    }
+    fields.university = schools as ProfileFields["university"];
+    if (!random.chance(GUILD_SHARE)) continue;
+    fields.guild = schools.map((of) =>
+      random.chance(OTHER_GUILD_SHARE) ? otherGuildOf(of) : random.pick(guildsOf(of)).id,
+    ) as ProfileFields["guild"];
+  }
+}
+
 /** The same people for the same size, seed and epoch, on every machine. */
 export function generatePopulation(options: PopulationOptions = {}): SyntheticPerson[] {
   const size = options.size ?? DEMO_SIZE;
@@ -433,6 +491,7 @@ export function generatePopulation(options: PopulationOptions = {}): SyntheticPe
   }
   fillTheBar(people);
   if (options.homes) giveHomes(people, options.homes, seed);
+  giveSchools(people, seed);
   return people;
 }
 

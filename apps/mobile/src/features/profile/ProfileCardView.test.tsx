@@ -49,7 +49,7 @@ const bare: ProfileCard = {
   bio: null,
   bioPreset: null,
   prompts: [],
-  shared: { hobbies: [], languages: [] },
+  shared: { hobbies: [], languages: [], university: [], guild: [] },
 };
 
 /** Every text of the rendered tree, in reading order. */
@@ -727,6 +727,120 @@ describe("ProfileCardView", () => {
       expect(screen.getByRole("button", { name: "Show the whole card" })).toBeTruthy();
     });
 
+    describe("the school and the guild (#677)", () => {
+      const studied: ProfileCard = {
+        ...bare,
+        fields: {
+          intent: "long_term",
+          occupationTitle: "Architect",
+          university: ["aalto", "hanken"],
+          guild: ["aalto_fyysikkokilta", "aalto_other", "hanken_shs", "hanken_other"],
+        },
+      };
+
+      it("keeps them off the short card: they are no key facts", async () => {
+        await renderWithTheme(<ProfileCardView card={studied} />);
+        expect(heardChips()).toEqual(["Looking for: Something long-term"]);
+        expect(screen.queryByText("Aalto University")).toBeNull();
+        expect(screen.queryByText("Fyysikkokilta (FK)")).toBeNull();
+      });
+
+      it("shows them on the whole card after the job title, a chip a school and a chip a guild by its own name, and another guild once however many schools have it", async () => {
+        await renderWithTheme(<ProfileCardView card={studied} />);
+        await toggle("Show the whole card");
+        expect(heardChips()).toEqual([
+          "Looking for: Something long-term",
+          "Job title: Architect",
+          "University: Aalto University",
+          "Hanken School of Economics",
+          "Guild or student association: Fyysikkokilta (FK)",
+          "Another guild",
+          "Svenska Handelshögskolans Studentkår",
+        ]);
+        expect(screen.getAllByText("Another guild")).toHaveLength(1);
+        for (const [chip, icon] of [
+          ["chip-university.aalto", "field-icon-university"],
+          ["chip-guild.aalto_fyysikkokilta", "field-icon-guild"],
+        ] as const) {
+          expect(
+            within(screen.getByTestId(chip)).getByTestId(icon, { includeHiddenElements: true }),
+          ).toBeTruthy();
+        }
+      });
+
+      it("marks a school and a guild both named as any shared answer, and another guild never", async () => {
+        await renderWithTheme(
+          <ProfileCardView
+            card={{
+              ...studied,
+              shared: { ...bare.shared, university: ["hanken"], guild: ["aalto_fyysikkokilta"] },
+            }}
+          />,
+        );
+        await toggle("Show the whole card");
+        expect(heardChips().slice(2)).toEqual([
+          "University: Aalto University",
+          "Hanken School of Economics, shared",
+          "Guild or student association: Fyysikkokilta (FK), shared",
+          "Another guild",
+          "Svenska Handelshögskolans Studentkår",
+        ]);
+      });
+
+      it("shows a guild alone when the school is hidden, and a school alone when no guild was given", async () => {
+        await renderWithTheme(
+          <ProfileCardView card={{ ...bare, fields: { guild: ["helsinki_tko_aly"] } }} />,
+        );
+        await toggle("Show the whole card");
+        expect(heardChips()).toEqual(["Guild or student association: TKO-äly ry"]);
+        await renderWithTheme(
+          <ProfileCardView card={{ ...bare, fields: { university: ["metropolia"] } }} />,
+        );
+        await toggle("Show the whole card");
+        expect(heardChips()).toEqual(["University: Metropolia University of Applied Sciences"]);
+      });
+
+      it.each([
+        [
+          "fi-FI",
+          [
+            "Korkeakoulu: Aalto-yliopisto",
+            "Kilta tai ainejärjestö: Fyysikkokilta (FK)",
+            "Muu kilta",
+          ],
+        ],
+        [
+          "sv-FI",
+          [
+            "Högskola: Aalto-universitetet",
+            "Gille eller ämnesförening: Fyysikkokilta (FK)",
+            "Annat gille",
+          ],
+        ],
+      ])(
+        "names the guild the same in %s, and the rest in the reader's language",
+        async (tag, heard) => {
+          (useLocales as jest.Mock).mockReturnValue([{ languageTag: tag }]);
+          try {
+            await renderWithTheme(
+              <ProfileCardView
+                card={{
+                  ...bare,
+                  fields: { university: ["aalto"], guild: ["aalto_fyysikkokilta", "aalto_other"] },
+                }}
+              />,
+            );
+            await act(async () => {
+              fireEvent.press(screen.getByRole("button", { expanded: false }));
+            });
+            expect(heardChips()).toEqual(heard);
+          } finally {
+            (useLocales as jest.Mock).mockReturnValue([{ languageTag: "en-US" }]);
+          }
+        },
+      );
+    });
+
     it("draws a field and a work that read the same as one chip with both icons, heard as both, and keeps a pair that differs apart", async () => {
       await renderWithTheme(
         <ProfileCardView
@@ -782,7 +896,7 @@ describe("ProfileCardView", () => {
           card={{
             ...bare,
             fields: { languages: ["fi", "en"], hobbies: ["yoga", "hiking"] },
-            shared: { languages: ["fi"], hobbies: ["hiking"] },
+            shared: { ...bare.shared, languages: ["fi"], hobbies: ["hiking"] },
           }}
         />,
       );
@@ -829,7 +943,7 @@ describe("ProfileCardView", () => {
               card={{
                 ...bare,
                 fields: { smoking: "never", languages: ["fi"] },
-                shared: { hobbies: [], languages: ["fi"] },
+                shared: { ...bare.shared, languages: ["fi"] },
                 prompts,
               }}
             />,

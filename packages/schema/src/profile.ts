@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { GUILD_OPTIONS, UNIVERSITIES, universityOfGuild } from "./guilds.ts";
 import { PhotoCaption, PhotoDescription, PhotoId } from "./media.ts";
 import { Gender, HomeSummary, PlaceName } from "./onboarding.ts";
 import { CARD_FIELD_KEYS, HiddenField, PROFILE_FIELDS, ProfileFields } from "./profile-fields.ts";
@@ -74,6 +75,15 @@ export type PromptAnswer = z.infer<typeof PromptAnswer>;
 const distinctPrompts = (prompts: { key: string }[]) =>
   new Set(prompts.map((p) => p.key)).size === prompts.length;
 
+/**
+ * A guild belongs to a school the person named (#677): the app clears a
+ * school's guilds with the school, and the contract refuses what is left
+ * over. Only what the person sends is held to it: a card whose school is
+ * hidden carries the guild alone.
+ */
+const guildsOfNamedSchools = (fields: ProfileFields) =>
+  (fields.guild ?? []).every((guild) => fields.university?.includes(universityOfGuild(guild)));
+
 /** What the person sends: the whole profile every time, so the row is the document. */
 export const ProfileUpdate = z
   .object({
@@ -96,6 +106,10 @@ export const ProfileUpdate = z
   .refine((p) => distinctPrompts(p.prompts), {
     message: "each prompt at most once",
     path: ["prompts"],
+  })
+  .refine((p) => guildsOfNamedSchools(p.fields), {
+    message: "a guild of a school that was not named",
+    path: ["fields", "guild"],
   })
   .meta({ id: "ProfileUpdate" });
 export type ProfileUpdate = z.infer<typeof ProfileUpdate>;
@@ -183,10 +197,15 @@ export const ProfileCard = z
     bio: z.string().max(BIO_MAX).nullable(),
     bioPreset: BioPreset.nullable(),
     prompts: z.array(PromptAnswer).max(PROMPTS_MAX),
-    /** What both the viewer and the subject answered (#150), from what the card shows, so never a hidden answer (#515): marked in words on the card, never a count. Empty on the owner's preview. */
+    /**
+     * What both the viewer and the subject answered (#150), from what the card shows, so never a hidden answer (#515): marked in words on the card, never a count. Empty on the owner's preview.
+     * A school and a guild both named are marked too (#677), never "another guild", which says nothing of which.
+     */
     shared: z.object({
       hobbies: z.array(z.string().max(40)).max(PROFILE_FIELDS.hobbies.options.length),
       languages: z.array(z.string().max(40)).max(PROFILE_FIELDS.languages.options.length),
+      university: z.array(z.string().max(40)).max(UNIVERSITIES.length),
+      guild: z.array(z.string().max(80)).max(GUILD_OPTIONS.length),
     }),
   })
   .meta({ id: "ProfileCard" });

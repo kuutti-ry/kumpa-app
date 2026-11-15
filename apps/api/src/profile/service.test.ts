@@ -1,10 +1,12 @@
 import type { Queryable } from "@kuutti/db";
 import {
   CARD_FIELD_KEYS,
+  GUILD_OPTIONS,
   PROFILE_FIELD_KEYS,
   PROFILE_FIELDS,
   type ProfileFields,
-  type ProfileUpdate,
+  ProfileUpdate,
+  UNIVERSITIES,
 } from "@kuutti/schema";
 import fc from "fast-check";
 import type { QueryResultRow } from "pg";
@@ -133,7 +135,12 @@ describe("the card for a viewer who is not the owner", () => {
       viewerAccountId: viewer.accountId,
       subjectAccountId: subject.accountId,
     });
-    expect(served.card?.shared).toEqual({ hobbies: [], languages: [] });
+    expect(served.card?.shared).toEqual({
+      hobbies: [],
+      languages: [],
+      university: [],
+      guild: [],
+    });
     expect(served.card?.photos).toHaveLength(2);
     expect(await shownRows(ctx, viewer.accountId)).toBe(2);
   });
@@ -404,17 +411,145 @@ describe("the card across a block (#84, ADR-030, features/safety/blocks.feature)
 
 describe("what both answered", () => {
   it("is nothing for the owner's own preview, and only what both answered otherwise, in the subject's order", () => {
-    expect(sharedAnswers(null, { hobbies: ["yoga"], languages: ["fi"] })).toEqual({
-      hobbies: [],
-      languages: [],
-    });
+    const none = { hobbies: [], languages: [], university: [], guild: [] };
+    expect(sharedAnswers(null, { hobbies: ["yoga"], languages: ["fi"] })).toEqual(none);
     expect(
       sharedAnswers({ languages: ["en", "fi"] }, { hobbies: ["yoga"], languages: ["fi", "en"] }),
+    ).toEqual({ ...none, languages: ["fi", "en"] });
+    expect(sharedAnswers({ hobbies: ["yoga"] }, {})).toEqual(none);
+  });
+
+  it("marks a school and a guild both named, in the subject's order, and nothing for the owner's own preview (#677)", () => {
+    const subject: ProfileFields = {
+      university: ["aalto", "hanken"],
+      guild: ["aalto_fyysikkokilta", "aalto_ky", "hanken_shs"],
+    };
+    expect(sharedAnswers(null, subject)).toEqual({
+      hobbies: [],
+      languages: [],
+      university: [],
+      guild: [],
+    });
+    expect(
+      sharedAnswers(
+        {
+          university: ["hanken", "helsinki", "aalto"],
+          guild: ["hanken_shs", "aalto_fyysikkokilta"],
+        },
+        subject,
+      ),
     ).toEqual({
       hobbies: [],
-      languages: ["fi", "en"],
+      languages: [],
+      university: ["aalto", "hanken"],
+      guild: ["aalto_fyysikkokilta", "hanken_shs"],
     });
-    expect(sharedAnswers({ hobbies: ["yoga"] }, {})).toEqual({ hobbies: [], languages: [] });
+    // A school in common says nothing of the guilds, and a guild the viewer alone named is no mark.
+    expect(
+      sharedAnswers({ university: ["aalto"], guild: ["aalto_tietokilta"] }, subject),
+    ).toMatchObject({ university: ["aalto"], guild: [] });
+    expect(sharedAnswers({ university: ["aalto"] }, { guild: ["aalto_ky"] })).toMatchObject({
+      university: [],
+      guild: [],
+    });
+  });
+
+  it("never marks another guild as shared: two of those need not be one guild (#677)", () => {
+    const both: ProfileFields = { university: ["aalto"], guild: ["aalto_other", "aalto_ky"] };
+    expect(sharedAnswers(both, both)).toMatchObject({ university: ["aalto"], guild: ["aalto_ky"] });
+    expect(
+      sharedAnswers(
+        { university: ["aalto"], guild: ["aalto_other"] },
+        { university: ["aalto"], guild: ["aalto_other"] },
+      ).guild,
+    ).toEqual([]);
+  });
+});
+
+describe("a school and a guild, over any answers (#677)", () => {
+  // The school of a guild read off its id, not through the schema's own lookup, which the rule under test uses.
+  const schoolOf = (guild: string) => UNIVERSITIES.find((school) => guild.startsWith(`${school}_`));
+  const answers = (university: readonly string[], guild: readonly string[]) =>
+    ({
+      ...(university.length > 0 && { university }),
+      ...(guild.length > 0 && { guild }),
+    }) as ProfileFields;
+
+  /** At most so many of a list, in any order; a list shorter than that gives what it has. */
+  const some = (of: readonly string[], atMost: number) =>
+    fc.shuffledSubarray([...of], { maxLength: Math.min(atMost, of.length) });
+
+  it("takes an update whose guilds are all of schools it names, and refuses any other at the guild", () => {
+    const base = { displayName: "Aino", bio: null, bioPreset: null, prompts: [] };
+    fc.assert(
+      fc.property(
+        fc.shuffledSubarray([...UNIVERSITIES]).chain((schools) =>
+          fc.record({
+            schools: fc.constant(schools),
+            own: some(
+              GUILD_OPTIONS.filter((guild) => schools.some((school) => school === schoolOf(guild))),
+              6,
+            ),
+            strays: some(
+              GUILD_OPTIONS.filter(
+                (guild) => !schools.some((school) => school === schoolOf(guild)),
+              ),
+              2,
+            ),
+            straysFirst: fc.boolean(),
+          }),
+        ),
+        ({ schools, own, strays, straysFirst }) => {
+          const guild = straysFirst ? [...strays, ...own] : [...own, ...strays];
+          const parsed = ProfileUpdate.safeParse({ ...base, fields: answers(schools, guild) });
+          expect(parsed.success).toBe(strays.length === 0);
+          if (parsed.success) {
+            expect(parsed.data.fields).toEqual(answers(schools, guild));
+          } else {
+            expect(parsed.error.issues.map((issue) => [issue.code, issue.path.join(".")])).toEqual([
+              ["custom", "fields.guild"],
+            ]);
+          }
+        },
+      ),
+      { seed: 677, numRuns: 300 },
+    );
+  });
+
+  it("marks exactly the schools and the listed guilds both named, in the subject's order, and never another guild", () => {
+    const side = (schools: readonly string[], guilds: readonly string[]) =>
+      fc
+        .record({
+          university: fc.shuffledSubarray([...schools]),
+          guild: fc.shuffledSubarray([...guilds]),
+        })
+        .map(({ university, guild }) => answers(university, guild));
+    fc.assert(
+      fc.property(
+        // Both sides draw from one short pool: out of 196 guilds, two free draws would never meet.
+        fc
+          .record({
+            schools: some(UNIVERSITIES, 4),
+            guilds: some(GUILD_OPTIONS, 8),
+          })
+          .chain(({ schools, guilds }) =>
+            fc.record({ viewer: side(schools, guilds), subject: side(schools, guilds) }),
+          ),
+        ({ viewer, subject }) => {
+          const shared = sharedAnswers(viewer, subject);
+          expect(shared.university).toEqual(
+            (subject.university ?? []).filter((school) => viewer.university?.includes(school)),
+          );
+          expect(shared.guild).toEqual(
+            (subject.guild ?? []).filter(
+              (guild) => !guild.endsWith("_other") && viewer.guild?.includes(guild),
+            ),
+          );
+          expect(sharedAnswers(null, subject)).toMatchObject({ university: [], guild: [] });
+        },
+      ),
+      { seed: 677, numRuns: 300 },
+    );
   });
 });
 

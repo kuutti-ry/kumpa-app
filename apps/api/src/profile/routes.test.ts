@@ -173,6 +173,102 @@ describe("profile routes", () => {
     }
   });
 
+  test("PUT /profile takes the schools and their guilds, and the card and the export carry them (#677)", async ({
+    ctx,
+  }) => {
+    const { app } = await appWith(ctx);
+    const a = await signedInAccount(ctx.client);
+    const fields = {
+      ...update.fields,
+      education: "maisteri",
+      university: ["aalto", "hanken"],
+      guild: ["aalto_fyysikkokilta", "aalto_other", "hanken_shs"],
+    };
+    const saved = await put(app, a.headers, { ...update, fields });
+    expect(saved.status).toBe(200);
+    expect(ProfileResponse.parse(await saved.json()).profile?.fields).toEqual(fields);
+    const read = await app.request("/profile", { headers: a.headers });
+    expect(ProfileResponse.parse(await read.json()).profile?.fields).toEqual(fields);
+    // On the card as given; the education beside them is a soft value and stays off it.
+    const preview = await app.request("/profile/card", { headers: a.headers });
+    expect(CardPreviewResponse.parse(await preview.json()).card?.fields).toEqual({
+      ...update.fields,
+      university: fields.university,
+      guild: fields.guild,
+    });
+    expect((await exportOf(app, a.headers)).profile?.fields).toEqual(fields);
+
+    // A school alone is an answer; the guild is never owed.
+    const alone = { ...update.fields, university: ["humak"] };
+    const again = await put(app, a.headers, { ...update, fields: alone });
+    expect(again.status).toBe(200);
+    expect(ProfileResponse.parse(await again.json()).profile?.fields).toEqual(alone);
+  });
+
+  test("PUT /profile refuses a guild whose school is not named, and a school or a guild off the lists (#677)", async ({
+    ctx,
+  }) => {
+    const { app } = await appWith(ctx);
+    const a = await signedInAccount(ctx.client);
+    const withFields = (fields: Record<string, unknown>) => ({
+      ...update,
+      fields: { ...update.fields, ...fields },
+    });
+    const refused = [
+      withFields({ guild: ["aalto_fyysikkokilta"] }),
+      withFields({ university: ["hanken"], guild: ["aalto_fyysikkokilta"] }),
+      withFields({ university: ["hanken"], guild: ["hanken_shs", "aalto_other"] }),
+      // Only the capital area's ten (ADR-019 §6).
+      withFields({ university: ["tampere"] }),
+      withFields({ university: ["aalto", "aalto"] }),
+      withFields({ university: "aalto" }),
+      withFields({ university: [] }),
+      // Left off the lists on purpose: a doctoral association, a nation, and Queerpolia.
+      withFields({ university: ["aalto"], guild: ["aalto_aallonhuiput"] }),
+      withFields({ university: ["helsinki"], guild: ["helsinki_wiipurilainen_osakunta"] }),
+      withFields({ university: ["metropolia"], guild: ["metropolia_queerpolia"] }),
+      // No guild is written in (#677): only its id from the list.
+      withFields({ university: ["aalto"], guild: ["Fyysikkokilta"] }),
+      withFields({ university: ["aalto"], guild: ["aalto_other", "aalto_other"] }),
+      withFields({ university: ["aalto"], guild: [] }),
+    ];
+    for (const body of refused) {
+      const response = await put(app, a.headers, body);
+      expect(response.status, JSON.stringify(body.fields)).toBe(400);
+      expect(await errorCode(response)).toBe("validation_failed");
+    }
+    const { rows } = await ctx.client.query("SELECT 1 FROM profile WHERE account_id = $1", [
+      a.accountId,
+    ]);
+    expect(rows).toHaveLength(0);
+  });
+
+  test("the card carries a guild alone when its school is hidden, and a school alone when its guild is (#677)", async ({
+    ctx,
+  }) => {
+    const { app } = await appWith(ctx);
+    const a = await signedInAccount(ctx.client);
+    const fields = {
+      ...update.fields,
+      university: ["helsinki"],
+      guild: ["helsinki_tko_aly", "helsinki_other"],
+    };
+    const cardWith = async (hiddenFields: string[]) => {
+      const saved = await put(app, a.headers, { ...update, fields, hiddenFields });
+      expect(saved.status).toBe(200);
+      expect(ProfileResponse.parse(await saved.json()).profile?.fields).toEqual(fields);
+      const preview = await app.request("/profile/card", { headers: a.headers });
+      return CardPreviewResponse.parse(await preview.json()).card?.fields;
+    };
+    expect(await cardWith(["university"])).toEqual({ ...update.fields, guild: fields.guild });
+    expect(await cardWith(["guild"])).toEqual({
+      ...update.fields,
+      university: fields.university,
+    });
+    expect(await cardWith(["university", "guild"])).toEqual(update.fields);
+    expect(await cardWith([])).toEqual({ ...fields });
+  });
+
   test("PUT /profile takes a height from 90 to 260 cm, both ends included (#287)", async ({
     ctx,
   }) => {
@@ -303,7 +399,7 @@ describe("profile routes", () => {
     const card = CardPreviewResponse.parse(await preview.json()).card;
     expect(card?.fields).toEqual(update.fields);
     // The owner previews without what both answered: there is nobody on the other side.
-    expect(card?.shared).toEqual({ hobbies: [], languages: [] });
+    expect(card?.shared).toEqual({ hobbies: [], languages: [], university: [], guild: [] });
   });
 
   test("a hidden answer stays on the profile and leaves the card, and nothing else moves (#515)", async ({
@@ -602,7 +698,12 @@ describe("profile routes", () => {
     expect(first.card?.bio).toBe("x".repeat(60));
     expect(first.card?.gender).toBe("woman");
     // In the order the subject gave them; never a count.
-    expect(first.card?.shared).toEqual({ hobbies: ["yoga"], languages: ["fi", "en"] });
+    expect(first.card?.shared).toEqual({
+      hobbies: ["yoga"],
+      languages: ["fi", "en"],
+      university: [],
+      guild: [],
+    });
     const shown = await ctx.client.query<{ n: string }>(
       "SELECT count(*) AS n FROM card_shown WHERE account_id = $1",
       [viewer.accountId],
@@ -670,7 +771,79 @@ describe("profile routes", () => {
     );
     expect(card?.fields).toEqual(update.fields);
     // The languages are on the card, so what both answered is marked as ever.
-    expect(card?.shared).toEqual({ hobbies: [], languages: ["fi", "en"] });
+    expect(card?.shared).toEqual({
+      hobbies: [],
+      languages: ["fi", "en"],
+      university: [],
+      guild: [],
+    });
+  });
+
+  test("another viewer's card marks a school and a guild both named, never another guild, and nothing of a hidden school (#677)", async ({
+    ctx,
+  }) => {
+    const { app, logger } = await appWith(ctx);
+    const viewer = await signedInAccount(ctx.client);
+    await put(app, viewer.headers, {
+      ...update,
+      fields: {
+        ...update.fields,
+        university: ["aalto", "hanken", "laurea"],
+        guild: ["aalto_fyysikkokilta", "aalto_other", "hanken_shs"],
+      },
+    });
+    const subject = await signedInAccount(ctx.client);
+    await approvedPhotos(ctx, app, subject.headers, 3);
+    const fields = {
+      ...update.fields,
+      university: ["hanken", "metropolia", "aalto"],
+      guild: ["aalto_other", "metropolia_other", "aalto_fyysikkokilta", "aalto_arkkitehtikilta"],
+    };
+    const cardWith = async (hiddenFields: string[]) => {
+      const saved = await put(app, subject.headers, {
+        ...update,
+        fields,
+        bio: "x".repeat(60),
+        bioPreset: null,
+        hiddenFields,
+      });
+      expect(saved.status).toBe(200);
+      const { card } = await buildCard(
+        {
+          db: ctx.client,
+          logger,
+          now: () => new Date(),
+          readPreferences: async () => ({ seeks: "everyone", ageWindow: [20, 40] }),
+        },
+        { viewerAccountId: viewer.accountId, subjectAccountId: subject.accountId },
+      );
+      return card;
+    };
+    const shown = await cardWith([]);
+    expect(shown?.fields).toEqual(fields);
+    // In the subject's order, and "another guild" of the same school is no shared guild.
+    expect(shown?.shared).toEqual({
+      hobbies: [],
+      languages: ["fi", "en"],
+      university: ["hanken", "aalto"],
+      guild: ["aalto_fyysikkokilta"],
+    });
+    const hidden = await cardWith(["university"]);
+    expect(hidden?.fields).toEqual({ ...update.fields, guild: fields.guild });
+    expect(hidden?.shared).toEqual({
+      hobbies: [],
+      languages: ["fi", "en"],
+      university: [],
+      guild: ["aalto_fyysikkokilta"],
+    });
+    const neither = await cardWith(["university", "guild"]);
+    expect(neither?.fields).toEqual(update.fields);
+    expect(neither?.shared).toEqual({
+      hobbies: [],
+      languages: ["fi", "en"],
+      university: [],
+      guild: [],
+    });
   });
 
   test("erasing the account deletes the profile, and the export carries it until then", async ({

@@ -140,6 +140,14 @@ describe("screenOpen", () => {
     expect(screenOpen({ occupation: ["tech"] }, "occupation")).toBe(false);
     expect(screenOpen({ hasKids: "no" }, "hasKids")).toBe(false);
   });
+
+  it("closes the education's screen on the education alone: the school and the guild are no gap (#677)", () => {
+    expect(screenOpen({}, "education")).toBe(true);
+    expect(screenOpen({ education: "amk" }, "education")).toBe(false);
+    expect(screenOpen({ education: "amk", university: ["laurea"] }, "education")).toBe(false);
+    // A school named without the education still leaves the education to ask.
+    expect(screenOpen({ university: ["laurea"], guild: ["laurea_lato"] }, "education")).toBe(true);
+  });
 });
 
 describe("laterFieldsShown", () => {
@@ -164,6 +172,21 @@ describe("laterFieldsShown", () => {
     ]);
     expect(laterFieldsShown({}, "occupation", false)).toEqual(["occupation", "occupationTitle"]);
     expect(laterFieldsShown({ smoking: "never" }, "hasKids", false)).toEqual(["hasKids"]);
+  });
+
+  it.each([
+    ["nothing answered", {}],
+    ["the education answered", { education: "amk" }],
+    ["a school named and no education", { university: ["laurea"] }],
+    ["all three answered", { education: "amk", university: ["laurea"], guild: ["laurea_lato"] }],
+  ])("draws the school and the guild beside the education, with %s (#677)", (_what, saved) => {
+    for (const once of [false, true]) {
+      expect(laterFieldsShown(saved, "education", once)).toEqual([
+        "education",
+        "university",
+        "guild",
+      ]);
+    }
   });
 });
 
@@ -445,6 +468,67 @@ describe("LaterFieldScreen", () => {
     await press(screen.getByRole("button", { name: "Save and continue" }));
     await waitFor(() => expect(puts).toHaveLength(1));
     expect(puts[0]).toMatchObject({ fields: { smoking: "vaping", nicotine: ["snus"] } });
+  });
+
+  describe("the school and the guild, beside the education (#677)", () => {
+    const school = (name: string) => screen.getByRole("button", { name });
+
+    it("asks the school on the education's screen, the guild only once a school is named, and saves all three with one press", async () => {
+      const { puts } = fakeApi(named({}));
+      await show(<LaterFieldScreen field="education" />);
+      await waitFor(() => expect(answer("Master's or YAMK")).toBeTruthy());
+      // The education is its screen's one counted answer, as rows; the schools are chips.
+      expect(screen.getAllByRole("radio")).toHaveLength(6);
+      expect(screen.getByText("University")).toBeTruthy();
+      expect(school("Aalto University")).toBeTruthy();
+      expect(screen.queryByText("Guild or student association")).toBeNull();
+      expect(screen.queryByRole("button", { name: "Fyysikkokilta (FK)" })).toBeNull();
+      await press(school("Aalto University"));
+      expect(screen.getByText("Guild or student association")).toBeTruthy();
+      checkA11y();
+      await press(screen.getByRole("button", { name: "Fyysikkokilta (FK)" }));
+      await press(answer("Master's or YAMK"));
+      await press(screen.getByRole("button", { name: "Save and continue" }));
+      await waitFor(() => expect(puts).toHaveLength(1));
+      expect(puts[0]?.fields).toEqual({
+        education: "maisteri",
+        university: ["aalto"],
+        guild: ["aalto_fyysikkokilta"],
+      });
+    });
+
+    it("counts the screen done with the education alone, and still sixteen screens", async () => {
+      fakeApi(named({ education: "amk" }));
+      await show(<LaterFieldScreen field="hasKids" />);
+      await waitFor(() => expect(screen.getByText("1 of 16 answered")).toBeTruthy());
+      expect(laterProgress({ university: ["laurea"], guild: ["laurea_lato"] })).toEqual({
+        answered: 0,
+        total: 16,
+      });
+    });
+
+    it("takes the guild back with its school on the screen, and saves neither", async () => {
+      const { puts } = fakeApi(
+        named({ education: "kandi", university: ["aalto"], guild: ["aalto_fyysikkokilta"] }),
+      );
+      await show(<LaterFieldScreen field="education" once />);
+      await waitFor(() => expect(school("Fyysikkokilta (FK)")).toBeTruthy());
+      await press(school("Aalto University"));
+      expect(screen.queryByText("Guild or student association")).toBeNull();
+      await press(screen.getByRole("button", { name: "Save and continue" }));
+      await waitFor(() => expect(puts).toHaveLength(1));
+      expect(puts[0]?.fields).toEqual({ education: "kandi" });
+    });
+
+    it("writes no school on Ask me later", async () => {
+      const { puts } = fakeApi(named({}));
+      await show(<LaterFieldScreen field="education" />);
+      await waitFor(() => expect(school("Aalto University")).toBeTruthy());
+      await press(school("Aalto University"));
+      await press(screen.getByRole("button", { name: "Ask me later" }));
+      expect(puts).toEqual([]);
+      expect(router.push).toHaveBeenCalled();
+    });
   });
 
   it("steps a number from the middle of its range, and clears it again", async () => {
