@@ -505,4 +505,4 @@ flowchart TB
 - 2026-11-05 (#581, PR #598): the profile's rows run the whole width, with less explained; the deal-breakers' own list and the e-mail screen's way to it go; Your card says what it lacks above the card.
 - 2026-11-07 (#616, PR #641): what a card needs is starred where it is edited; a later question asks only the half still open; a deal-breaker on the languages never takes "Another language".
 - 2026-11-08 (#644, PR #647): the card in two depths, a short card and the whole card in place, its answers as chips, a shared one filled and in bold.
-- 2026-11-15 (#677): "University" and "Guild or student association" join "Work and education" and the education's later question; both show on the whole card, a shared one filled and in bold.
+- 2026-11-15 (#677, PR #682): "University" and "Guild or student association" join "Work and education" and the education's later question; both show on the whole card, a shared one filled and in bold.
