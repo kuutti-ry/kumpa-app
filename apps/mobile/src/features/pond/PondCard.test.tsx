@@ -1,4 +1,4 @@
-import type { PondCounterResponse, PondSummary } from "@kuutti/schema";
+import type { PondCounterResponse } from "@kuutti/schema";
 import { act, fireEvent } from "@testing-library/react-native";
 import { FAILED_TO_LOAD } from "@/test/failed";
 import { renderWithTheme } from "@/test/render";
@@ -8,23 +8,12 @@ import { PondCard } from "./PondCard";
 // threshold, the bar of whom those people seek right under it (#507), and not a
 // word that a profile can be unfinished.
 
-const POND: PondSummary = {
-  id: "0b1c1c4e-9a8e-4a0b-9c3a-0c8d1e2f3a01",
-  slug: "suomi",
-  name: "Suomi",
-};
-
-const counter = (figures: Partial<PondCounterResponse["ponds"][number]>): PondCounterResponse => ({
+const counter = (figures: Partial<PondCounterResponse>): PondCounterResponse => ({
   k: 10,
-  ponds: [
-    {
-      pond: POND,
-      day: figures.finished == null ? null : "2026-10-05",
-      finished: null,
-      seeks: null,
-      ...figures,
-    },
-  ],
+  day: figures.finished == null ? null : "2026-10-05",
+  finished: null,
+  seeks: null,
+  ...figures,
 });
 
 const json = (body: unknown, status = 200) =>
@@ -100,12 +89,6 @@ describe("PondCard", () => {
     expect(screen.queryByRole("image")).toBeNull();
   });
 
-  it("says the same of a counter that lists no pond", async () => {
-    const { screen, lines } = await cardAnswering({ k: 10, ponds: [] });
-    expect(lines).toEqual([HEADING, SMALL]);
-    expect(screen.queryByRole("image")).toBeNull();
-  });
-
   it("draws no bar below the threshold, whatever the answer says", async () => {
     const { screen, lines } = await cardAnswering(counter({ seeks: BAR }));
     expect(lines).toEqual([HEADING, SMALL]);
@@ -140,16 +123,27 @@ describe("PondCard", () => {
     expect(screen.getByText("30 % men")).toBeTruthy();
   });
 
-  it("offers the update and no number when the answer has the shape before the one number", async () => {
-    const before = {
-      pond: POND,
-      day: "2026-10-05",
-      verified: 42,
-      split: null,
-      finishing: 17,
-      seeks: null,
-    };
-    answering([() => json({ k: 10, ponds: [before] })]);
+  it.each([
+    [
+      "has the shape before the one number",
+      { k: 10, day: "2026-10-05", verified: 42, split: null, finishing: 17, seeks: null },
+    ],
+    [
+      "lists ponds, as it did while the pond had a row (#607)",
+      {
+        k: 10,
+        ponds: [
+          {
+            pond: { id: "0b1c1c4e-9a8e-4a0b-9c3a-0c8d1e2f3a01", slug: "suomi", name: "Suomi" },
+            day: "2026-10-05",
+            finished: 42,
+            seeks: null,
+          },
+        ],
+      },
+    ],
+  ])("offers the update and no number when the answer %s", async (_, before) => {
+    answering([() => json(before)]);
     const screen = await renderWithTheme(<PondCard />);
     await settle();
     expect(screen.getByText(FAILED_TO_LOAD)).toBeTruthy();

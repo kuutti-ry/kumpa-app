@@ -17,7 +17,6 @@ import {
   OnboardingStatus,
   PLACE_NAME_MAX,
   PlaceName,
-  PondSummary,
   PostalCode,
   PreferencesResponse,
   PreferencesUpdate,
@@ -36,7 +35,6 @@ const issues = (schema: z.ZodType, input: unknown) =>
 const codes = (schema: z.ZodType, input: unknown) =>
   issues(schema, input).map((issue) => issue.code);
 
-const uuid = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 const at = "2026-10-01T12:00:00.000Z";
 
 describe("the age window", () => {
@@ -138,26 +136,6 @@ describe("the gender", () => {
     expect(codes(GenderUpdate, { gender: "female" })).toEqual(["invalid_value"]);
     expect(codes(GenderUpdate, {})).toEqual(["invalid_value"]);
     expect(codes(GenderUpdate, { gender: "woman", legalSex: "F" })).toEqual(["unrecognized_keys"]);
-  });
-});
-
-describe("the pond", () => {
-  const pond = {
-    id: uuid(1),
-    slug: "suomi",
-    name: "Suomi",
-  };
-
-  it("carries its id, its slug and its name", () => {
-    expect(PondSummary.parse(pond)).toEqual(pond);
-  });
-
-  it.each([
-    ["an empty slug", { slug: "" }, "too_small"],
-    ["a slug of 61 characters", { slug: "s".repeat(61) }, "too_big"],
-    ["a name of 81 characters", { name: "n".repeat(81) }, "too_big"],
-  ])("refuses %s", (_, change, code) => {
-    expect(codes(PondSummary, { ...pond, ...change })).toEqual([code]);
   });
 });
 

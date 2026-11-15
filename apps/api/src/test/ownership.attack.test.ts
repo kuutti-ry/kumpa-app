@@ -52,7 +52,7 @@ describe("route ownership attacks against another person's conversation", () => 
   for (const row of conversationCases) {
     const run = (owner: boolean) =>
       rolledBack(async (db) => {
-        const ids = await people(db, null, 3, { complete: true, registeredAt: AT });
+        const ids = await people(db, 3, { complete: true, registeredAt: AT });
         const [a, b, outsider] = ids;
         if (!a || !b || !outsider) throw new Error("conversation people not written");
         const conversationId = await conversationBetween(db, a, b, {
@@ -91,7 +91,7 @@ describe("route ownership attacks against another person's photos", () => {
   for (const operation of photoCases) {
     const run = (owner: boolean) =>
       rolledBack(async (db) => {
-        const ids = await people(db, null, 2, { complete: true });
+        const ids = await people(db, 2, { complete: true });
         const [subject, outsider] = ids;
         if (!subject || !outsider) throw new Error("photo people not written");
         const photos = await db.query<{ id: string }>(

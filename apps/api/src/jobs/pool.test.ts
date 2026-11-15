@@ -7,8 +7,9 @@ import {
   RoundResponse,
 } from "@kuutti/schema";
 import { createApp } from "../app.ts";
+import { matchingOpen } from "../lib/matching-config.ts";
 import { pointOf } from "../pond/index.ts";
-import { signInAs, staffSession, withMatchingConfig } from "../test/account.ts";
+import { openMatchingHere, signInAs, staffSession, withMatchingConfig } from "../test/account.ts";
 import { conversationBetween } from "../test/chat.ts";
 import {
   captureLogger,
@@ -18,15 +19,8 @@ import {
   test,
   testConfig,
 } from "../test/harness.ts";
-import { openPond, type PeopleOptions, people, pondNamed } from "../test/people.ts";
-import {
-  isComplete,
-  matchingStatusOf,
-  openPondOf,
-  pondIdOf,
-  subjectOf,
-  subjectsOfPond,
-} from "./pool.ts";
+import { type PeopleOptions, people } from "../test/people.ts";
+import { isComplete, matchingStatusOf, subjectOf, subjectsOfPond } from "./pool.ts";
 import { fillQueue } from "./round-builder.ts";
 
 // features/pond/opening.feature (#500, ADR-060): who is complete, what a
@@ -63,9 +57,9 @@ async function reads(ctx: TestContext, ids: readonly string[], at = NOON) {
   return added;
 }
 
-const turn = async (ctx: TestContext, pondId: string, open: boolean) => {
+const turn = async (ctx: TestContext, open: boolean) => {
   const admin = await staffSession(ctx.client, "admin");
-  const response = await ctx.app.request(`/admin/ponds/${pondId}/matching`, {
+  const response = await ctx.app.request("/admin/matching", {
     method: "POST",
     headers: { ...admin.headers, "content-type": "application/json" },
     body: JSON.stringify({ open }),
@@ -73,19 +67,17 @@ const turn = async (ctx: TestContext, pondId: string, open: boolean) => {
   expect(response.status).toBe(200);
 };
 
-describe("a pond's switch", () => {
+describe("the switch", () => {
   test("Matching opens in a pond when an admin opens it, and not before", async ({ ctx }) => {
-    const pond = await pondNamed(ctx.client, "test-opening");
-    const ids = await people(ctx.client, pond, 31, ALIKE);
+    const ids = await people(ctx.client, 31, ALIKE);
 
     expect(await reads(ctx, ids)).toEqual(ids.map(() => false));
     for (const id of ids) expect(await roundCount(ctx.client, id)).toBe(0);
     expect(await statusOf(ctx, ids[0])).toBe("closed");
     expect(await statusOf(ctx, ids[30])).toBe("closed");
-    const closed = await ctx.client.query("SELECT matching_open FROM ponds WHERE id = $1", [pond]);
-    expect(closed.rows).toEqual([{ matching_open: false }]);
+    expect(await matchingOpen(ctx.client)).toBe(false);
 
-    await turn(ctx, pond, true);
+    await turn(ctx, true);
 
     expect(await statusOf(ctx, ids[0])).toBe("open");
     expect(await statusOf(ctx, ids[30])).toBe("open");
@@ -94,9 +86,8 @@ describe("a pond's switch", () => {
   });
 
   test("Closing a pond opens no new round and ends no conversation", async ({ ctx }) => {
-    const pond = await pondNamed(ctx.client, "test-closing");
-    await openPond(ctx.client, pond);
-    const [a, b] = await people(ctx.client, pond, 2, ALIKE);
+    await openMatchingHere(ctx.client);
+    const [a, b] = await people(ctx.client, 2, ALIKE);
     if (!a || !b) throw new Error("people not written");
     await reads(ctx, [a]);
     const conversation = await conversationBetween(ctx.client, a, b);
@@ -111,7 +102,7 @@ describe("a pond's switch", () => {
     const before = await read();
     expect(before.entries).not.toBeNull();
 
-    await turn(ctx, pond, false);
+    await turn(ctx, false);
 
     expect((await read()).entries?.map((entry) => entry.card)).toEqual(
       before.entries?.map((entry) => entry.card),
@@ -121,17 +112,6 @@ describe("a pond's switch", () => {
     expect(await statusOf(ctx, a)).toBe("closed");
     expect(await reads(ctx, [a], NEXT_NOON)).toEqual([false]);
     expect(await roundCount(ctx.client, a)).toBe(1);
-  });
-
-  test("the switch is read for the person, whatever another pond's says", async ({ ctx }) => {
-    const open = await pondNamed(ctx.client, "test-open-a");
-    const shut = await pondNamed(ctx.client, "test-open-b");
-    await openPond(ctx.client, open);
-    const [here] = await people(ctx.client, open, 1, ALIKE);
-    const [there] = await people(ctx.client, shut, 1, ALIKE);
-    expect(await openPondOf(ctx.client, here ?? "")).toBe(open);
-    expect(await openPondOf(ctx.client, there ?? "")).toBeNull();
-    expect(await pondIdOf(ctx.client, there ?? "")).toBe(shut);
   });
 });
 
@@ -143,9 +123,8 @@ describe("what a person is told", () => {
       ["unfinished", "open", "incomplete"],
       ["unfinished", "closed", "incomplete"],
     ] as const)("%s in a pond that is %s: %s", async ([person, pondState, told], { ctx }) => {
-      const pond = await pondNamed(ctx.client, `test-told-${person}-${pondState}`);
-      if (pondState === "open") await openPond(ctx.client, pond);
-      const [who] = await people(ctx.client, pond, 1, ALIKE);
+      if (pondState === "open") await openMatchingHere(ctx.client);
+      const [who] = await people(ctx.client, 1, ALIKE);
       if (!who) throw new Error("person not written");
       if (person === "unfinished") {
         await ctx.client.query("DELETE FROM photo WHERE account_id = $1", [who]);
@@ -155,10 +134,9 @@ describe("what a person is told", () => {
   });
 
   test("Another person's state is never served", async ({ ctx }) => {
-    const pond = await pondNamed(ctx.client, "test-own-state");
-    await openPond(ctx.client, pond);
-    const [mine] = await people(ctx.client, pond, 1, { gender: "woman" });
-    const [theirs] = await people(ctx.client, pond, 1, ALIKE);
+    await openMatchingHere(ctx.client);
+    const [mine] = await people(ctx.client, 1, { gender: "woman" });
+    const [theirs] = await people(ctx.client, 1, ALIKE);
     expect(await statusOf(ctx, theirs)).toBe("open");
     expect(await statusOf(ctx, mine)).toBe("incomplete");
     // The route takes no id: there is nobody else's to ask for.
@@ -173,25 +151,26 @@ describe("what a person is told", () => {
     expect(forged.status).toBe(401);
   });
 
-  test("a person without a pond, or with no profile, is told that something is missing", async ({
+  test("a person without a home, or with no profile, is told that something is missing", async ({
     ctx,
   }) => {
-    const pond = await pondNamed(ctx.client, "test-told-missing");
-    await openPond(ctx.client, pond);
-    const [noPond] = await people(ctx.client, null, 1, ALIKE);
-    const [registered] = await people(ctx.client, pond, 1, { gender: "woman" });
-    expect(await statusOf(ctx, noPond)).toBe("incomplete");
+    await openMatchingHere(ctx.client);
+    const [noHome] = await people(ctx.client, 1, { ...ALIKE, home: null });
+    const [registered] = await people(ctx.client, 1, { gender: "woman" });
+    const [whole] = await people(ctx.client, 1, ALIKE);
+    expect(await statusOf(ctx, noHome)).toBe("incomplete");
     expect(await statusOf(ctx, registered)).toBe("incomplete");
+    // The switch is on: somebody with everything is told so.
+    expect(await statusOf(ctx, whole)).toBe("open");
   });
 
   test("somebody paused, suspended or banned is told nothing is open, by the reader as by the route", async ({
     ctx,
   }) => {
-    const pond = await pondNamed(ctx.client, "test-told-hidden");
-    await openPond(ctx.client, pond);
-    const [paused, suspended] = await people(ctx.client, pond, 2, ALIKE);
-    const [banned] = await people(ctx.client, pond, 1, { ...ALIKE, standing: "banned" });
-    if (!paused || !suspended || !banned) throw new Error("people not written");
+    await openMatchingHere(ctx.client);
+    const [paused, suspended, live] = await people(ctx.client, 3, ALIKE);
+    const [banned] = await people(ctx.client, 1, { ...ALIKE, standing: "banned" });
+    if (!paused || !suspended || !banned || !live) throw new Error("people not written");
     await ctx.client.query("UPDATE account SET state = 'paused' WHERE id = $1", [paused]);
     await ctx.client.query("UPDATE account SET state = 'suspended' WHERE id = $1", [suspended]);
     const deps = { db: ctx.client, now: () => NOON };
@@ -199,36 +178,34 @@ describe("what a person is told", () => {
       expect(await matchingStatusOf(deps, id)).toEqual({ state: "incomplete" });
       expect(await isComplete(ctx.client, id, NOON)).toBe(false);
     }
-    expect(await openPondOf(ctx.client, paused)).toBeNull();
-    expect(await openPondOf(ctx.client, suspended)).toBeNull();
-    // Banned on the identity: the account is live, its standing is what keeps it out.
-    expect(await openPondOf(ctx.client, banned)).toBe(pond);
+    // The switch is on, and somebody in sight is told so by the same reader.
+    expect(await matchingStatusOf(deps, live)).toEqual({ state: "open" });
+    expect(await isComplete(ctx.client, live, NOON)).toBe(true);
   });
 });
 
 describe("who is complete", () => {
   test("Only a finished profile and current consents count", async ({ ctx }) => {
-    const pond = await pondNamed(ctx.client, "test-complete");
-    await openPond(ctx.client, pond);
-    const [she] = await people(ctx.client, pond, 1, ALIKE);
+    await openMatchingHere(ctx.client);
+    const [she] = await people(ctx.client, 1, ALIKE);
     // No profile at all, and so no photos.
-    const [unfinished] = await people(ctx.client, pond, 1, {
+    const [unfinished] = await people(ctx.client, 1, {
       gender: "woman",
       state: "active",
       consented: true,
     });
     // Everything, but the consents are for an older wording.
-    const [outdated] = await people(ctx.client, pond, 1, { ...ALIKE, consented: false });
+    const [outdated] = await people(ctx.client, 1, { ...ALIKE, consented: false });
     await ctx.client.query(
       `INSERT INTO consent (account_id, kind, version, locale_shown)
        VALUES ($1, 'terms', 'an-older-wording', 'fi'), ($1, 'privacy', 'an-older-wording', 'fi')`,
       [outdated],
     );
-    const [shadow] = await people(ctx.client, pond, 1, ALIKE);
+    const [shadow] = await people(ctx.client, 1, ALIKE);
     await ctx.client.query("UPDATE account SET state = 'shadow_banned' WHERE id = $1", [shadow]);
-    const [paused] = await people(ctx.client, pond, 1, ALIKE);
+    const [paused] = await people(ctx.client, 1, ALIKE);
     await ctx.client.query("UPDATE account SET state = 'paused' WHERE id = $1", [paused]);
-    const [banned] = await people(ctx.client, pond, 1, { ...ALIKE, standing: "banned" });
+    const [banned] = await people(ctx.client, 1, { ...ALIKE, standing: "banned" });
     if (!she || !shadow || !unfinished || !outdated || !paused || !banned) {
       throw new Error("people not written");
     }
@@ -257,8 +234,7 @@ describe("who is complete", () => {
   test.for(["terms", "privacy", "special_category"] as const)(
     "the %s consent alone decides: withdrawn, the person is not complete",
     async (kind, { ctx }) => {
-      const pond = await pondNamed(ctx.client, `test-complete-consent-${kind}`);
-      const [who] = await people(ctx.client, pond, 1, ALIKE);
+      const [who] = await people(ctx.client, 1, ALIKE);
       if (!who) throw new Error("person not written");
       expect(await isComplete(ctx.client, who, NOON)).toBe(true);
       await ctx.client.query(
@@ -272,52 +248,49 @@ describe("who is complete", () => {
   test("a person short of one answer (the birth month, the intent, a finished profile) is not complete", async ({
     ctx,
   }) => {
-    const pond = await pondNamed(ctx.client, "test-complete-short");
-    const [whole, noBirth, noIntent, noPhotos] = await people(ctx.client, pond, 4, ALIKE);
+    const [whole, noBirth, noIntent, noPhotos] = await people(ctx.client, 4, ALIKE);
     await ctx.client.query("UPDATE account SET birth_month = NULL WHERE id = $1", [noBirth]);
     await ctx.client.query("UPDATE profile SET fields = fields - 'intent' WHERE account_id = $1", [
       noIntent,
     ]);
     await ctx.client.query("DELETE FROM photo WHERE account_id = $1", [noPhotos]);
-    expect((await subjectsOfPond(ctx.client, pond, NOON)).map((s) => s.id)).toEqual([whole]);
+    expect((await subjectsOfPond(ctx.client, NOON)).map((s) => s.id)).toEqual([whole]);
     for (const id of [noBirth, noIntent, noPhotos]) {
       expect(await statusOf(ctx, id), id).toBe("incomplete");
     }
   });
 
   test("photos sent in conversations finish no profile (#350)", async ({ ctx }) => {
-    const pond = await pondNamed(ctx.client, "test-complete-message-photos");
-    const [whole, messagesOnly] = await people(ctx.client, pond, 2, ALIKE);
+    const [whole, messagesOnly] = await people(ctx.client, 2, ALIKE);
     // The same three approved photos, sent in conversations instead.
     await ctx.client.query(
       "UPDATE photo SET purpose = 'message', position = NULL WHERE account_id = $1",
       [messagesOnly],
     );
-    expect((await subjectsOfPond(ctx.client, pond, NOON)).map((s) => s.id)).toEqual([whole]);
+    expect((await subjectsOfPond(ctx.client, NOON)).map((s) => s.id)).toEqual([whole]);
     expect(await statusOf(ctx, messagesOnly)).toBe("incomplete");
   });
 
   test("a ready line in place of a bio counts as a finished profile, and neither does not (#239)", async ({
     ctx,
   }) => {
-    const pond = await pondNamed(ctx.client, "test-complete-ready-line");
-    const [line] = await people(ctx.client, pond, 1, { ...ALIKE, bio: "ready_line" });
-    const [neither] = await people(ctx.client, pond, 1, { ...ALIKE, bio: "none" });
-    expect((await subjectsOfPond(ctx.client, pond, NOON)).map((s) => s.id)).toEqual([line]);
+    const [line] = await people(ctx.client, 1, { ...ALIKE, bio: "ready_line" });
+    const [neither] = await people(ctx.client, 1, { ...ALIKE, bio: "none" });
+    expect((await subjectsOfPond(ctx.client, NOON)).map((s) => s.id)).toEqual([line]);
     expect(await statusOf(ctx, neither)).toBe("incomplete");
   });
 
   test("a reader of the person alone says the same", async ({ ctx }) => {
-    const pond = await pondNamed(ctx.client, "test-complete-one");
-    const [whole, short] = await people(ctx.client, pond, 2, ALIKE);
+    const [whole, short] = await people(ctx.client, 2, ALIKE);
     if (!whole || !short) throw new Error("people not written");
     await ctx.client.query("DELETE FROM photo WHERE account_id = $1", [short]);
     expect(await isComplete(ctx.client, whole, NOON)).toBe(true);
     expect(await isComplete(ctx.client, short, NOON)).toBe(false);
     // Closed, or open: completeness does not ask the switch, the invitations' question.
-    await openPond(ctx.client, pond);
+    expect(await matchingOpen(ctx.client)).toBe(false);
+    await openMatchingHere(ctx.client);
     expect(await isComplete(ctx.client, whole, NOON)).toBe(true);
-    expect(await openPondOf(ctx.client, whole)).toBe(pond);
+    expect(await isComplete(ctx.client, short, NOON)).toBe(false);
   });
 });
 
@@ -340,12 +313,11 @@ describe("a home in the pool (#514, ADR-061)", () => {
   test("An active account without a home is in nobody's pool, and the step opens", async ({
     ctx,
   }) => {
-    const pond = await pondNamed(ctx.client, "test-pool-no-home");
-    await openPond(ctx.client, pond);
-    const [she] = await people(ctx.client, pond, 1, { ...ALIKE, home: null });
-    await people(ctx.client, pond, 2, ALIKE);
+    await openMatchingHere(ctx.client);
+    const [she] = await people(ctx.client, 1, { ...ALIKE, home: null });
+    await people(ctx.client, 2, ALIKE);
     expect(await statusOf(ctx, she)).toBe("incomplete");
-    expect((await subjectsOfPond(ctx.client, pond, NOON)).map((s) => s.id)).not.toContain(she);
+    expect((await subjectsOfPond(ctx.client, NOON)).map((s) => s.id)).not.toContain(she);
 
     const read = statusRead(ctx, she);
     const before = await read();
@@ -359,14 +331,13 @@ describe("a home in the pool (#514, ADR-061)", () => {
     expect((await putHome(ctx, she, "00530")).status).toBe(200);
     expect((await read()).missing).toEqual([]);
     expect(await statusOf(ctx, she)).toBe("open");
-    expect((await subjectsOfPond(ctx.client, pond, NOON)).map((s) => s.id)).toContain(she);
+    expect((await subjectsOfPond(ctx.client, NOON)).map((s) => s.id)).toContain(she);
   });
 
   test("A place the list no longer knows reads as no home, and the step opens again", async ({
     ctx,
   }) => {
-    const pond = await pondNamed(ctx.client, "test-pool-left-the-list");
-    const [she] = await people(ctx.client, pond, 1, ALIKE);
+    const [she] = await people(ctx.client, 1, ALIKE);
     await ctx.client.query("UPDATE account SET home_place = '12345' WHERE id = $1", [she]);
 
     const status = await statusRead(ctx, she)();
@@ -379,11 +350,11 @@ describe("a home in the pool (#514, ADR-061)", () => {
     expect(JSON.stringify(ctx.logs())).not.toContain("12345");
 
     expect(await statusOf(ctx, she)).toBe("incomplete");
-    expect(await subjectOf(ctx.client, pond, she ?? "", NOON)).toBeNull();
+    expect(await subjectOf(ctx.client, she ?? "", NOON)).toBeNull();
 
     // A new one is taken like a first.
     expect((await putHome(ctx, she, "00530")).status).toBe(200);
-    expect((await subjectOf(ctx.client, pond, she ?? "", NOON))?.person.home).toMatchObject(
+    expect((await subjectOf(ctx.client, she ?? "", NOON))?.person.home).toMatchObject(
       pointOf("00530") ?? {},
     );
   });
@@ -391,9 +362,8 @@ describe("a home in the pool (#514, ADR-061)", () => {
   test("A raised floor coarsens every read at once, and a lowered one gives back only what the row still holds", async ({
     ctx,
   }) => {
-    const pond = await pondNamed(ctx.client, "test-pool-floor");
-    const [area] = await people(ctx.client, pond, 1, { ...ALIKE, home: "00530" });
-    const [town] = await people(ctx.client, pond, 1, { ...ALIKE, home: "422" });
+    const [area] = await people(ctx.client, 1, { ...ALIKE, home: "00530" });
+    const [town] = await people(ctx.client, 1, { ...ALIKE, home: "422" });
     await ctx.client.query("UPDATE account SET home_shows_area = true WHERE id = $1", [area]);
     const who = await signInAs(ctx.client, area ?? "");
     const preview = async () =>
@@ -401,7 +371,7 @@ describe("a home in the pool (#514, ADR-061)", () => {
         await (await ctx.app.request("/profile/card", { headers: who.headers })).json(),
       ).card?.place;
     const homeOf = async (id: string | undefined) =>
-      (await subjectOf(ctx.client, pond, id ?? "", NOON))?.person.home;
+      (await subjectOf(ctx.client, id ?? "", NOON))?.person.home;
     expect(await preview()).toEqual({ fi: "Kallio", sv: "Berghäll" });
     expect(await homeOf(area)).toMatchObject(pointOf("00530") ?? {});
 
@@ -426,14 +396,13 @@ describe("a home in the pool (#514, ADR-061)", () => {
   });
 
   test("a home is carried to the pool with the edges of the same read", async ({ ctx }) => {
-    const pond = await pondNamed(ctx.client, "test-pool-edges");
-    const [she] = await people(ctx.client, pond, 1, ALIKE);
+    const [she] = await people(ctx.client, 1, ALIKE);
     await withMatchingConfig(ctx.client, {
       distance_nearby_km: 1,
       distance_close_km: 2,
       distance_around_km: 3,
     });
-    expect((await subjectOf(ctx.client, pond, she ?? "", NOON))?.person.home).toEqual({
+    expect((await subjectOf(ctx.client, she ?? "", NOON))?.person.home).toEqual({
       ...pointOf("00530"),
       edges: { nearby: 1, close: 2, around: 3 },
     });

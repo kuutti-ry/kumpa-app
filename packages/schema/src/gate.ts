@@ -5,7 +5,7 @@ import { z } from "zod";
  * ADR-060 §4): three things, and no number, no step and no place.
  *
  * - `incomplete`: the profile or onboarding lacks something.
- * - `closed`: complete, and matching has not opened in the person's pond yet.
+ * - `closed`: complete, and matching has not opened yet.
  * - `open`: matching is open.
  */
 const GATE_STATES = ["incomplete", "closed", "open"] as const;

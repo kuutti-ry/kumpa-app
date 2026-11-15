@@ -7,7 +7,7 @@ import { HOME, type PeopleOptions } from "./people.ts";
 /**
  * What `people` is given for people who fit each other, whatever the test is
  * about: a read and a like ask both people's filters now (ADR-062 §8), so
- * everybody of one pond with these seeks everybody else of it.
+ * everybody with these seeks everybody else with them.
  */
 export const FITTING = {
   complete: true,
@@ -16,12 +16,12 @@ export const FITTING = {
   seeks: ["non_binary"],
 } as const satisfies PeopleOptions;
 
-/** Somebody signed in, who has no profile yet, given what `FITTING` gives but the profile and the consents, in that pond. */
-export async function fitIn(db: Queryable, accountId: string, pondId: string): Promise<void> {
-  await db.query(
-    "UPDATE account SET gender = 'non_binary', pond_id = $2, home_place = $3 WHERE id = $1",
-    [accountId, pondId, HOME],
-  );
+/** Somebody signed in, who has no profile yet, given what `FITTING` gives but the profile and the consents. */
+export async function fitIn(db: Queryable, accountId: string): Promise<void> {
+  await db.query("UPDATE account SET gender = 'non_binary', home_place = $2 WHERE id = $1", [
+    accountId,
+    HOME,
+  ]);
 }
 
 /**

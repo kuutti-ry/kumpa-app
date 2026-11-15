@@ -78,7 +78,6 @@ describe("the tables", () => {
       "photo_check_note",
       "photo_review",
       "pond_counter",
-      "ponds",
       "preferences",
       "profile",
       // A signed-in device's push token (#102, ADR-055).
@@ -98,13 +97,13 @@ describe("the tables", () => {
     ]);
   });
 
-  it("each have one uuid primary key", () => {
+  it("each have one uuid primary key, but the counter, whose one row a constant keys (#607)", () => {
     for (const table of tables) {
       const keys = table.columns.filter((column) => column.primary);
       expect(
         keys.map((column) => column.getSQLType()),
         table.name,
-      ).toEqual(["uuid"]);
+      ).toEqual([table.name === "pond_counter" ? "boolean" : "uuid"]);
       expect(table.primaryKeys, table.name).toEqual([]);
     }
   });
@@ -143,7 +142,7 @@ describe("the pond counter (#581, ADR-013)", () => {
     expect(columns.map((column) => column.name).sort()).toEqual([
       "day",
       "finished",
-      "pond_id",
+      "id",
       "seeks_everyone",
       "seeks_men",
       "seeks_women",
@@ -366,13 +365,9 @@ describe("the foreign keys", () => {
     ]);
   });
 
-  it("name the one pond from the account and the counter, and no pond from a pond", () => {
-    expect(
-      references.filter((reference) => reference.endsWith("-> ponds.id no action")).sort(),
-    ).toEqual([
-      "account.pond_id -> ponds.id no action",
-      "pond_counter.pond_id -> ponds.id no action",
-    ]);
+  it("name no pond: the account has none and the counter is one row of nobody's (#607, ADR-061 §8)", () => {
+    expect(references.filter((reference) => reference.includes("pond"))).toEqual([]);
+    expect(byName.get("account")?.columns.map((column) => column.name)).not.toContain("pond_id");
   });
 });
 

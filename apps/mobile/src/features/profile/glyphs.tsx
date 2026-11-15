@@ -56,7 +56,7 @@ export type GlyphField = keyof typeof OPTION_GLYPHS;
 export const GLYPH_FIELDS = Object.keys(OPTION_GLYPHS) as GlyphField[];
 
 /** Whether any option of the field has a glyph: the card lays those out as a row of glyph and name. */
-export const hasGlyphs = (field: ProfileFieldKey): field is GlyphField => field in OPTION_GLYPHS;
+const hasGlyphs = (field: ProfileFieldKey): field is GlyphField => field in OPTION_GLYPHS;
 
 export function optionGlyph(field: ProfileFieldKey, option: string): number | null {
   if (!hasGlyphs(field)) return null;

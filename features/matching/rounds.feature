@@ -22,8 +22,8 @@ Feature: The queue: whom it holds and in which order
     Then ten cards come, and the day's log holds those ten and nobody else
 
   Scenario: Only somebody complete in an open pond opens a day
-    Given "A" complete in an open pond, "B" whose profile lacks its photos there, and "C" complete in a closed pond
-    When each of them reads the queue
+    Given "A" and "C" complete, and "B" whose profile lacks its photos
+    When "C" reads the queue before matching has opened, and "A" and "B" read it once it has
     Then "A" has today's round, and "B" and "C" have none
 
   Scenario: A read with undecided cards adds nobody
@@ -37,9 +37,9 @@ Feature: The queue: whom it holds and in which order
     Then the other two come, at places eleven and twelve
 
   Scenario: The queue's end is an empty list, and null means no matching
-    Given "A" has decided everybody in their pool, and "B" is complete in a pond nobody has opened
-    When each of them reads the queue
-    Then "A" gets an empty list and "B" gets null
+    Given "A" with two people in their pool
+    When "A" reads the queue before matching has opened, and again once it has and "A" has decided both
+    Then the first read gets null and the last an empty list
 
   Scenario: Two reads at once queue nobody twice
     Given "A" has twelve people in their pool and nothing written for the day

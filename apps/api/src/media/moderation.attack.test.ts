@@ -27,7 +27,7 @@ async function pending(
   from: Date,
   cards = true,
 ): Promise<string[]> {
-  const [owner] = await people(db, null, 1, { state: "active" });
+  const [owner] = await people(db, 1, { state: "active" });
   const { rows } = await db.query<{ id: string; key: string; position: number }>(
     `INSERT INTO photo (account_id, key, blurhash, width, height, state, position, created_at)
      SELECT $1::uuid, 'attack-pending-' || $1::text || '-' || n, 'LEHV6nWB2yk8pyo0adR*.7kCMdnj', 800, 1067,

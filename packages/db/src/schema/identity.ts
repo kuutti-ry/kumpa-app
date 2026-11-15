@@ -11,7 +11,6 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
-import { ponds } from "./ponds.ts";
 
 /** Self-declared, one of a closed list (#46, rule 3); mirrors GENDERS in packages/schema (a test keeps them equal). */
 export const gender = pgEnum("gender", ["woman", "man", "non_binary"]);
@@ -93,10 +92,9 @@ export const account = pgTable(
     // anonymised tombstone of a deleted account.
     birthYear: smallint("birth_year"),
     birthMonth: smallint("birth_month"),
-    // Onboarding (#46): self-declared gender and the pond matching happens
-    // in; null until answered, nulled again at erasure with the age.
+    // Onboarding (#46): self-declared gender; null until answered, nulled
+    // again at erasure with the age.
     gender: gender("gender"),
-    pondId: uuid("pond_id").references(() => ponds.id),
     // The person's one home (ADR-061 §2, §9): the place kept, of at least
     // matching_config.home_min_inhabitants people. A five-digit postal code
     // where the area is that large, else a three-digit municipality number:

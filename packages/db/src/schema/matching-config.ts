@@ -15,8 +15,9 @@ export const matchingConfig = pgTable(
     validFrom: timestamp("valid_from", { withTimezone: true }).notNull().defaultNow(),
     createdBy: text("created_by").notNull(),
     // Why this version (#305): written by the panel's change, required there.
-    // Null for the rows the seed and the migrations wrote before reasons were
-    // kept; `created_by` names those writers.
+    // Null for the rows the seed and the migrations wrote, and for the turns of
+    // the switch `matching_open`, which asks for none (ADR-060 §2);
+    // `created_by` names those writers.
     reason: text("reason"),
   },
   (table) => [uniqueIndex("matching_config_key_version_idx").on(table.key, table.version)],

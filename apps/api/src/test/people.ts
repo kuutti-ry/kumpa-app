@@ -13,7 +13,10 @@ export const HOMES = { nearby: "00500", close: "00210", around: "01350", far: "9
 /**
  * Many verified people at once, for figures that only mean something in
  * numbers (#54). Plain SQL like `signedInAccount`: a test of one slice may
- * not import another's internals. No sessions: nobody here signs in.
+ * not import another's internals. No sessions: nobody here signs in. There is
+ * no pond to put them in (ADR-061 §8, #607): a home is what puts a person among
+ * the others, so a test's pond is everybody it wrote a home for, and matching
+ * opens for them all with `openMatchingHere(db)` (account.ts).
  */
 export type PeopleOptions = {
   gender?: "woman" | "man" | "non_binary" | null;
@@ -41,21 +44,6 @@ export type PeopleOptions = {
 };
 
 let batch = 0;
-
-export async function pondNamed(db: Queryable, slug: string): Promise<string> {
-  const { rows } = await db.query<{ id: string }>(
-    "INSERT INTO ponds (slug, name_nominative) VALUES ($1, $2) RETURNING id",
-    [slug, `Pond ${slug}`],
-  );
-  const id = rows[0]?.id;
-  if (!id) throw new Error("test pond not written");
-  return id;
-}
-
-/** Opens a pond, as an admin's switch does (#500, ADR-060 §1). */
-export async function openPond(db: Queryable, pondId: string): Promise<void> {
-  await db.query("UPDATE ponds SET matching_open = true WHERE id = $1", [pondId]);
-}
 
 /** The three consents, in their current wording, for accounts that may hold some of them already. */
 export async function consentsOf(db: Queryable, ids: readonly string[]): Promise<void> {
@@ -108,7 +96,6 @@ export async function completeProfiles(
 
 export async function people(
   db: Queryable,
-  pondId: string | null,
   count: number,
   options: PeopleOptions = {},
 ): Promise<string[]> {
@@ -122,10 +109,10 @@ export async function people(
        FROM generate_series(1, $3::int) g
        RETURNING id)
      , numbered AS (SELECT id, row_number() OVER () AS n FROM ids)
-     INSERT INTO account (identity_id, state, birth_year, birth_month, gender, pond_id, home_place,
+     INSERT INTO account (identity_id, state, birth_year, birth_month, gender, home_place,
                           registered_at)
-     SELECT id, $4::account_state, $7, 6, $5::gender, $6, $9,
-            coalesce($8::timestamptz, now()) + n * interval '1 second'
+     SELECT id, $4::account_state, $6, 6, $5::gender, $8,
+            coalesce($7::timestamptz, now()) + n * interval '1 second'
      FROM numbered ORDER BY n
      RETURNING id, registered_at`,
     [
@@ -134,7 +121,6 @@ export async function people(
       count,
       state,
       options.gender ?? null,
-      pondId,
       options.birthYear ?? 1990,
       options.registeredAt ?? null,
       options.home === undefined ? (options.complete ? HOME : null) : options.home,

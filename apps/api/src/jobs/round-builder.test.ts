@@ -1,6 +1,6 @@
-import { type Queryable, SEED_PONDS } from "@kuutti/db";
+import type { Queryable } from "@kuutti/db";
 // biome-ignore lint/style/noRestrictedImports: a test of the builder over the synthetic population (#95); nothing of it is bundled
-import { generatePopulation, openPonds, writePopulation } from "@kuutti/db/demo";
+import { generatePopulation, writePopulation } from "@kuutti/db/demo";
 import { CONSENT_VERSIONS } from "@kuutti/i18n";
 import {
   ErrorResponse,
@@ -13,7 +13,7 @@ import { type App, createApp } from "../app.ts";
 import { eraseAccount } from "../identity/index.ts";
 import { addDays, finnishDay } from "../lib/finnish-day.ts";
 import { exportRounds, inEachOthersPool, pruneRounds } from "../matching/index.ts";
-import { signInAs, withMatchingConfig } from "../test/account.ts";
+import { openMatchingHere, signInAs, withMatchingConfig } from "../test/account.ts";
 import { cardShown } from "../test/cards.ts";
 import { conversationBetween, interleaved } from "../test/chat.ts";
 import {
@@ -24,7 +24,7 @@ import {
   test,
   testConfig,
 } from "../test/harness.ts";
-import { HOME, HOMES, openPond, type PeopleOptions, people, pondNamed } from "../test/people.ts";
+import { HOME, HOMES, type PeopleOptions, people } from "../test/people.ts";
 import { pidOf, waitsFor, watched, withTwoConnections } from "../test/races.ts";
 import { endedConversation, logged, shownAt } from "../test/rounds.ts";
 import { subjectsOfPond } from "./pool.ts";
@@ -63,15 +63,12 @@ async function fillAll(db: Queryable, ids: readonly (string | undefined)[], now 
   for (const id of ids) await fill(db, id ?? "", now);
 }
 
-/** A value of matching_config above every version a migration wrote, so it is the one read. */
-
-/** An open pond, `women` women and `men` men in it. */
-async function pondOf(ctx: TestContext, slug: string, women: number, men: number) {
-  const pond = await pondNamed(ctx.client, slug);
-  await openPond(ctx.client, pond);
-  const her = await people(ctx.client, pond, women, WOMEN);
-  const him = await people(ctx.client, pond, men, MEN);
-  return { pond, women: her, men: him };
+/** Matching open, and `women` women and `men` men who have told their home: the pond there is (ADR-061 §8). */
+async function pondOf(ctx: TestContext, women: number, men: number) {
+  await openMatchingHere(ctx.client);
+  const her = await people(ctx.client, women, WOMEN);
+  const him = await people(ctx.client, men, MEN);
+  return { women: her, men: him };
 }
 
 type Card = { candidate_id: string; reason: string };
@@ -158,7 +155,7 @@ describe("who has a queue", () => {
   test("The day's first read opens the day and fills ten, nobody built at night", async ({
     ctx,
   }) => {
-    const { women, men } = await pondOf(ctx, "test-queue-first", 1, 12);
+    const { women, men } = await pondOf(ctx, 1, 12);
     const [a] = women;
     if (!a) throw new Error("people not written");
     expect(await roundOf(ctx.client, a)).toBeNull();
@@ -180,30 +177,29 @@ describe("who has a queue", () => {
   });
 
   test("Only somebody complete in an open pond opens a day", async ({ ctx }) => {
-    const { pond, women, men } = await pondOf(ctx, "test-rounds-who", 1, 2);
-    const [a] = women;
-    const [b] = await people(ctx.client, pond, 1, WOMEN);
-    const closed = await pondNamed(ctx.client, "test-rounds-who-closed");
-    const [c] = await people(ctx.client, closed, 1, WOMEN);
-    await people(ctx.client, closed, 1, MEN);
+    const [a, b, c] = await people(ctx.client, 3, WOMEN);
+    const men = await people(ctx.client, 2, MEN);
     if (!a || !b || !c) throw new Error("people not written");
     await ctx.client.query("DELETE FROM photo WHERE account_id = $1", [b]);
 
+    // Before the switch is on, somebody complete with people in their pool opens no day.
+    expect(await fill(ctx.client, c)).toBe(false);
+    expect(await roundOf(ctx.client, c)).toBeNull();
+
+    await openMatchingHere(ctx.client);
     expect(await fill(ctx.client, a)).toBe(true);
     expect(await fill(ctx.client, b)).toBe(false);
-    expect(await fill(ctx.client, c)).toBe(false);
 
     expect(candidates(await roundOf(ctx.client, a)).sort()).toEqual([...men].sort());
     expect(await roundOf(ctx.client, b)).toBeNull();
-    expect(await roundOf(ctx.client, c)).toBeNull();
   });
 
   test("Somebody hidden from others, or not complete, is nobody's card", async ({ ctx }) => {
-    const { pond, women } = await pondOf(ctx, "test-rounds-hidden", 1, 1);
+    const { women } = await pondOf(ctx, 1, 1);
     const [a] = women;
     if (!a) throw new Error("people not written");
-    const [b] = await people(ctx.client, pond, 1, { ...MEN });
-    const [c] = await people(ctx.client, pond, 1, { ...MEN });
+    const [b] = await people(ctx.client, 1, { ...MEN });
+    const [c] = await people(ctx.client, 1, { ...MEN });
     if (!b || !c) throw new Error("people not written");
     await ctx.client.query("UPDATE account SET state = 'shadow_banned' WHERE id = $1", [b]);
     await ctx.client.query("DELETE FROM photo WHERE account_id = $1", [c]);
@@ -218,25 +214,12 @@ describe("who has a queue", () => {
     expect(candidates(await roundOf(ctx.client, b))).toEqual([a]);
   });
 
-  test("a person of another pond is nobody's card here, and that pond's switch is its own", async ({
-    ctx,
-  }) => {
-    const { women } = await pondOf(ctx, "test-rounds-here", 1, 1);
-    const elsewhere = await pondNamed(ctx.client, "test-rounds-elsewhere");
-    const [them] = await people(ctx.client, elsewhere, 1, MEN);
-    if (!them) throw new Error("people not written");
-    await fillAll(ctx.client, [women[0], them]);
-    expect(await roundOf(ctx.client, them)).toBeNull();
-    expect(candidates(await roundOf(ctx.client, women[0] ?? ""))).not.toContain(them);
-  });
-
   test("Nobody to show makes an empty queue, never a filler", async ({ ctx }) => {
-    const pond = await pondNamed(ctx.client, "test-rounds-empty");
-    const [a] = await people(ctx.client, pond, 1, WOMEN);
-    // A man who seeks men only: in the pond, not in A's pool.
-    const [b] = await people(ctx.client, pond, 1, { ...MEN, seeks: ["man"] });
+    const [a] = await people(ctx.client, 1, WOMEN);
+    // A man who seeks men only: of the pond, not in A's pool.
+    const [b] = await people(ctx.client, 1, { ...MEN, seeks: ["man"] });
     if (!a || !b) throw new Error("people not written");
-    await openPond(ctx.client, pond);
+    await openMatchingHere(ctx.client);
 
     const read = await readToday(await appAt(ctx.client), ctx.client, a);
 
@@ -245,9 +228,8 @@ describe("who has a queue", () => {
   });
 
   test("A person whose matching has not opened reads no round", async ({ ctx }) => {
-    const pond = await pondNamed(ctx.client, "test-rounds-closed");
-    const [a] = await people(ctx.client, pond, 1, WOMEN);
-    await people(ctx.client, pond, 2, MEN);
+    const [a] = await people(ctx.client, 1, WOMEN);
+    await people(ctx.client, 2, MEN);
     if (!a) throw new Error("people not written");
 
     const read = await readToday(await appAt(ctx.client), ctx.client, a);
@@ -265,7 +247,7 @@ describe("who has a queue", () => {
   test("in production a read fills the queue as anywhere, the switch being what holds it (ADR-062 §13)", async ({
     ctx,
   }) => {
-    const { women, men } = await pondOf(ctx, "test-rounds-production", 1, 1);
+    const { women, men } = await pondOf(ctx, 1, 1);
     const [a] = women;
     if (!a) throw new Error("people not written");
     const { logger } = await captureLogger();
@@ -282,7 +264,7 @@ describe("who has a queue", () => {
   test("somebody erased or paused opens no day, and adding to a day already open adds what is left", async ({
     ctx,
   }) => {
-    const { women, men } = await pondOf(ctx, "test-rounds-of", 2, 1);
+    const { women, men } = await pondOf(ctx, 2, 1);
     const [a, paused] = women;
     const [b] = men;
     if (!a || !paused || !b) throw new Error("people not written");
@@ -300,9 +282,9 @@ describe("who has a queue", () => {
   test("nobody's day opens whose profile is no longer complete, and the pond is never read for them", async ({
     ctx,
   }) => {
-    const { women } = await pondOf(ctx, "test-rounds-incomplete", 1, 1);
-    const [a] = women;
-    if (!a) throw new Error("people not written");
+    const { women } = await pondOf(ctx, 2, 1);
+    const [a, whole] = women;
+    if (!a || !whole) throw new Error("people not written");
     await ctx.client.query("DELETE FROM photo WHERE account_id = $1", [a]);
     // The person is asked alone first: the pond is never read for them.
     const asked: string[] = [];
@@ -312,15 +294,20 @@ describe("who has a queue", () => {
         return ctx.client.query(text, values);
       }) as Queryable["query"],
     };
+    const readsThePond = () =>
+      asked.some((text) => /SELECT id FROM account\s+WHERE home_place IS NOT NULL/.test(text));
     expect(await fillQueue({ ...(await deps(ctx.client)), db }, a)).toBe(false);
-    expect(asked.some((text) => text.includes("SELECT id FROM account WHERE pond_id"))).toBe(false);
+    expect(readsThePond()).toBe(false);
     expect(await roundOf(ctx.client, a)).toBeNull();
+    // And for somebody complete it is read: the statement above is the one the walk makes.
+    expect(await fillQueue({ ...(await deps(ctx.client)), db }, whole)).toBe(true);
+    expect(readsThePond()).toBe(true);
   });
 });
 
 describe("a page at a time (ADR-062 §1)", () => {
   test("A read with undecided cards adds nobody", async ({ ctx }) => {
-    const { women } = await pondOf(ctx, "test-queue-undecided", 1, 12);
+    const { women } = await pondOf(ctx, 1, 12);
     const [a] = women;
     if (!a) throw new Error("people not written");
     const app = await appAt(ctx.client);
@@ -336,7 +323,7 @@ describe("a page at a time (ADR-062 §1)", () => {
   });
 
   test("The eleventh person comes once ten are decided", async ({ ctx }) => {
-    const { women, men } = await pondOf(ctx, "test-queue-eleventh", 1, 12);
+    const { women, men } = await pondOf(ctx, 1, 12);
     const [a] = women;
     if (!a) throw new Error("people not written");
     const app = await appAt(ctx.client);
@@ -352,25 +339,26 @@ describe("a page at a time (ADR-062 §1)", () => {
   });
 
   test("The queue's end is an empty list, and null means no matching", async ({ ctx }) => {
-    const { women } = await pondOf(ctx, "test-queue-end", 1, 2);
-    const [a] = women;
-    const closed = await pondNamed(ctx.client, "test-queue-end-closed");
-    const [b] = await people(ctx.client, closed, 1, WOMEN);
-    await people(ctx.client, closed, 1, MEN);
-    if (!a || !b) throw new Error("people not written");
+    const [a] = await people(ctx.client, 1, WOMEN);
+    await people(ctx.client, 2, MEN);
+    if (!a) throw new Error("people not written");
     const app = await appAt(ctx.client);
-    await passAll(app, ctx.client, a, await readToday(app, ctx.client, a));
+    // Before the switch is on there is no queue to be at the end of.
+    expect((await readToday(app, ctx.client, a)).entries).toBeNull();
+
+    await openMatchingHere(ctx.client);
+    const first = await readToday(app, ctx.client, a);
+    expect(first.entries).toHaveLength(2);
+    await passAll(app, ctx.client, a, first);
 
     expect((await readToday(app, ctx.client, a)).entries).toEqual([]);
-    expect((await readToday(app, ctx.client, b)).entries).toBeNull();
   });
 
   test("Two reads at once queue nobody twice", async () => {
     await withTwoConnections("kuutti-502-first-read", async (pool, first, second) => {
-      const pond = await pondNamed(pool, "test-queue-two-reads");
-      await openPond(pool, pond);
-      const [a] = await people(pool, pond, 1, WOMEN);
-      await people(pool, pond, 12, MEN);
+      await openMatchingHere(pool);
+      const [a] = await people(pool, 1, WOMEN);
+      await people(pool, 12, MEN);
       if (!a) throw new Error("people not written");
       const firstPid = await pidOf(first);
       const secondPid = await pidOf(second);
@@ -396,10 +384,9 @@ describe("a page at a time (ADR-062 §1)", () => {
 
   test("two reads past the first page queue nobody twice either, and leave no place twice", async () => {
     await withTwoConnections("kuutti-502-next-read", async (pool, first, second) => {
-      const pond = await pondNamed(pool, "test-queue-two-more");
-      await openPond(pool, pond);
-      const [a] = await people(pool, pond, 1, WOMEN);
-      await people(pool, pond, 12, MEN);
+      await openMatchingHere(pool);
+      const [a] = await people(pool, 1, WOMEN);
+      await people(pool, 12, MEN);
       if (!a) throw new Error("people not written");
       await fill(pool, a);
       await pool.query(
@@ -431,7 +418,7 @@ describe("a page at a time (ADR-062 §1)", () => {
   test("a read that another read beat to the day's places is answered with them", async ({
     ctx,
   }) => {
-    const { women, men } = await pondOf(ctx, "test-rounds-lost", 1, 1);
+    const { women, men } = await pondOf(ctx, 1, 1);
     const [a] = women;
     if (!a) throw new Error("people not written");
     const who = await signInAs(ctx.client, a);
@@ -452,7 +439,7 @@ describe("a page at a time (ADR-062 §1)", () => {
   });
 
   test("the first read after midnight opens the new day", async ({ ctx }) => {
-    const { women } = await pondOf(ctx, "test-rounds-early", 1, 1);
+    const { women } = await pondOf(ctx, 1, 1);
     const [a] = women;
     if (!a) throw new Error("people not written");
     // 00:30 in Helsinki.
@@ -465,7 +452,7 @@ describe("a page at a time (ADR-062 §1)", () => {
   });
 
   test("a person paused while their read walks the pool opens no day", async ({ ctx }) => {
-    const { women } = await pondOf(ctx, "test-queue-paused", 1, 1);
+    const { women } = await pondOf(ctx, 1, 1);
     const [a] = women;
     if (!a) throw new Error("people not written");
     const db = interleaved(
@@ -481,7 +468,7 @@ describe("a page at a time (ADR-062 §1)", () => {
   });
 
   test("a card that cannot be served makes a read go on to the next people", async ({ ctx }) => {
-    const { women, men } = await pondOf(ctx, "test-queue-unserved", 1, 2);
+    const { women, men } = await pondOf(ctx, 1, 2);
     const [a] = women;
     const [b, c] = men;
     if (!a || !b || !c) throw new Error("people not written");
@@ -499,8 +486,7 @@ describe("a page at a time (ADR-062 §1)", () => {
 
 describe("whom the queue holds", () => {
   test("new people of one band come the most soft matches first", async ({ ctx }) => {
-    const pond = await pondNamed(ctx.client, "test-queue-soft");
-    const [a] = await people(ctx.client, pond, 1, {
+    const [a] = await people(ctx.client, 1, {
       ...WOMEN,
       fields: { education: "amk", drinking: "rarely" },
     });
@@ -511,11 +497,11 @@ describe("whom the queue holds", () => {
     ];
     const chosen: (string | undefined)[] = [];
     for (const fields of answers) {
-      chosen.push((await people(ctx.client, pond, 1, { ...MEN, fields }))[0]);
+      chosen.push((await people(ctx.client, 1, { ...MEN, fields }))[0]);
     }
     const [two, one, none] = chosen;
     if (!a || !two || !one || !none) throw new Error("people not written");
-    await openPond(ctx.client, pond);
+    await openMatchingHere(ctx.client);
 
     await fill(ctx.client, a);
 
@@ -544,7 +530,7 @@ describe("whom the queue holds", () => {
       { days: 89, decided: "liked them", outcome: 'not in "A"\'s queue' },
       { days: 90, decided: "liked them", outcome: 'in "A"\'s queue, labelled seen before' },
     ])("$days days ago, $decided: $outcome", async ({ days, decided, outcome }, { ctx }) => {
-      const { women, men } = await pondOf(ctx, `test-rounds-cool-${days}-${decided}`, 1, 1);
+      const { women, men } = await pondOf(ctx, 1, 1);
       const [a] = women;
       const [b] = men;
       if (!a || !b) throw new Error("people not written");
@@ -582,7 +568,7 @@ describe("whom the queue holds", () => {
         outcome: "in the other's queue, labelled seen before",
       },
     ])("$ended $days days ago: $outcome", async ({ ended, days, outcome }, { ctx }) => {
-      const { women, men } = await pondOf(ctx, `test-ended-${days}-${ended.length}`, 1, 1);
+      const { women, men } = await pondOf(ctx, 1, 1);
       const [a] = women;
       const [b] = men;
       if (!a || !b) throw new Error("people not written");
@@ -602,7 +588,7 @@ describe("whom the queue holds", () => {
   });
 
   test("the clock of an ended conversation counts Finnish days", async ({ ctx }) => {
-    const { women, men } = await pondOf(ctx, "test-ended-finnish", 1, 1);
+    const { women, men } = await pondOf(ctx, 1, 1);
     const [a] = women;
     const [b] = men;
     if (!a || !b) throw new Error("people not written");
@@ -619,7 +605,7 @@ describe("whom the queue holds", () => {
   test("Two people with a conversation between them are never each other's cards", async ({
     ctx,
   }) => {
-    const { women, men } = await pondOf(ctx, "test-rounds-talking", 1, 2);
+    const { women, men } = await pondOf(ctx, 1, 2);
     const [a] = women;
     const [b, other] = men;
     if (!a || !b || !other) throw new Error("people not written");
@@ -632,7 +618,7 @@ describe("whom the queue holds", () => {
   });
 
   test("A block never runs out", async ({ ctx }) => {
-    const { women, men } = await pondOf(ctx, "test-rounds-block-ladder", 1, 2);
+    const { women, men } = await pondOf(ctx, 1, 2);
     const [a] = women;
     const [b, other] = men;
     if (!a || !b || !other) throw new Error("people not written");
@@ -648,15 +634,14 @@ describe("whom the queue holds", () => {
   test("a person who hides from their own field is in no round of somebody of it, nor they in hers", async ({
     ctx,
   }) => {
-    const pond = await pondNamed(ctx.client, "test-rounds-field");
-    const [a] = await people(ctx.client, pond, 1, {
+    const [a] = await people(ctx.client, 1, {
       ...WOMEN,
       fields: { field: ["tech"], hideFromField: true },
     });
-    const [same] = await people(ctx.client, pond, 1, { ...MEN, fields: { field: ["tech"] } });
-    const [apart] = await people(ctx.client, pond, 1, { ...MEN, fields: { field: ["health"] } });
+    const [same] = await people(ctx.client, 1, { ...MEN, fields: { field: ["tech"] } });
+    const [apart] = await people(ctx.client, 1, { ...MEN, fields: { field: ["health"] } });
     if (!a || !same || !apart) throw new Error("people not written");
-    await openPond(ctx.client, pond);
+    await openMatchingHere(ctx.client);
 
     await fillAll(ctx.client, [a, same]);
 
@@ -669,7 +654,7 @@ describe("what seen means (ADR-062 §2)", () => {
   test("An entry queued and never displayed starts no clock, and its person is new again", async ({
     ctx,
   }) => {
-    const { women, men } = await pondOf(ctx, "test-seen-queued", 1, 1);
+    const { women, men } = await pondOf(ctx, 1, 1);
     const [a] = women;
     const [b] = men;
     if (!a || !b) throw new Error("people not written");
@@ -681,7 +666,7 @@ describe("what seen means (ADR-062 §2)", () => {
   });
 
   test("a decision needs no seen report: seen means displayed or decided", async ({ ctx }) => {
-    const { women, men } = await pondOf(ctx, "test-seen-decided", 1, 2);
+    const { women, men } = await pondOf(ctx, 1, 2);
     const [a] = women;
     const [passed, skipped] = men;
     if (!a || !passed || !skipped) throw new Error("people not written");
@@ -698,7 +683,7 @@ describe("what seen means (ADR-062 §2)", () => {
   test("the phone's seen report is what displays a card, and a read alone displays none", async ({
     ctx,
   }) => {
-    const { women, men } = await pondOf(ctx, "test-seen-report", 1, 2);
+    const { women, men } = await pondOf(ctx, 1, 2);
     const [a] = women;
     if (!a) throw new Error("people not written");
     const app = await appAt(ctx.client);
@@ -734,7 +719,7 @@ describe("what seen means (ADR-062 §2)", () => {
   test("The day's first read deletes what earlier days queued and never displayed", async ({
     ctx,
   }) => {
-    const { women, men } = await pondOf(ctx, "test-seen-deleted", 2, 3);
+    const { women, men } = await pondOf(ctx, 2, 3);
     const [a, other] = women;
     const [queued, displayed, decided] = men;
     if (!a || !other || !queued || !displayed || !decided) throw new Error("people not written");
@@ -752,7 +737,7 @@ describe("what seen means (ADR-062 §2)", () => {
   test("the day's first read holds today's people before it deletes, so that an erasure meets no deadlock", async ({
     ctx,
   }) => {
-    const { women, men } = await pondOf(ctx, "test-seen-deleted-order", 1, 1);
+    const { women, men } = await pondOf(ctx, 1, 1);
     const [a] = women;
     const [b] = men;
     if (!a || !b) throw new Error("people not written");
@@ -772,16 +757,16 @@ describe("what seen means (ADR-062 §2)", () => {
   test("only the day's first read deletes, and a person with no matching deletes nothing", async ({
     ctx,
   }) => {
-    const { pond, women, men } = await pondOf(ctx, "test-seen-deleted-once", 1, 2);
+    const { women, men } = await pondOf(ctx, 1, 2);
     const [a] = women;
     const [b, c] = men;
     if (!a || !b || !c) throw new Error("people not written");
     await shownBefore(ctx.client, a, b, 1, null, { displayed: false });
-    await ctx.client.query("UPDATE ponds SET matching_open = false WHERE id = $1", [pond]);
+    await withMatchingConfig(ctx.client, { matching_open: false });
     await fill(ctx.client, a);
     expect(await earlierEntries(ctx.client, a)).toEqual(new Set([b]));
 
-    await openPond(ctx.client, pond);
+    await openMatchingHere(ctx.client);
     await fill(ctx.client, a);
     expect(await earlierEntries(ctx.client, a)).toEqual(new Set());
 
@@ -792,7 +777,7 @@ describe("what seen means (ADR-062 §2)", () => {
   });
 
   test("A skip starts no clock, and the card returns another day", async ({ ctx }) => {
-    const { women, men } = await pondOf(ctx, "test-skip-returns", 1, 1);
+    const { women, men } = await pondOf(ctx, 1, 1);
     const [a] = women;
     const [b] = men;
     if (!a || !b) throw new Error("people not written");
@@ -810,7 +795,7 @@ describe("what seen means (ADR-062 §2)", () => {
   });
 
   test("A card displayed and left undecided on an ended day reads as a skip", async ({ ctx }) => {
-    const { women, men } = await pondOf(ctx, "test-skip-undecided", 1, 3);
+    const { women, men } = await pondOf(ctx, 1, 3);
     const [a] = women;
     const [b, c, d] = men;
     if (!a || !b || !c || !d) throw new Error("people not written");
@@ -831,7 +816,7 @@ describe("what seen means (ADR-062 §2)", () => {
   test("A skip on a liked-you card answers nothing, and the like keeps waiting", async ({
     ctx,
   }) => {
-    const { women, men } = await pondOf(ctx, "test-skip-liked", 1, 1);
+    const { women, men } = await pondOf(ctx, 1, 1);
     const [a] = women;
     const [b] = men;
     if (!a || !b) throw new Error("people not written");
@@ -858,7 +843,7 @@ describe("what seen means (ADR-062 §2)", () => {
   });
 
   test("A pass whose earlier one has been pruned counts as a first", async ({ ctx }) => {
-    const { women, men } = await pondOf(ctx, "test-pass-pruned", 1, 1);
+    const { women, men } = await pondOf(ctx, 1, 1);
     const [a] = women;
     const [b] = men;
     if (!a || !b) throw new Error("people not written");
@@ -887,7 +872,7 @@ describe("what seen means (ADR-062 §2)", () => {
   test("a second pass marked at the route holds the year, and the first pass's record may go", async ({
     ctx,
   }) => {
-    const { women, men } = await pondOf(ctx, "test-pass-second", 1, 1);
+    const { women, men } = await pondOf(ctx, 1, 1);
     const [a] = women;
     const [b] = men;
     if (!a || !b) throw new Error("people not written");
@@ -910,7 +895,7 @@ describe("what seen means (ADR-062 §2)", () => {
   });
 
   test("A third pass is another year", async ({ ctx }) => {
-    const { women, men } = await pondOf(ctx, "test-pass-third", 1, 1);
+    const { women, men } = await pondOf(ctx, 1, 1);
     const [a] = women;
     const [b] = men;
     if (!a || !b) throw new Error("people not written");
@@ -940,7 +925,7 @@ describe("what seen means (ADR-062 §2)", () => {
   test("the latest showing rules: somebody shown twice comes back by the later decision", async ({
     ctx,
   }) => {
-    const { women, men } = await pondOf(ctx, "test-seen-latest", 1, 1);
+    const { women, men } = await pondOf(ctx, 1, 1);
     const [a] = women;
     const [b] = men;
     if (!a || !b) throw new Error("people not written");
@@ -966,18 +951,17 @@ describe("distance (#514, ADR-061 §5 to §7)", () => {
   }
 
   /** "A", a woman living in Kallio, and one man at each home; everybody's matching open. */
-  async function around(ctx: TestContext, slug: string, homes: readonly string[]) {
-    const pond = await pondNamed(ctx.client, slug);
-    const [a] = await people(ctx.client, pond, 1, WOMEN);
+  async function around(ctx: TestContext, homes: readonly string[]) {
+    const [a] = await people(ctx.client, 1, WOMEN);
     if (!a) throw new Error("A not written");
     const men: string[] = [];
     for (const home of homes) {
-      const [man] = await people(ctx.client, pond, 1, { ...MEN, home });
+      const [man] = await people(ctx.client, 1, { ...MEN, home });
       if (!man) throw new Error("a man not written");
       men.push(man);
     }
-    await openPond(ctx.client, pond);
-    return { pond, a, men };
+    await openMatchingHere(ctx.client);
+    return { a, men };
   }
 
   const moves = async (ctx: TestContext, accountId: string, postalCode: string) => {
@@ -993,12 +977,7 @@ describe("distance (#514, ADR-061 §5 to §7)", () => {
   test("the queue writes new people nearest band first, whatever the soft matches, with each band", async ({
     ctx,
   }) => {
-    const { a, men } = await around(ctx, "test-distance-order", [
-      HOMES.far,
-      HOMES.around,
-      HOMES.close,
-      HOMES.nearby,
-    ]);
+    const { a, men } = await around(ctx, [HOMES.far, HOMES.around, HOMES.close, HOMES.nearby]);
     const [far, further, close, nearby] = men;
     // The furthest is the most like her: it moves him up nothing.
     await ctx.client.query(
@@ -1018,7 +997,7 @@ describe("distance (#514, ADR-061 §5 to §7)", () => {
   });
 
   test("A distance deal-breaker keeps the two out of each other's rounds", async ({ ctx }) => {
-    const { a, men } = await around(ctx, "test-distance-filter", [HOMES.nearby, HOMES.close]);
+    const { a, men } = await around(ctx, [HOMES.nearby, HOMES.close]);
     const [b, c] = men;
     if (!b || !c) throw new Error("people not written");
     await ctx.client.query(
@@ -1035,7 +1014,7 @@ describe("distance (#514, ADR-061 §5 to §7)", () => {
   });
 
   test("The liked-you places keep their order, whatever the band", async ({ ctx }) => {
-    const { a, men } = await around(ctx, "test-distance-liked", [HOMES.far, HOMES.nearby]);
+    const { a, men } = await around(ctx, [HOMES.far, HOMES.nearby]);
     const [b, c] = men;
     if (!b || !c) throw new Error("people not written");
     await shownBefore(ctx.client, b, a, 3, "like");
@@ -1054,7 +1033,7 @@ describe("distance (#514, ADR-061 §5 to §7)", () => {
   });
 
   test("Coming back keeps its order, whatever the band", async ({ ctx }) => {
-    const { a, men } = await around(ctx, "test-distance-back", [HOMES.far, HOMES.nearby]);
+    const { a, men } = await around(ctx, [HOMES.far, HOMES.nearby]);
     const [c, d] = men;
     if (!c || !d) throw new Error("people not written");
     await shownBefore(ctx.client, a, c, 45, null);
@@ -1075,7 +1054,7 @@ describe("distance (#514, ADR-061 §5 to §7)", () => {
   test("An entry keeps its band, so moving home and reading again says nothing new", async ({
     ctx,
   }) => {
-    const { a, men } = await around(ctx, "test-distance-frozen", [HOMES.close]);
+    const { a, men } = await around(ctx, [HOMES.close]);
     const [b] = men;
     if (!b) throw new Error("people not written");
     const app = await appAt(ctx.client);
@@ -1093,7 +1072,7 @@ describe("distance (#514, ADR-061 §5 to §7)", () => {
   test("A new home and a changed edge count from the next entry, never on an entry written", async ({
     ctx,
   }) => {
-    const { a, men } = await around(ctx, "test-distance-next", [HOMES.close, HOMES.nearby]);
+    const { a, men } = await around(ctx, [HOMES.close, HOMES.nearby]);
     const [b, c] = men;
     if (!b || !c) throw new Error("people not written");
     await fill(ctx.client, a);
@@ -1117,7 +1096,7 @@ describe("distance (#514, ADR-061 §5 to §7)", () => {
   });
 
   test("Only a round's entry says a band, and as a word", async ({ ctx }) => {
-    const { a, men } = await around(ctx, "test-distance-word", [HOMES.close]);
+    const { a, men } = await around(ctx, [HOMES.close]);
     const [b] = men;
     if (!b) throw new Error("people not written");
     const app = await appAt(ctx.client);
@@ -1140,7 +1119,7 @@ describe("distance (#514, ADR-061 §5 to §7)", () => {
   });
 
   test("a person whose home left the list is in nobody's round, and gets none", async ({ ctx }) => {
-    const { a, men } = await around(ctx, "test-distance-no-home", [HOMES.nearby, "12345"]);
+    const { a, men } = await around(ctx, [HOMES.nearby, "12345"]);
     const [b, gone] = men;
     if (!b || !gone) throw new Error("people not written");
 
@@ -1151,7 +1130,7 @@ describe("distance (#514, ADR-061 §5 to §7)", () => {
   });
 
   test("an entry from before distance reads as no band", async ({ ctx }) => {
-    const { a } = await around(ctx, "test-distance-old", [HOMES.nearby]);
+    const { a } = await around(ctx, [HOMES.nearby]);
     await fill(ctx.client, a);
     await ctx.client.query(
       `UPDATE round_entries SET distance = NULL
@@ -1167,7 +1146,7 @@ describe("liked-you (#97, ADR-037, ADR-062 §2)", () => {
   test("A like given on an ended day comes first in the liked person's queue, labelled", async ({
     ctx,
   }) => {
-    const { women, men } = await pondOf(ctx, "test-liked-first", 1, 3);
+    const { women, men } = await pondOf(ctx, 1, 3);
     const [a] = women;
     const [b, c, d] = men;
     if (!a || !b || !c || !d) throw new Error("people not written");
@@ -1187,7 +1166,7 @@ describe("liked-you (#97, ADR-037, ADR-062 §2)", () => {
   test("More likes than a page all come, the oldest first and ahead of anybody new", async ({
     ctx,
   }) => {
-    const { women, men } = await pondOf(ctx, "test-liked-all", 1, 13);
+    const { women, men } = await pondOf(ctx, 1, 13);
     const [a] = women;
     const [fresh, ...likers] = men;
     if (!a || !fresh) throw new Error("people not written");
@@ -1211,12 +1190,11 @@ describe("liked-you (#97, ADR-037, ADR-062 §2)", () => {
   });
 
   test("Fit moves no like", async ({ ctx }) => {
-    const pond = await pondNamed(ctx.client, "test-liked-fit");
-    await openPond(ctx.client, pond);
+    await openMatchingHere(ctx.client);
     const soft: ProfileFields = { education: "amk", drinking: "rarely" };
-    const [a] = await people(ctx.client, pond, 1, { ...WOMEN, fields: soft });
-    const [b] = await people(ctx.client, pond, 1, MEN);
-    const [c] = await people(ctx.client, pond, 1, { ...MEN, fields: soft });
+    const [a] = await people(ctx.client, 1, { ...WOMEN, fields: soft });
+    const [b] = await people(ctx.client, 1, MEN);
+    const [c] = await people(ctx.client, 1, { ...MEN, fields: soft });
     if (!a || !b || !c) throw new Error("people not written");
     await shownBefore(ctx.client, b, a, 2, "like");
     await shownBefore(ctx.client, c, a, 1, "like");
@@ -1251,7 +1229,7 @@ describe("liked-you (#97, ADR-037, ADR-062 §2)", () => {
       { days: 3, answer: '"A" passed it two days ago', outcome: 'not in "A"\'s queue' },
       { days: 3, answer: '"A" liked it two days ago', outcome: 'not in "A"\'s queue' },
     ])("$days days ago, $answer: $outcome", async ({ days, answer, outcome }, { ctx }) => {
-      const { women, men } = await pondOf(ctx, `test-liked-wait-${days}-${answer.length}`, 1, 1);
+      const { women, men } = await pondOf(ctx, 1, 1);
       const [a] = women;
       const [b] = men;
       if (!a || !b) throw new Error("people not written");
@@ -1275,7 +1253,7 @@ describe("liked-you (#97, ADR-037, ADR-062 §2)", () => {
   });
 
   test("A like of today waits for the day to end", async ({ ctx }) => {
-    const { women, men } = await pondOf(ctx, "test-liked-today", 1, 1);
+    const { women, men } = await pondOf(ctx, 1, 1);
     const [a] = women;
     const [b] = men;
     if (!a || !b) throw new Error("people not written");
@@ -1290,7 +1268,7 @@ describe("liked-you (#97, ADR-037, ADR-062 §2)", () => {
   test("A like never reaches the queue from somebody the person passed, or who no longer passes the filters", async ({
     ctx,
   }) => {
-    const { women, men } = await pondOf(ctx, "test-liked-refused", 1, 2);
+    const { women, men } = await pondOf(ctx, 1, 2);
     const [a] = women;
     const [b, c] = men;
     if (!a || !b || !c) throw new Error("people not written");
@@ -1310,7 +1288,7 @@ describe("liked-you (#97, ADR-037, ADR-062 §2)", () => {
   test("a like from somebody erased, shadow-banned or with a conversation with the person never comes", async ({
     ctx,
   }) => {
-    const { women, men } = await pondOf(ctx, "test-liked-gone", 1, 4);
+    const { women, men } = await pondOf(ctx, 1, 4);
     const [a] = women;
     const [erased, hidden, talking, kept] = men;
     if (!a || !erased || !hidden || !talking || !kept) throw new Error("people not written");
@@ -1330,7 +1308,7 @@ describe("liked-you (#97, ADR-037, ADR-062 §2)", () => {
   test("A shadow-banned person's queue holds no liked-you places, and the likes wait for the lift", async ({
     ctx,
   }) => {
-    const { women, men } = await pondOf(ctx, "test-liked-shadow", 1, 2);
+    const { women, men } = await pondOf(ctx, 1, 2);
     const [a] = women;
     const [b, c] = men;
     if (!a || !b || !c) throw new Error("people not written");
@@ -1352,7 +1330,7 @@ describe("liked-you (#97, ADR-037, ADR-062 §2)", () => {
   });
 
   test("A liked-you card queued before a shadow ban waits for the lift too", async ({ ctx }) => {
-    const { women, men } = await pondOf(ctx, "test-liked-shadow-after", 1, 2);
+    const { women, men } = await pondOf(ctx, 1, 2);
     const [a] = women;
     const [b, c] = men;
     if (!a || !b || !c) throw new Error("people not written");
@@ -1379,7 +1357,7 @@ describe("liked-you (#97, ADR-037, ADR-062 §2)", () => {
   });
 
   test("The sender learns nothing of what became of a like", async ({ ctx }) => {
-    const { women, men } = await pondOf(ctx, "test-liked-silent", 1, 1);
+    const { women, men } = await pondOf(ctx, 1, 1);
     const [a] = women;
     const [b] = men;
     if (!a || !b) throw new Error("people not written");
@@ -1406,7 +1384,7 @@ describe("the fish (#378, ADR-039)", () => {
   test("A fish sent today is at the front of the recipient's next round, ahead of every ordinary like", async ({
     ctx,
   }) => {
-    const { women, men } = await pondOf(ctx, "test-fish-first", 1, 2);
+    const { women, men } = await pondOf(ctx, 1, 2);
     const [a] = women;
     const [b, c] = men;
     if (!a || !b || !c) throw new Error("people not written");
@@ -1429,7 +1407,7 @@ describe("the fish (#378, ADR-039)", () => {
       { sender: "L2", place: 4, label: "liked you" },
       { sender: "L3", place: 5, label: "liked you" },
     ])("$sender at place $place, labelled $label", async ({ sender, place, label }, { ctx }) => {
-      const { women, men } = await pondOf(ctx, `test-fish-queue-${sender}`, 1, 5);
+      const { women, men } = await pondOf(ctx, 1, 5);
       const [a] = women;
       const [f1, f2, l1, l2, l3] = men;
       if (!a || !f1 || !f2 || !l1 || !l2 || !l3) throw new Error("people not written");
@@ -1455,21 +1433,21 @@ describe("the inbox stop (ADR-062 §4)", () => {
   /** The maintainer's number of 01/11/2026 (matching_config inbox_stop), which every test here leaves as it stands. */
   const STOP = 30;
 
-  /** `count` women of the pond, who each liked `liked` yesterday: likes their inbox can show. */
-  async function pile(ctx: TestContext, pond: string, liked: string, count: number) {
-    const likers = await people(ctx.client, pond, count, WOMEN);
+  /** `count` women, who each liked `liked` yesterday: likes their inbox can show. */
+  async function pile(ctx: TestContext, liked: string, count: number) {
+    const likers = await people(ctx.client, count, WOMEN);
     for (const liker of likers) await shownBefore(ctx.client, liker, liked, 1, "like");
     return likers;
   }
 
-  /** "A", who has never met "B", "B" with `likes` likes waiting, and the pond. */
-  async function pileOnB(ctx: TestContext, slug: string, likes: number) {
-    const { pond, women, men } = await pondOf(ctx, slug, 1, 1);
+  /** "A", who has never met "B", and "B" with `likes` likes waiting. */
+  async function pileOnB(ctx: TestContext, likes: number) {
+    const { women, men } = await pondOf(ctx, 1, 1);
     const [a] = women;
     const [b] = men;
     if (!a || !b) throw new Error("people not written");
-    const likers = await pile(ctx, pond, b, likes);
-    return { pond, a, b, likers };
+    const likers = await pile(ctx, b, likes);
+    return { a, b, likers };
   }
 
   describe("Somebody with inbox_stop likes waiting is in nobody's queue", () => {
@@ -1477,7 +1455,7 @@ describe("the inbox stop (ADR-062 §4)", () => {
       { likes: 29, outcome: 'in "A"\'s queue' },
       { likes: 30, outcome: 'not in "A"\'s queue' },
     ])("$likes likes: $outcome", async ({ likes, outcome }, { ctx }) => {
-      const { a, b } = await pileOnB(ctx, `test-stop-${likes}`, likes);
+      const { a, b } = await pileOnB(ctx, likes);
 
       await fill(ctx.client, a);
 
@@ -1496,8 +1474,8 @@ describe("the inbox stop (ADR-062 §4)", () => {
       { like: 'came from somebody "B" passed before it, within their clock' },
       { like: "came from somebody shadow-banned" },
     ])("one more that $like", async ({ like }, { ctx }) => {
-      const { pond, a, b } = await pileOnB(ctx, `test-stop-counts-${like.length}`, STOP - 1);
-      const [other] = await people(ctx.client, pond, 1, WOMEN);
+      const { a, b } = await pileOnB(ctx, STOP - 1);
+      const [other] = await people(ctx.client, 1, WOMEN);
       if (!other) throw new Error("people not written");
       const given = like === "has expired" ? 14 : like === "was given today" ? 0 : 1;
       await shownBefore(ctx.client, other, b, like.includes("since") ? 3 : given, "like");
@@ -1525,7 +1503,7 @@ describe("the inbox stop (ADR-062 §4)", () => {
       { decides: "passes", decision: "pass", outcome: 'in "A"\'s queue' },
       { decides: "skips", decision: "skip", outcome: 'not in "A"\'s queue' },
     ])("$decides: $outcome", async ({ decision, outcome }, { ctx }) => {
-      const { a, b } = await pileOnB(ctx, `test-stop-clears-${decision}`, STOP);
+      const { a, b } = await pileOnB(ctx, STOP);
       const app = await appAt(ctx.client);
       const read = await readToday(app, ctx.client, b);
       expect(read.entries?.[0]?.reason).toBe("liked_you");
@@ -1538,7 +1516,7 @@ describe("the inbox stop (ADR-062 §4)", () => {
   });
 
   test("a card of the pile left undecided clears nothing", async ({ ctx }) => {
-    const { a, b } = await pileOnB(ctx, "test-stop-undecided", STOP);
+    const { a, b } = await pileOnB(ctx, STOP);
     const app = await appAt(ctx.client);
     await readToday(app, ctx.client, b);
     const who = await signInAs(ctx.client, b);
@@ -1554,7 +1532,7 @@ describe("the inbox stop (ADR-062 §4)", () => {
   });
 
   test("The stop holds a person out of seen-before cards too", async ({ ctx }) => {
-    const { a, b } = await pileOnB(ctx, "test-stop-seen", STOP);
+    const { a, b } = await pileOnB(ctx, STOP);
     await shownBefore(ctx.client, a, b, 1, "skip");
 
     await fill(ctx.client, a);
@@ -1565,7 +1543,7 @@ describe("the inbox stop (ADR-062 §4)", () => {
   test("the stop lifted, the person comes back in the queue the next read adds to", async ({
     ctx,
   }) => {
-    const { a, b } = await pileOnB(ctx, "test-stop-lifted", STOP);
+    const { a, b } = await pileOnB(ctx, STOP);
     const app = await appAt(ctx.client);
     expect((await readToday(app, ctx.client, a)).entries).toEqual([]);
     await readToday(app, ctx.client, b);
@@ -1576,8 +1554,8 @@ describe("the inbox stop (ADR-062 §4)", () => {
   });
 
   test("The stop holds back no like the person sent", async ({ ctx }) => {
-    const { pond, b } = await pileOnB(ctx, "test-stop-sent", STOP);
-    const [c] = await people(ctx.client, pond, 1, WOMEN);
+    const { b } = await pileOnB(ctx, STOP);
+    const [c] = await people(ctx.client, 1, WOMEN);
     if (!c) throw new Error("people not written");
     await shownBefore(ctx.client, b, c, 1, "like");
 
@@ -1587,7 +1565,7 @@ describe("the inbox stop (ADR-062 §4)", () => {
   });
 
   test("An entry queued already stays when the stop comes", async ({ ctx }) => {
-    const { a, b } = await pileOnB(ctx, "test-stop-queued", STOP);
+    const { a, b } = await pileOnB(ctx, STOP);
     await logged(ctx.client, a, DAY, [b]);
 
     const read = await readToday(await appAt(ctx.client), ctx.client, a);
@@ -1596,7 +1574,7 @@ describe("the inbox stop (ADR-062 §4)", () => {
   });
 
   test("The stop says nothing to anybody", async ({ ctx }) => {
-    const { a, b } = await pileOnB(ctx, "test-stop-silent", STOP);
+    const { a, b } = await pileOnB(ctx, STOP);
     const app = await appAt(ctx.client);
     const who = await signInAs(ctx.client, b);
 
@@ -1614,7 +1592,7 @@ describe("the inbox stop (ADR-062 §4)", () => {
 
   test("An inbox_stop of 0 is off", async ({ ctx }) => {
     await withMatchingConfig(ctx.client, { inbox_stop: 0 });
-    const { a, b } = await pileOnB(ctx, "test-stop-off", STOP);
+    const { a, b } = await pileOnB(ctx, STOP);
 
     await fill(ctx.client, a);
 
@@ -1623,14 +1601,14 @@ describe("the inbox stop (ADR-062 §4)", () => {
 
   test("a queue goes on past the people held, past a page of them", async ({ ctx }) => {
     // Women in Kallio, and men nearby at the stop ahead of one far away: the walk reaches him.
-    const { pond, women } = await pondOf(ctx, "test-stop-walks", 1, 0);
+    const { women } = await pondOf(ctx, 1, 0);
     const [a] = women;
     if (!a) throw new Error("people not written");
-    const held = await people(ctx.client, pond, QUEUE_PAGE + 1, { ...MEN, home: HOMES.nearby });
-    const [far] = await people(ctx.client, pond, 1, { ...MEN, home: HOMES.far });
+    const held = await people(ctx.client, QUEUE_PAGE + 1, { ...MEN, home: HOMES.nearby });
+    const [far] = await people(ctx.client, 1, { ...MEN, home: HOMES.far });
     if (!far) throw new Error("people not written");
     // Each of them liked all of those men yesterday, in one round each: three hundred likes.
-    for (const liker of await people(ctx.client, pond, STOP, WOMEN)) {
+    for (const liker of await people(ctx.client, STOP, WOMEN)) {
       const roundId = await logged(ctx.client, liker, finnishDay(daysAgo(1)), held);
       await ctx.client.query(
         "UPDATE round_entries SET decision = 'like', decided_at = $2 WHERE round_id = $1",
@@ -1650,37 +1628,24 @@ describe("over the synthetic population", () => {
   test("every open person opens a day, and nobody a candidate a hard filter excludes, in either direction", {
     timeout: 60_000,
   }, async ({ ctx }) => {
-    // The population lives in the seed's ponds, which this database has not been given.
-    for (const pond of SEED_PONDS) {
-      await ctx.client.query(
-        `INSERT INTO ponds (slug, name_nominative) VALUES ($1, $2)
-         ON CONFLICT (slug) DO NOTHING`,
-        [pond.slug, pond.nameNominative],
-      );
-    }
     await writePopulation(
       ctx.client,
       generatePopulation({ size: 300, seed: 7, homes: { [HOME]: 1 } }),
       CONSENT_VERSIONS,
     );
     // Without the photos release nobody has a face, so nobody is complete: three approved rows
-    // each, as the people of the other tests have, and the demo commands' open ponds.
+    // each, as the people of the other tests have, and the switch on, as the demo commands turn it.
     await ctx.client.query(
       `INSERT INTO photo (account_id, key, blurhash, width, height, state, position)
        SELECT p.account_id, md5(p.account_id::text || n::text), 'LEHV6nWB2yk8pyo0adR*.7kCMdnj',
               800, 1067, 'approved', n
          FROM profile p, generate_series(0, 2) n`,
     );
-    await openPonds(ctx.client);
+    await openMatchingHere(ctx.client);
 
     // Everybody's pool facts, read as the builder reads them, to ask every card both ways.
-    const { rows: ponds } = await ctx.client.query<{ id: string }>(
-      "SELECT id FROM ponds WHERE matching_open",
-    );
     const everybody = new Map(
-      (await Promise.all(ponds.map((pond) => subjectsOfPond(ctx.client, pond.id, NOON))))
-        .flat()
-        .map((subject) => [subject.id, subject]),
+      (await subjectsOfPond(ctx.client, NOON)).map((subject) => [subject.id, subject]),
     );
     expect(everybody.size).toBeGreaterThan(50);
     for (const accountId of everybody.keys()) await fill(ctx.client, accountId);
@@ -1707,14 +1672,13 @@ describe("the filters across a pond's queues", () => {
   /** Women who seek women: every two of them are in each other's pool. */
   const ALIKE: PeopleOptions = { ...WOMEN, seeks: ["woman"] };
 
-  async function alikePond(ctx: TestContext, slug: string, count: number) {
-    const pond = await pondNamed(ctx.client, slug);
-    await openPond(ctx.client, pond);
-    return { pond, ids: await people(ctx.client, pond, count, ALIKE) };
+  async function alikePond(ctx: TestContext, count: number) {
+    await openMatchingHere(ctx.client);
+    return { ids: await people(ctx.client, count, ALIKE) };
   }
 
   test("The round leaves a blocked pair out of each other's cards", async ({ ctx }) => {
-    const { ids } = await alikePond(ctx, "test-rounds-blocks", 4);
+    const { ids } = await alikePond(ctx, 4);
     const [she, her, x, y] = ids;
     if (!she || !her || !x || !y) throw new Error("people not written");
     await blocks(await appAt(ctx.client), ctx.client, she, her);
@@ -1727,14 +1691,14 @@ describe("the filters across a pond's queues", () => {
   });
 
   test("A block holds for a later account of either identity", async ({ ctx }) => {
-    const { pond, ids } = await alikePond(ctx, "test-rounds-blocks-later", 3);
+    const { ids } = await alikePond(ctx, 3);
     const [a, b, c] = ids;
     if (!a || !b || !c) throw new Error("people not written");
     await blocks(await appAt(ctx.client), ctx.client, a, b);
     // B deletes the account, the cooldown passes, and B comes back: a new
     // account on the same identity (a complete person here, given B's identity).
     await eraseAccount(await deps(ctx.client), b);
-    const [again] = await people(ctx.client, pond, 1, ALIKE);
+    const [again] = await people(ctx.client, 1, ALIKE);
     if (!again) throw new Error("people not written");
     await ctx.client.query(
       "UPDATE account SET identity_id = (SELECT identity_id FROM account WHERE id = $2) WHERE id = $1",
@@ -1763,19 +1727,18 @@ describe("the filters across a pond's queues", () => {
   test("The round leaves a pair a deal-breaker excludes out of each other's cards", async ({
     ctx,
   }) => {
-    const pond = await pondNamed(ctx.client, "test-rounds-deal-breakers");
-    await openPond(ctx.client, pond);
-    const [holder] = await people(ctx.client, pond, 1, {
+    await openMatchingHere(ctx.client);
+    const [holder] = await people(ctx.client, 1, {
       ...ALIKE,
       fields: { smoking: "never" },
     });
-    const [smoker] = await people(ctx.client, pond, 1, {
+    const [smoker] = await people(ctx.client, 1, {
       ...ALIKE,
       fields: { smoking: "regularly" },
     });
     // Somebody who did not answer, whom the holder lets through, and somebody who never smokes.
-    const [open] = await people(ctx.client, pond, 1, ALIKE);
-    const [never] = await people(ctx.client, pond, 1, { ...ALIKE, fields: { smoking: "never" } });
+    const [open] = await people(ctx.client, 1, ALIKE);
+    const [never] = await people(ctx.client, 1, { ...ALIKE, fields: { smoking: "never" } });
     if (!holder || !smoker || !open || !never) throw new Error("people not written");
     await ctx.client.query(
       `INSERT INTO preferences (account_id, field, value, mode, include_unknown)
@@ -1803,7 +1766,7 @@ describe("the filters across a pond's queues", () => {
   test("a deal-breaker on an option the registry no longer has, or a field off the whitelist, filters nothing", async ({
     ctx,
   }) => {
-    const { ids } = await alikePond(ctx, "test-rounds-stale-deal-breakers", 3);
+    const { ids } = await alikePond(ctx, 3);
     const [holder, x, y] = ids;
     if (!holder || !x || !y) throw new Error("people not written");
     await ctx.client.query(
@@ -1830,16 +1793,15 @@ describe("the filters across a pond's queues", () => {
   test("an answer the registry no longer has is read as none, by the holder's deal-breaker and by the other's", async ({
     ctx,
   }) => {
-    const pond = await pondNamed(ctx.client, "test-rounds-stale-answers");
-    await openPond(ctx.client, pond);
+    await openMatchingHere(ctx.client);
     // H accepts no children or no answer; C's answer is an option the registry dropped.
-    const [h, c] = await people(ctx.client, pond, 2, {
+    const [h, c] = await people(ctx.client, 2, {
       ...ALIKE,
       fields: { smoking: "never", hasKids: "no" },
     });
     // P refuses smokers, then P's own answer becomes a dropped option: the deal-breaker is paused.
-    const [p] = await people(ctx.client, pond, 1, { ...ALIKE, fields: { smoking: "never" } });
-    const [smoker] = await people(ctx.client, pond, 1, {
+    const [p] = await people(ctx.client, 1, { ...ALIKE, fields: { smoking: "never" } });
+    const [smoker] = await people(ctx.client, 1, {
       ...ALIKE,
       fields: { smoking: "regularly" },
     });
@@ -1872,10 +1834,9 @@ describe("the filters across a pond's queues", () => {
   });
 
   test("a dance partner is a card for dance partners only (#175)", async ({ ctx }) => {
-    const pond = await pondNamed(ctx.client, "test-rounds-dance");
-    await openPond(ctx.client, pond);
-    const dancers = await people(ctx.client, pond, 2, { ...ALIKE, intent: "dance_partner" });
-    const [either] = await people(ctx.client, pond, 1, { ...ALIKE, intent: "open_to_either" });
+    await openMatchingHere(ctx.client);
+    const dancers = await people(ctx.client, 2, { ...ALIKE, intent: "dance_partner" });
+    const [either] = await people(ctx.client, 1, { ...ALIKE, intent: "open_to_either" });
     const [dancer, partner] = dancers;
     if (!dancer || !partner || !either) throw new Error("people not written");
 
@@ -1917,14 +1878,13 @@ describe("filters at once (ADR-062 §8)", () => {
   const lives = (db: Queryable, id: string, home: string) =>
     db.query("UPDATE account SET home_place = $2 WHERE id = $1", [id, home]);
 
-  /** "A", a woman, and "B", a man, who answered smoking and live close, in an open pond. */
-  async function aPair(ctx: TestContext, slug: string) {
-    const pond = await pondNamed(ctx.client, slug);
-    await openPond(ctx.client, pond);
-    const [a] = await people(ctx.client, pond, 1, { ...WOMEN, fields: { smoking: "never" } });
-    const [b] = await people(ctx.client, pond, 1, { ...MEN, fields: { smoking: "never" } });
+  /** "A", a woman, and "B", a man, who answered smoking and live close, with matching open. */
+  async function aPair(ctx: TestContext) {
+    await openMatchingHere(ctx.client);
+    const [a] = await people(ctx.client, 1, { ...WOMEN, fields: { smoking: "never" } });
+    const [b] = await people(ctx.client, 1, { ...MEN, fields: { smoking: "never" } });
     if (!a || !b) throw new Error("people not written");
-    return { pond, a, b };
+    return { a, b };
   }
 
   const NARROW_AND_BACK: Record<string, [Change, Change]> = {
@@ -1981,7 +1941,7 @@ describe("filters at once (ADR-062 §8)", () => {
 
   describe("A change of what fits works on the next read, whoever makes it", () => {
     test.for(Object.keys(NARROW_AND_BACK))("%s", async (row, { ctx }) => {
-      const pair = await aPair(ctx, `test-fits-${row.length}-${row.charCodeAt(1)}`);
+      const pair = await aPair(ctx);
       const { a, b } = pair;
       const [narrow, back] = NARROW_AND_BACK[row] as [Change, Change];
       if (row.includes("distance"))
@@ -2007,7 +1967,7 @@ describe("filters at once (ADR-062 §8)", () => {
   test("the entries that fit are served, past those that do not, and the page is the fitting ones'", async ({
     ctx,
   }) => {
-    const { women, men } = await pondOf(ctx, "test-fits-some", 1, 12);
+    const { women, men } = await pondOf(ctx, 1, 12);
     const [a] = women;
     const [out] = men;
     if (!a || !out) throw new Error("people not written");
@@ -2023,8 +1983,8 @@ describe("filters at once (ADR-062 §8)", () => {
   });
 
   test("One change narrows and widens at once, and both work on the next read", async ({ ctx }) => {
-    const { pond, a, b } = await aPair(ctx, "test-fits-both");
-    const [c] = await people(ctx.client, pond, 1, {
+    const { a, b } = await aPair(ctx);
+    const [c] = await people(ctx.client, 1, {
       complete: true,
       consented: true,
       gender: "non_binary",
@@ -2040,8 +2000,8 @@ describe("filters at once (ADR-062 §8)", () => {
   });
 
   test("Widening at the queue's end works on the next read", async ({ ctx }) => {
-    const { pond, a, b } = await aPair(ctx, "test-fits-widen");
-    const [c] = await people(ctx.client, pond, 1, {
+    const { a, b } = await aPair(ctx);
+    const [c] = await people(ctx.client, 1, {
       complete: true,
       consented: true,
       gender: "non_binary",
@@ -2060,7 +2020,7 @@ describe("filters at once (ADR-062 §8)", () => {
 
   describe("A new like asks both people's filters, and a card that no longer fits answers not_found", () => {
     test.for(['"A"', '"B"'])("%s narrows", async (who, { ctx }) => {
-      const pair = await aPair(ctx, `test-fits-like-${who.charCodeAt(1)}`);
+      const pair = await aPair(ctx);
       const { a, b } = pair;
       const app = await appAt(ctx.client);
       await readToday(app, ctx.client, a);
@@ -2080,7 +2040,7 @@ describe("filters at once (ADR-062 §8)", () => {
       { decides: "passes", decision: "pass" },
       { decides: "skips", decision: "skip" },
     ])("$decides", async ({ decision }, { ctx }) => {
-      const { a, b } = await aPair(ctx, `test-fits-${decision}`);
+      const { a, b } = await aPair(ctx);
       const app = await appAt(ctx.client);
       await readToday(app, ctx.client, a);
       await seeks(ctx.client, b, ["man"]);
@@ -2092,7 +2052,7 @@ describe("filters at once (ADR-062 §8)", () => {
   });
 
   test("A like taken back works when the card no longer fits", async ({ ctx }) => {
-    const { a, b } = await aPair(ctx, "test-fits-taken-back");
+    const { a, b } = await aPair(ctx);
     const app = await appAt(ctx.client);
     await readToday(app, ctx.client, a);
     expect((await decideAs(app, ctx.client, a, 1, "like")).status).toBe(200);
@@ -2106,7 +2066,7 @@ describe("filters at once (ADR-062 §8)", () => {
   test("a block between the read and the like leaves the like not found, as a filter does", async ({
     ctx,
   }) => {
-    const { a, b } = await aPair(ctx, "test-fits-block");
+    const { a, b } = await aPair(ctx);
     const app = await appAt(ctx.client);
     await readToday(app, ctx.client, a);
     await ctx.client.query(
@@ -2120,11 +2080,10 @@ describe("filters at once (ADR-062 §8)", () => {
   });
 
   test("A like back asks the filters with what the other person's like waived", async ({ ctx }) => {
-    const pond = await pondNamed(ctx.client, "test-fits-waived");
-    await openPond(ctx.client, pond);
-    const [a] = await people(ctx.client, pond, 1, { ...WOMEN, fields: { smoking: "regularly" } });
+    await openMatchingHere(ctx.client);
+    const [a] = await people(ctx.client, 1, { ...WOMEN, fields: { smoking: "regularly" } });
     // Each refuses smokers; only B's like, on a card B relaxed smoking for, sets that aside for "A".
-    const [b, c] = await people(ctx.client, pond, 2, { ...MEN, fields: { smoking: "never" } });
+    const [b, c] = await people(ctx.client, 2, { ...MEN, fields: { smoking: "never" } });
     if (!a || !b || !c) throw new Error("people not written");
     await dealBreaker(ctx.client, b, "smoking", ["never"]);
     await dealBreaker(ctx.client, c, "smoking", ["never"]);
@@ -2148,10 +2107,9 @@ describe("filters at once (ADR-062 §8)", () => {
   });
 
   test("a like waived on an expired day waives nothing any more", async ({ ctx }) => {
-    const pond = await pondNamed(ctx.client, "test-fits-waived-expired");
-    await openPond(ctx.client, pond);
-    const [a] = await people(ctx.client, pond, 1, { ...WOMEN, fields: { smoking: "regularly" } });
-    const [b] = await people(ctx.client, pond, 1, { ...MEN, fields: { smoking: "never" } });
+    await openMatchingHere(ctx.client);
+    const [a] = await people(ctx.client, 1, { ...WOMEN, fields: { smoking: "regularly" } });
+    const [b] = await people(ctx.client, 1, { ...MEN, fields: { smoking: "never" } });
     if (!a || !b) throw new Error("people not written");
     await dealBreaker(ctx.client, b, "smoking", ["never"]);
     const roundId = await logged(ctx.client, b, addDays(DAY, -14), [
@@ -2165,11 +2123,18 @@ describe("filters at once (ADR-062 §8)", () => {
     expect(await fitsNow({ now: () => NOON }, ctx.client, a, [b])).toEqual(new Set());
   });
 
-  test("a person who is not complete now fits nobody, and a person with no pond neither", async ({
+  test("a person who is not complete now fits nobody, and a person with no home neither", async ({
     ctx,
   }) => {
-    const { a, b } = await aPair(ctx, "test-fits-nobody");
+    const { a, b } = await aPair(ctx);
     const now = { now: () => NOON };
+    expect(await fitsNow(now, ctx.client, a, [b])).toEqual(new Set([b]));
+
+    // No home: nobody to measure from, whoever asks.
+    await ctx.client.query("UPDATE account SET home_place = NULL WHERE id = $1", [b]);
+    expect(await fitsNow(now, ctx.client, a, [b])).toEqual(new Set());
+    expect(await fitsNow(now, ctx.client, b, [a])).toEqual(new Set());
+    await ctx.client.query("UPDATE account SET home_place = $2 WHERE id = $1", [b, HOME]);
     expect(await fitsNow(now, ctx.client, a, [b])).toEqual(new Set([b]));
 
     await ctx.client.query("DELETE FROM photo WHERE account_id = $1", [a]);
@@ -2182,10 +2147,10 @@ describe("filters at once (ADR-062 §8)", () => {
   test("a read of a pond closed since still asks the filters of what the log holds", async ({
     ctx,
   }) => {
-    const { pond, a, b } = await aPair(ctx, "test-fits-closed");
+    const { a, b } = await aPair(ctx);
     const app = await appAt(ctx.client);
     expect(accountsOf(await readToday(app, ctx.client, a))).toEqual([b]);
-    await ctx.client.query("UPDATE ponds SET matching_open = false WHERE id = $1", [pond]);
+    await withMatchingConfig(ctx.client, { matching_open: false });
 
     expect(accountsOf(await readToday(app, ctx.client, a))).toEqual([b]);
     await seeks(ctx.client, b, ["man"]);
@@ -2193,7 +2158,7 @@ describe("filters at once (ADR-062 §8)", () => {
   });
 
   test("somebody nobody is shown fits nobody, and still reads who fits them", async ({ ctx }) => {
-    const { a, b } = await aPair(ctx, "test-fits-shadow-banned");
+    const { a, b } = await aPair(ctx);
     const now = { now: () => NOON };
     expect(await fitsNow(now, ctx.client, a, [b])).toEqual(new Set([b]));
 

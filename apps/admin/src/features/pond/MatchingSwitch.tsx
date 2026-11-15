@@ -1,5 +1,5 @@
 import { useT } from "@kuutti/i18n/react";
-import { AdminPond, AdminPondList } from "@kuutti/schema";
+import { MatchingSwitchState } from "@kuutti/schema";
 import { useState } from "react";
 import { Alert } from "../../components/ui/alert.tsx";
 import { Badge } from "../../components/ui/badge.tsx";
@@ -14,9 +14,8 @@ import { useList } from "../../lib/use-list.ts";
 import { type Refusals, useSend } from "../safety/index.ts";
 
 // The switch that opens matching (#500, ADR-060 §1 and §2, admins only): one,
-// for the whole country, since there is one pond (ADR-061 §8), whose row the
-// routes still name. Matching opens when an admin says so here, and nothing else
-// opens or closes it. A confirm step says the effect in words; the API writes
+// for the whole country, with no pond behind it (ADR-061 §8, #607). Matching
+// opens when an admin says so here, and nothing else opens or closes it. A confirm step says the effect in words; the API writes
 // the audit row. No reason is asked: an audit row's detail holds no words, and
 // the act is its own reason. A turned switch updates in place, nothing else on
 // the screen moves. English only (TD-17); keyboard first.
@@ -29,16 +28,15 @@ export function MatchingSwitch() {
   // the first press is announced too. Heard and never drawn: the badge turns
   // and the button changes its name.
   const [said, setSaid] = useState<boolean | null>(null);
-  const [turning, setTurning] = useState<AdminPond | null>(null);
+  const [turning, setTurning] = useState<MatchingSwitchState | null>(null);
+  // One switch, read through the hook every screen loads by, as a list of one:
+  // its loading, refused and failed states are the same as any list's.
   const { state, reload, update } = useList({
-    fetchPage: () => api.GET("/admin/ponds"),
-    parse: (data) => {
-      const { items } = AdminPondList.parse(data);
-      return { items, total: items.length };
-    },
+    fetchPage: () => api.GET("/admin/matching"),
+    parse: (data) => ({ items: [MatchingSwitchState.parse(data)], total: 1 }),
     what: "matching",
   });
-  const pond = state.kind === "ready" ? state.items[0] : undefined;
+  const matching = state.kind === "ready" ? state.items[0] : undefined;
 
   return (
     <section aria-labelledby="matching-title" className="space-y-6">
@@ -59,35 +57,35 @@ export function MatchingSwitch() {
       </p>
       {state.kind === "loading" && <Loading>{t("load.loading")}</Loading>}
       {state.kind === "error" && <Alert>{t("admin.loadFailed")}</Alert>}
-      {pond && (
+      {matching && (
         <Card className="py-0 sm:py-0">
           {/* Wraps at a phone's width, so the press is never out of sight. */}
           <CardContent className="flex-row flex-wrap items-center gap-x-4 gap-y-2 py-3">
             {/* The word says it, the fill only repeats it: never colour alone. */}
-            <Badge variant={pond.matchingOpen ? "default" : "secondary"}>
-              {t(pond.matchingOpen ? "admin.matching.open" : "admin.matching.closed")}
+            <Badge variant={matching.open ? "default" : "secondary"}>
+              {t(matching.open ? "admin.matching.open" : "admin.matching.closed")}
             </Badge>
             <Button
               variant="outline"
               className="ms-auto"
               onClick={() => {
                 setSaid(null);
-                setTurning(pond);
+                setTurning(matching);
               }}
             >
-              {t(pond.matchingOpen ? "admin.matching.apply.close" : "admin.matching.apply.open")}
+              {t(matching.open ? "admin.matching.apply.close" : "admin.matching.apply.open")}
             </Button>
           </CardContent>
         </Card>
       )}
       {turning && (
         <TurnStep
-          pond={turning}
+          matching={turning}
           onCancel={() => setTurning(null)}
           onDone={async (turned) => {
             setTurning(null);
-            setSaid(turned.matchingOpen);
-            update((items) => items.map((item) => (item.id === turned.id ? turned : item)));
+            setSaid(turned.open);
+            update(() => [turned]);
           }}
         />
       )}
@@ -97,19 +95,19 @@ export function MatchingSwitch() {
 
 /** The confirm step: what the press will do, in words, before it is sent. */
 function TurnStep({
-  pond,
+  matching,
   onCancel,
   onDone,
 }: {
-  pond: AdminPond;
+  matching: MatchingSwitchState;
   onCancel: () => void;
-  onDone: (pond: AdminPond) => Promise<void>;
+  onDone: (turned: MatchingSwitchState) => Promise<void>;
 }) {
   const { t } = useT();
-  const open = !pond.matchingOpen;
+  const open = !matching.open;
   // A 403 is the shell's to say (#302): the step closes with no words of its own.
   const { sending, refused, send, cancel } = useSend({
-    answer: AdminPond,
+    answer: MatchingSwitchState,
     refusals: REFUSALS,
     onShell: onCancel,
     onCancel,
@@ -130,14 +128,7 @@ function TurnStep({
           <Button
             variant={open ? "default" : "destructive"}
             aria-busy={sending || undefined}
-            onClick={() =>
-              void send(() =>
-                api.POST("/admin/ponds/{id}/matching", {
-                  params: { path: { id: pond.id } },
-                  body: { open },
-                }),
-              )
-            }
+            onClick={() => void send(() => api.POST("/admin/matching", { body: { open } }))}
           >
             {t(open ? "admin.matching.apply.open" : "admin.matching.apply.close")}
           </Button>

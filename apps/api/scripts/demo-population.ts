@@ -4,15 +4,15 @@
  *
  *   pnpm demo:population                      three hundred people, the usual seed
  *   pnpm demo:population -- --size 5000       as many as the queue must walk
- *   pnpm demo:population -- --seed 7          other people, the same ponds
+ *   pnpm demo:population -- --seed 7          other people, as many of each
  *   pnpm demo:population -- --photos          with faces of the release, drawn by seed, through the pipeline (#142), and the cast (#560)
  *   pnpm demo:population -- --remove          removes them and writes nobody
- *   pnpm demo:population -- --dry-run         counts per pond, nothing written, no connection
+ *   pnpm demo:population -- --dry-run         the counts, nothing written, no connection
  *
  * After a write or a removal the public counter of #54 is counted anew over
  * what is in the database now. By itself it would not move: it counts once a
  * day and moves in steps, which is right among people and would leave a demo
- * showing yesterday's ponds. What may be said of a pond is decided as ever.
+ * showing yesterday's people. What may be said of them is decided as ever.
  *
  * It goes ahead only in development, test and preview, and on staging from
  * inside the API's container (`node dist/demo-population.js --env staging`,
@@ -21,8 +21,7 @@
  * server it is connected to what it is before it writes or removes anything:
  * production is refused whatever the environment is called
  * (packages/db/src/seed/command.ts).
- * The ponds come from the seed (`pnpm --filter @kuutti/db seed`), which runs
- * first. It lives with the API because the consents name the version of the
+ * It lives with the API because the consents name the version of the
  * wording in force, which the API knows from the message catalogue.
  *
  * The pictures (#142) go through the upload pipeline like anybody's, so they
@@ -40,7 +39,7 @@
  * reset comes after this: that is what gives those.
  */
 import { networkInterfaces } from "node:os";
-import { createPool } from "@kuutti/db";
+import { createPool, openMatching } from "@kuutti/db";
 import {
   assertDemoTarget,
   assertStagingProcess,
@@ -53,11 +52,10 @@ import {
   type DemoEnvironment,
   describeTarget,
   facesForPopulation,
-  openPonds,
   type PhotoAsset,
   PLACEHOLDER_PHOTO_PREFIX,
   parseDemoCommand,
-  plannedPonds,
+  plannedPeople,
   removePopulation,
   writePopulation,
 } from "@kuutti/db/demo";
@@ -86,11 +84,11 @@ const command = (() => {
 })();
 const { env, size, seed, action, photos } = command;
 
-const ponds = plannedPonds(size);
+const planned = plannedPeople(size);
 
 if (action === "dry-run") {
   console.log(
-    JSON.stringify({ msg: "demo population (dry run)", env, size, seed, ponds }, null, 2),
+    JSON.stringify({ msg: "demo population (dry run)", env, size, seed, people: planned }, null, 2),
   );
   process.exit(0);
 }
@@ -234,14 +232,15 @@ try {
     );
     console.log(JSON.stringify({ msg: "demo population: orphaned objects deleted", objects }));
   }
-  // The figures the counter stood on are of the ponds as they were: gone, and
+  // The figures the counter stood on are of the people as they were: gone, and
   // counted anew. Only here, where the target has been asked what it is.
   await pool.query("DELETE FROM pond_counter");
   const counted = await takeSnapshot({ db: pool, logger, now: () => new Date() });
   console.log(JSON.stringify({ msg: "demo population: counter recounted", ...counted }));
-  // And the ponds open, so that these people have rounds (ADR-060 Open 1).
-  const opened = await openPonds(pool);
-  console.log(JSON.stringify({ msg: "demo population: ponds opened", opened }));
+  // And matching open, so that these people have rounds (ADR-060 Open 1): the
+  // switch's next version by this command's name, where it stands closed.
+  const opened = await openMatching(pool, "demo-population");
+  console.log(JSON.stringify({ msg: "demo population: matching opened", opened }));
 } catch (error) {
   if (error instanceof DemoCommandError || error instanceof DemoError) {
     console.error(`✖ ${error.message}`);

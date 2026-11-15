@@ -1,5 +1,7 @@
 import { spawn } from "node:child_process";
-import { resolve } from "node:path";
+import { copyFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { ConfigKeyName, ConfigVersion } from "@kuutti/schema";
 import { describe, expect, it } from "vitest";
 import { readJournal } from "./journal.ts";
@@ -74,15 +76,15 @@ describe("migrate", () => {
     });
   });
 
-  it("starts a database with the one pond, closed, the tunables, and no other row (ADR-060, ADR-061 §8)", async () => {
+  it("starts a database with matching closed, the tunables, and no other row (ADR-060, ADR-061 §8)", async () => {
     await withTemporaryDatabase(async (url) => {
       const pool = createPool({ connectionString: url, max: 2 });
       try {
         await migrate(pool, MIGRATIONS);
-        const ponds = await pool.query("SELECT slug, name_nominative, matching_open FROM ponds");
-        expect(ponds.rows).toEqual([
-          { slug: "suomi", name_nominative: "Suomi", matching_open: false },
-        ]);
+        const { rows: matching } = await pool.query(
+          "SELECT version, value, created_by FROM matching_config WHERE key = 'matching_open'",
+        );
+        expect(matching).toEqual([{ version: 1, value: false, created_by: "migration:0004" }]);
         const { rows: tables } = await pool.query<{ table_name: string }>(
           `SELECT table_name FROM information_schema.tables
             WHERE table_schema = 'public' AND table_type = 'BASE TABLE' ORDER BY 1`,
@@ -94,7 +96,6 @@ describe("migrate", () => {
         }
         expect(holding).toEqual({
           matching_config: Object.keys(MATCHING_CONFIG_V1).length,
-          ponds: 1,
         });
       } finally {
         await pool.end();
@@ -515,16 +516,111 @@ describe("migrate", () => {
     });
   });
 
-  it("stands a counter's row that names no number at zero, and never at null (#581)", async () => {
+  /** The chain up to a migration, without it: a folder of its own, for a database as it stood before. */
+  function migrationsBefore(tag: string): string {
+    const journal = readJournal(MIGRATIONS) ?? [];
+    const end = journal.findIndex((entry) => entry.tag === tag);
+    expect(end, tag).toBeGreaterThan(0);
+    const dir = mkdtempSync(join(tmpdir(), "kuutti-db-"));
+    mkdirSync(join(dir, "meta"));
+    const entries = journal.slice(0, end);
+    for (const entry of entries) {
+      copyFileSync(resolve(MIGRATIONS, `${entry.tag}.sql`), join(dir, `${entry.tag}.sql`));
+    }
+    writeFileSync(join(dir, "meta", "_journal.json"), JSON.stringify({ version: "7", entries }));
+    return dir;
+  }
+
+  it.each([
+    { pond: "an open pond", before: "UPDATE ponds SET matching_open = true", open: true },
+    { pond: "a closed pond", before: "SELECT 1", open: false },
+    // Nothing writes such a database; the migration's aggregate answers one row all the same.
+    {
+      pond: "no pond at all",
+      before: "UPDATE account SET pond_id = NULL; DELETE FROM pond_counter; DELETE FROM ponds",
+      open: false,
+    },
+  ])(
+    "takes the pond out of a database with $pond: the switch keeps its value as a tunable, the counter its row, an account its home (#607, ADR-061 §8)",
+    async ({ before, open }) => {
+      const withThePond = migrationsBefore("0004_matching_open_key");
+      try {
+        await withTemporaryDatabase(async (url) => {
+          const pool = createPool({ connectionString: url, max: 2 });
+          try {
+            await migrate(pool, withThePond);
+            const account = await accountOf(pool, "7");
+            await pool.query(
+              `UPDATE account SET home_place = '00530', pond_id = (SELECT id FROM ponds)
+             WHERE id = $1`,
+              [account],
+            );
+            await pool.query(
+              `INSERT INTO pond_counter (pond_id, day, finished, seeks_men, seeks_everyone, seeks_women, taken_at)
+             SELECT id, '2026-11-04', 40, 12, 10, 18, '2026-11-04T02:00:00Z' FROM ponds`,
+            );
+            await pool.query(before);
+
+            await migrate(pool, MIGRATIONS);
+
+            const { rows: matching } = await pool.query(
+              "SELECT version, value, created_by, reason FROM matching_config WHERE key = 'matching_open'",
+            );
+            expect(matching).toEqual([
+              { version: 1, value: open, created_by: "migration:0004", reason: null },
+            ]);
+            const { rows: counter } = await pool.query(
+              "SELECT id, day::text, finished, seeks_men, seeks_everyone, seeks_women, taken_at FROM pond_counter",
+            );
+            expect(counter).toEqual(
+              before.includes("DELETE FROM pond_counter")
+                ? []
+                : [
+                    {
+                      id: true,
+                      day: "2026-11-04",
+                      finished: 40,
+                      seeks_men: 12,
+                      seeks_everyone: 10,
+                      seeks_women: 18,
+                      taken_at: new Date("2026-11-04T02:00:00Z"),
+                    },
+                  ],
+            );
+            const { rows: accounts } = await pool.query("SELECT * FROM account");
+            expect(accounts).toHaveLength(1);
+            expect(accounts[0]).toMatchObject({ id: account, home_place: "00530" });
+            expect(accounts[0]).not.toHaveProperty("pond_id");
+            const { rows: tables } = await pool.query(
+              "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'ponds'",
+            );
+            expect(tables).toEqual([]);
+          } finally {
+            await pool.end();
+          }
+        });
+      } finally {
+        rmSync(withThePond, { recursive: true, force: true });
+      }
+    },
+  );
+
+  it("stands a counter's row that names no number at zero, and never at null, and holds the counter to one row (#581, #607)", async () => {
     await withTemporaryDatabase(async (url) => {
       const pool = createPool({ connectionString: url, max: 1 });
       try {
         await migrate(pool, MIGRATIONS);
         const { rows } = await pool.query<{ finished: number }>(
-          `INSERT INTO pond_counter (pond_id, day)
-           SELECT id, '2026-11-04' FROM ponds WHERE slug = 'suomi' RETURNING finished`,
+          "INSERT INTO pond_counter (day) VALUES ('2026-11-04') RETURNING finished",
         );
         expect(rows).toEqual([{ finished: 0 }]);
+        // One pond, the country, so one row: a second is the same key, and no other key is let in.
+        await expect(
+          pool.query("INSERT INTO pond_counter (day) VALUES ('2026-11-05')"),
+        ).rejects.toMatchObject({ code: "23505" });
+        await expect(
+          pool.query("INSERT INTO pond_counter (id, day) VALUES (false, '2026-11-05')"),
+        ).rejects.toMatchObject({ code: "23514", constraint: "pond_counter_one_row_check" });
         await expect(pool.query("UPDATE pond_counter SET finished = NULL")).rejects.toMatchObject({
           code: "23502",
         });
@@ -593,7 +689,6 @@ describe("migrate", () => {
           "photo_check_note",
           "photo_review",
           "pond_counter",
-          "ponds",
           "preferences",
           "profile",
           "push_token",

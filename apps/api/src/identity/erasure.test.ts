@@ -171,12 +171,10 @@ describe("account erasure", () => {
     expect(res.status).toBe(200);
     expect((await del(app, a.headers)).status).toBe(204);
     const { rows } = await ctx.client.query(
-      "SELECT state, home_place, home_shows_area, pond_id FROM account WHERE id = $1",
+      "SELECT state, home_place, home_shows_area FROM account WHERE id = $1",
       [a.accountId],
     );
-    expect(rows).toEqual([
-      { state: "deleted", home_place: null, home_shows_area: false, pond_id: null },
-    ]);
+    expect(rows).toEqual([{ state: "deleted", home_place: null, home_shows_area: false }]);
   });
 
   test("A photo another account also uploaded keeps its objects", async ({ ctx }) => {

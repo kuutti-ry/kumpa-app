@@ -6015,7 +6015,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/admin/ponds": {
+    "/admin/matching": {
         parameters: {
             query?: never;
             header?: never;
@@ -6023,8 +6023,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Every pond with its switch
-         * @description Each pond and whether matching is open in it. Admins only.
+         * Whether matching is open
+         * @description The switch that opens matching, for the whole country. Admins only.
          */
         get: {
             parameters: {
@@ -6035,13 +6035,13 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description The ponds. */
+                /** @description The switch as it stands. */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["AdminPondList"];
+                        "application/json": components["schemas"]["MatchingSwitchState"];
                     };
                 };
                 /** @description unauthenticated, session_expired or session_revoked. */
@@ -6065,48 +6065,30 @@ export interface paths {
             };
         };
         put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/ponds/{id}/matching": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
         /**
-         * Open or close matching in a pond
-         * @description Sets the switch of the one pond, which stands for the whole country (ADR-061 §8). Open, each complete person reads their queue from their next read, and their matching card says so; closed, nobody new joins a queue, cards already queued stay for the day, and conversations go on (ADR-060, ADR-062). Nothing else turns it. A press that finds the switch as it asks changes nothing and writes nothing. Admins only; written to audit_log.
+         * Open or close matching
+         * @description Sets the one switch, which stands for the whole country (ADR-061 §8). Open, each complete person reads their queue from their next read, and their matching card says so; closed, nobody new joins a queue, cards already queued stay for the day, and conversations go on (ADR-060, ADR-062). Nothing else turns it. A press that finds the switch as it asks changes nothing and writes nothing. Admins only; written to audit_log.
          */
         post: {
             parameters: {
                 query?: never;
                 header?: never;
-                path: {
-                    id: string;
-                };
+                path?: never;
                 cookie?: never;
             };
             requestBody: {
                 content: {
-                    "application/json": components["schemas"]["PondMatchingChange"];
+                    "application/json": components["schemas"]["MatchingSwitchState"];
                 };
             };
             responses: {
-                /** @description The pond as it now stands. */
+                /** @description The switch as it now stands. */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["AdminPond"];
+                        "application/json": components["schemas"]["MatchingSwitchState"];
                     };
                 };
                 /** @description Validation failed. */
@@ -6129,15 +6111,6 @@ export interface paths {
                 };
                 /** @description admin_forbidden: the role does not allow this. */
                 403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description No such pond. */
-                404: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -6443,7 +6416,7 @@ export interface paths {
         };
         /**
          * Whether matching is open for the caller
-         * @description Between a finished profile and the first read of the queue: incomplete while the profile or onboarding lacks something, closed once it is finished and matching has not opened in the caller's pond yet, open once it has. An admin opens a pond; nothing here counts anybody.
+         * @description Between a finished profile and the first read of the queue: incomplete while the profile or onboarding lacks something, closed once it is finished and matching has not opened yet, open once it has. An admin opens matching; nothing here counts anybody.
          */
         get: {
             parameters: {
@@ -6491,7 +6464,7 @@ export interface paths {
         };
         /**
          * The pond counter
-         * @description Per pond: how many bank-verified people with the pond as theirs have completed their profiles. The number is published only where at least k people stand behind it (k is in the answer), and it moves only once at least k people have come or gone since it was last said. Counted once a day. No session needed. With one, the answer is the caller's and is not cached, and the caller's own pond also says whom its people seek: percentages in steps of five of three bands of finished profiles, those who seek men, those who seek both women and men, and those who seek women, null until every band holds at least k people.
+         * @description How many bank-verified people who have told their home have completed their profiles. The number is published only where at least k people stand behind it (k is in the answer), and it moves only once at least k people have come or gone since it was last said. Counted once a day. No session needed. With one, the answer is the caller's and is not cached, and to a caller who has told their home it also says whom people seek: percentages in steps of five of three bands of finished profiles, those who seek men, those who seek both women and men, and those who seek women, null until every band holds at least k people.
          */
         get: {
             parameters: {
@@ -6502,7 +6475,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Every pond with what may be said of it. */
+                /** @description What may be said of the people on Kuutti. */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -6540,7 +6513,7 @@ export interface paths {
         get?: never;
         /**
          * Set the caller's home, or what their card shows of it
-         * @description A postal code of five digits, whether the card shows the area instead of the town, or both. What is kept is a place of at least matching_config home_min_inhabitants people: the postal area, else its municipality, else the nearest municipality that has them. A new postal code starts from the town again unless the same request says otherwise, and showArea stays false where no area is kept. The home changes whenever the person likes. The write sets the account's pond if it has none. The answer names places and never carries digits.
+         * @description A postal code of five digits, whether the card shows the area instead of the town, or both. What is kept is a place of at least matching_config home_min_inhabitants people: the postal area, else its municipality, else the nearest municipality that has them. A new postal code starts from the town again unless the same request says otherwise, and showArea stays false where no area is kept. The home changes whenever the person likes. The answer names places and never carries digits.
          */
         put: {
             parameters: {
@@ -7564,7 +7537,6 @@ export interface components {
                 birthYear: number | null;
                 birthMonth: number | null;
                 gender: components["schemas"]["Gender"];
-                pond: components["schemas"]["PondSummary"];
                 home: {
                     place: string;
                     shownOnCard: string;
@@ -7641,12 +7613,6 @@ export interface components {
         };
         /** @enum {string|null} */
         Gender: "woman" | "man" | "non_binary" | null;
-        PondSummary: {
-            /** Format: uuid */
-            id: string;
-            slug: string;
-            name: string;
-        } | null;
         PreferencesResponse: {
             seeks: components["schemas"]["Gender"][] | null;
             ageWindow: components["schemas"]["AgeWindow"];
@@ -9171,17 +9137,7 @@ export interface components {
             /** Format: date-time */
             lastSignInAt: string | null;
         };
-        AdminPondList: {
-            items: components["schemas"]["AdminPond"][];
-        };
-        AdminPond: {
-            /** Format: uuid */
-            id: string;
-            slug: string;
-            name: string;
-            matchingOpen: boolean;
-        };
-        PondMatchingChange: {
+        MatchingSwitchState: {
             open: boolean;
         };
         AdminAnnouncementList: {
@@ -9221,10 +9177,6 @@ export interface components {
         GateState: "incomplete" | "closed" | "open";
         PondCounterResponse: {
             k: number;
-            ponds: components["schemas"]["PondCounterPond"][];
-        };
-        PondCounterPond: {
-            pond: components["schemas"]["PondSummary"];
             /** Format: date */
             day: string | null;
             finished: number | null;

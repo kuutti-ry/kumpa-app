@@ -1,15 +1,15 @@
-import type { PondCounterPond } from "@kuutti/schema";
+import type { PondCounterResponse } from "@kuutti/schema";
 import { useCallback, useEffect, useState } from "react";
 import { fetchPondCounter } from "./client";
 
 export type PondCounterState =
   | { status: "loading" }
-  /** What the counter says; `figures` is null when it lists no pond. */
-  | { status: "ready"; figures: PondCounterPond | null }
+  /** What the counter says: its answer whole, the number null below the threshold. */
+  | { status: "ready"; figures: PondCounterResponse }
   /** `error` says why, for the card to say so (LoadFailed). */
   | { status: "failed"; error: unknown };
 
-/** What the counter says of the one pond there is (#54, ADR-061 §8), its bar included (#507). */
+/** What the counter says of everybody on Kuutti (#54, ADR-061 §8, #607), its bar included (#507). */
 export function usePondCounter(): PondCounterState & { retry: () => void } {
   const [state, setState] = useState<PondCounterState>({ status: "loading" });
   const [attempt, setAttempt] = useState(0);
@@ -18,7 +18,7 @@ export function usePondCounter(): PondCounterState & { retry: () => void } {
     setState({ status: "loading" });
     fetchPondCounter()
       .then((counter) => {
-        if (live) setState({ status: "ready", figures: counter.ponds[0] ?? null });
+        if (live) setState({ status: "ready", figures: counter });
       })
       .catch((error: unknown) => {
         if (live) setState({ status: "failed", error });

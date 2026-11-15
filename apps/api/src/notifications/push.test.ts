@@ -74,7 +74,7 @@ afterEach(() => {
  * whether they are online and hold a pause.
  */
 async function scene(ctx: TestContext, options: { pusher?: false } = {}) {
-  const [first, second] = await people(ctx.client, null, 2, { complete: true });
+  const [first, second] = await people(ctx.client, 2, { complete: true });
   if (!first || !second) throw new Error("no people");
   const a = first;
   const b = second;
@@ -381,7 +381,7 @@ describe("a message's push (ADR-055 §4)", () => {
     await s.send("b", "Kuusi");
     expect(s.pusher.sent().map((m) => m.to)).toEqual([toB.token, toB.token, toA.token]);
     // Another conversation of B's is its own: it pushes within the first's interval.
-    const [c] = await people(ctx.client, null, 1, { complete: true });
+    const [c] = await people(ctx.client, 1, { complete: true });
     if (!c) throw new Error("no person");
     s.ids.push(c);
     const other = await conversationBetween(ctx.client, c, s.b, { openedAt: T });
@@ -448,7 +448,7 @@ describe("a message's push (ADR-055 §4)", () => {
     ctx,
   }) => {
     const s = await scene(ctx);
-    const [c] = await people(ctx.client, null, 1, { complete: true });
+    const [c] = await people(ctx.client, 1, { complete: true });
     if (!c) throw new Error("no person");
     s.ids.push(c);
     const first = await s.device(s.b, "en", 1);
@@ -623,7 +623,7 @@ describe("a message's push (ADR-055 §4)", () => {
     s.pusher.receipt = () => ({ status: "error", error: "DeviceNotRegistered" });
     await s.send("a", "Kenen laite?");
     // Meanwhile the phone was signed in as somebody else, who registered the same token.
-    const [c] = await people(ctx.client, null, 1, { complete: true });
+    const [c] = await people(ctx.client, 1, { complete: true });
     if (!c) throw new Error("no person");
     s.ids.push(c);
     const theirs = await deviceOf(ctx.client, c);

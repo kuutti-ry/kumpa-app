@@ -296,10 +296,12 @@ describe("listConfig", () => {
     ctx,
   }) => {
     const items = await listConfig(ctx.client);
+    // Every key but the switch that opens matching, which is no tunable (#607).
     const { rows } = await ctx.client.query<{ key: string }>(
-      "SELECT DISTINCT key FROM matching_config ORDER BY key",
+      "SELECT DISTINCT key FROM matching_config WHERE key <> 'matching_open' ORDER BY key",
     );
     expect(items.map((i) => i.key)).toEqual(rows.map((r) => r.key));
+    expect(items.map((i) => i.key)).not.toContain("matching_open");
     expect(new Set(items.map((i) => i.key)).size).toBe(items.length);
     expect(items.length).toBeGreaterThan(40);
     expect(ConfigList.parse({ items })).toEqual({ items });
@@ -356,7 +358,8 @@ describe("listConfig", () => {
 });
 
 /** changeConfig's read of the key's latest version, before its transaction. */
-const LATEST_READ = /FROM matching_config WHERE key = \$1 ORDER BY version DESC LIMIT 1/;
+const LATEST_READ =
+  /FROM matching_config WHERE key = \$1 AND key <> \$2 ORDER BY version DESC LIMIT 1/;
 
 describe("changeConfig", () => {
   test("refuses a key no migration made with 404, and writes nothing", async ({ ctx }) => {

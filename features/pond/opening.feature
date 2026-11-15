@@ -1,11 +1,13 @@
 # features/pond/opening.feature
 Feature: A pond opens when an admin opens it
   Nobody waits at the pond (#500, ADR-060; the maintainer, 29/10/2026). Matching
-  in a pond opens the day an admin turns its switch on in the panel, after a
-  confirm step, and nothing else opens or closes it: no count, no share and no
-  night. There is one pond, the whole country (ADR-061 §8), so this is one
-  switch, called Matching in the panel (#500, the maintainer, 01/11/2026).
-  Matching is open for a person when the pond is open
+  opens the day an admin turns its switch on in the panel, after a confirm
+  step, and nothing else opens or closes it: no count, no share, no night and
+  no other screen of the panel. There is one switch, called Matching in the
+  panel (#500, the maintainer, 01/11/2026), and no pond behind it any more: it
+  is one value among matching's own, and "a pond" below is everybody who has
+  told their home (ADR-061 §8; the maintainer, 15/11/2026, #607).
+  Matching is open for a person when the switch is on
   and their profile and onboarding are complete, and they are told one of three
   things, with no number, no step and no place in a line.
 
@@ -50,11 +52,16 @@ Feature: A pond opens when an admin opens it
   Scenario: The switch is written to the audit log once, with no words
     Given a pond nobody has opened
     When an admin opens it, and presses again
-    Then the pond is open, and the audit log has one row: the admin, the pond and that it opened
+    Then matching is open, and the audit log has one row: the admin and that it opened
     When the admin closes it
     Then the audit log has a second row that says so
 
   Scenario: Only an admin turns the switch
     Given a pond nobody has opened
-    When a moderator, or somebody with no staff session, lists the ponds or asks to open it
+    When a moderator, or somebody with no staff session, reads the switch or asks to turn it on
     Then each is refused and the pond stays closed
+
+  Scenario: The switch is not one of the tunables
+    Given a pond nobody has opened
+    When an admin lists the tunables, and writes the switch a new value there
+    Then the list leaves the switch out, the write is refused as no such key, and the pond stays closed

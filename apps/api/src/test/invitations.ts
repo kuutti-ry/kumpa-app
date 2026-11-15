@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import type { Queryable } from "@kuutti/db";
 import { CONSENT_VERSIONS } from "@kuutti/i18n";
-import { completeProfiles, consentsOf, HOME, pondNamed } from "./people.ts";
+import { completeProfiles, consentsOf, HOME } from "./people.ts";
 
 /**
  * Invitations and the reward ledger as a test of any slice sets them up
@@ -10,14 +10,13 @@ import { completeProfiles, consentsOf, HOME, pondNamed } from "./people.ts";
  * real code: the invitations written are known by their hash alone.
  */
 
-/** The person's profile and onboarding are complete (ADR-060 §7), in a pond of their own; a registered account becomes active, as onboarding makes it. */
+/** The person's profile and onboarding are complete (ADR-060 §7); a registered account becomes active, as onboarding makes it. */
 export async function completed(db: Queryable, accountId: string): Promise<void> {
-  const pondId = await pondNamed(db, `invite-${randomUUID().slice(0, 8)}`);
   await db.query(
-    `UPDATE account SET pond_id = $2, gender = 'woman', home_place = $3,
+    `UPDATE account SET gender = 'woman', home_place = $2,
             state = CASE WHEN state = 'registered' THEN 'active' ELSE state END
       WHERE id = $1`,
-    [accountId, pondId, HOME],
+    [accountId, HOME],
   );
   await consentsOf(db, [accountId]);
   await completeProfiles(db, [accountId]);

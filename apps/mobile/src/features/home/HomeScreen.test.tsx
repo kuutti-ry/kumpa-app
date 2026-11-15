@@ -1,5 +1,5 @@
 import { CONSENT_VERSIONS } from "@kuutti/i18n";
-import type { GateResponse, PondCounterResponse, PondSummary } from "@kuutti/schema";
+import type { GateResponse, PondCounterResponse } from "@kuutti/schema";
 import { fireEvent, screen, userEvent, within } from "@testing-library/react-native";
 import * as SecureStore from "expo-secure-store";
 import * as React from "react";
@@ -45,15 +45,7 @@ function topRow(): HostNode[] {
   return (row?.children ?? []).filter((child): child is HostNode => typeof child !== "string");
 }
 
-const POND: PondSummary = {
-  id: "0b4f3a0e-7c2f-4e2b-9a9a-1a2b3c4d5e6f",
-  slug: "suomi",
-  name: "Suomi",
-};
-const counter: PondCounterResponse = {
-  k: 10,
-  ponds: [{ pond: POND, day: "2026-10-05", finished: 150, seeks: null }],
-};
+const counter: PondCounterResponse = { k: 10, day: "2026-10-05", finished: 150, seeks: null };
 const gate: GateResponse = { state: "closed" };
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });

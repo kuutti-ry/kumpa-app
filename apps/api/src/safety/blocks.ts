@@ -60,7 +60,7 @@ async function writeBlock(
  * the answer is a stranger's (the block itself holds for it all the same,
  * `blocked_between`). Scoped by the caller's account (rule 6).
  */
-export async function blockStandsBetween(
+async function blockStandsBetween(
   db: Queryable,
   input: { callerAccountId: string; otherAccountId: string },
 ): Promise<boolean> {

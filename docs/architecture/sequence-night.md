@@ -22,7 +22,7 @@ In these diagrams every arrow is built. Mermaid's sequence diagrams take a messa
 | 4 | `research-events-partitions` | research | the events table's partitions; the copy, where there is one | this month's and next month's partitions; drops each month whose first day reaches 90 days before the next scheduled run | everywhere |
 | 5 | `research-anonymity` | research | the events table | nothing; a warning when a cell is under k | everywhere |
 | 6 | `end-suspensions` | safety | sanctions | lifts each suspension past its day, settles the account | everywhere |
-| 7 | `pond-counter` | jobs | accounts, profiles, photos, preferences, ponds | the day's figures per pond | everywhere |
+| 7 | `pond-counter` | jobs | accounts, profiles, photos, preferences | the day's figures, one row | everywhere |
 | 8 | `invitation-count` | rewards | invitations, accounts, consents, profiles, photos, preferences | invitations counted, both people's reward units, the notices | everywhere |
 | 9 | `prune-rounds` | matching | rounds | deletes the rounds of days over 365 days back, their entries and relaxations with them | everywhere |
 | 10 | `reject-unreviewed-photos` | media | profile photos in the human queue | rejects those waiting past `photo_queue_reject_days` as not reviewed | everywhere |
@@ -61,7 +61,7 @@ sequenceDiagram
 
 1. Each API process arms one timer at its start, for the next 04:00 in Helsinki (`NIGHTLY_HOUR`). The timer does not keep the process alive by itself. Two containers that overlap during a deploy each arm one; the jobs that must not run twice at once take an advisory lock in the database (steps 11, 15, 17, 20 and 21).
 2. The jobs run one at a time, in the order of the table: each waits for the one before it. A rejected operation is caught and the chain continues; a never-settling operation still holds the chain. There is no uncancellable timeout that lets its writes overlap the following job.
-3. A job answers with counts, never with who: how many sessions, ponds, days, photos. A job that throws answers with its error.
+3. A job answers with counts, never with who: how many sessions, days, photos; the counter's with the day and whether its figures moved. A job that throws answers with its error.
 4. One line per job: `nightly job done` with the job's name and its counts, or `nightly job failed` with its name and the error, which the logger redacts as everywhere. A failure is logged, never thrown, so one broken job stops neither the next job nor the server. On a deployed box Docker's `awslogs` driver sends every container's lines to the log group `/kuutti/{env}/api`, one stream per container, kept 30 days; a preview's container writes to the same group under its own stream. On a developer's machine the lines go to the terminal.
 5. After the last job the timer is armed again for the next 04:00.
 6. A metric filter on the log group counts each `nightly job failed` line and each `research events dropped without their copy` line (step 16) as `NightlyFailures`.
@@ -117,7 +117,7 @@ sequenceDiagram
   participant api as The API's nightly run
   participant db as PostgreSQL
   api->>db: end-suspensions. Lift each suspension past its day and settle its account, one account per transaction
-  api->>db: pond-counter. Under its lock, count each pond, and move its figures when k people came or went
+  api->>db: pond-counter. Under its lock, count everybody with a home, and move the figures when k people came or went
   api->>db: invitation-count. Count each invitation whose redeemer is complete now, give the inviter and the friend their units, write the notices
   api->>db: prune-rounds. Delete the rounds of days over 365 days back, their entries and relaxations with them
 ```
@@ -125,7 +125,7 @@ sequenceDiagram
 ### Steps
 
 19. `end-suspensions` (safety, #307, ADR-024 §5): every suspension still open past its day is lifted by nobody, and its account's state settled from the sanctions still open, one account per transaction. A failure is collected while the remaining accounts are still attempted, then reported through the runner. It runs before the counts so that a person let back in is counted the same night. A login on the end day before 04:00 is still refused: a `shortcut:` in `safety/sanctions.ts`.
-20. `pond-counter` (`jobs/`, #54, ADR-013): under its own advisory lock, counts each pond's finished profiles: live, bank-verified accounts with a pond that stand as active and have a complete profile, reading nobody's gender (#581). A pond's number moves only when at least k people have come or gone since it was taken, and the bands of whom its finished profiles seek on their own (#507). The counter's route serves the number all day, and to a session the bands of the caller's own pond, as shares. A database with no figures gets its first ones at boot.
+20. `pond-counter` (`jobs/`, #54, ADR-013): under its own advisory lock, counts the finished profiles: live, bank-verified accounts with a home that stand as active and have a complete profile, reading nobody's gender (#581). The number moves only when at least k people have come or gone since it was taken, and the bands of whom the finished profiles seek on their own (#507). One row holds what stands (#607). The counter's route serves the number all day, and to the session of somebody with a home the bands, as shares. A database with no figures gets its first ones at boot.
 21. `invitation-count` (rewards, #107, ADR-044 §7, ADR-060 §7): in one transaction, each invitation not counted yet whose redeemer's profile and onboarding are complete now is counted once; its inviter and the friend who used it get the units `matching_config invitation_reward` says tonight, with both people locked first. The inviter gets one notice in the app even of nothing, and the friend one only of a fish (ADR-032). Its line says how many and of what, never who.
 22. `prune-rounds` (matching, #502, ADR-062 §13): the rounds of Finnish days more than 365 days back are deleted, and their entries and relaxations go with them by the cascade. The year covers the longest clock of the queue's ladder, a second pass. Nothing else is done for the round at night: `GET /rounds/today` opens a person's log at their first read of the day and adds the next people as they read (ADR-062 §1), and no push tells of it (ADR-062 §12).
 

@@ -1,20 +1,8 @@
 import { createHash } from "node:crypto";
 import { and, eq, ne } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
-import type { Pool } from "./pool.ts";
-import { account, identity, matchingConfig, ponds, preferences, profile } from "./schema/index.ts";
-
-/**
- * One pond, the whole country (ADR-061 §8), set by the API with a person's
- * home. The migrations write the same row, and a second pond here would stand
- * on every boot of a preview and nowhere else.
- */
-export const SEED_PONDS = [
-  {
-    slug: "suomi",
-    nameNominative: "Suomi",
-  },
-] as const;
+import type { Pool, Queryable } from "./pool.ts";
+import { account, identity, matchingConfig, preferences, profile } from "./schema/index.ts";
 
 /**
  * matching_config version 1: every key as the migrations write it, each at the
@@ -156,6 +144,10 @@ export const MATCHING_CONFIG_V1 = {
   // #54 (ADR-013, rules/schema.md): the public counter says a number
   // only where at least this many people stand behind it.
   pond_counter_k: 10,
+  // #500, #607 (ADR-060 §1): whether matching is open, the one value here that
+  // is a switch: an admin turns it on the panel's Matching screen, and the
+  // tunables' screen neither lists nor writes it. Closed until somebody opens it.
+  matching_open: false,
   // #147 (the field sheet, ADR-060 §9): a change of gender is possible once in
   // this many days.
   change_cadence_days: 30,
@@ -222,30 +214,34 @@ const SEED_PROFILE = {
 const seedHetuHmac = (label: string): string =>
   createHash("sha256").update(`kuutti seed identity: ${label}`).digest("hex");
 
-export type SeedResult = { ponds: number; matchingConfig: number; identities: number };
+export type SeedResult = { matchingConfig: number; identities: number };
 
 /**
- * Idempotent: upserts keyed by slug and by (key, version). Safe to run on every
- * boot of a preview. It opens the ponds it writes on every run, the row the
- * migrations wrote first among them, so that development, previews and
- * CI have rounds from the first start (ADR-060 §10). Production refuses it.
+ * Turns matching on where its newest version says off, as the next version:
+ * for the seed and the demo commands, whose people need a queue (ADR-014,
+ * ADR-060 §10). Never an admin's switch: both refuse production. Whether it
+ * turned it.
+ */
+export async function openMatching(db: Queryable, createdBy: string): Promise<boolean> {
+  const { rowCount } = await db.query(
+    `INSERT INTO matching_config (version, key, value, created_by)
+     SELECT latest.version + 1, 'matching_open', 'true'::jsonb, $1
+     FROM (SELECT version, value FROM matching_config
+           WHERE key = 'matching_open' ORDER BY version DESC LIMIT 1) latest
+     WHERE latest.value <> 'true'::jsonb`,
+    [createdBy],
+  );
+  return rowCount === 1;
+}
+
+/**
+ * Idempotent: upserts keyed by (key, version) and by the identity's hash. Safe
+ * to run on every boot of a preview. It opens matching on every run, as the
+ * switch's next version where it stands closed, so that development, previews
+ * and CI have a queue from the first start (ADR-060 §10). Production refuses it.
  */
 export async function seed(pool: Pool, createdBy = "seed"): Promise<SeedResult> {
   const db = drizzle(pool);
-
-  for (const pond of SEED_PONDS) {
-    await db
-      .insert(ponds)
-      .values({
-        slug: pond.slug,
-        nameNominative: pond.nameNominative,
-        matchingOpen: true,
-      })
-      .onConflictDoUpdate({
-        target: ponds.slug,
-        set: { nameNominative: pond.nameNominative, matchingOpen: true },
-      });
-  }
 
   for (const [key, value] of Object.entries(MATCHING_CONFIG_V1)) {
     await db
@@ -256,6 +252,7 @@ export async function seed(pool: Pool, createdBy = "seed"): Promise<SeedResult> 
         set: { value },
       });
   }
+  await openMatching(pool, createdBy);
 
   const now = Date.now();
   for (const person of SEED_IDENTITIES) {
@@ -290,15 +287,11 @@ export async function seed(pool: Pool, createdBy = "seed"): Promise<SeedResult> 
         .from(account)
         .where(and(eq(account.identityId, row.id), ne(account.state, "deleted")));
       if (current) {
-        // Onboarding (#46): gender, home, pond and the two hard rows; the consents
+        // Onboarding (#46): gender, home and the two hard rows; the consents
         // are left for the flow to ask, so the screens can be tried locally.
-        const [pond] = await db
-          .select({ id: ponds.id })
-          .from(ponds)
-          .where(eq(ponds.slug, SEED_PONDS[0].slug));
         await db
           .update(account)
-          .set({ gender: "woman", pondId: pond?.id ?? null, homePlace: SEED_HOME_PLACE })
+          .set({ gender: "woman", homePlace: SEED_HOME_PLACE })
           .where(eq(account.id, current.id));
         for (const [field, value] of [
           ["seeks", ["man", "non_binary"]],
@@ -321,7 +314,6 @@ export async function seed(pool: Pool, createdBy = "seed"): Promise<SeedResult> 
   }
 
   return {
-    ponds: SEED_PONDS.length,
     matchingConfig: Object.keys(MATCHING_CONFIG_V1).length,
     identities: SEED_IDENTITIES.length,
   };

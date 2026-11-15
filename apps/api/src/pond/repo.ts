@@ -1,39 +1,11 @@
 import type { Queryable } from "@kuutti/db";
-import type { AdminPond, PondSummary } from "@kuutti/schema";
+import { MATCHING_OPEN_KEY, matchingOpen } from "../lib/matching-config.ts";
 
 // Raw parameterised SQL for the same reason as identity/repo.ts: Deps.db is
 // the Queryable seam the test harness hands a rolled-back transaction through.
-// Ponds are public structure, not user data: the list is the same for
-// everyone. Every statement about a person carries the caller's account id
-// (rule 6).
-
-type Row = Record<string, unknown>;
-
-const pondFrom = (r: Row): PondSummary => ({
-  id: r.id as string,
-  slug: r.slug as string,
-  name: r.name_nominative as string,
-});
-
-const COLUMNS = "id, slug, name_nominative";
-
-/** Every pond by name; there is one, the country (ADR-061 §8). */
-export async function listPonds(db: Queryable): Promise<PondSummary[]> {
-  const { rows } = await db.query<Row>(`SELECT ${COLUMNS} FROM ponds ORDER BY name_nominative`);
-  return rows.map(pondFrom);
-}
-
-export async function findPondOfAccount(
-  db: Queryable,
-  accountId: string,
-): Promise<PondSummary | null> {
-  const { rows } = await db.query<Row>(
-    `SELECT p.id, p.slug, p.name_nominative
-     FROM account a JOIN ponds p ON p.id = a.pond_id WHERE a.id = $1`,
-    [accountId],
-  );
-  return rows[0] ? pondFrom(rows[0]) : null;
-}
+// There is no pond's row (ADR-061 §8, #607): a home is what puts a person
+// among the others, and the switch is the same for everyone. Every statement
+// about a person carries the caller's account id (rule 6).
 
 /** A home as `account` holds it: the kept place's key, and whether the card shows its area (ADR-061 §2, §3). */
 export type StoredHome = { place: string | null; showsArea: boolean };
@@ -78,10 +50,7 @@ export async function lockHomeOfAccount(
 }
 
 /**
- * The write of a home, and the one write of a pond (ADR-061 §8): in one
- * statement, so that nobody has a home without one. The slug is the row every
- * database has (the migrations write it); a pond already held stays.
- * `place` null leaves the kept place as it is.
+ * The write of a home. `place` null leaves the kept place as it is.
  */
 export async function writeHomeOfAccount(
   tx: Queryable,
@@ -90,43 +59,38 @@ export async function writeHomeOfAccount(
 ): Promise<void> {
   await tx.query(
     `UPDATE account
-        SET home_place = COALESCE($2, home_place), home_shows_area = $3,
-            pond_id = COALESCE(pond_id, (SELECT id FROM ponds WHERE slug = 'suomi'))
+        SET home_place = COALESCE($2, home_place), home_shows_area = $3
       WHERE id = $1`,
     [accountId, home.place, home.showsArea],
   );
 }
 
-const adminPondFrom = (r: Row): AdminPond => ({
-  ...pondFrom(r),
-  matchingOpen: r.matching_open as boolean,
-});
-
-/** Every pond with its switch, by name, for the panel (ADR-060 §2). */
-export async function listPondsForAdmin(db: Queryable): Promise<AdminPond[]> {
-  const { rows } = await db.query<Row>(
-    `SELECT ${COLUMNS}, matching_open FROM ponds ORDER BY name_nominative`,
-  );
-  return rows.map(adminPondFrom);
-}
+/**
+ * One turn of the switch at a time, across every process that may turn it: of
+ * two admins pressing at once the second reads what the first wrote, so they
+ * write one version and one audit row.
+ */
+const MATCHING_SWITCH_LOCK_KEY = 725_121_155;
 
 /**
- * Sets a pond's switch, under the row's lock, and says what it was: `changed`
- * is false for a press that met the switch as it was asked to be already, so
- * two admins pressing at once write one audit row. Null for no such pond.
+ * Turns the switch (ADR-060 §2): its next version in `matching_config`, by
+ * whoever pressed, with no reason, since none is asked. The id of the row
+ * written, which the audit row is about; null for a press that met the switch
+ * as it asked, which writes nothing. Call it in a transaction: the lock is
+ * held until it ends.
  */
-export async function setMatchingOpen(
-  db: Queryable,
-  pondId: string,
+export async function turnMatching(
+  tx: Queryable,
   open: boolean,
-): Promise<{ pond: AdminPond; changed: boolean } | null> {
-  const { rows } = await db.query<Row>(
-    `SELECT ${COLUMNS}, matching_open FROM ponds WHERE id = $1 FOR UPDATE`,
-    [pondId],
+  actor: string,
+): Promise<string | null> {
+  await tx.query("SELECT pg_advisory_xact_lock($1)", [MATCHING_SWITCH_LOCK_KEY]);
+  if ((await matchingOpen(tx)) === open) return null;
+  const { rows } = await tx.query<{ id: string }>(
+    `INSERT INTO matching_config (version, key, value, created_by)
+     SELECT max(version) + 1, $1, $2::jsonb, $3 FROM matching_config WHERE key = $1
+     RETURNING id`,
+    [MATCHING_OPEN_KEY, JSON.stringify(open), actor],
   );
-  const row = rows[0];
-  if (!row) return null;
-  if (row.matching_open === open) return { pond: adminPondFrom(row), changed: false };
-  await db.query("UPDATE ponds SET matching_open = $2 WHERE id = $1", [pondId, open]);
-  return { pond: adminPondFrom({ ...row, matching_open: open }), changed: true };
+  return rows[0]?.id ?? null;
 }

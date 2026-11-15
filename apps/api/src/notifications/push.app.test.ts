@@ -21,7 +21,7 @@ import {
   testConfig,
 } from "../test/harness.ts";
 import { fixtureJpeg, testMediaDeps } from "../test/media.ts";
-import { people, pondNamed } from "../test/people.ts";
+import { people } from "../test/people.ts";
 import {
   expectNamesNothing,
   gate,
@@ -100,7 +100,6 @@ async function appWith(ctx: TestContext, options: { db?: Queryable } = {}) {
   const names: string[] = [];
   const texts: string[] = [];
   const settled = () => push.settled();
-  const pondId = await pondNamed(ctx.client, `push-app-${randomUUID()}`);
   recorded.push({
     pusher,
     settled,
@@ -120,7 +119,7 @@ async function appWith(ctx: TestContext, options: { db?: Queryable } = {}) {
 
   /** A signed-in person with a complete profile, a name of their own, and who fits everybody of the test. */
   async function person(name: string): Promise<Person> {
-    const [accountId] = await people(ctx.client, pondId, 1, FITTING);
+    const [accountId] = await people(ctx.client, 1, FITTING);
     if (!accountId) throw new Error("no person");
     await ctx.client.query("UPDATE profile SET display_name = $2 WHERE account_id = $1", [
       accountId,

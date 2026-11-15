@@ -14,6 +14,9 @@ const config: KnipConfig = {
   // Android Studio (adb), not from npm; scripts/logo/icons.mjs to sips, macOS's
   // own image tool.
   ignoreBinaries: ["adb", "brew", "maestro", "sips"],
+  // infra/modules/media/origin-proof.js is a CloudFront Function (ADR-066):
+  // `cloudfront` is its runtime's own module, in no registry.
+  ignoreDependencies: ["cloudfront"],
   workspaces: {
     "apps/mobile": {
       entry: [

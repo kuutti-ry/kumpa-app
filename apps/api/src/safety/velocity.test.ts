@@ -20,7 +20,7 @@ import {
   testConfig,
 } from "../test/harness.ts";
 import { testMediaDeps } from "../test/media.ts";
-import { completeProfiles, consentsOf, people, pondNamed } from "../test/people.ts";
+import { completeProfiles, consentsOf, people } from "../test/people.ts";
 import { FITTING, fitIn, queued } from "../test/queue.ts";
 import { pidOf, waitsFor, watched, withTwoConnections } from "../test/races.ts";
 import { sanctionsOf } from "../test/reports.ts";
@@ -124,11 +124,10 @@ const byRule = (rule: string, count: number) => ({
 
 /** The viewer made complete, and one complete person who fits them in their queue today; that person's account id. */
 async function roundWithOne(db: Queryable, viewer: SignedIn): Promise<string> {
-  const pondId = await pondNamed(db, `velocity-${viewer.accountId}`);
-  await fitIn(db, viewer.accountId, pondId);
+  await fitIn(db, viewer.accountId);
   await consentsOf(db, [viewer.accountId]);
   await completeProfiles(db, [viewer.accountId], FITTING);
-  const [subject] = await people(db, pondId, 1, FITTING);
+  const [subject] = await people(db, 1, FITTING);
   if (!subject) throw new Error("person not written");
   await queued(db, viewer.accountId, [subject], T);
   return subject;
@@ -170,7 +169,7 @@ async function servedCards(db: Queryable, viewer: SignedIn, n: number, last: Dat
      SELECT $2, p.id, $3::timestamptz - (($4::int - s.place + 1) * interval '1 second')
        FROM unnest($1::uuid[]) WITH ORDINALITY AS s(id, place)
        JOIN photos p ON p.account_id = s.id`,
-    [await people(db, null, n), viewer.accountId, last, n],
+    [await people(db, n), viewer.accountId, last, n],
   );
 }
 
@@ -809,7 +808,7 @@ describe("the round rules", () => {
 
   test("a card served as long ago as the window does not count", async ({ ctx, app }) => {
     const a = await signedInAccount(ctx.client);
-    const [old] = await people(ctx.client, null, 1);
+    const [old] = await people(ctx.client, 1);
     await cardShown(ctx.client, a.accountId, old as string, ago(10 * MINUTE));
     await servedCards(ctx.client, a, 298, ago(MINUTE));
     await roundWithOne(ctx.client, a);

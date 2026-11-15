@@ -9,7 +9,7 @@ import {
   test,
   testPool,
 } from "../test/harness.ts";
-import { people, pondNamed } from "../test/people.ts";
+import { people } from "../test/people.ts";
 import { COPY_LOCK_KEY, copiedBeforeDrop, researchCopyJob, writeResearchCopy } from "./copy.ts";
 import { encodeDay } from "./copy-file.ts";
 import { type CopyStore, memoryCopyStore } from "./copy-store.ts";
@@ -67,7 +67,7 @@ async function insert(ctx: TestContext, events: Event[]) {
 
 /** `count` people in the study, each under a live pseudonym: the only ones the census counts. */
 async function subjects(ctx: TestContext, count: number): Promise<string[]> {
-  const accounts = await people(ctx.client, null, count);
+  const accounts = await people(ctx.client, count);
   const { rows } = await ctx.client.query<{ research_id: string }>(
     `INSERT INTO research_subject (account_id, consent_version, enrolled_at)
      SELECT id, 'research-test', '2019-01-01T00:00:00Z' FROM unnest($1::uuid[]) AS id
@@ -184,8 +184,7 @@ describe("what a file carries", () => {
     ctx,
   }) => {
     await months(ctx, "2019-02-10T00:00:00Z");
-    const pond = await pondNamed(ctx.client, "test-copy-pond");
-    const accounts = await people(ctx.client, pond, 10, {
+    const accounts = await people(ctx.client, 10, {
       gender: "woman",
       complete: true,
       intent: "long_term",
@@ -212,7 +211,7 @@ describe("what a file carries", () => {
       {
         at: "2019-02-14T11:00:00Z",
         researchId: someone,
-        pond: "test-copy-pond",
+        pond: "suomi",
         snapshot: {
           gender: "woman",
           fields: {
@@ -262,7 +261,7 @@ describe("what a file carries", () => {
       name: "profile_saved",
       research_id: expect.any(String),
       consent_version: "research-test",
-      pond: "test-copy-pond",
+      pond: "suomi",
       age_band: "25-29",
       gender: "woman",
       field_intent: "long_term",
@@ -339,8 +338,7 @@ describe("the census across files", () => {
     ctx,
   }) => {
     await months(ctx, "2019-02-10T00:00:00Z");
-    const pond = await pondNamed(ctx.client, "test-churn-pond");
-    const [account] = await people(ctx.client, pond, 1, {
+    const [account] = await people(ctx.client, 1, {
       gender: "woman",
       complete: true,
       intent: "long_term",

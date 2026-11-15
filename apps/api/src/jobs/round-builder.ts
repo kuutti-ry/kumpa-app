@@ -11,7 +11,7 @@ import {
 } from "@kuutti/schema";
 import { addDays, finnishDay } from "../lib/finnish-day.ts";
 import type { Logger } from "../lib/logger.ts";
-import { matchingConfigNumbers } from "../lib/matching-config.ts";
+import { matchingConfigNumbers, matchingOpen } from "../lib/matching-config.ts";
 import {
   addPlaces,
   bandBetween,
@@ -29,18 +29,11 @@ import {
   relaxedBy,
   roundOrder,
 } from "../matching/index.ts";
-import {
-  openPondOf,
-  pondIdOf,
-  type Subject,
-  subjectOf,
-  subjectsAmong,
-  subjectsOfPond,
-} from "./pool.ts";
+import { type Subject, subjectOf, subjectsAmong, subjectsOfPond } from "./pool.ts";
 
 /**
  * The queue's builder (#95, #502, ADR-035, ADR-062): who comes next for a
- * person. Everybody complete of a pond an admin has opened (#500, ADR-060) has a
+ * person. Once an admin has opened matching (#500, ADR-060), everybody complete has a
  * queue from their first read; nothing is built at night. It lives with the jobs
  * and not in a slice for the reason `pool.ts` does: it reads across accounts,
  * profiles, photos, preferences, consents, blocks, rounds and conversations. The
@@ -271,16 +264,15 @@ async function inLogOf(db: Queryable, accountId: string, day: string): Promise<S
 async function todayOf(deps: BuilderDeps, accountId: string): Promise<Today | null> {
   const at = deps.now();
   const day = finnishDay(at);
-  const pondId = await openPondOf(deps.db, accountId);
-  if (!pondId) return null;
+  if (!(await matchingOpen(deps.db))) return null;
   // The person alone first: one whose profile does not count as complete
   // costs no read of the pool on every visit.
-  if (!(await subjectOf(deps.db, pondId, accountId, at))) return null;
+  if (!(await subjectOf(deps.db, accountId, at))) return null;
   // shortcut: every walk reads the whole pool, about 360 ms at 3,400 complete
   // people on the laptop (docs/runbooks/capacity.md), so a few walks a second is
   // what a core holds; the pool read a minute old and shared would lift it, and
   // is safe, since every card is asked again fresh before it is served (`fitsNow`).
-  const subjects = await subjectsOfPond(deps.db, pondId, at);
+  const subjects = await subjectsOfPond(deps.db, at);
   const owner = subjects.find((subject) => subject.id === accountId);
   if (!owner) return null;
   const config = await matchingConfigNumbers(deps.db, ALL_KEYS);
@@ -581,9 +573,7 @@ export async function fittingNow(
 ): Promise<Subject[]> {
   const at = deps.now();
   const day = finnishDay(at);
-  const pondId = await pondIdOf(db, accountId);
-  if (!pondId) return [];
-  const subjects = await subjectsAmong(db, pondId, [accountId, ...candidateIds], at);
+  const subjects = await subjectsAmong(db, [accountId, ...candidateIds], at);
   const owner = subjects.find((subject) => subject.id === accountId);
   if (!owner) return [];
   const { like_expiry_days: expiry } = await matchingConfigNumbers(db, ["like_expiry_days"]);

@@ -13,7 +13,7 @@ const homeRoute = createRoute({
   path: "/account/home",
   summary: "Set the caller's home, or what their card shows of it",
   description:
-    "A postal code of five digits, whether the card shows the area instead of the town, or both. What is kept is a place of at least matching_config home_min_inhabitants people: the postal area, else its municipality, else the nearest municipality that has them. A new postal code starts from the town again unless the same request says otherwise, and showArea stays false where no area is kept. The home changes whenever the person likes. The write sets the account's pond if it has none. The answer names places and never carries digits.",
+    "A postal code of five digits, whether the card shows the area instead of the town, or both. What is kept is a place of at least matching_config home_min_inhabitants people: the postal area, else its municipality, else the nearest municipality that has them. A new postal code starts from the town again unless the same request says otherwise, and showArea stays false where no area is kept. The home changes whenever the person likes. The answer names places and never carries digits.",
   ...bearer,
   request: { body: { required: true, ...json(HomeUpdate) } },
   responses: {
@@ -26,21 +26,21 @@ const homeRoute = createRoute({
   },
 });
 
-// The one public route that carries figures (#54, ADR-013): aggregates per
-// pond, nothing below k, moving in steps of at least k people, no id but the
-// pond's. The public site may read it from its allowlisted origin (rules/api.md).
-// The app reads it with the person's session, which adds the one thing a
-// session adds here, the bar of their own pond, and which is checked as on every
+// The one public route that carries figures (#54, ADR-013): one aggregate,
+// the country's, nothing below k, moving in steps of at least k people, and no
+// id at all. The public site may read it from its allowlisted origin
+// (rules/api.md). The app reads it with the person's session, which adds the
+// one thing a session adds here, the bar, and which is checked as on every
 // other route (ADR-013 §18).
 const counterRoute = createRoute({
   method: "get",
   path: "/ponds/counter",
   summary: "The pond counter",
   description:
-    "Per pond: how many bank-verified people with the pond as theirs have completed their profiles. The number is published only where at least k people stand behind it (k is in the answer), and it moves only once at least k people have come or gone since it was last said. Counted once a day. No session needed. With one, the answer is the caller's and is not cached, and the caller's own pond also says whom its people seek: percentages in steps of five of three bands of finished profiles, those who seek men, those who seek both women and men, and those who seek women, null until every band holds at least k people.",
+    "How many bank-verified people who have told their home have completed their profiles. The number is published only where at least k people stand behind it (k is in the answer), and it moves only once at least k people have come or gone since it was last said. Counted once a day. No session needed. With one, the answer is the caller's and is not cached, and to a caller who has told their home it also says whom people seek: percentages in steps of five of three bands of finished profiles, those who seek men, those who seek both women and men, and those who seek women, null until every band holds at least k people.",
   security: [{}, { session: [] }],
   responses: {
-    200: { description: "Every pond with what may be said of it.", ...json(PondCounterResponse) },
+    200: { description: "What may be said of the people on Kuutti.", ...json(PondCounterResponse) },
     401: errorContent(
       "A session was offered and does not stand: unauthenticated, session_expired or session_revoked. No session at all is the public answer.",
     ),
@@ -54,7 +54,7 @@ const gateRoute = createRoute({
   path: "/gate",
   summary: "Whether matching is open for the caller",
   description:
-    "Between a finished profile and the first read of the queue: incomplete while the profile or onboarding lacks something, closed once it is finished and matching has not opened in the caller's pond yet, open once it has. An admin opens a pond; nothing here counts anybody.",
+    "Between a finished profile and the first read of the queue: incomplete while the profile or onboarding lacks something, closed once it is finished and matching has not opened yet, open once it has. An admin opens matching; nothing here counts anybody.",
   ...bearer,
   responses: {
     200: { description: "What stands for the caller.", ...json(GateResponse) },

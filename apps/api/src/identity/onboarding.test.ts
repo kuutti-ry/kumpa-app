@@ -254,7 +254,7 @@ describe("onboarding and consents", () => {
     expect(done.consents.research).toBeNull();
   });
 
-  test("Erasure removes the preferences and the consents and blanks gender and pond", async ({
+  test("Erasure removes the preferences and the consents and blanks the gender", async ({
     ctx,
   }) => {
     const { app } = await appWith(ctx);
@@ -276,24 +276,18 @@ describe("onboarding and consents", () => {
     const { rows } = await ctx.client.query<{
       state: string;
       gender: string | null;
-      pond_id: string | null;
       home_place: string | null;
-    }>("SELECT state, gender, pond_id, home_place FROM account WHERE id = $1", [a.accountId]);
-    expect(rows[0]).toEqual({ state: "deleted", gender: null, pond_id: null, home_place: null });
+    }>("SELECT state, gender, home_place FROM account WHERE id = $1", [a.accountId]);
+    expect(rows[0]).toEqual({ state: "deleted", gender: null, home_place: null });
   });
 
-  test("The export lists gender, pond, preferences and every consent", async ({ ctx }) => {
+  test("The export lists gender, preferences and every consent", async ({ ctx }) => {
     const { app } = await appWith(ctx);
     const a = await signedInAccount(ctx.client, undefined, { state: "registered" });
     await onboard(app, a.headers, { research: true });
     await app.request("/consents/research", { method: "DELETE", headers: a.headers });
     const exported = await exportOf(app, a.headers);
     expect(exported.account.gender).toBe("woman");
-    expect(exported.account.pond).toEqual({
-      id: expect.any(String),
-      slug: "suomi",
-      name: "Suomi",
-    });
     expect(exported.preferences).toEqual({
       seeks: ["man", "non_binary"],
       ageWindow: { min: 25, max: 35 },
