@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { GUILD_OPTIONS, UNIVERSITIES } from "./guilds.ts";
 
 /**
  * The profile fields (#47, #145, TD-16, ADR-009, ADR-019): one registry, read
@@ -389,7 +390,7 @@ export const PROFILE_FIELDS = {
     role: "info",
     preferenceAbout: "none",
   }),
-  /** Fields of study or work, as many as apply (#178, #239); a list per university is a configuration of its own, later (ADR-019 §5). */
+  /** Fields of study or work, as many as apply (#178, #239). */
   field: multi(
     [
       "tech",
@@ -436,6 +437,10 @@ export const PROFILE_FIELDS = {
   ),
   /** A short title in the person's words and no employer's name: under the plain-text rule like every free text. */
   occupationTitle: text(40, { role: "info", preferenceAbout: "none" }),
+  /** The schools one studies or studied at, of the capital area's ten (#677): shown, never a filter, an order or a deal-breaker. */
+  university: multi(UNIVERSITIES, { role: "info", preferenceAbout: "none" }),
+  /** The guilds of those schools, as many as apply, or "another guild" (#677, guilds.ts); the update refuses one whose school is not named. Shown like the school, and nothing reads it. */
+  guild: multi(GUILD_OPTIONS, { role: "info", preferenceAbout: "none" }),
   /** Article 9: the parties the person could vote for, or none of them; shown only when filled, never a filter. */
   politics: multi(
     POLITICS_OPTIONS,
@@ -515,7 +520,9 @@ export type HiddenField = z.infer<typeof HiddenField>;
  * The optional fields as the screens after onboarding ask them, one per
  * screen with "Ask me later", in the field sheet's order (#148, TD-16).
  * Intent and the identity label are onboarding's; a companion field shares
- * its screen with the one it belongs to.
+ * its screen with the one it belongs to. The school and the guild ride with
+ * the education (#677): most people have neither on the list, so they are
+ * never a question of their own or a gap in a profile.
  */
 export const LATER_FIELD_ORDER: readonly ProfileFieldKey[] = [
   "hasKids",
@@ -535,10 +542,13 @@ export const LATER_FIELD_ORDER: readonly ProfileFieldKey[] = [
   "religion",
   "zodiac",
 ];
-export const LATER_COMPANIONS: Readonly<Partial<Record<ProfileFieldKey, ProfileFieldKey>>> = {
-  smoking: "nicotine",
-  field: "hideFromField",
-  occupation: "occupationTitle",
+export const LATER_COMPANIONS: Readonly<
+  Partial<Record<ProfileFieldKey, readonly ProfileFieldKey[]>>
+> = {
+  smoking: ["nicotine"],
+  education: ["university", "guild"],
+  field: ["hideFromField"],
+  occupation: ["occupationTitle"],
 };
 
 /** The fields a deal-breaker may be set on (#149), always one the person answered themselves. */
@@ -568,6 +578,8 @@ export const ProfileFields = z
     hideFromField: PROFILE_FIELDS.hideFromField.schema.optional(),
     occupation: PROFILE_FIELDS.occupation.schema.optional(),
     occupationTitle: PROFILE_FIELDS.occupationTitle.schema.optional(),
+    university: PROFILE_FIELDS.university.schema.optional(),
+    guild: PROFILE_FIELDS.guild.schema.optional(),
     politics: PROFILE_FIELDS.politics.schema.optional(),
     religion: PROFILE_FIELDS.religion.schema.optional(),
     zodiac: PROFILE_FIELDS.zodiac.schema.optional(),

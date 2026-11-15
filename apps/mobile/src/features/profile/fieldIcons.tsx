@@ -29,8 +29,10 @@ import Ruler from "lucide-react-native/icons/ruler";
 import Shapes from "lucide-react-native/icons/shapes";
 import Sprout from "lucide-react-native/icons/sprout";
 import Trees from "lucide-react-native/icons/trees";
+import University from "lucide-react-native/icons/university";
 import User from "lucide-react-native/icons/user";
 import Users from "lucide-react-native/icons/users";
+import UsersRound from "lucide-react-native/icons/users-round";
 import Utensils from "lucide-react-native/icons/utensils";
 import Volleyball from "lucide-react-native/icons/volleyball";
 import Vote from "lucide-react-native/icons/vote";
@@ -89,6 +91,8 @@ export const FIELD_ICONS: Readonly<Record<DealBreakerField, LucideIcon>> = {
   hideFromField: EyeOff,
   occupation: Briefcase,
   occupationTitle: IdCard,
+  university: University,
+  guild: UsersRound,
   politics: Vote,
   religion: PalmsUp,
   zodiac: MoonStar,

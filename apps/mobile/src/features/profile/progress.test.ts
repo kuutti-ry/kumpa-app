@@ -1,5 +1,12 @@
 import { PHOTOS_FOR_COMPLETENESS, PROMPTS_MAX, type ProfileUpdate } from "@kuutti/schema";
-import { answeredPrompts, isDone, type Progress, photoProgress, sectionProgress } from "./progress";
+import {
+  answeredPrompts,
+  countsAsAnswer,
+  isDone,
+  type Progress,
+  photoProgress,
+  sectionProgress,
+} from "./progress";
 import { findSection, PROFILE_SECTIONS, type SectionId } from "./sections";
 import { EMPTY_PROFILE } from "./useProfile";
 
@@ -63,6 +70,25 @@ describe("sectionProgress", () => {
     ).toEqual({ answered: 3, total: 3 });
   });
 
+  it("leaves the school and the guild out: no gap for anybody who studied elsewhere, or nowhere (#677)", () => {
+    expect(
+      of("work", profile({ fields: { university: ["aalto"], guild: ["aalto_fyysikkokilta"] } })),
+    ).toEqual({ answered: 0, total: 3 });
+    expect(
+      of(
+        "work",
+        profile({
+          fields: {
+            education: "maisteri",
+            field: ["tech"],
+            occupation: ["student"],
+            university: ["aalto"],
+          },
+        }),
+      ),
+    ).toEqual({ answered: 3, total: 3 });
+  });
+
   it("counts each prompt with an answer, never a blank one or more than three", () => {
     expect(
       of(
@@ -87,6 +113,21 @@ describe("sectionProgress", () => {
     expect(
       of("beliefs", profile({ fields: { politics: ["none_of_them"], religion: "atheist" } })),
     ).toEqual({ answered: 2, total: 3 });
+  });
+});
+
+describe("countsAsAnswer", () => {
+  it.each([
+    ["education", true],
+    ["nicotine", true],
+    ["hobbies", true],
+    ["height", true],
+    ["hideFromField", false],
+    ["occupationTitle", false],
+    ["university", false],
+    ["guild", false],
+  ] as const)("says whether %s is a gap when unanswered: %s", (field, counts) => {
+    expect(countsAsAnswer(field)).toBe(counts);
   });
 });
 

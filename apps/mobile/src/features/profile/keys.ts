@@ -5,6 +5,8 @@ import {
   type CompletenessItem,
   type DealBreakerField,
   type Gender,
+  type GuildOption,
+  guildName,
   type HomeSummary,
   PHOTOS_FOR_COMPLETENESS,
   type PlaceName,
@@ -32,6 +34,13 @@ export const fieldLabelKey = (field: DealBreakerField): PlainMessageKey =>
 
 export const optionKey = (field: DealBreakerField, option: string): PlainMessageKey =>
   `profile.option.${field}.${option}` as PlainMessageKey;
+
+/**
+ * A guild in words (#677): a listed one by its own name, which is the same in
+ * every language, and "Another guild" in the reader's.
+ */
+export const guildWords = (t: ReturnType<typeof useT>["t"], option: GuildOption): string =>
+  guildName(option) ?? t("profile.guild.other");
 
 /**
  * An answer as a deal-breaker names it, which is about somebody else (#551):

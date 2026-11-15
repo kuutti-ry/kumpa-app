@@ -1,5 +1,6 @@
 import { CONSENT_VERSIONS, createI18n } from "@kuutti/i18n";
 import {
+  GUILD_GROUP_KEYS,
   HOBBY_GROUP_KEYS,
   PARTY_OPTIONS,
   PROFILE_FIELD_KEYS,
@@ -10,25 +11,32 @@ import { describe, expect, it } from "vitest";
 // The registry of packages/schema names fields, options and hobby groups by
 // key; their texts are messages.yaml entries with the same key (ADR-019 §3).
 // Here, where both packages are dependencies: a field or an option without a
-// text in every catalogue would reach a card as its key.
+// text in every catalogue would reach a card as its key. A guild is the one
+// option with no text: it is named by its own name, the same in every
+// language (#677, guilds.ts), and the catalogues hold only "another guild"
+// and Helsinki's faculties.
 
 describe("the texts of the profile registry", () => {
   const i18n = createI18n({ locale: "en" });
   const has = (locale: string, key: string) =>
     i18n.getResource(locale, "translation", key) !== undefined;
 
-  it("exist in English, Finnish and Swedish for every field, option and hobby group", () => {
+  it("exist in English, Finnish and Swedish for every field, option, hobby group and faculty", () => {
     const keys = [
       ...PROFILE_FIELD_KEYS.map((field) => `profile.field.${field}`),
       ...PROFILE_FIELD_KEYS.flatMap((field) => {
         const spec = PROFILE_FIELDS[field];
-        return spec.kind === "single" || spec.kind === "multi"
+        return field !== "guild" && (spec.kind === "single" || spec.kind === "multi")
           ? spec.options.map((option) => `profile.option.${field}.${option}`)
           : [];
       }),
       ...HOBBY_GROUP_KEYS.map((group) => `profile.hobbyGroup.${group}`),
+      ...GUILD_GROUP_KEYS.map((group) => `profile.guildGroup.${group}`),
+      "profile.guild.other",
     ];
     expect(keys.length).toBeGreaterThan(200);
+    expect(keys).toContain("profile.option.university.haaga_helia");
+    expect(keys).toContain("profile.guildGroup.social_sciences");
     const missing = ["en", "fi", "sv"].flatMap((locale) =>
       keys.filter((key) => !has(locale, key)).map((key) => `${locale}: ${key}`),
     );

@@ -1,12 +1,19 @@
 import { formatHeight, type PlainMessageKey } from "@kuutti/i18n";
 import {
   CARD_FIELD_KEYS,
+  GUILD_GROUP_KEYS,
+  type GuildOption,
+  guildsOf,
   HOBBY_GROUP_KEYS,
   HOBBY_GROUPS,
+  otherGuildOf,
   PROFILE_FIELDS,
   type ProfileFieldKey,
   type ProfileFields,
   type ProfileUpdate,
+  UNIVERSITIES,
+  type University,
+  universityOfGuild,
 } from "@kuutti/schema";
 import Eye from "lucide-react-native/icons/eye";
 import EyeOff from "lucide-react-native/icons/eye-off";
@@ -24,7 +31,7 @@ import { useT } from "@/lib/locale";
 import { useHapticTap } from "@/theme/haptics";
 import { FieldLabel, HobbyGroupLabel } from "./fieldIcons";
 import { OptionGlyph, optionGlyph } from "./glyphs";
-import { fieldLabelKey, optionKey } from "./keys";
+import { fieldLabelKey, guildWords, optionKey } from "./keys";
 import { withField } from "./useProfile";
 
 /**
@@ -85,6 +92,17 @@ export function toggled(
   return [...current.filter((o) => !spec.alone.includes(o)), option];
 }
 
+/**
+ * The fields after a change of the schools (#677): a guild goes with its
+ * school, since an update names no guild of a school it does not name.
+ */
+export function withoutStrayGuilds(fields: ProfileFields): ProfileFields {
+  const kept = (fields.guild ?? []).filter((guild) =>
+    fields.university?.includes(universityOfGuild(guild)),
+  );
+  return withField(fields, "guild", kept.length > 0 ? kept : undefined);
+}
+
 type Draft = Pick<ProfileUpdate, "fields" | "hiddenFields">;
 type Update = (patch: Partial<Draft>) => void;
 
@@ -141,10 +159,13 @@ export function Chip({
   glyph?: React.ReactNode;
 }) {
   const variant = selected ? "default" : "outline";
+  // Never wider than its row: a long name, a guild's (#677), wraps inside its chip. The phone's layout
+  // holds a chip to the row by itself; a browser's lets it run past the edge.
   if (glyph === undefined || glyph === null || glyph === false) {
     return (
       <Button
         variant={variant}
+        className="max-w-full"
         disabled={disabled}
         accessibilityState={{ selected }}
         onPress={onPress}
@@ -156,13 +177,14 @@ export function Chip({
   return (
     <Button
       variant={variant}
+      className="max-w-full"
       accessibilityState={{ selected }}
       onPress={onPress}
       accessibilityLabel={label}
     >
-      <View className="flex-row items-center gap-2">
+      <View className="shrink flex-row items-center gap-2">
         {glyph}
-        <Text>{label}</Text>
+        <Text className="shrink">{label}</Text>
       </View>
     </Button>
   );
@@ -254,8 +276,11 @@ function FieldHeading({
  * stepper; a short text; a setting as a switch; with its title, what the card
  * does with the answer (FieldHeading).
  * Nothing here is particular to a field beyond the widget its kind asks for
- * and the one adaptive text of the sheet. The profile screen and the later
- * screens share it; the draft and its update are the caller's.
+ * and the one adaptive text of the sheet, but for the guilds (#677): they are
+ * asked only of the schools named, under each school's name and by faculty
+ * where its register has them, by their own names, and a school taken back
+ * takes its guilds along. The profile screen and the later screens share it;
+ * the draft and its update are the caller's.
  */
 export function FieldEditor({
   field,
@@ -280,7 +305,24 @@ export function FieldEditor({
   // the finger and the screen reader's focus, with no way to undo (#239).
   const [seen, setSeen] = useState<readonly string[]>([]);
   const label = t(fieldLabelKey(field));
-  const setField = (next: unknown) => update({ fields: withField(draft.fields, field, next) });
+  const setField = (next: unknown) => {
+    const fields = withField(draft.fields, field, next);
+    update({ fields: field === "university" ? withoutStrayGuilds(fields) : fields });
+  };
+  const wordsOf = (option: string) =>
+    field === "guild"
+      ? guildWords(t, option as GuildOption)
+      : t(optionTextKey(field, option, draft.fields));
+  // The schools whose guilds are asked: those named, in the list's order.
+  const schools: readonly University[] =
+    field === "guild" ? UNIVERSITIES.filter((u) => draft.fields.university?.includes(u)) : [];
+  // With no school named there is no guild to ask about.
+  if (field === "guild" && schools.length === 0) return null;
+  /** How many options the picker holds: for the guilds, those of the schools named. */
+  const offered = (options: readonly string[]) =>
+    field === "guild"
+      ? schools.reduce((count, school) => count + guildsOf(school).length + 1, 0)
+      : options.length;
 
   if (spec.kind === "flag") {
     return (
@@ -303,7 +345,7 @@ export function FieldEditor({
   const choice = (option: string) => {
     const selected =
       spec.kind === "multi" ? Array.isArray(value) && value.includes(option) : value === option;
-    const words = t(optionTextKey(field, option, draft.fields));
+    const words = wordsOf(option);
     const press = () => {
       tap();
       if (spec.kind === "multi") {
@@ -346,10 +388,7 @@ export function FieldEditor({
     );
   };
   const matches = (option: string) =>
-    search.trim() === "" ||
-    t(optionTextKey(field, option, draft.fields))
-      .toLowerCase()
-      .includes(search.trim().toLowerCase());
+    search.trim() === "" || wordsOf(option).toLowerCase().includes(search.trim().toLowerCase());
 
   return (
     <View className="gap-2">
@@ -410,7 +449,7 @@ export function FieldEditor({
       )}
       {!rows && (spec.kind === "single" || spec.kind === "multi") && (
         <>
-          {spec.options.length >= SEARCHABLE_FROM && (
+          {offered(spec.options) >= SEARCHABLE_FROM && (
             <OptionSearch value={search} onChange={setSearch} />
           )}
           {field === "hobbies" ? (
@@ -429,6 +468,39 @@ export function FieldEditor({
                 <View className="flex-row flex-wrap gap-2">{choice("other")}</View>
               )}
             </View>
+          ) : field === "guild" ? (
+            <View className="gap-6">
+              {schools.map((school) => {
+                const found = guildsOf(school).filter((guild) => matches(guild.id));
+                // "Another guild" stays whatever is searched for: a search that
+                // finds nothing is how one learns the list lacks a guild.
+                const other = otherGuildOf(school);
+                const byFaculty = guildsOf(school).some((guild) => guild.groups !== undefined);
+                return (
+                  <View key={school} className="gap-3">
+                    <Text variant="small">{t(optionKey("university", school))}</Text>
+                    {byFaculty &&
+                      GUILD_GROUP_KEYS.map((group) => {
+                        const guilds = found.filter((guild) => guild.groups?.includes(group));
+                        if (guilds.length === 0) return null;
+                        return (
+                          <View key={group} className="gap-1">
+                            <Text variant="muted">
+                              {t(`profile.guildGroup.${group}` as PlainMessageKey)}
+                            </Text>
+                            <View className="flex-row flex-wrap gap-2">
+                              {guilds.map((guild) => choice(guild.id))}
+                            </View>
+                          </View>
+                        );
+                      })}
+                    <View className="flex-row flex-wrap gap-2">
+                      {[...(byFaculty ? [] : found.map((guild) => guild.id)), other].map(choice)}
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
           ) : (
             <View className="flex-row flex-wrap gap-2">
               {visibleOptions(
@@ -436,7 +508,7 @@ export function FieldEditor({
                 spec.kind === "multi" ? spec.shownFirst : undefined,
                 [...chosen, ...seen],
                 search,
-                (option) => t(optionTextKey(field, option, draft.fields)),
+                wordsOf,
               ).map(choice)}
             </View>
           )}

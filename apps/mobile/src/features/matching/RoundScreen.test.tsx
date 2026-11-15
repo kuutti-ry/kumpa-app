@@ -61,7 +61,7 @@ function card(n: number, name: string): ProfileCard {
     bio: null,
     bioPreset: null,
     prompts: [],
-    shared: { hobbies: [], languages: [] },
+    shared: { hobbies: [], languages: [], university: [], guild: [] },
   };
 }
 const entry = (

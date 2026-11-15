@@ -6,6 +6,8 @@ import {
   dealBreakerOptions,
   GENDERS,
   type HomeSummary,
+  otherGuildOf,
+  UNIVERSITIES,
 } from "@kuutti/schema";
 import { renderHook } from "@testing-library/react-native";
 import { LocaleProvider, useT } from "@/lib/locale";
@@ -14,6 +16,7 @@ import {
   fieldLabelKey,
   filterOptionKey,
   genderKey,
+  guildWords,
   optionKey,
   placeName,
   presetKey,
@@ -126,6 +129,29 @@ describe("the profile's message keys", () => {
     const t = typedT(createI18n({ locale }));
     expect(GENDERS).toEqual(["woman", "man", "non_binary"]);
     expect(GENDERS.map((gender) => t(seeksKey(gender)))).toEqual(words);
+  });
+});
+
+describe("guildWords (#677)", () => {
+  it.each(["en", "fi", "sv"] as const)(
+    "names a listed guild by its own name in %s: a name is not translated",
+    (locale) => {
+      const t = typedT(createI18n({ locale }));
+      expect(guildWords(t, "aalto_fyysikkokilta")).toBe("Fyysikkokilta (FK)");
+      expect(guildWords(t, "hanken_shs")).toBe("Svenska Handelshögskolans Studentkår");
+      expect(guildWords(t, "helsinki_tko_aly")).toBe("TKO-äly ry");
+    },
+  );
+
+  it.each([
+    ["en", "Another guild"],
+    ["fi", "Muu kilta"],
+    ["sv", "Annat gille"],
+  ] as const)("says another guild in %s, the same of every school", (locale, words) => {
+    const t = typedT(createI18n({ locale }));
+    for (const university of UNIVERSITIES) {
+      expect(guildWords(t, otherGuildOf(university))).toBe(words);
+    }
   });
 });
 

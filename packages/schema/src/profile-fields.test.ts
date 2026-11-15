@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { GUILD_OPTIONS, UNIVERSITIES } from "./guilds.ts";
 import {
   CARD_FIELD_KEYS,
   cardFields,
@@ -169,7 +170,7 @@ describe("the profile field registry (ADR-019)", () => {
     }
     // Shown on the card, never a filter, and asked on smoking's later screen.
     expect(PROFILE_FIELDS.nicotine).toMatchObject({ role: "info", preferenceAbout: "none" });
-    expect(LATER_COMPANIONS.smoking).toBe("nicotine");
+    expect(LATER_COMPANIONS.smoking).toEqual(["nicotine"]);
     expect(LATER_FIELD_ORDER).not.toContain("nicotine");
   });
 
@@ -198,6 +199,65 @@ describe("the profile field registry (ADR-019)", () => {
       if (spec.kind === "multi" && key !== "languages")
         expect(spec.shownFirst, key).toBeUndefined();
     }
+  });
+
+  it("gives a later screen's companions to one question of the walk each, and never a question of their own", () => {
+    const companions = Object.values(LATER_COMPANIONS).flat();
+    expect(new Set(companions).size).toBe(companions.length);
+    for (const companion of companions) {
+      expect(PROFILE_FIELD_KEYS, companion).toContain(companion);
+      expect(LATER_FIELD_ORDER, companion).not.toContain(companion);
+    }
+    for (const key of Object.keys(LATER_COMPANIONS)) expect(LATER_FIELD_ORDER).toContain(key);
+    expect(LATER_FIELD_ORDER).toHaveLength(16);
+  });
+
+  it("asks the school and the guild beside the education, shown and read by nothing (#677)", () => {
+    expect(LATER_COMPANIONS.education).toEqual(["university", "guild"]);
+    for (const key of ["university", "guild"] as const) {
+      expect(PROFILE_FIELDS[key], key).toMatchObject({
+        kind: "multi",
+        role: "info",
+        preferenceAbout: "none",
+        specialCategory: false,
+        research: false,
+        alone: [],
+      });
+      expect(CARD_FIELD_KEYS, key).toContain(key);
+      expect(HiddenField.safeParse(key).success, key).toBe(true);
+      expect(DEAL_BREAKER_FIELDS, key).not.toContain(key);
+    }
+    expect(PROFILE_FIELDS.university.options).toBe(UNIVERSITIES);
+    expect(PROFILE_FIELDS.guild.options).toBe(GUILD_OPTIONS);
+  });
+
+  it("takes the schools and the guilds of the lists, several of each, and refuses any other (#677)", () => {
+    expect(
+      ProfileFields.safeParse({
+        university: ["aalto", "helsinki"],
+        guild: ["aalto_fyysikkokilta", "aalto_other", "helsinki_tko_aly"],
+      }).success,
+    ).toBe(true);
+    expect(ProfileFields.safeParse({ university: [...UNIVERSITIES] }).success).toBe(true);
+    for (const bad of [
+      { university: [] },
+      { university: "aalto" },
+      { university: ["tampere"] },
+      { university: ["aalto", "aalto"] },
+      { guild: [] },
+      { guild: ["Fyysikkokilta"] },
+      { guild: ["aalto_aallonhuiput"] },
+      { guild: ["metropolia_queerpolia"] },
+      { guild: ["tampere_other"] },
+      { guild: ["aalto_other", "aalto_other"] },
+    ]) {
+      expect(ProfileFields.safeParse(bad).success, JSON.stringify(bad)).toBe(false);
+    }
+    // The registry's own parse knows no school: a card whose school is hidden carries the guild alone.
+    expect(ProfileFields.safeParse({ guild: ["aalto_fyysikkokilta"] }).success).toBe(true);
+    expect(
+      cardFields({ university: ["aalto"], guild: ["aalto_other"], education: "kandi" }),
+    ).toEqual({ university: ["aalto"], guild: ["aalto_other"] });
   });
 
   it("groups every hobby once, in one of the twelve groups, and keeps 'other' apart", () => {

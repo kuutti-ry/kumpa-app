@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { z } from "zod";
+import { GUILD_OPTIONS, UNIVERSITIES } from "./guilds.ts";
 import {
   BIO_MAX,
   BIO_PRESETS,
@@ -145,6 +146,51 @@ describe("the profile update", () => {
   });
 });
 
+describe("a guild and its school in an update (#677)", () => {
+  const withFields = (fields: Record<string, unknown>) => ({ ...profile, fields });
+
+  it.each([
+    ["a school and no guild", { university: ["aalto"] }],
+    ["a guild of the school named", { university: ["aalto"], guild: ["aalto_fyysikkokilta"] }],
+    ["another guild of the school named", { university: ["diak"], guild: ["diak_other"] }],
+    [
+      "guilds of two schools, both named",
+      {
+        university: ["helsinki", "aalto"],
+        guild: ["aalto_prodeko", "helsinki_tko_aly", "aalto_other", "helsinki_mythos"],
+      },
+    ],
+    ["neither", {}],
+  ])("takes %s", (_, fields) => {
+    expect(ProfileUpdate.parse(withFields(fields)).fields).toEqual(fields);
+  });
+
+  it.each([
+    ["a guild and no school", { guild: ["aalto_fyysikkokilta"] }],
+    ["another guild and no school", { guild: ["aalto_other"] }],
+    ["a guild of a school not named", { university: ["helsinki"], guild: ["aalto_fyysikkokilta"] }],
+    [
+      "one guild of a school not named among those of schools named",
+      {
+        university: ["helsinki", "hanken"],
+        guild: ["helsinki_tko_aly", "hanken_shs", "aalto_other"],
+      },
+    ],
+  ])("refuses %s, said at the guild and without repeating it", (_, fields) => {
+    const refused = issues(ProfileUpdate, withFields(fields));
+    expect(refused).toEqual([
+      { code: "custom", path: "fields.guild", message: "a guild of a school that was not named" },
+    ]);
+    expect(JSON.stringify(refused)).not.toContain("aalto");
+  });
+
+  it("holds only what a person sends to it: a stored document carries a guild alone", () => {
+    const fields = { guild: ["aalto_fyysikkokilta"] };
+    const document = { ...profile, fields, specialCategoryConsent: null, updatedAt: at };
+    expect(ProfileDocument.parse(document).fields).toEqual(fields);
+  });
+});
+
 describe("the profile as its owner reads it back", () => {
   const document = {
     displayName: "Aino",
@@ -222,7 +268,7 @@ describe("the card another person sees", () => {
     bio: null,
     bioPreset: "photos_speak",
     prompts: [],
-    shared: { hobbies: ["sauna"], languages: [] },
+    shared: { hobbies: ["sauna"], languages: [], university: [], guild: [] },
   };
 
   it("names the person's place in both languages, or says nothing, and no longer a pond (ADR-061 §3)", () => {
@@ -295,8 +341,8 @@ describe("the card another person sees", () => {
       "too many shared hobbies",
       {
         shared: {
+          ...card.shared,
           hobbies: Array(PROFILE_FIELDS.hobbies.options.length + 1).fill("x"),
-          languages: [],
         },
       },
       "too_big",
@@ -305,11 +351,26 @@ describe("the card another person sees", () => {
       "too many shared languages",
       {
         shared: {
-          hobbies: [],
+          ...card.shared,
           languages: Array(PROFILE_FIELDS.languages.options.length + 1).fill("fi"),
         },
       },
       "too_big",
+    ],
+    [
+      "more shared schools than there are schools",
+      { shared: { ...card.shared, university: Array(UNIVERSITIES.length + 1).fill("aalto") } },
+      "too_big",
+    ],
+    [
+      "more shared guilds than there are guilds",
+      { shared: { ...card.shared, guild: Array(GUILD_OPTIONS.length + 1).fill("aalto_ky") } },
+      "too_big",
+    ],
+    [
+      "a card that says nothing of shared schools and guilds",
+      { shared: { hobbies: [], languages: [] } },
+      "invalid_type",
     ],
     ["a gender outside the list", { gender: "female" }, "invalid_value"],
   ])("refuses %s", (_, change, code) => {
@@ -318,9 +379,20 @@ describe("the card another person sees", () => {
 
   it("marks every hobby and language as shared, more than the old five (#239)", () => {
     const all = {
+      ...card.shared,
       hobbies: [...PROFILE_FIELDS.hobbies.options],
       languages: [...PROFILE_FIELDS.languages.options],
     };
+    expect(ProfileCard.parse({ ...card, shared: all }).shared).toEqual(all);
+  });
+
+  it("carries a guild without its school, as the card of somebody who hides the school does (#677)", () => {
+    const fields = { guild: ["aalto_fyysikkokilta", "aalto_other"] };
+    expect(ProfileCard.parse({ ...card, fields }).fields).toEqual(fields);
+  });
+
+  it("marks every school and every guild as shared (#677)", () => {
+    const all = { ...card.shared, university: [...UNIVERSITIES], guild: [...GUILD_OPTIONS] };
     expect(ProfileCard.parse({ ...card, shared: all }).shared).toEqual(all);
   });
 

@@ -187,10 +187,10 @@ profile.section.work.title:
   machine: { fi: true, sv: true }
 
 profile.section.work.summary:
-  en: "Education, field, work and job title"
-  description: "What a screen reader hears as the hint of the work section's row on the profile list (#227, #581): what the section holds. Never drawn: the title says enough to the eye."
-  fi: "Koulutus, ala, työ ja tehtävänimike"
-  sv: "Utbildning, bransch, arbete och yrkestitel"
+  en: "Education, field, work, job title, university and guild"
+  description: "What a screen reader hears as the hint of the work section's row on the profile list (#227, #581, #677): what the section holds. Never drawn: the title says enough to the eye."
+  fi: "Koulutus, ala, työ, tehtävänimike, korkeakoulu ja kilta"
+  sv: "Utbildning, bransch, arbete, yrkestitel, högskola och gille"
   machine: { fi: true, sv: true }
 
 profile.section.lifestyle.title:
@@ -464,6 +464,20 @@ profile.field.occupationTitle:
   description: "Label of the occupationTitle field of the profile registry (#145, ADR-019), read on the card and the deal-breakers too; the editor's instruction is profile.text.hint (#223)."
   fi: "Tehtävänimike"
   sv: "Yrkestitel"
+  machine: { fi: true, sv: true }
+
+profile.field.university:
+  en: "University"
+  description: "Label of the university field of the profile registry (#677, ADR-019 §5): the universities and universities of applied sciences of the capital area a person studies or studied at, as many as apply. Read on the card too. Finnish and Swedish use the word that covers both kinds of school."
+  fi: "Korkeakoulu"
+  sv: "Högskola"
+  machine: { fi: true, sv: true }
+
+profile.field.guild:
+  en: "Guild or student association"
+  description: "Label of the guild field of the profile registry (#677, ADR-019 §5): the subject associations of the schools a person named, from each student union's own list, as many as apply. Read on the card too."
+  fi: "Kilta tai ainejärjestö"
+  sv: "Gille eller ämnesförening"
   machine: { fi: true, sv: true }
 
 profile.field.politics:
@@ -1999,6 +2013,76 @@ profile.option.occupation.other:
   sv: "Något annat"
   machine: { fi: true, sv: true }
 
+profile.option.university.helsinki:
+  en: "University of Helsinki"
+  description: "Option helsinki of the university field (#677 registry, ADR-019 §5): the school's own name in each language, also the heading of its guilds in the picker."
+  fi: "Helsingin yliopisto"
+  sv: "Helsingfors universitet"
+  machine: { fi: true, sv: true }
+
+profile.option.university.aalto:
+  en: "Aalto University"
+  description: "Option aalto of the university field (#677 registry, ADR-019 §5): the school's own name in each language, also the heading of its guilds in the picker."
+  fi: "Aalto-yliopisto"
+  sv: "Aalto-universitetet"
+  machine: { fi: true, sv: true }
+
+profile.option.university.hanken:
+  en: "Hanken School of Economics"
+  description: "Option hanken of the university field (#677 registry, ADR-019 §5): the school's own name in each language, also the heading of its guilds in the picker."
+  fi: "Hanken Svenska handelshögskolan"
+  sv: "Hanken Svenska handelshögskolan"
+  machine: { fi: true, sv: true }
+
+profile.option.university.uniarts:
+  en: "University of the Arts Helsinki"
+  description: "Option uniarts of the university field (#677 registry, ADR-019 §5): the school's own name in each language, also the heading of its guilds in the picker."
+  fi: "Taideyliopisto"
+  sv: "Konstuniversitetet"
+  machine: { fi: true, sv: true }
+
+profile.option.university.metropolia:
+  en: "Metropolia University of Applied Sciences"
+  description: "Option metropolia of the university field (#677 registry, ADR-019 §5): the school's own name in each language, also the heading of its guilds in the picker."
+  fi: "Metropolia Ammattikorkeakoulu"
+  sv: "Yrkeshögskolan Metropolia"
+  machine: { fi: true, sv: true }
+
+profile.option.university.haaga_helia:
+  en: "Haaga-Helia University of Applied Sciences"
+  description: "Option haaga_helia of the university field (#677 registry, ADR-019 §5): the school's own name in each language, also the heading of its guilds in the picker."
+  fi: "Haaga-Helia ammattikorkeakoulu"
+  sv: "Yrkeshögskolan Haaga-Helia"
+  machine: { fi: true, sv: true }
+
+profile.option.university.laurea:
+  en: "Laurea University of Applied Sciences"
+  description: "Option laurea of the university field (#677 registry, ADR-019 §5): the school's own name in each language, also the heading of its guilds in the picker."
+  fi: "Laurea-ammattikorkeakoulu"
+  sv: "Yrkeshögskolan Laurea"
+  machine: { fi: true, sv: true }
+
+profile.option.university.arcada:
+  en: "Arcada University of Applied Sciences"
+  description: "Option arcada of the university field (#677 registry, ADR-019 §5): the school's own name in each language, also the heading of its guilds in the picker."
+  fi: "Yrkeshögskolan Arcada"
+  sv: "Yrkeshögskolan Arcada"
+  machine: { fi: true, sv: true }
+
+profile.option.university.diak:
+  en: "Diaconia University of Applied Sciences"
+  description: "Option diak of the university field (#677 registry, ADR-019 §5): the school's own name in each language, also the heading of its guilds in the picker."
+  fi: "Diakonia-ammattikorkeakoulu"
+  sv: "Diakoniyrkeshögskolan"
+  machine: { fi: true, sv: true }
+
+profile.option.university.humak:
+  en: "Humak University of Applied Sciences"
+  description: "Option humak of the university field (#677 registry, ADR-019 §5): the school's own name in each language, also the heading of its guilds in the picker."
+  fi: "Humanistinen ammattikorkeakoulu"
+  sv: "Humanistiska yrkeshögskolan"
+  machine: { fi: true, sv: true }
+
 profile.option.politics.kok:
   en: "National Coalition Party"
   description: "Option kok of the politics field (#145 registry, ADR-019)."
@@ -2620,6 +2704,97 @@ profile.hobbyGroup.wellbeing:
   description: "Heading of the wellbeing group of the hobby chip grid (#145, #148)."
   fi: "Hyvinvointi"
   sv: "Välmående"
+  machine: { fi: true, sv: true }
+
+profile.guild.other:
+  en: "Another guild"
+  description: "The last option under each school in the guild picker, and its chip on a card (#677): the person's guild or student association is not on that school's list. A listed guild is shown by its own name, which is never translated."
+  fi: "Muu kilta"
+  sv: "Annat gille"
+  machine: { fi: true, sv: true }
+
+profile.guildGroup.theology:
+  en: "Faculty of Theology"
+  description: "Heading of the theology group of the University of Helsinki's guilds in the guild picker (#677): the faculty's own name in each language."
+  fi: "Teologinen tiedekunta"
+  sv: "Teologiska fakulteten"
+  machine: { fi: true, sv: true }
+
+profile.guildGroup.law:
+  en: "Faculty of Law"
+  description: "Heading of the law group of the University of Helsinki's guilds in the guild picker (#677): the faculty's own name in each language."
+  fi: "Oikeustieteellinen tiedekunta"
+  sv: "Juridiska fakulteten"
+  machine: { fi: true, sv: true }
+
+profile.guildGroup.medicine:
+  en: "Faculty of Medicine"
+  description: "Heading of the medicine group of the University of Helsinki's guilds in the guild picker (#677): the faculty's own name in each language."
+  fi: "Lääketieteellinen tiedekunta"
+  sv: "Medicinska fakulteten"
+  machine: { fi: true, sv: true }
+
+profile.guildGroup.arts:
+  en: "Faculty of Arts"
+  description: "Heading of the arts group of the University of Helsinki's guilds in the guild picker (#677): the faculty's own name in each language."
+  fi: "Humanistinen tiedekunta"
+  sv: "Humanistiska fakulteten"
+  machine: { fi: true, sv: true }
+
+profile.guildGroup.science:
+  en: "Faculty of Science"
+  description: "Heading of the science group of the University of Helsinki's guilds in the guild picker (#677): the faculty's own name in each language."
+  fi: "Matemaattis-luonnontieteellinen tiedekunta"
+  sv: "Matematisk-naturvetenskapliga fakulteten"
+  machine: { fi: true, sv: true }
+
+profile.guildGroup.pharmacy:
+  en: "Faculty of Pharmacy"
+  description: "Heading of the pharmacy group of the University of Helsinki's guilds in the guild picker (#677): the faculty's own name in each language."
+  fi: "Farmasian tiedekunta"
+  sv: "Farmaceutiska fakulteten"
+  machine: { fi: true, sv: true }
+
+profile.guildGroup.bio_env:
+  en: "Faculty of Biological and Environmental Sciences"
+  description: "Heading of the bio_env group of the University of Helsinki's guilds in the guild picker (#677): the faculty's own name in each language."
+  fi: "Bio- ja ympäristötieteellinen tiedekunta"
+  sv: "Bio- och miljövetenskapliga fakulteten"
+  machine: { fi: true, sv: true }
+
+profile.guildGroup.education:
+  en: "Faculty of Educational Sciences"
+  description: "Heading of the education group of the University of Helsinki's guilds in the guild picker (#677): the faculty's own name in each language."
+  fi: "Kasvatustieteellinen tiedekunta"
+  sv: "Pedagogiska fakulteten"
+  machine: { fi: true, sv: true }
+
+profile.guildGroup.social_sciences:
+  en: "Faculty of Social Sciences"
+  description: "Heading of the social_sciences group of the University of Helsinki's guilds in the guild picker (#677): the faculty's own name in each language."
+  fi: "Valtiotieteellinen tiedekunta"
+  sv: "Statsvetenskapliga fakulteten"
+  machine: { fi: true, sv: true }
+
+profile.guildGroup.agriculture_forestry:
+  en: "Faculty of Agriculture and Forestry"
+  description: "Heading of the agriculture_forestry group of the University of Helsinki's guilds in the guild picker (#677): the faculty's own name in each language."
+  fi: "Maatalous-metsätieteellinen tiedekunta"
+  sv: "Agrikultur-forstvetenskapliga fakulteten"
+  machine: { fi: true, sv: true }
+
+profile.guildGroup.veterinary:
+  en: "Faculty of Veterinary Medicine"
+  description: "Heading of the veterinary group of the University of Helsinki's guilds in the guild picker (#677): the faculty's own name in each language."
+  fi: "Eläinlääketieteellinen tiedekunta"
+  sv: "Veterinärmedicinska fakulteten"
+  machine: { fi: true, sv: true }
+
+profile.guildGroup.soc_kom:
+  en: "Swedish School of Social Science"
+  description: "Heading of the soc_kom group of the University of Helsinki's guilds in the guild picker (#677): the faculty's own name in each language."
+  fi: "Svenska social- och kommunalhögskolan"
+  sv: "Svenska social- och kommunalhögskolan"
   machine: { fi: true, sv: true }
 
 profile.prompt.sunday:

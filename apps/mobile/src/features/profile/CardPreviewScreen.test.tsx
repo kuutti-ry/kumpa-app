@@ -46,7 +46,7 @@ const card = {
     { key: "sunday", answer: "A long breakfast." },
     { key: "hidden_talent", answer: "I can whistle with my mouth full." },
   ],
-  shared: { hobbies: ["yoga"], languages: ["en"] },
+  shared: { hobbies: ["yoga"], languages: ["en"], university: [], guild: [] },
 };
 
 /** Every text of the rendered tree, in reading order. */

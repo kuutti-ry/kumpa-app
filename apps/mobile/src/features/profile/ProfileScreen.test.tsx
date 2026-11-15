@@ -275,7 +275,7 @@ describe("ProfileScreen", () => {
     const HINTS = [
       ["The basics", "Name, a few words about you, height and languages"],
       ["Relationship and kids", "Relationship structure and kids"],
-      ["Work and education", "Education, field, work and job title"],
+      ["Work and education", "Education, field, work, job title, university and guild"],
       ["Lifestyle", "Smoking, nicotine, drinking, drugs, exercise and pets"],
       ["Hobbies", "Things you like doing, as many as you like"],
       ["Beliefs", "Parties you could vote for, religion and star sign"],

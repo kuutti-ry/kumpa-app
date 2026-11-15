@@ -1,16 +1,27 @@
 import {
+  GUILD_OPTIONS,
   type HiddenField,
   PROFILE_FIELDS,
   type ProfileFieldKey,
   type ProfileFields,
+  ProfileUpdate,
+  UNIVERSITIES,
 } from "@kuutti/schema";
 import { fireEvent, screen } from "@testing-library/react-native";
 import { useLocales } from "expo-localization";
+import fc from "fast-check";
 import { useState } from "react";
 import { AccessibilityInfo } from "react-native";
 import { a11yProblems, type HostNode, pressables } from "@/test/a11y";
 import { renderWithTheme } from "@/test/render";
-import { FieldEditor, OptionSearch, optionTextKey, toggled, visibleOptions } from "./FieldEditor";
+import {
+  FieldEditor,
+  OptionSearch,
+  optionTextKey,
+  toggled,
+  visibleOptions,
+  withoutStrayGuilds,
+} from "./FieldEditor";
 
 // One field of the registry as the person answers it (#47, #148, ADR-019):
 // a setting as a switch, choices as chips that say whether they are chosen, or
@@ -136,6 +147,8 @@ describe("FieldEditor: what the card shows (#515)", () => {
     ["politics", { politics: ["vas"] }, NOT_USED],
     ["religion", { religion: "atheist" }, NOT_USED],
     ["occupationTitle", { occupationTitle: "Nurse" }, NOT_USED],
+    ["university", { university: ["aalto"] }, NOT_USED],
+    ["guild", { university: ["aalto"], guild: ["aalto_fyysikkokilta"] }, NOT_USED],
   ] satisfies [ProfileFieldKey, ProfileFields, string][])(
     "says matching still reads a hidden %s only where it does",
     async (field, initial, line) => {
@@ -630,6 +643,303 @@ describe("FieldEditor: a long list", () => {
     expect(chosen("German")).toBe(false);
     await fireEvent.press(screen.getByRole("button", { name: "German" }));
     expect(fields).toEqual({ languages: ["fi", "de"] });
+  });
+});
+
+describe("FieldEditor: the school and the guild (#677)", () => {
+  const ANOTHER = "Another guild";
+  /** A button's name: its label, or the words it holds. */
+  type Node = ReturnType<typeof screen.getByRole>;
+  const named = (node: Node): string =>
+    typeof node.props.accessibilityLabel === "string"
+      ? node.props.accessibilityLabel
+      : node.children
+          .map((child) => (typeof child === "string" ? child : named(child as Node)))
+          .join("");
+  /** What each button of the picker is called, in reading order. */
+  const buttons = () => screen.getAllByRole("button").map(named);
+  const SCHOOLS = [
+    "University of Helsinki",
+    "Aalto University",
+    "Hanken School of Economics",
+    "University of the Arts Helsinki",
+    "Metropolia University of Applied Sciences",
+    "Haaga-Helia University of Applied Sciences",
+    "Laurea University of Applied Sciences",
+    "Arcada University of Applied Sciences",
+    "Diaconia University of Applied Sciences",
+    "Humak University of Applied Sciences",
+  ];
+  const FACULTIES = [
+    "Faculty of Theology",
+    "Faculty of Law",
+    "Faculty of Medicine",
+    "Faculty of Arts",
+    "Faculty of Science",
+    "Faculty of Pharmacy",
+    "Faculty of Biological and Environmental Sciences",
+    "Faculty of Educational Sciences",
+    "Faculty of Social Sciences",
+    "Faculty of Agriculture and Forestry",
+    "Faculty of Veterinary Medicine",
+    "Swedish School of Social Science",
+  ];
+  const LAUREA = [
+    "Laurean restonomiopiskelijayhdistys LARE ry",
+    "Laurean Tradenomiopiskelijat LATO ry",
+    "Laurean Sosiaalialojen Opiskelijat LASO ry",
+    "Laurean Tietojenkäsittelyopiskelijat Jenkins ry",
+  ];
+  const SHS = "Svenska Handelshögskolans Studentkår";
+
+  it("offers the ten schools as chips with no search, and takes as many as apply", async () => {
+    await show("university");
+    expect(buttons()).toEqual(SCHOOLS);
+    expect(screen.queryByLabelText("Search")).toBeNull();
+    await fireEvent.press(screen.getByRole("button", { name: "Aalto University" }));
+    await fireEvent.press(screen.getByRole("button", { name: "Hanken School of Economics" }));
+    expect(fields).toEqual({ university: ["aalto", "hanken"] });
+    expect(chosen("Aalto University")).toBe(true);
+    expect(chosen("University of Helsinki")).toBe(false);
+  });
+
+  it.each([
+    ["no school", {}],
+    ["no school, even with a guild left behind", { guild: ["aalto_fyysikkokilta"] }],
+  ] satisfies [string, ProfileFields][])(
+    "asks no guild of somebody who named %s: nothing is drawn",
+    async (_what, initial) => {
+      await show("guild", initial);
+      expect(screen.queryByText("Guild or student association")).toBeNull();
+      expect(screen.queryAllByRole("button")).toEqual([]);
+      expect(screen.queryByLabelText("Search")).toBeNull();
+    },
+  );
+
+  it("asks a school's guilds under its name, by their own names in its list's order, another guild last, with no search over a short list", async () => {
+    await show("guild", { university: ["laurea"] });
+    expect(screen.getByText("Guild or student association")).toBeTruthy();
+    expect(screen.getByText("Laurea University of Applied Sciences")).toBeTruthy();
+    expect(buttons()).toEqual([...LAUREA, ANOTHER]);
+    expect(screen.queryByLabelText("Search")).toBeNull();
+    // A school with no faculties in its list draws none.
+    for (const faculty of FACULTIES) expect(screen.queryByText(faculty)).toBeNull();
+    const found = pressables(screen.toJSON() as HostNode);
+    expect(found.flatMap((node) => a11yProblems(node))).toEqual([]);
+  });
+
+  it("asks the union as the one guild of a school whose union lists none", async () => {
+    await show("guild", { university: ["hanken"] });
+    expect(buttons()).toEqual([SHS, ANOTHER]);
+  });
+
+  it("takes as many guilds as apply and another guild beside them, and drops the field with the last", async () => {
+    await show("guild", { university: ["aalto"] });
+    await fireEvent.press(screen.getByRole("button", { name: "Fyysikkokilta (FK)" }));
+    await fireEvent.press(screen.getByRole("button", { name: ANOTHER }));
+    expect(fields).toEqual({
+      university: ["aalto"],
+      guild: ["aalto_fyysikkokilta", "aalto_other"],
+    });
+    expect(chosen("Fyysikkokilta (FK)")).toBe(true);
+    expect(chosen(ANOTHER)).toBe(true);
+    expect(chosen("Teknologföreningen (TF)")).toBe(false);
+    await fireEvent.press(screen.getByRole("button", { name: "Fyysikkokilta (FK)" }));
+    expect(fields).toEqual({ university: ["aalto"], guild: ["aalto_other"] });
+    await fireEvent.press(screen.getByRole("button", { name: ANOTHER }));
+    expect(fields).toEqual({ university: ["aalto"] });
+  });
+
+  it("orders Helsinki's guilds under their faculties, and Mythos under both of its own as one answer", async () => {
+    await show("guild", { university: ["helsinki"] });
+    expect(screen.getByText("University of Helsinki")).toBeTruthy();
+    for (const faculty of FACULTIES) expect(screen.getByText(faculty)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Pykälä ry" })).toBeTruthy();
+    // 115 guilds, two of them under two faculties, and another guild.
+    expect(buttons()).toHaveLength(115 + 2 + 1);
+    expect(buttons().at(-1)).toBe(ANOTHER);
+    const twice = screen.getAllByRole("button", { name: "Mythos ry" });
+    expect(twice).toHaveLength(2);
+    await fireEvent.press(twice[0] as (typeof twice)[number]);
+    expect(fields).toEqual({ university: ["helsinki"], guild: ["helsinki_mythos"] });
+    for (const chip of screen.getAllByRole("button", { name: "Mythos ry" })) {
+      expect(chip.props.accessibilityState?.selected).toBe(true);
+    }
+    const found = pressables(screen.toJSON() as HostNode);
+    expect(found.flatMap((node) => a11yProblems(node))).toEqual([]);
+  });
+
+  it("searches a long list by the guilds' names, hides a faculty with no match, and keeps another guild whatever is searched for", async () => {
+    await show("guild", { university: ["helsinki"] });
+    await fireEvent.changeText(screen.getByLabelText("Search"), "  TKO-ä ");
+    expect(buttons()).toEqual(["TKO-äly ry", ANOTHER]);
+    expect(screen.getByText("Faculty of Science")).toBeTruthy();
+    expect(screen.queryByText("Faculty of Law")).toBeNull();
+    // A search that finds nothing is how one learns the list lacks a guild.
+    await fireEvent.changeText(screen.getByLabelText("Search"), "no such guild");
+    expect(buttons()).toEqual([ANOTHER]);
+    expect(screen.getByText("University of Helsinki")).toBeTruthy();
+    for (const faculty of FACULTIES) expect(screen.queryByText(faculty)).toBeNull();
+    // The words of another guild are no name to search by: it is there anyway.
+    await fireEvent.changeText(screen.getByLabelText("Search"), "another");
+    expect(buttons()).toEqual([ANOTHER]);
+    await fireEvent.press(screen.getByRole("button", { name: ANOTHER }));
+    expect(fields).toEqual({ university: ["helsinki"], guild: ["helsinki_other"] });
+  });
+
+  it.each([
+    ["the name its members say", " nude", "Nuoret Designerit Ry (NuDe)"],
+    ["its own name", "nuoret des", "Nuoret Designerit Ry (NuDe)"],
+    ["the name its members say, whatever the case", "pjk", "Puunjalostajakilta ry (PJK)"],
+  ])("finds a guild by %s, and writes both on its chip", async (_what, search, chip) => {
+    await show("guild", { university: ["aalto"] });
+    await fireEvent.changeText(screen.getByLabelText("Search"), search);
+    expect(buttons()).toEqual([chip, ANOTHER]);
+    await fireEvent.press(screen.getByRole("button", { name: chip }));
+    expect(chosen(chip)).toBe(true);
+  });
+
+  it("asks each named school's guilds under its own name, in the list's order whichever was named first, another guild of each", async () => {
+    await show("guild", { university: ["laurea", "hanken"] });
+    expect(buttons()).toEqual([SHS, ANOTHER, ...LAUREA, ANOTHER]);
+    const tree = JSON.stringify(screen.toJSON());
+    expect(tree.indexOf("Hanken School of Economics")).toBeLessThan(
+      tree.indexOf("Laurea University of Applied Sciences"),
+    );
+    const others = screen.getAllByRole("button", { name: ANOTHER });
+    await fireEvent.press(others[1] as (typeof others)[number]);
+    expect(fields).toEqual({ university: ["laurea", "hanken"], guild: ["laurea_other"] });
+    expect(
+      screen
+        .getAllByRole("button", { name: ANOTHER })
+        .map((chip) => chip.props.accessibilityState?.selected),
+    ).toEqual([false, true]);
+  });
+
+  it.each([
+    ["no search over thirteen", ["uniarts"], false],
+    ["a search over fifteen", ["uniarts", "hanken"], true],
+    ["a search over Aalto's thirty-six", ["aalto"], true],
+  ] satisfies [string, ProfileFields["university"], boolean][])(
+    "counts what the named schools offer, not the whole list: %s",
+    async (_what, university, searchable) => {
+      await show("guild", { university });
+      expect(screen.queryByLabelText("Search") !== null).toBe(searchable);
+    },
+  );
+
+  it.each([
+    ["fi-FI", "Aalto-yliopisto", "Muu kilta", "Kilta tai ainejärjestö"],
+    ["sv-FI", "Aalto-universitetet", "Annat gille", "Gille eller ämnesförening"],
+  ])(
+    "names a guild the same in %s, with the school, another guild and the question in the reader's language",
+    async (tag, school, another, question) => {
+      (useLocales as jest.Mock).mockReturnValue([{ languageTag: tag }]);
+      try {
+        await show("guild", { university: ["aalto"] });
+        expect(screen.getByText(question)).toBeTruthy();
+        expect(screen.getByText(school)).toBeTruthy();
+        expect(screen.getByRole("button", { name: "Fyysikkokilta (FK)" })).toBeTruthy();
+        expect(screen.getByRole("button", { name: "Teknologföreningen (TF)" })).toBeTruthy();
+        expect(buttons().at(-1)).toBe(another);
+      } finally {
+        (useLocales as jest.Mock).mockReturnValue([{ languageTag: "en-US" }]);
+      }
+    },
+  );
+
+  it("takes a school's guilds along when the school is taken back, and keeps the other school's", async () => {
+    await show("university", {
+      university: ["aalto", "hanken"],
+      guild: ["aalto_fyysikkokilta", "hanken_shs", "aalto_other"],
+    });
+    await fireEvent.press(screen.getByRole("button", { name: "Aalto University" }));
+    expect(fields).toEqual({ university: ["hanken"], guild: ["hanken_shs"] });
+    await fireEvent.press(screen.getByRole("button", { name: "Hanken School of Economics" }));
+    expect(fields).toEqual({});
+  });
+
+  it("keeps the guilds chosen when another school is named", async () => {
+    await show("university", { university: ["aalto"], guild: ["aalto_fyysikkokilta"] });
+    await fireEvent.press(screen.getByRole("button", { name: "University of Helsinki" }));
+    expect(fields).toEqual({ university: ["aalto", "helsinki"], guild: ["aalto_fyysikkokilta"] });
+  });
+
+  it("leaves every other answer as it was when a school goes", async () => {
+    await show("university", {
+      university: ["aalto"],
+      guild: ["aalto_fyysikkokilta"],
+      education: "maisteri",
+      field: ["tech"],
+    });
+    await fireEvent.press(screen.getByRole("button", { name: "Aalto University" }));
+    expect(fields).toEqual({ education: "maisteri", field: ["tech"] });
+  });
+});
+
+describe("withoutStrayGuilds (#677)", () => {
+  it.each([
+    [
+      "keeps the guilds of the schools named",
+      { university: ["aalto"], guild: ["aalto_ky"] },
+      ["aalto_ky"],
+    ],
+    [
+      "drops a guild of a school not named, another guild as any",
+      { university: ["hanken"], guild: ["aalto_ky", "hanken_shs", "aalto_other"] },
+      ["hanken_shs"],
+    ],
+    [
+      "drops the field with its last guild",
+      { university: ["hanken"], guild: ["aalto_ky"] },
+      undefined,
+    ],
+    ["drops every guild with no school named", { guild: ["aalto_ky"] }, undefined],
+    ["has nothing to drop with no guild", { university: ["aalto"] }, undefined],
+  ] satisfies [string, ProfileFields, ProfileFields["guild"]][])("%s", (_what, fields, guild) => {
+    const before: ProfileFields = fields;
+    const after = withoutStrayGuilds(before);
+    expect(after.guild).toEqual(guild);
+    expect("guild" in after).toBe(guild !== undefined);
+    expect(after.university).toEqual(before.university);
+  });
+
+  it("leaves, of any schools and any guilds, what an update takes: the guilds of the schools named, in their order", () => {
+    // The school of a guild read off its id, not through the lookup the function itself asks.
+    const schoolOf = (guild: string) =>
+      UNIVERSITIES.find((school) => guild.startsWith(`${school}_`));
+    fc.assert(
+      fc.property(
+        fc.shuffledSubarray([...UNIVERSITIES], { maxLength: 4 }),
+        fc.shuffledSubarray([...GUILD_OPTIONS], { maxLength: 8 }),
+        (university, guild) => {
+          const before = {
+            intent: "long_term",
+            ...(university.length > 0 && { university }),
+            ...(guild.length > 0 && { guild }),
+          } as ProfileFields;
+          const after = withoutStrayGuilds(before);
+          const kept = guild.filter((one) => university.some((school) => school === schoolOf(one)));
+          expect(after).toEqual({
+            intent: "long_term",
+            ...(university.length > 0 && { university }),
+            ...(kept.length > 0 && { guild: kept }),
+          });
+          expect("guild" in after).toBe(kept.length > 0);
+          expect(withoutStrayGuilds(after)).toEqual(after);
+          expect(
+            ProfileUpdate.safeParse({
+              displayName: "Aino",
+              bio: null,
+              bioPreset: null,
+              prompts: [],
+              fields: after,
+            }).success,
+          ).toBe(true);
+        },
+      ),
+      { seed: 677, numRuns: 300 },
+    );
   });
 });
 
