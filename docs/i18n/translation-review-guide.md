@@ -8,7 +8,7 @@ Most Finnish and Swedish in the app is first written by a machine translator (or
 
 When you approve a text, the file records a fingerprint of the English and your Finnish together. If either changes later, the text counts as unreviewed again and comes back to you. Your name is not written into the file; your approval on GitHub is the record.
 
-Legal texts (terms, privacy, research consent) are not reviewed this way. People write them, the Finnish wording is the binding one, and each has a version number.
+Legal texts (terms, privacy, the consents) are not reviewed this way. The English wording is the binding one, the Finnish is its translation, and each has a version number: a change to either is the maintainer's decision and a new version, never an approval here.
 
 ## Before you start
 

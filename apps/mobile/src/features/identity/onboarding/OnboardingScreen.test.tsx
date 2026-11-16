@@ -1327,8 +1327,8 @@ describe("OnboardingScreen", () => {
     ]);
     expect(screen.getByText("Terms of use")).toBeTruthy();
     expect(screen.getByText("Privacy")).toBeTruthy();
-    // English is a translation: the Finnish text is the binding one.
-    expect(screen.getByText(/The Finnish text is the one that counts/)).toBeTruthy();
+    // English is the binding text (#208): nothing calls it a translation.
+    expect(screen.queryByText(/is the one that counts/)).toBeNull();
     // Each summary's version links to the full text on the website (#208).
     for (const version of new Set([TERMS, PRIVACY])) {
       expect(
@@ -1360,13 +1360,13 @@ describe("OnboardingScreen", () => {
     });
   });
 
-  it("gives the welcome step's consents in Finnish on a Finnish phone, with no line about a binding text", async () => {
+  it("gives the welcome step's consents in Finnish on a Finnish phone, under the line that the English text binds", async () => {
     (useLocales as jest.Mock).mockReturnValue([{ languageTag: "fi-FI" }]);
     try {
       const { server } = fakeApi();
       await show(<OnboardingScreen />);
       await waitFor(() => expect(screen.getByText("Näin täällä toimitaan")).toBeTruthy());
-      expect(screen.queryByText(/Suomenkielinen teksti on sitova/)).toBeNull();
+      expect(screen.getByText("Englanninkielinen teksti on sitova; tämä on käännös.")).toBeTruthy();
       await press(screen.getByRole("button", { name: "Olen mukana ja hyväksyn molemmat" }));
       await flush();
       expect(server.consents.map((c) => [c.kind, c.locale])).toEqual([
@@ -1379,7 +1379,7 @@ describe("OnboardingScreen", () => {
     }
   });
 
-  it("asks somebody who chose Stadi for the sensitive answers' consent as Finnish: no line about a binding text, and fi on the record (#521)", async () => {
+  it("asks somebody who chose Stadi for the sensitive answers' consent as Finnish: the binding line in Finnish, and fi on the record (#521)", async () => {
     store.set("kuutti.preference.locale", "fi-x-stadi");
     try {
       const { server } = fakeApi();
@@ -1389,7 +1389,7 @@ describe("OnboardingScreen", () => {
       await show(<OnboardingScreen />);
       await waitFor(() => expect(screen.getByText("Ketä etsit?")).toBeTruthy());
       expect(screen.getByText("Arkaluonteiset tiedot")).toBeTruthy();
-      expect(screen.queryByText(/Suomenkielinen teksti on sitova/)).toBeNull();
+      expect(screen.getByText("Englanninkielinen teksti on sitova; tämä on käännös.")).toBeTruthy();
       await press(screen.getByLabelText("Annan Kuutille luvan tallentaa, kenen seuraa etsin"));
       await flush();
       expect(server.consents.at(-1)).toEqual({ ...consented("special_category"), locale: "fi" });
@@ -1397,6 +1397,43 @@ describe("OnboardingScreen", () => {
       store.delete("kuutti.preference.locale");
     }
   });
+
+  // The legal texts are written in English and Finnish: a Swedish phone reads
+  // the English, which binds, so nothing there is a translation (#208).
+  it.each([
+    ["en-US", "Whom are you looking for?", "I consent to Kuutti storing whom I seek"],
+    ["sv-FI", "Vem söker du?", "Jag samtycker till att Kuutti lagrar vem jag söker"],
+  ])(
+    "asks a %s phone for the sensitive answers' consent in the English text itself, and calls nothing a translation",
+    async (tag, question, allow) => {
+      (useLocales as jest.Mock).mockReturnValue([{ languageTag: tag }]);
+      try {
+        const { server } = fakeApi();
+        server.consents.push(consented("terms"), consented("privacy"));
+        server.profile = {
+          displayName: "Onni",
+          bio: null,
+          bioPreset: null,
+          fields: {},
+          prompts: [],
+        };
+        server.gender = "non_binary";
+        await show(<OnboardingScreen />);
+        await waitFor(() => expect(screen.getByText(question)).toBeTruthy());
+        expect(screen.getByText("Sensitive answers")).toBeTruthy();
+        expect(screen.getByText(/^Whom you seek, the political parties/)).toBeTruthy();
+        expect(screen.queryByText(/one that counts|som gäller|on sitova/)).toBeNull();
+        await press(screen.getByLabelText(allow));
+        await flush();
+        expect(server.consents.at(-1)).toMatchObject({
+          kind: "special_category",
+          version: SPECIAL,
+        });
+      } finally {
+        (useLocales as jest.Mock).mockReturnValue([{ languageTag: "en-US" }]);
+      }
+    },
+  );
 
   it("stays at the welcome step, remembering nothing, when a consent there is refused", async () => {
     const { server } = fakeApi();

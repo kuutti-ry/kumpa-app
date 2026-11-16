@@ -95,7 +95,7 @@ describe("i18n:review", () => {
     expect(result.refused).toEqual({
       "demo.likes": "{likes} lacks the fi plural forms one",
       "legal.privacy.title":
-        "legal text is written by people and versioned by consent_version, not reviewed here",
+        "legal text is versioned by consent_version and decided by the maintainer, not reviewed here",
       "admin.title": "admin.* is English only",
     });
     expect(result.skipped).toEqual({ "demo.bye": "already reviewed" });
@@ -561,7 +561,7 @@ describe("an imported sheet", () => {
     expect(importSheet(SOURCE, messages, "fi", back).refused).toEqual({
       "demo.greeting": "changed in the repository since the sheet was exported; export it again",
       "legal.privacy.title":
-        "legal text is written by people and versioned by consent_version, not reviewed here",
+        "legal text is versioned by consent_version and decided by the maintainer, not reviewed here",
       "admin.title": "admin.* is English only",
     });
     const sv = `${header.replace("\tfi\t", "\tsv\t")}\ndemo.likes\t\tx\tx\tx\t\t0\n`;

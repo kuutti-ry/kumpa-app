@@ -2,7 +2,7 @@
 Feature: Onboarding and consents
   Matching cannot start without four answers (gender, seeks, an age window,
   a home) and nothing may start without two consents given for the exact
-  wording and version the person read (TD-17: the Finnish text is binding).
+  wording and version the person read (the English text binds, ADR-010 §20).
   The research opt-in has its own yes and can be withdrawn, and so can the
   special-category consent that the seek answer needs (ADR-019 §4). The
   account becomes active when everything required is there; the steps of

@@ -436,7 +436,8 @@ export function OnboardingScreen() {
               </CardHeader>
               <CardContent className="gap-2">
                 <Text>{t("legal.special_category.summary")}</Text>
-                {realLocale(locale) !== "fi" && (
+                {/* The English binds, and only the Finnish is a translation of it (#208, ADR-010 §9). */}
+                {realLocale(locale) === "fi" && (
                   <Text variant="muted">{t("onboarding.consents.binding")}</Text>
                 )}
                 <LegalTextLink kind="special_category" />

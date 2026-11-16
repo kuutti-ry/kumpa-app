@@ -17,8 +17,8 @@ import { flagMachine, rejectionReason, writeText } from "./translate.ts";
  * approving it, and the review sheet a reviewer fills in without git. A review
  * writes `reviewed: { <locale>: <hash> }` in place of the machine flag; the
  * hash covers the English and the approved text, so an edit to either shows
- * again as a text nobody has reviewed (check.ts). legal.* is written by people
- * and versioned, admin.* is English only: neither passes through here.
+ * again as a text nobody has reviewed (check.ts). legal.* is versioned and
+ * the maintainer's to decide, admin.* is English only: neither passes through here.
  */
 
 type ReviewState = "reviewed" | "machine" | "stale" | "missing";
@@ -149,7 +149,7 @@ export function formatProgress(rows: ProgressRow[], markdown: boolean): string {
 /** Why a key never passes through the review, or undefined for a translation that does. */
 function notReviewedHere(key: string): string | undefined {
   if (isLegalKey(key)) {
-    return "legal text is written by people and versioned by consent_version, not reviewed here";
+    return "legal text is versioned by consent_version and decided by the maintainer, not reviewed here";
   }
   if (isAdminKey(key)) return "admin.* is English only";
   return undefined;

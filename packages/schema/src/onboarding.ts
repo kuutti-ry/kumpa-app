@@ -128,7 +128,7 @@ export const WithdrawableConsentKind = z
   .meta({ id: "WithdrawableConsentKind" });
 export type WithdrawableConsentKind = z.infer<typeof WithdrawableConsentKind>;
 
-/** The languages the texts exist in; the Finnish wording is the binding one (TD-17). */
+/** The languages the texts exist in; the English wording is the binding one (ADR-010 §20). */
 const CONSENT_LOCALES = ["fi", "sv", "en"] as const;
 
 export const ConsentRequest = z
