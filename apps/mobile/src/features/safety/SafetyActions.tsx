@@ -686,7 +686,7 @@ function SafetyDialog({
                             blurhash={option.blurhash}
                             style={CHOICE_PHOTO}
                           />
-                          <Text className="flex-1">{marked(chosen, option.text)}</Text>
+                          <Text className="flex-1 text-left">{marked(chosen, option.text)}</Text>
                         </Button>
                       );
                     })}
