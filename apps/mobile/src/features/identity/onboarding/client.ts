@@ -26,7 +26,11 @@ export async function fetchOnboarding(): Promise<OnboardingStatus> {
   return OnboardingStatus.parse(data);
 }
 
-/** The consent texts exist in fi, sv and en; Stadi reads the Finnish, the pseudo-locale the English. */
+/**
+ * The language a consent was read in, as the app's own: Stadi reads the
+ * Finnish, the pseudo-locale the English. The legal texts are written in
+ * English and Finnish, so the API records a Swedish phone's as English.
+ */
 export const consentLocale = realLocale;
 
 export async function fetchConsents(): Promise<ConsentsResponse> {

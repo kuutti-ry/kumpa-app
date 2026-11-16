@@ -235,7 +235,7 @@ describe("review states (#55)", () => {
     expect(checkMessages(legal, { release: true })).toEqual({
       errors: [],
       warnings: [
-        "legal.privacy.title: no sv text (legal text is written by a person, never by the translator)",
+        "legal.privacy.title: no sv text (a legal text is the maintainer's decision, never the translator's)",
       ],
     });
   });

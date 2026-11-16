@@ -110,7 +110,7 @@ export function parseMessages(yamlText: string): Messages {
     }
     if (isLegalKey(key)) {
       if (message.machine) problems.push(`${key}: legal text is never machine-translated`);
-      // Its Finnish is the binding source, written by people, not a translation to approve.
+      // A wording a person accepts, versioned by consent_version: never a translation to approve.
       if (message.reviewed) problems.push(`${key}: legal text takes no review hash`);
       if (!message.consent_version) problems.push(`${key}: legal text needs a consent_version`);
     } else if (message.consent_version) {

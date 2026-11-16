@@ -12,10 +12,11 @@ import { LegalSummary } from "./LegalSummary";
 /**
  * The norms and the two consents a person accepts before anything else, under
  * the screen's one heading (#581): the terms and the privacy summary, each as
- * the exact version this app carries with its link to the full text, and
- * outside Finnish the line that the Finnish text is the one that counts
- * (ADR-010 §4, §9). Shown before the bank login (#418) and on onboarding's
- * welcome step after it.
+ * the exact version this app carries with its link to the full text, and in
+ * Finnish the line that the English text is the one that counts: the legal
+ * texts are written in English and Finnish, so a Swedish phone reads the
+ * English itself (#208, ADR-010 §4, §9). Shown before the bank login (#418)
+ * and on onboarding's welcome step after it.
  */
 export function NormsAndConsents() {
   const { t, locale } = useT();
@@ -29,7 +30,7 @@ export function NormsAndConsents() {
         <Text>{t("onboarding.welcome.norm2")}</Text>
       </View>
       <Text>{t("onboarding.consents.explain")}</Text>
-      {realLocale(locale) !== "fi" && (
+      {realLocale(locale) === "fi" && (
         <Text variant="muted">{t("onboarding.consents.binding")}</Text>
       )}
       {(["terms", "privacy"] as const).map((kind) => (

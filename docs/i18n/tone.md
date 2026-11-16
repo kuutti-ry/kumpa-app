@@ -29,4 +29,4 @@ For everyone who writes or reviews `packages/i18n/messages.yaml`, and sent with 
 
 - A dynamic value (`{name}`) stands only where it needs no inflection: after a colon, as a subject, in a list. Never "in {name}", never `{name}ssa`. A sentence that would need a case form is written so that it does not.
 - ICU arguments are kept exactly as in the English source: same names, same plural and select structure, every plural category the language needs.
-- Legal texts (`legal.*`: privacy, consent, terms, the police-traceability line) are never machine-translated. The Finnish text is binding and is written by people.
+- Legal texts (`legal.*`: privacy, consent, terms, the police-traceability line) are never filled by the translator. The English text is binding (the maintainer, 08/11/2026 on #208), the Finnish beside it is a translation the app says is one, and each wording is the maintainer's decision under its `consent_version`.

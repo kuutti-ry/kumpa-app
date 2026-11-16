@@ -166,7 +166,7 @@ describe("the language's choices", () => {
 describe("the legal texts under their rows", () => {
   it("show the terms with their version, to anybody", async () => {
     await renderWithTheme(<LegalSummary kind="terms" />);
-    expect(screen.getByText(/^DRAFT: Kuutti is a free dating service/)).toBeTruthy();
+    expect(screen.getByText(/^Kumpa is a service of Kuutti ry/)).toBeTruthy();
     // The version, as the link to the full text on the website (#208).
     expect(
       screen.getByRole("link", { name: /^Read the full text on kuutti\.app \(version \S+\)$/ }),
@@ -177,7 +177,7 @@ describe("the legal texts under their rows", () => {
   it("show the privacy text, and lead to the full policy at its version", async () => {
     const open = jest.spyOn(Linking, "openURL").mockResolvedValue(true);
     await renderWithTheme(<LegalSummary kind="privacy" />);
-    expect(screen.getByText(/^DRAFT: Kuutti stores your year and month of birth/)).toBeTruthy();
+    expect(screen.getByText(/^Kuutti ry is the controller of the personal data/)).toBeTruthy();
     await fireEvent.press(screen.getByRole("link", { name: /^Read the full text/ }));
     expect(open).toHaveBeenCalledWith(
       `https://kuutti.app/legal/privacy/#privacy-${CONSENT_VERSIONS.privacy}`,
@@ -187,9 +187,9 @@ describe("the legal texts under their rows", () => {
 
   it("open under their rows for a signed-out device too", async () => {
     await settingsWith("terms");
-    expect(screen.getByText(/^DRAFT: Kuutti is a free dating service/)).toBeTruthy();
+    expect(screen.getByText(/^Kumpa is a service of Kuutti ry/)).toBeTruthy();
     await settingsWith("privacy");
-    expect(screen.getByText(/^DRAFT: Kuutti stores your year and month of birth/)).toBeTruthy();
+    expect(screen.getByText(/^Kuutti ry is the controller of the personal data/)).toBeTruthy();
   });
 });
 

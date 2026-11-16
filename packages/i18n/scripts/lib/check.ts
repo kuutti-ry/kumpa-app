@@ -48,7 +48,7 @@ const RELEASED_TRANSLATIONS: readonly string[] = TRANSLATED_LOCALES.filter((loca
   (RELEASED_LOCALES as readonly string[]).includes(locale),
 );
 
-// A wording the association's counsel has not yet replaced (#46, ADR-010).
+// A wording still marked a draft (#46, ADR-010 §7; since §20 the research opt-in alone).
 const DRAFT_VERSION = /draft|luonnos|utkast/i;
 // Anywhere in the wording, as its own word, however it is capitalised.
 const DRAFT_TEXT = /(?<![\p{L}])(DRAFT|LUONNOS|UTKAST)(?![\p{L}])/iu;
@@ -116,7 +116,7 @@ export function checkMessages(messages: Messages, options: { release: boolean })
           errors.push(`${key}: no ${locale} text, and ${locale} is a released language`);
         } else if (isLegalKey(key)) {
           warnings.push(
-            `${key}: no ${locale} text (legal text is written by a person, never by the translator)`,
+            `${key}: no ${locale} text (a legal text is the maintainer's decision, never the translator's)`,
           );
         } else warnings.push(`${key}: no ${locale} text`);
         continue;
@@ -149,7 +149,7 @@ export function checkMessages(messages: Messages, options: { release: boolean })
       const untrusted = untrustedTextProblem(message.en, text);
       if (untrusted) errors.push(`${key}: ${locale} ${untrusted}`);
 
-      // legal.* Finnish is the binding source, versioned by consent_version instead.
+      // legal.* is versioned by consent_version instead, in both its languages.
       if (isLegalKey(key)) continue;
       if (!message.machine?.[locale] && !message.reviewed?.[locale]) {
         errors.push(

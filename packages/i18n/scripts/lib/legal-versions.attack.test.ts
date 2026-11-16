@@ -17,6 +17,12 @@ const FI = {
   "legal.research.title": "Tutkimus",
   "legal.research.summary": "LUONNOS: tutkimus.",
 };
+const EN = {
+  "legal.research.title": "Research",
+  "legal.research.summary": "DRAFT: research.",
+};
+/** The app's texts by language: the site says which one its fingerprint is of. */
+const TEXTS = { en: EN, fi: FI };
 const SITE: Published = {
   terms: {
     version: "2026-09-draft-1",
@@ -35,13 +41,13 @@ const research = SITE.research as Published[string];
 const terms = SITE.terms as Published[string];
 
 const silent = (seen: string[]) => expect(seen).toEqual([]);
-const agreed = () => legalVersionProblems(APP, SITE, FI);
+const agreed = () => legalVersionProblems(APP, SITE, TEXTS);
 
 /** What is tried, and the two sides as they then stand. */
 const PARTED: [string, () => string[]][] = [
   [
     "a kind the site names with a capital",
-    () => legalVersionProblems(APP, { terms, Research: research }, FI),
+    () => legalVersionProblems(APP, { terms, Research: research }, TEXTS),
   ],
   [
     "an address that differs from the app's link by one slash",
@@ -49,21 +55,47 @@ const PARTED: [string, () => string[]][] = [
       legalVersionProblems(
         APP,
         { ...SITE, terms: { ...terms, url: terms.url.replace("/#", "#") } },
-        FI,
+        TEXTS,
       ),
   ],
   [
     "a research text the site calls Finnish of Finland, not Finnish",
-    () => legalVersionProblems(APP, { ...SITE, research: { ...research, language: "fi-FI" } }, FI),
+    () =>
+      legalVersionProblems(APP, { ...SITE, research: { ...research, language: "fi-FI" } }, TEXTS),
+  ],
+  [
+    "a research text the site calls English, with the fingerprint of the app's Finnish",
+    () => legalVersionProblems(APP, { ...SITE, research: { ...research, language: "en" } }, TEXTS),
+  ],
+  [
+    "a research text in a language the app has no legal text in, with the fingerprint of its Finnish",
+    () => legalVersionProblems(APP, { ...SITE, research: { ...research, language: "sv" } }, TEXTS),
+  ],
+  [
+    "a research text in a language named as every object's own maker is",
+    () =>
+      legalVersionProblems(
+        APP,
+        { ...SITE, research: { ...research, language: "constructor" } },
+        TEXTS,
+      ),
   ],
   [
     "a Finnish research title that changed only in its capitals",
-    () => legalVersionProblems(APP, SITE, { ...FI, "legal.research.title": "TUTKIMUS" }),
+    () =>
+      legalVersionProblems(APP, SITE, {
+        en: EN,
+        fi: { ...FI, "legal.research.title": "TUTKIMUS" },
+      }),
   ],
-  ["a Finnish research wording the app no longer has", () => legalVersionProblems(APP, SITE, {})],
+  [
+    "a Finnish research wording the app no longer has",
+    () => legalVersionProblems(APP, SITE, { en: EN, fi: {} }),
+  ],
+  ["an app with no legal text in any language", () => legalVersionProblems(APP, SITE, {})],
   [
     "a version the app carries with a space after it",
-    () => legalVersionProblems({ ...APP, terms: `${APP.terms} ` }, SITE, FI),
+    () => legalVersionProblems({ ...APP, terms: `${APP.terms} ` }, SITE, TEXTS),
   ],
 ];
 
@@ -78,7 +110,7 @@ for (const [name, parted] of PARTED) {
 // "Nothing found, read as nothing wrong": neither side names a kind. The
 // comparison goes kind by kind, and with no kind on either side asks nothing.
 attack("check:legal-versions: an app and a site that both name no kind at all agree", {
-  attempt: () => legalVersionProblems({}, {}, FI),
+  attempt: () => legalVersionProblems({}, {}, TEXTS),
   control: agreed,
   succeeds: silent,
 });
