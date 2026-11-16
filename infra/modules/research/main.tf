@@ -185,6 +185,11 @@ resource "aws_iam_role_policy" "reader" {
 
 resource "aws_s3_bucket" "access_log" {
   bucket = local.log_bucket
+  # Research is being taken out (#208, the maintainer's word of 2026-11-16): the
+  # next change removes this module, and a versioned bucket that still holds the
+  # trail's logs and its hourly digests can be destroyed only with its objects.
+  # The flag must be in the state before that destroy, so it lands first.
+  force_destroy = true
 
   tags = { Name = local.log_bucket }
 }
