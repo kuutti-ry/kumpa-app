@@ -152,5 +152,5 @@ sequenceDiagram
 
 - **Fifteen minutes.** #397 says signed URLs last 15 minutes. That holds for this route, for a conversation's thumb and for the staff's views (`URL_TTL_MS`). A photo sent in a conversation (#350) is signed to the next five-minute mark plus fifteen minutes, so its URLs live 15 to 20 minutes (ADR-005, History of 2026-10-18). That path is the chat's and is not drawn here: it checks the full size, not the card, before anything is stored, and refuses rather than queues.
 - **The phone's own check** is a seam with a pass-through (step 2) until the native batch, #184.
-- **Rekognition and AWS's use of content.** AWS may use what its AI services are sent to improve them unless the account opts out, and the opt-out waits for the account to sit under the association's organisation (ADR-006 §1).
+- **Rekognition and AWS's use of content.** AWS may use what its AI services are sent to improve them unless the organisation opts out. The opt-out for every service is declared at the root of the organisation this account manages (`infra/bootstrap/organization.tf`, #691), which only the maintainer applies: it holds once his apply reads back `optOut` (ADR-006 §1).
 - **Production.** Running since 2026-10-24, with photos off: production's media module is dormant until its cutover (`infra/README.md`, Layout and Media).
