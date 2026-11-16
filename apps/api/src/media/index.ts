@@ -39,6 +39,8 @@ export {
   listApprovedPhotos,
   listPhotos,
   othersPhotoFetchesSince,
+  // The fetch log kept a year (#688).
+  prunePhotoAccess,
   queueSummary,
   recordCardServed,
   wasShown,
