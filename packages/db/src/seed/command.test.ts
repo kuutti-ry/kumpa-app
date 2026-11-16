@@ -36,15 +36,25 @@ describe("the command's arguments", () => {
       action: "write",
       photos: false,
     });
-    expect(parseDemoCommand(["--env=preview", "--remove"], "preview")).toMatchObject({
-      env: "preview",
+    expect(parseDemoCommand(["--env=test", "--remove"], "test")).toMatchObject({
+      env: "test",
       action: "remove",
       photos: false,
     });
   });
 
   it("go ahead only in an environment that is named and allowed", () => {
-    for (const env of ["production", "Production", "prod", "Staging", "", " development", "demo"]) {
+    // preview went with the pull-request previews (ADR-070).
+    for (const env of [
+      "production",
+      "Production",
+      "prod",
+      "Staging",
+      "",
+      " development",
+      "demo",
+      "preview",
+    ]) {
       expect(() => parseDemoCommand(["--env", env], undefined), `--env ${env}`).toThrow(
         DemoCommandError,
       );
@@ -121,26 +131,9 @@ describe("the server the rows would go to", () => {
   it("is refused when it is a deployed one, whatever the environment is called", () => {
     // Staging and production through the tunnel: 127.0.0.1, database kuutti, and managed.
     const tunnel: DemoTarget = { ...local, port: 15432, user: "kuutti_app", managed: true };
-    for (const env of ["development", "test", "preview"] as const) {
+    for (const env of ["development", "test"] as const) {
       expect(() => assertDemoTarget(tunnel, env), env).toThrow(/managed server/);
       expect(() => assertDemoTarget(local, env), env).not.toThrow();
-    }
-  });
-
-  it("is a pull request's own database only when asked for as a preview", () => {
-    const preview: DemoTarget = { ...local, database: "kuutti_pr_88", managed: true };
-    expect(() => assertDemoTarget(preview, "preview")).not.toThrow();
-    expect(() => assertDemoTarget(preview, "development")).toThrow(DemoCommandError);
-    for (const database of [
-      "kuutti",
-      "kuutti_pr_",
-      "kuutti_pr_88x",
-      "xkuutti_pr_88",
-      "kuutti_test",
-    ]) {
-      expect(() => assertDemoTarget({ ...preview, database }, "preview"), database).toThrow(
-        DemoCommandError,
-      );
     }
   });
 });

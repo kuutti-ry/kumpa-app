@@ -38,7 +38,7 @@ variable "origin_proof_store_arn" {
 }
 
 variable "extra_aliases" {
-  description = "Names besides api_fqdn that the distribution serves for the box, each routed by Traefik on the forwarded Host: Dokploy's control plane and, on staging, the previews' wildcard (ADR-005 §7, #198). They are names on the certificate too; the environment's dns.tf points them at the distribution."
+  description = "Names besides api_fqdn that the distribution serves for the box, each routed by Traefik on the forwarded Host: Dokploy's control plane (ADR-005 §7, #198). They are names on the certificate too; the environment's dns.tf points them at the distribution."
   type        = list(string)
   default     = []
 }

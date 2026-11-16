@@ -16,10 +16,10 @@ import { DEMO_SEED, DEMO_SIZE, DEMO_SIZE_MAX } from "./population.ts";
  *   on 127.0.0.1 under the same database name as the local one (the
  *   moderator's command line of infra/README.md is used that way). So after
  *   connecting it asks the server what it is, and refuses a managed one
- *   unless it is a pull request's own preview database.
+ *   unless it is asked for as staging, from inside staging's container.
  */
 
-export const DEMO_ENVIRONMENTS = ["development", "test", "preview", "staging"] as const;
+export const DEMO_ENVIRONMENTS = ["development", "test", "staging"] as const;
 export type DemoEnvironment = (typeof DEMO_ENVIRONMENTS)[number];
 
 export class DemoCommandError extends Error {
@@ -150,13 +150,10 @@ export async function describeTarget(db: Queryable): Promise<DemoTarget> {
   return row;
 }
 
-const PREVIEW_DATABASE = /^kuutti_pr_\d+$/;
-
 /**
- * Refuses a managed server unless it is a pull request's own database, asked
- * for as a preview, or staging's, asked for as staging. Staging and
- * production are both managed and both called `kuutti`, and no question to
- * the server tells them apart: what does is where the command runs
+ * Refuses a managed server unless it is staging's, asked for as staging.
+ * Staging and production are both managed and both called `kuutti`, and no
+ * question to the server tells them apart: what does is where the command runs
  * (`assertStagingProcess`, ADR-018), inside staging's own container with
  * staging's own parameters.
  */
@@ -168,9 +165,8 @@ export function assertDemoTarget(target: DemoTarget, env: DemoEnvironment): void
     );
   }
   if (!target.managed) return;
-  if (env === "preview" && PREVIEW_DATABASE.test(target.database)) return;
   throw new DemoCommandError(
-    `refusing: database "${target.database}" is on a managed server (RDS). Synthetic people go into a local database, a pull request's own (kuutti_pr_<n>, with --env preview) or staging from inside its container (--env staging, ADR-018), never into production`,
+    `refusing: database "${target.database}" is on a managed server (RDS). Synthetic people go into a local database or staging from inside its container (--env staging, ADR-018), never into production`,
   );
 }
 

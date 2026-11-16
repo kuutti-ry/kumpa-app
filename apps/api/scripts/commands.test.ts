@@ -230,10 +230,10 @@ describe.concurrent("demo:reset", () => {
     [[], { NODE_USE_ENV_PROXY: "1" }, "✖ refusing: Node is configured to use an environment proxy"],
     [
       [],
-      { APP_ENV: "preview" },
-      '✖ refusing: APP_ENV is "preview", and the personas are reset in development and test only',
+      { APP_ENV: "production" },
+      '✖ refusing: APP_ENV is "production", and the personas are reset in development and test only',
     ],
-    [["--env=preview"], {}, '✖ refusing: APP_ENV is "preview"'],
+    [["--env=production"], {}, '✖ refusing: APP_ENV is "production"'],
   ])(
     "%j with %j: exit 2 and the reason",
     async (args, env, reason) => {

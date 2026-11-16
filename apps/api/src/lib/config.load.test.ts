@@ -97,24 +97,6 @@ describe("loadConfig", () => {
     },
   );
 
-  it("a preview reads staging's parameters and serves from its own database as the preview role", async () => {
-    ssm.parameters["/kuutti/staging/"] = parameters("/kuutti/staging/", {
-      ...database,
-      "db-preview-user": "kuutti_preview",
-      "db-preview-password": "placeholder-preview",
-    });
-    const config = await loadConfig({ APP_ENV: "preview", PR_NUMBER: "42" });
-    expect(ssm.paths).toEqual(["/kuutti/staging/"]);
-    expect(urlParts(config.databaseUrl)).toEqual({
-      user: "kuutti_preview",
-      password: "placeholder-preview",
-      host: "db.internal:5432",
-      database: "kuutti_pr_42",
-      sslmode: "require",
-    });
-    expect(config.DB_APP_PASSWORD).toBeUndefined();
-  });
-
   it("what the process sets wins over the parameter store", async () => {
     ssm.parameters["/kuutti/staging/"] = parameters("/kuutti/staging/", {
       ...database,

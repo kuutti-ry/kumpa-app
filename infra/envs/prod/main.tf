@@ -105,8 +105,7 @@ resource "aws_cloudfront_key_value_store" "origin_proof" {
 
 # The moderation panel's host (#313, ADR-025): a bucket and a distribution of
 # its own on the host admin-app-url and cors-allowed-origins name
-# (variables.tf). admin-deploy.yml writes the build to its root; production has
-# no previews, so nothing writes under pr-*.
+# (variables.tf). admin-deploy.yml writes the build to its root.
 module "admin" {
   source = "../../modules/admin"
   providers = {

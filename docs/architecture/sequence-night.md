@@ -12,13 +12,13 @@ In these diagrams every arrow is built. Mermaid's sequence diagrams take a messa
 
 ## The jobs, in order
 
-"Everywhere" is every process the API runs in: staging, a developer's machine, and each pull request's preview against its own database. Production runs the same list but the one job it holds back.
+"Everywhere" is every process the API runs in: staging and a developer's machine. Production runs the same list but the one job it holds back.
 
 | # | Job, as the log names it | Where the work lives | Reads | Writes | Runs |
 |---|---|---|---|---|---|
 | 1 | `sweep-sessions` | identity | sessions, sign-in attempts | deletes ended, expired and erased sessions, and expired sign-in attempts | everywhere |
 | 2 | `sweep-admin-sessions` | identity | staff sessions | deletes expired or revoked staff sessions, each member's newest kept | everywhere |
-| 3 | `research-export` | research | the events table, the copy's files | one Parquet file per closed UTC day under `research/` in the media bucket | where media has a bucket, not in production: staging and a developer's S3 stand-in, never a preview |
+| 3 | `research-export` | research | the events table, the copy's files | one Parquet file per closed UTC day under `research/` in the media bucket | where media has a bucket, not in production: staging and a developer's S3 stand-in |
 | 4 | `research-events-partitions` | research | the events table's partitions; the copy, where there is one | this month's and next month's partitions; drops each month whose first day reaches 90 days before the next scheduled run | everywhere |
 | 5 | `research-anonymity` | research | the events table | nothing; a warning when a cell is under k | everywhere |
 | 6 | `end-suspensions` | safety | sanctions | lifts each suspension past its day, settles the account | everywhere |
@@ -63,7 +63,7 @@ sequenceDiagram
 1. Each API process arms one timer at its start, for the next 04:00 in Helsinki (`NIGHTLY_HOUR`). The timer does not keep the process alive by itself. Two containers that overlap during a deploy each arm one; the jobs that must not run twice at once take an advisory lock in the database (steps 11, 15, 17, 20 and 21).
 2. The jobs run one at a time, in the order of the table: each waits for the one before it. A rejected operation is caught and the chain continues; a never-settling operation still holds the chain. There is no uncancellable timeout that lets its writes overlap the following job.
 3. A job answers with counts, never with who: how many sessions, days, photos; the counter's with the day and whether its figures moved. A job that throws answers with its error.
-4. One line per job: `nightly job done` with the job's name and its counts, or `nightly job failed` with its name and the error, which the logger redacts as everywhere. A failure is logged, never thrown, so one broken job stops neither the next job nor the server. On a deployed box Docker's `awslogs` driver sends every container's lines to the log group `/kuutti/{env}/api`, one stream per container, kept 30 days; a preview's container writes to the same group under its own stream. On a developer's machine the lines go to the terminal.
+4. One line per job: `nightly job done` with the job's name and its counts, or `nightly job failed` with its name and the error, which the logger redacts as everywhere. A failure is logged, never thrown, so one broken job stops neither the next job nor the server. On a deployed box Docker's `awslogs` driver sends every container's lines to the log group `/kuutti/{env}/api`, one stream per container, kept 30 days. On a developer's machine the lines go to the terminal.
 5. After the last job the timer is armed again for the next 04:00.
 6. A metric filter on the log group counts each `nightly job failed` line and each `research events dropped without their copy` line (step 16) as `NightlyFailures`.
 7. The alarm `kuutti-{env}-nightly-job-failed` sums a day: one or more is ALARM, and a day with none is OK again. Both go to the environment's topic.
@@ -99,7 +99,7 @@ sequenceDiagram
 
 9. `sweep-sessions` (identity, #35): deletes the sessions revoked more than 30 days ago, those past their expiry, and those of erased accounts; and the sign-in attempts past their time. A deleted session also closes any socket it still had (see Chat, step 43).
 10. `sweep-admin-sessions` (identity, #49): deletes staff sessions that expired or were revoked, keeping each member of staff's newest.
-11. `research-export` (research, #194, ADR-029), only where media has a bucket and the environment is not production: on staging and beside a developer's S3 stand-in, never in a preview, whose media is off. Production holds it until the maintainer has answered ADR-029's ninety days (a `shortcut:` in `boot.ts`). In one transaction it tries a lock of its own; a second container that finds it held writes nothing. Then it finds the first day the events table holds.
+11. `research-export` (research, #194, ADR-029), only where media has a bucket and the environment is not production: on staging and beside a developer's S3 stand-in. Production holds it until the maintainer has answered ADR-029's ninety days (a `shortcut:` in `boot.ts`). In one transaction it tries a lock of its own; a second container that finds it held writes nothing. Then it finds the first day the events table holds.
 12. It asks the bucket which days the copy holds, and reads the files of the ninety days before each missing day, which are the census's prior. A file of a day not yet closed stops the run before anything is released.
 13. It reads the events of each closed UTC day the table still holds and the copy lacks, oldest first. A day is closed an hour after it ends; 04:00 in Helsinki is one or two hours after midnight UTC.
 14. It writes one Parquet file per day to `research/YYYY/MM/YYYY-MM-DD.parquet`, releasing a value only where k people with a live research consent share it (ADR-029 §4), and never the account, the event's id, the stored snapshot or text. The write is conditional: a file that exists is never written over. A night that fails writes what it finished, and the next night catches up while the table holds the days.

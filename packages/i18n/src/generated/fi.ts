@@ -1206,7 +1206,7 @@ export const fi: Readonly<Record<string, string>> = {
   "signIn.lock.title": "Lukitus kirjasi sinut ulos",
   "signIn.paused.title": "Tilisi on tauolla",
   "signIn.title": "Kirjaudu sisään",
-  "signIn.unavailable": "Pankkitunnistusta ei ole täällä: verkkoversiossa ja pull requestien esikatseluissa sitä ei ole. Kokeile muutosta paikallisesti testipankilla.",
+  "signIn.unavailable": "Verkkoversiossa ei ole pankkitunnistusta. Kokeile muutosta puhelimella tai simulaattorissa testipankin avulla.",
   "stars.back": "Takaisin alkuun",
   "stars.card.back": "Takaisin tähdellä merkittyihin",
   "stars.clear.label": "Poista tähti: {name}",

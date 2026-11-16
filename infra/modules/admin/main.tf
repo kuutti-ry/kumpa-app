@@ -4,8 +4,8 @@
 # /admin/* itself, and the panel's CSP would cover its answers too). A path the
 # bucket has no object for is the app, whose router finds the page (#302).
 # Every answer carries the panel's headers, whose CSP lets it talk to the API
-# and nothing else. A pull request's preview is the prefix pr-<n>/ of the same
-# bucket. TLS terminates at CloudFront with an ACM certificate from us-east-1.
+# and nothing else. TLS terminates at CloudFront with an ACM certificate from
+# us-east-1.
 
 data "aws_caller_identity" "current" {}
 
@@ -13,18 +13,14 @@ locals {
   name        = "${var.project}-${var.environment}"
   account_id  = data.aws_caller_identity.current.account_id
   bucket_name = "${var.project}-admin-${var.environment}-${local.account_id}"
-  # preview.yml writes the panel built under /pr-<n>/ here, and the plan role
-  # may write nothing else (infra/bootstrap, ci_plan_admin_previews).
-  preview_prefix = "pr-"
 }
 
 # ---------------------------------------------------------------------------
 # The bucket. Private; the only reader is the distribution (origin access
-# control). CI writes it: main's build at the root, a pull request's preview
-# under pr-<n>/ (ADR-025 §5-§7). The maintainer writes Saiga's faces under
-# fonts/ by hand, since no runner has them (ADR-052). Versioning stays off:
-# every object is the build of a commit, which CI rebuilds, or a face, which
-# the upload puts back.
+# control). CI writes main's build at its root (ADR-025 §5). The maintainer
+# writes Saiga's faces under fonts/ by hand, since no runner has them
+# (ADR-052). Versioning stays off: every object is the build of a commit,
+# which CI rebuilds, or a face, which the upload puts back.
 # ---------------------------------------------------------------------------
 
 resource "aws_s3_bucket" "admin" {
@@ -83,28 +79,11 @@ resource "aws_s3_bucket_lifecycle_configuration" "admin" {
       days_after_initiation = 1
     }
   }
-
-  # The backstop to the sweep (ADR-025 §8): preview-cleanup.yml removes pr-<n>/
-  # with the pull request's other previews, never waiting for a person, and
-  # never blocking the rest on a failure here (ADR-012 §4). What it leaves
-  # expires after the sweep's seven days, with room.
-  rule {
-    id     = "expire-previews"
-    status = "Enabled"
-
-    filter {
-      prefix = local.preview_prefix
-    }
-
-    expiration {
-      days = 14
-    }
-  }
 }
 
 # ---------------------------------------------------------------------------
 # How the distribution reads and answers: origin access control, the managed
-# cache policy, the panel's headers, and the previews' function.
+# cache policy and the panel's headers.
 # ---------------------------------------------------------------------------
 
 resource "aws_cloudfront_origin_access_control" "admin" {
@@ -143,9 +122,9 @@ resource "aws_cloudfront_response_headers_policy" "admin" {
         "font-src 'self'",
         "img-src 'self' ${var.api_origin}",
         "connect-src ${var.api_origin}",
-        # No service worker: one registered from a preview's prefix could take
-        # the whole origin, the root's panel and its bank return included, and
-        # outlive the preview (ADR-025 §3).
+        # No service worker: the panel registers none, and one that did could
+        # hold the whole origin, its bank return included, past the next
+        # deploy (ADR-025 §3).
         "worker-src 'none'",
         "base-uri 'none'",
         "form-action 'none'",
@@ -202,18 +181,6 @@ resource "aws_cloudfront_response_headers_policy" "admin" {
       override = true
     }
   }
-}
-
-# Previews (ADR-025 §6): a page inside pr-<n>/ is that preview's index.html.
-# Without it every preview path would fall into the fallback below and get
-# main's panel. On the pr-* behaviour alone; the repository's first CloudFront
-# Function, and Lambda@Edge stays out (rules/infra.md).
-resource "aws_cloudfront_function" "previews" {
-  name    = "${local.name}-admin-previews"
-  runtime = "cloudfront-js-2.0"
-  comment = "A page inside a panel preview is that preview's index.html (ADR-025)"
-  publish = true
-  code    = file("${path.module}/previews.js")
 }
 
 # ---------------------------------------------------------------------------
@@ -288,27 +255,11 @@ resource "aws_cloudfront_distribution" "this" {
     compress                   = true
   }
 
-  ordered_cache_behavior {
-    path_pattern               = "${local.preview_prefix}*"
-    target_origin_id           = "panel"
-    viewer_protocol_policy     = "redirect-to-https"
-    allowed_methods            = ["GET", "HEAD"]
-    cached_methods             = ["GET", "HEAD"]
-    cache_policy_id            = data.aws_cloudfront_cache_policy.caching_optimized.id
-    response_headers_policy_id = aws_cloudfront_response_headers_policy.admin.id
-    compress                   = true
-
-    function_association {
-      event_type   = "viewer-request"
-      function_arn = aws_cloudfront_function.previews.arn
-    }
-  }
-
   # A path is the app (ADR-025 §2, #302): the bucket answers 403 for a key it
   # does not have, since CloudFront may not list it, so /accounts/<id> gets
   # index.html and the router finds the page; 404 the same, should it ever be
   # allowed to list. The answer is cached for ten seconds (CloudFront's default,
-  # stated because it matters): a preview published under a path asked for a
+  # stated because it matters): a file published under a path asked for a
   # moment earlier is seen within them.
   custom_error_response {
     error_code            = 403

@@ -236,8 +236,8 @@ describe("the walk to the bank, when the API does not answer as it should", () =
     ],
     [
       "another refusal with Retry-After",
-      sentBack("auth_unavailable", { "retry-after": "42" }),
-      "auth_unavailable",
+      sentBack("auth_provider_error", { "retry-after": "42" }),
+      "auth_provider_error",
     ],
   ])("%s at the start is said by its code at once, without a wait", async (_, answer, code) => {
     const api = scripted({ "GET /auth/start": () => answer });

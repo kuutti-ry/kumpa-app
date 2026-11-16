@@ -477,7 +477,6 @@ describe("SignInScreen", () => {
       ["auth_cancelled"],
       ["auth_rate_limited"],
       ["rate_limited"],
-      ["auth_unavailable"],
       ["unexpected_link"],
       ["attestation_refused"],
       ["something_else"],
@@ -592,11 +591,6 @@ describe("SignInScreen", () => {
     expect(screen.queryByText(/22\.10\.2026/)).toBeNull();
   });
 
-  it("says so when the API has no bank, as a pull-request preview has none", async () => {
-    await renderWithTheme(<SignInScreen error="auth_unavailable" />);
-    expect(await screen.findByText(/There is no bank sign-in here/)).toBeTruthy();
-  });
-
   it("on the web, says there is no bank sign-in instead of offering a button", async () => {
     // Without ThemeProvider: its web path sets the colour scheme on a DOM
     // that jest-expo's iOS preset does not have.
@@ -609,7 +603,7 @@ describe("SignInScreen", () => {
           </SessionProvider>
         </LocaleProvider>,
       );
-      expect(await screen.findByText(/There is no bank sign-in here/)).toBeTruthy();
+      expect(await screen.findByText(/There is no bank sign-in in the web version/)).toBeTruthy();
       expect(screen.queryByRole("button")).toBeNull();
       // The web preview keeps nothing of this phone's store: no screens before a bank it cannot reach.
       expect(screen.queryByText(NORMS)).toBeNull();

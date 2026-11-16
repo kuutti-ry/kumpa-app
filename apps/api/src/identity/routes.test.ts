@@ -455,19 +455,6 @@ describe("bank login", () => {
     expect(res.status).toBe(503);
     expect(await errorCode(res)).toBe("auth_provider_error");
   });
-
-  test("A preview's login sends the app back with auth_unavailable", async ({ ctx }) => {
-    const { logger } = await captureLogger();
-    const config = testConfig({ APP_ENV: "preview", PR_NUMBER: "125" });
-    const app = createApp({ config, logger, db: ctx.client });
-    const res = await app.request(`/auth/start?platform=android&code_challenge=${CHALLENGE}`);
-    expect(res.status).toBe(302);
-    expect(res.headers.get("location")).toBe("kuutti://auth?error=auth_unavailable");
-    // A request the app could not have sent is still refused first.
-    expect((await app.request(`/auth/start?platform=web&code_challenge=${CHALLENGE}`)).status).toBe(
-      400,
-    );
-  });
 });
 
 describe("the callback's refusals and failures", () => {
@@ -734,18 +721,16 @@ describe("the callback's refusals and failures", () => {
     expect(broker.completed).toEqual([state]);
   });
 
-  test("A preview handed a broker still has no key, and sends the app back without asking the bank", async ({
-    ctx,
-  }) => {
+  test("A broker without the HMAC key answers 503 without asking the bank", async ({ ctx }) => {
     const { logger } = await captureLogger();
     const broker = fakeBroker(ADULT_HETU);
-    // A preview's configuration drops the HMAC key whatever is set (ADR-014 §1).
-    const config = testConfig({ APP_ENV: "preview", PR_NUMBER: "125", HETU_HMAC_KEY: KEY_HEX });
+    // The test configuration sets no key.
+    const config = testConfig();
     expect(config.HETU_HMAC_KEY).toBeUndefined();
     const app = createApp({ config, logger, db: ctx.client, broker });
     const res = await app.request(`/auth/start?platform=ios&code_challenge=${CHALLENGE}`);
-    expect(res.status).toBe(302);
-    expect(res.headers.get("location")).toBe("kuutti://auth?error=auth_unavailable");
+    expect(res.status).toBe(503);
+    expect(await errorCode(res)).toBe("auth_provider_error");
     expect(broker.started).toEqual([]);
   });
 

@@ -11,7 +11,7 @@ Nothing here stores or logs an address (ADR-026 §7, ADR-067 §4). The edge keep
 | Shield Standard, AWS's, on every distribution | floods at the network's layers | AWS's | nothing reaches the distribution | nothing of Kuutti's |
 | The edge's rate rule (ADR-067) | every request the distribution sends to the box, per address, except a signed photo's path (`/media/<sha256>/<variant>.webp`), the two sign-in starts and the load runner's address for its hour | 2,000 in five minutes, `edge_requests_per_five_minutes` in `infra/envs/<env>/main.tf` | 429 `rate_limited`, `"requestId":"edge"`, `Retry-After: 300`, until the address's count over five minutes is under the limit | `kuutti-<env>-edge-rate-limited` (us-east-1) |
 | Signed URLs (ADR-005) | a photo under `/media/` without a valid signature | 15 minutes, 20 for a photo sent in a conversation | 403 from CloudFront | nothing |
-| The address's window (ADR-026 §1, §2) | every request until a guard admits it; a signed-in request gives its count back | 120 a minute, 30 on a preview; `/kuutti/<env>/rate-limit-per-minute` | 429 `rate_limited`, on the request line with `route` `/*` and no account | `kuutti-<env>-api-refusals` |
+| The address's window (ADR-026 §1, §2) | every request until a guard admits it; a signed-in request gives its count back | 120 a minute; `/kuutti/<env>/rate-limit-per-minute` | 429 `rate_limited`, on the request line with `route` `/*` and no account | `kuutti-<env>-api-refusals` |
 | The person's window (§1, §3) | every request a guard admits, per account or staff identity | the same number | 429 `rate_limited`, the line names the account | the same |
 | The sign-in doors (§4) | `/auth/start` and `/admin/auth/start` per address, IPv6 by its /56 | 10 a minute in production, 60 elsewhere; `/kuutti/<env>/sign-in-rate-limit-per-minute` | 302 to the app or the panel with `error=auth_rate_limited`, and a `sign-in refused` line, `detail.limiter` `address` | the same |
 | The table of attempts (§6) | sign-in attempts the bank has not answered | 50,000 rows | the two oldest unanswered attempts go, a `sign-in refused` line with `detail.limiter` `evicted` | the same |
@@ -46,7 +46,6 @@ The edge is for volume from one address. A flood from many addresses passes it, 
 1. Logs Insights, saved query `kuutti-<env>/refusals-by-route`, over the alarm's minutes. `route` `/*` with `signedIn` 0 is the address's window. A route with `signedIn` 1 is a person's window, or a day's budget on that route: the code is in the answer, not on the line. A `sign-in refused` row names its limiter: `address` for one address starting many sign-ins, `evicted` for a flood of starts from many addresses (the table is full, ADR-026 §6), `cap` for a table full of answered attempts, which does not happen in use.
 2. One account behind many refusals is a script under a person's account. Over the same minutes in Logs Insights: `filter msg = "request" and status = 429 and ispresent(accountId) | stats count() as refusals by accountId | sort refusals desc | limit 10`. Suspend it (`incident.md`, One person).
 3. Many accounts on one route, one platform, is a loop in a build that asks again at a 429: a fix in the app, not a limit.
-4. On staging a preview logs to the same group, with its own window of 30 a minute; the line's stream names its container.
 
 ## Moving a number
 

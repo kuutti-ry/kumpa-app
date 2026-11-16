@@ -64,12 +64,6 @@ variable "manage_session_preferences" {
   default     = false
 }
 
-variable "preview_databases" {
-  description = "Staging only (#9): declares the Run Command document that drops a pull request's kuutti_pr_<n>, which preview-cleanup.yml sends through the plan role as the kuutti_preview role that infra/scripts/db-app-role.sh creates on staging."
-  type        = bool
-  default     = false
-}
-
 variable "demo_reset" {
   description = "Staging only (#613, ADR-018 §8): declares the Run Command document that returns the demo personas to where they begin, inside the API's container, which demo-reset.yml sends through the plan role."
   type        = bool

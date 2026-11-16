@@ -1579,7 +1579,7 @@ export const en: Readonly<Record<string, string>> = {
   "signIn.lock.title": "Signed out by the lock",
   "signIn.paused.title": "Your account is on a break",
   "signIn.title": "Sign in",
-  "signIn.unavailable": "There is no bank sign-in here: the web version and pull-request previews have none. Try the change locally, with the mock bank.",
+  "signIn.unavailable": "There is no bank sign-in in the web version. Try the change on a phone or a simulator, with the mock bank.",
   "stars.back": "Back to home",
   "stars.card.back": "Back to Starred",
   "stars.clear.label": "Take the star off: {name}",

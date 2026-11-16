@@ -49,13 +49,13 @@ variable "mail_recipients" {
 }
 
 variable "admin_app_url" {
-  description = "Where the staff login returns to and the moderation panel lives (#49, ADR-006): /kuutti/staging/admin-app-url. The panel's own host, static behind CloudFront (module admin, #313, ADR-025). A preview's panel under /pr-<n>/ has no login of its own: staff sign in here and open it in the same tab (ADR-025 §6)."
+  description = "Where the staff login returns to and the moderation panel lives (#49, ADR-006): /kuutti/staging/admin-app-url. The panel's own host, static behind CloudFront (module admin, #313, ADR-025)."
   type        = string
   default     = "https://admin.staging.kuutti.app"
 }
 
 variable "cors_allowed_origins" {
-  description = "Browser origins the API answers (rule 8: the admin panel and the public site only), comma separated: /kuutti/staging/cors-allowed-origins. The panel's origin must be here or its preflight fails; its previews share it. A panel on a developer's laptop is not listed: the bank returns the one-time code to the hosted panel, so it could not finish a staging login anyway (ADR-025 §10)."
+  description = "Browser origins the API answers (rule 8: the admin panel and the public site only), comma separated: /kuutti/staging/cors-allowed-origins. The panel's origin must be here or its preflight fails. A panel on a developer's laptop is not listed: the bank returns the one-time code to the hosted panel, so it could not finish a staging login anyway (ADR-025 §10)."
   type        = string
   default     = "https://admin.staging.kuutti.app"
 }
@@ -73,7 +73,7 @@ variable "media_enabled" {
 }
 
 variable "cloudfront_only_ingress" {
-  description = "Passed to the network module: HTTPS from CloudFront's prefix list only. On since #198, once Dokploy and the previews were behind the distribution too (ADR-005 §7). The list is every CloudFront distribution's servers, not Kuutti's alone, so this closes the box to direct requests and proves nothing about whose distribution a request came through; the proof of ADR-066 tells Kuutti's apart. Turning this off needs trusted_proxy at traefik first: a precondition refuses the pair."
+  description = "Passed to the network module: HTTPS from CloudFront's prefix list only. On since #198, once Dokploy was behind the distribution too (ADR-005 §7). The list is every CloudFront distribution's servers, not Kuutti's alone, so this closes the box to direct requests and proves nothing about whose distribution a request came through; the proof of ADR-066 tells Kuutti's apart. Turning this off needs trusted_proxy at traefik first: a precondition refuses the pair."
   type        = bool
   default     = true
 }

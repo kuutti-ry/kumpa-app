@@ -9,7 +9,7 @@ const saiga = require("../../../scripts/saiga.json");
 
 // One fingerprint with Saiga and without (ADR-052): EAS builds with it, the
 // GitHub runners that compute the runtime version of an update never have it
-// (deploy.yml, preview.yml, eas-build.yml, e2e.yml). If the two differed,
+// (deploy.yml, eas-build.yml, e2e.yml). If the two differed,
 // updates would stop reaching the builds. Each machine is a process of its
 // own with its own HOME, as a runner is: Jest's process.env is a copy that
 // neither os.homedir() nor a child process reads. Stand-in files: the plugin

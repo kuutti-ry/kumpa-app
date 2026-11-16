@@ -1,19 +1,13 @@
 import * as Updates from "expo-updates";
 
-export type AppEnvironment = "development" | "preview" | "staging" | "production";
+export type AppEnvironment = "development" | "staging" | "production";
 
-const ENVIRONMENTS: ReadonlySet<string> = new Set([
-  "development",
-  "preview",
-  "staging",
-  "production",
-]);
+const ENVIRONMENTS: ReadonlySet<string> = new Set(["development", "staging", "production"]);
 
 /**
  * Which environment this JavaScript runs in, from the EAS Update channel: no
- * channel is a dev client on Metro, `production` the store's build, `pr-<n>`
- * a pull request's preview, anything else staging. `EXPO_PUBLIC_APP_ENV`,
- * set for a build, overrides everything but the production channel, so a dev
+ * channel is a dev client on Metro, `production` the store's build, anything
+ * else staging. `EXPO_PUBLIC_APP_ENV`, set for a build, overrides everything but the production channel, so a dev
  * client pointed at staging reads as staging and a store build can never be
  * talked into showing what the store must not see; a value that names no
  * environment is ignored. The one reader of the channel (#143): everything
@@ -26,7 +20,6 @@ export function appEnvironmentOf(
   if (channel === "production") return "production";
   if (override && ENVIRONMENTS.has(override)) return override as AppEnvironment;
   if (!channel) return "development";
-  if (channel.startsWith("pr-")) return "preview";
   return "staging";
 }
 

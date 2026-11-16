@@ -82,10 +82,10 @@ const startRoute = createRoute({
   responses: {
     302: {
       description:
-        "Redirect to the broker; where none is configured (a pull-request preview, ADR-014 §1), to kuutti://auth?error=auth_unavailable; when this address has sent too many requests or started too many sign-ins, or too many are under way at once (ADR-026), to kuutti://auth?error=auth_rate_limited with Retry-After.",
+        "Redirect to the broker; when this address has sent too many requests or started too many sign-ins, or too many are under way at once (ADR-026), to kuutti://auth?error=auth_rate_limited with Retry-After.",
     },
     400: errorContent("Validation failed."),
-    503: errorContent("No identification broker is configured (anywhere but a preview)."),
+    503: errorContent("No identification broker is configured."),
   },
 });
 
@@ -331,12 +331,6 @@ export function authRoutes(
 
   app.openapi(startRoute, async (c) => {
     const query = c.req.valid("query");
-    // A pull-request preview has no bank (ADR-014 §1): the browser goes back
-    // to the app, which says so, rather than stopping on a JSON page. Anywhere
-    // else a missing broker stays a 503, which the 5xx alarm sees.
-    if (deps.config.preview && (!deps.broker || !hmacKey)) {
-      return c.redirect(appErrorUrl("auth_unavailable"), 302);
-    }
     try {
       const url = await startLogin(loginDeps(c.get("requestId")), {
         platform: query.platform,
