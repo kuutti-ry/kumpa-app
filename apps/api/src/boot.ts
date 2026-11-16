@@ -24,6 +24,7 @@ import { initSentry, sentryReporter } from "./lib/sentry.ts";
 import { pruneRounds } from "./matching/index.ts";
 import {
   createMediaDeps,
+  prunePhotoAccess,
   rejectUnreviewedPhotos,
   sweepOrphanedObjects,
   sweepPendingPhotos,
@@ -295,6 +296,11 @@ export async function boot({
     {
       name: "prune-photo-check-notes",
       run: async () => ({ pruned: await prunePhotoCheckNotes(pool, now()) }),
+    },
+    // The fetch log of signed photo URLs keeps a year (#688, ADR-008 History 16/11/2026).
+    {
+      name: "prune-photo-access",
+      run: async () => ({ pruned: await prunePhotoAccess(pool, now()) }),
     },
     // Reports keep twelve months from filing, whoever was erased meanwhile (#84, ADR-030 §8),
     // and the photos of erased senders their copies held go with them (#351).

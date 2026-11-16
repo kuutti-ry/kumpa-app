@@ -938,6 +938,21 @@ export async function deletePhotoAccessOfAccount(
   return result.rowCount ?? 0;
 }
 
+/**
+ * How long the fetch log is kept (#688, the maintainer's of 16/11/2026, ADR-008
+ * History). Its own readers need far less: the day's budget, the hour of the
+ * velocity rule (ADR-041). The year is for tracing a photo that turns up
+ * elsewhere back to whoever was given its link.
+ */
+const PHOTO_ACCESS_RETENTION_DAYS = 365;
+
+/** The night's prune: fetch-log rows older than the kept year, every account's, by `photo_access_at_idx`. */
+export async function prunePhotoAccess(db: Queryable, now: Date): Promise<number> {
+  const before = new Date(now.getTime() - PHOTO_ACCESS_RETENTION_DAYS * 86_400_000);
+  const result = await db.query("DELETE FROM photo_access WHERE at < $1", [before]);
+  return result.rowCount ?? 0;
+}
+
 /** Of the given keys, those no photo row references any more. */
 export async function orphanedKeys(db: Queryable, keys: string[]): Promise<string[]> {
   const { rows } = await db.query<{ key: string }>(
