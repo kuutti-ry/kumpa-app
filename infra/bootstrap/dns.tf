@@ -169,6 +169,15 @@ resource "aws_route53_record" "github_org_verification" {
 # kuutti.app's story above. Google's DKIM key for kumpa.fi comes from the
 # Admin console once generated for this domain; until then Google's mail from
 # a kumpa.fi address passes on SPF alone.
+#
+# The DMARC and the CAA are kuutti.app's, declared here first, on the
+# maintainer's word of 2026-11-16. A domain with a mailbox and no DMARC lets
+# anyone send as it with only a soft fail. Google's envelope carries the
+# sender's own address, so its mail aligns under aspf=s even before its key
+# is published; until then, a forwarded message that breaks SPF has no
+# signature to pass on and is rejected. The CAA names Amazon's issuers alone:
+# Amplify's ACM certificate is the only one the domain has, and no box serves
+# it, so Let's Encrypt has no place here.
 # ---------------------------------------------------------------------------
 
 import {
@@ -211,5 +220,27 @@ resource "aws_route53_record" "kumpa_txt" {
   records = [
     "google-site-verification=B0InikoK6q0-A4gtwI4N2So6V7VKprw6_iq2C5J_8j8",
     "v=spf1 include:_spf.google.com ~all",
+  ]
+}
+
+resource "aws_route53_record" "kumpa_dmarc" {
+  zone_id = aws_route53_zone.kumpa.zone_id
+  name    = "_dmarc.kumpa.fi"
+  type    = "TXT"
+  ttl     = 3600
+  records = ["v=DMARC1; p=reject; adkim=s; aspf=s"]
+}
+
+resource "aws_route53_record" "kumpa_caa" {
+  zone_id = aws_route53_zone.kumpa.zone_id
+  name    = "kumpa.fi"
+  type    = "CAA"
+  ttl     = 3600
+  records = [
+    "0 issue \"amazon.com\"",
+    "0 issue \"amazontrust.com\"",
+    "0 issue \"awstrust.com\"",
+    "0 issue \"amazonaws.com\"",
+    "0 iodef \"mailto:admin@${var.domain}\"",
   ]
 }
