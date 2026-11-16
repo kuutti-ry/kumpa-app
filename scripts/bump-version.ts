@@ -7,7 +7,7 @@
  *   when the fetch fails, the origin/main this clone already has, said so.
  *   A second run, or a run after a rebase onto a main another pull request
  *   bumped, gives main's next number again.
- * - origin is the remote whose URL is kuutti-ry/kuutti-app, whatever its name:
+ * - origin is the remote whose URL is kuutti-ry/kumpa-app (or its old name, kuutti-app), whatever its name:
  *   in a fork's clone that is upstream, and origin the fork, whose main lags.
  *   The fetch names its refspec, so it moves origin/main whatever the clone
  *   fetches by default, and the ref is read by its full name, so a local
@@ -53,10 +53,12 @@ const SEMVER = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
 const VERSION_LINE = /^( {2}"version": ")[^"\n]*(")/m;
 const CONFLICT_MARKER = /^(<{7}|={7}|>{7})( |$)/m;
 const USAGE = "usage: pnpm version:bump patch|minor (a feature bumps MINOR, only fixes PATCH)";
-// The repository whose main a pull request merges into, at its known HTTPS or SSH host.
+// The repository whose main a pull request merges into, at its known HTTPS or SSH host. Its name
+// before 2026-11-16, kuutti-app, still counts (#702): clones made before then keep that URL, which
+// GitHub redirects, and only a member of kuutti-ry could take the old name back.
 const MAIN_REPO =
-  /^(?:https:\/\/github\.com\/|git@github\.com:|ssh:\/\/git@github\.com\/)kuutti-ry\/kuutti-app(?:\.git)?\/?$/i;
-const NO_REMOTE = "no remote of this clone is github.com/kuutti-ry/kuutti-app";
+  /^(?:https:\/\/github\.com\/|git@github\.com:|ssh:\/\/git@github\.com\/)kuutti-ry\/(?:kumpa|kuutti)-app(?:\.git)?\/?$/i;
+const NO_REMOTE = "no remote of this clone is github.com/kuutti-ry/kumpa-app";
 
 type Next = { version: string } | { refused: string };
 /** origin/main as the bump counts from it: its name, short sha, version, and whether this run fetched it. */
@@ -166,7 +168,7 @@ function git(args: string[]): { ok: boolean; status: number | null; out: string;
 }
 
 /**
- * The remote that is kuutti-ry/kuutti-app, by its URL, or undefined: in a fork's clone origin is the
+ * The remote that is kuutti-ry/kumpa-app, by its URL, or undefined: in a fork's clone origin is the
  * fork, whose main lags, and counting from it gives main's own number on a stale base (#333).
  */
 function mainRemote(): string | undefined {
@@ -251,7 +253,7 @@ function bump(level: string | undefined): void {
   const remote = mainRemote();
   if (remote === undefined) {
     refuse(
-      `${NO_REMOTE}, whose main the bump counts from: git remote add upstream https://github.com/kuutti-ry/kuutti-app.git, then run it again`,
+      `${NO_REMOTE}, whose main the bump counts from: git remote add upstream https://github.com/kuutti-ry/kumpa-app.git, then run it again`,
     );
   }
   const ref = tracking(remote);
@@ -416,12 +418,28 @@ function selfTest(): void {
     true,
   );
 
-  expect("another host", MAIN_REPO.test("https://example.org/kuutti-ry/kuutti-app.git"), false);
-  expect("main over HTTPS", MAIN_REPO.test("https://github.com/kuutti-ry/kuutti-app.git"), true);
-  expect("main over SSH", MAIN_REPO.test("git@github.com:kuutti-ry/kuutti-app.git"), true);
-  expect("main without .git", MAIN_REPO.test("https://github.com/kuutti-ry/kuutti-app"), true);
-  expect("a fork", MAIN_REPO.test("https://github.com/someone/kuutti-app.git"), false);
-  expect("the site", MAIN_REPO.test("git@github.com:kuutti-ry/kuutti-app-site.git"), false);
+  expect("another host", MAIN_REPO.test("https://example.org/kuutti-ry/kumpa-app.git"), false);
+  expect("main over HTTPS", MAIN_REPO.test("https://github.com/kuutti-ry/kumpa-app.git"), true);
+  expect("main over SSH", MAIN_REPO.test("git@github.com:kuutti-ry/kumpa-app.git"), true);
+  expect("main without .git", MAIN_REPO.test("https://github.com/kuutti-ry/kumpa-app"), true);
+  expect(
+    "main by its old name",
+    MAIN_REPO.test("https://github.com/kuutti-ry/kuutti-app.git"),
+    true,
+  );
+  expect(
+    "main by its old name, SSH",
+    MAIN_REPO.test("git@github.com:kuutti-ry/kuutti-app.git"),
+    true,
+  );
+  expect("a fork", MAIN_REPO.test("https://github.com/someone/kumpa-app.git"), false);
+  expect("a fork, old name", MAIN_REPO.test("https://github.com/someone/kuutti-app.git"), false);
+  expect("the site", MAIN_REPO.test("git@github.com:kuutti-ry/kumpa-app-site.git"), false);
+  expect(
+    "the site, old name",
+    MAIN_REPO.test("git@github.com:kuutti-ry/kuutti-app-site.git"),
+    false,
+  );
 
   expect("a conflict's start", CONFLICT_MARKER.test('{\n<<<<<<< HEAD\n  "version"'), true);
   expect("a conflict's middle", CONFLICT_MARKER.test("a\n=======\nb"), true);
@@ -446,17 +464,17 @@ function selfTest(): void {
   // attack: an owner whose name only ends with ours is taken for the main repository
   expect(
     "an owner that ends with ours",
-    MAIN_REPO.test("https://github.com/not-kuutti-ry/kuutti-app.git"),
+    MAIN_REPO.test("https://github.com/not-kuutti-ry/kumpa-app.git"),
     false,
   );
   // attack: so is a repository whose name only begins with ours
   expect(
     "a repository that begins with ours",
-    MAIN_REPO.test("git@github.com:kuutti-ry/kuutti-app-fonts.git"),
+    MAIN_REPO.test("git@github.com:kuutti-ry/kumpa-app-fonts.git"),
     false,
   );
   // control: the main repository with a slash after it
-  expect("main with a slash", MAIN_REPO.test("https://github.com/kuutti-ry/kuutti-app/"), true);
+  expect("main with a slash", MAIN_REPO.test("https://github.com/kuutti-ry/kumpa-app/"), true);
   // attack: of two top-level versions the first is changed, and the file still says the second
   expect(
     "two top-level versions",
@@ -483,7 +501,7 @@ function selfTest(): void {
 
 /**
  * The guard and the hook's check as the command wires them (#333), in a throwaway clone that holds
- * every way to miss main's tip at once: kuutti-ry/kuutti-app's URL as upstream, rewritten to a bare
+ * every way to miss main's tip at once: kuutti-ry/kumpa-app's URL as upstream, rewritten to a bare
  * repository on this disk, with no fetch refspec of its own; origin a fork whose main lags; a local
  * branch named upstream/main on the old base. Git runs without the user's or the system's settings.
  */
@@ -517,7 +535,7 @@ function selfTestClone(expect: (name: string, got: unknown, wanted: unknown) => 
   };
   const pkg = (version: string): string =>
     `{\n  "name": "x",\n  "version": "${version}",\n  "type": "module"\n}\n`;
-  const canonical = "https://github.com/kuutti-ry/kuutti-app.git";
+  const canonical = "https://github.com/kuutti-ry/kumpa-app.git";
   try {
     mkdirSync(work);
     sh("init", "-q", "-b", "main");

@@ -149,10 +149,10 @@ flowchart TB
     n28["A contributor or the maintainer"]
   end
   subgraph github["GitHub"]
-    n29["The repository kuutti-ry/kuutti-app"]
+    n29["The repository kuutti-ry/kumpa-app"]
     n30["GitHub Actions: the workflows"]
     n31["GHCR: the API image, a public package"]
-    n40["kuutti-ry/kuutti-app-fonts, private: Saiga"]
+    n40["kuutti-ry/kumpa-app-fonts, private: Saiga"]
   end
   subgraph aws3["AWS"]
     n32["STS: kuutti-ci-plan and kuutti-ci-apply, by OIDC"]
@@ -193,7 +193,7 @@ flowchart TB
 ### Steps
 
 28. A contributor or the maintainer: anyone with write access to the repository, which is staging-level trust (ADR-004 §3).
-29. The repository `kuutti-ry/kuutti-app` on GitHub: `main` changes only through a reviewed pull request, squash-merged.
+29. The repository `kuutti-ry/kumpa-app` on GitHub: `main` changes only through a reviewed pull request, squash-merged.
 30. GitHub Actions: the workflows of [Delivery](delivery.md). No AWS credential exists in any secret: AWS is reached by OIDC, the other vendors by tokens kept in GitHub environments.
 31. GHCR: `ghcr.io/kuutti-ry/kuutti-api`, one image per commit, built for arm64. The package is public, so the box pulls it without a credential.
 32. AWS STS: a job exchanges its GitHub OIDC token for `kuutti-ci-plan` (read-only, without data; trusts pull requests and `main`) or `kuutti-ci-apply` (trusts the GitHub environments `staging` and `prod` only). Both roles are made by `infra/bootstrap`, which only the maintainer applies.
@@ -204,7 +204,7 @@ flowchart TB
 37. Sentry: `deploy.yml` uploads the published update's source maps, so that Sentry can read the app's stack traces.
 38. `kuutti-ry/kuutti-app-site`: the website's own repository, with its build spec and its headers.
 39. Amplify Hosting: a push to the site's `main` deploys `kuutti.app`, and the same site at `kumpa.fi`. CI here reads the deployed site's `/legal/versions.json` to hold the app's consent versions to the site's.
-40. `kuutti-ry/kuutti-app-fonts`: the association's private repository of Saiga, Kuutti's typeface, which Spoke Type licensed to Kuutti ry for Kuutti only and which is never public as a file (ADR-052). EAS Build and the website's Amplify read it at a pinned commit, each with a read-only token of its own, and hold every file to its SHA-256. No GitHub workflow reads it or holds a token for it, and a member's laptop reads it with the member's own login (`pnpm fonts`).
+40. `kuutti-ry/kumpa-app-fonts`: the association's private repository of Saiga, Kuutti's typeface, which Spoke Type licensed to Kuutti ry for Kuutti only and which is never public as a file (ADR-052). EAS Build and the website's Amplify read it at a pinned commit, each with a read-only token of its own, and hold every file to its SHA-256. No GitHub workflow reads it or holds a token for it, and a member's laptop reads it with the member's own login (`pnpm fonts`).
 41. The panel's bucket, `fonts/saiga-<version>/`: Saiga's faces, which the maintainer uploads from a laptop, since the panel is built on GitHub's runners, which never have them. The deploy leaves the folder alone, and the panel's CSP allows fonts from its own origin.
 42. Google Play, the association's developer account: a build of the profile `staging`, started by hand, is submitted by EAS to the app's internal testing track once it is built, with the key of a Google service account that EAS holds and no workflow sees ([Delivery](delivery.md), part 4; ADR-057). The team installs the staging app from Play. What Google receives: `docs/vendors/google-play.md`.
 43. App Store Connect, the association's Apple team (Kuutti ry): the same build's iOS side is submitted by EAS with an App Store Connect API key that EAS holds and no workflow sees, and reaches TestFlight's internal testing ([Delivery](delivery.md), part 4; ADR-063). The team installs it with TestFlight. What Apple receives: `docs/vendors/app-store.md`.

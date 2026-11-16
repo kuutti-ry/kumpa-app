@@ -43,7 +43,7 @@ Sign in from your own terminal. An agent working in this repository never types,
 GitHub's immutable subject claims mean the trust policy keys on numeric IDs, not names. Get them:
 
 ```sh
-gh api repos/kuutti-ry/kuutti-app --jq '{repo_id: .id, owner_id: .owner.id}'
+gh api repos/kuutti-ry/kumpa-app --jq '{repo_id: .id, owner_id: .owner.id}'
 ```
 
 Then:
@@ -102,7 +102,7 @@ gh variable set AWS_PERMISSIONS_BOUNDARY_ARN --body "$(tofu output -raw permissi
 The apply role trusts exactly two subjects, `environment:staging` and `environment:prod`, so the production approval lives in GitHub's environment protection, not in AWS. Create the environments with the same names (the GitHub Terraform provider is not adopted; `infra/github/` stays empty until that question is settled):
 
 ```sh
-R=repos/kuutti-ry/kuutti-app
+R=repos/kuutti-ry/kumpa-app
 # staging: deployable from main only, no reviewers
 gh api -X PUT "$R/environments/staging" --input - <<'JSON'
 {"wait_timer":0,"reviewers":[],"deployment_branch_policy":{"protected_branches":false,"custom_branch_policies":true}}
@@ -131,7 +131,7 @@ for e in staging prod; do gh api "$R/environments/$e/deployment-branch-policies"
 With the checks on `main`, the ruleset `23053522` carries a pull-request rule and the required checks, and direct pushes have ended. Code-owner review stays off: the only code owner is the maintainer, and an author cannot approve their own pull request, so requiring it would block every merge.
 
 ```sh
-gh api -X PUT repos/kuutti-ry/kuutti-app/rulesets/23053522 --input - <<'JSON'
+gh api -X PUT repos/kuutti-ry/kumpa-app/rulesets/23053522 --input - <<'JSON'
 {"name":"Protect main","target":"branch","enforcement":"active",
  "bypass_actors":[{"actor_id":5,"actor_type":"RepositoryRole","bypass_mode":"always"}],
  "conditions":{"ref_name":{"include":["~DEFAULT_BRANCH"],"exclude":[]}},
@@ -144,7 +144,7 @@ gh api -X PUT repos/kuutti-ry/kuutti-app/rulesets/23053522 --input - <<'JSON'
 JSON
 ```
 
-The rules above are the live ones as of 2026-09-26: fourteen checks, `i18n` (#13) and `licenses` (#16) among them; one approving review since the `contributors` team got write (2026-09-25), and one more for changes no person is attributed to, such as a pull request Copilot's coding agent wrote (`require_extra_approval_for_unattributed_changes`); approvals are dismissed when new commits arrive (the native review of #55 relies on that); squash merges only. `dependency review` runs on every pull request without being required. The ruleset on GitHub is the source of truth (`gh api repos/kuutti-ry/kuutti-app/rulesets/23053522`), and a PUT replaces all of it, `bypass_actors` included: the snippet carries the live value, repository role 5 (admin) bypassing always, which only an admin token can read back, so compare before a PUT. `required_review_thread_resolution` is off, although #8 item 7 asked for it: with a bot reviewing pull requests (Copilot did, until 2026-09-29), an unresolved bot thread would block every merge until someone clicked; turning it on is a one-line change here and in the live rule, the maintainer's call. A change to the ruleset updates this snippet, `CLAUDE.md` (Git) and `CONTRIBUTING.md` in the same pull request.
+The rules above are the live ones as of 2026-09-26: fourteen checks, `i18n` (#13) and `licenses` (#16) among them; one approving review since the `contributors` team got write (2026-09-25), and one more for changes no person is attributed to, such as a pull request Copilot's coding agent wrote (`require_extra_approval_for_unattributed_changes`); approvals are dismissed when new commits arrive (the native review of #55 relies on that); squash merges only. `dependency review` runs on every pull request without being required. The ruleset on GitHub is the source of truth (`gh api repos/kuutti-ry/kumpa-app/rulesets/23053522`), and a PUT replaces all of it, `bypass_actors` included: the snippet carries the live value, repository role 5 (admin) bypassing always, which only an admin token can read back, so compare before a PUT. `required_review_thread_resolution` is off, although #8 item 7 asked for it: with a bot reviewing pull requests (Copilot did, until 2026-09-29), an unresolved bot thread would block every merge until someone clicked; turning it on is a one-line change here and in the live rule, the maintainer's call. A change to the ruleset updates this snippet, `CLAUDE.md` (Git) and `CONTRIBUTING.md` in the same pull request.
 
 ### Hardening settings (#16), maintainer only
 
@@ -153,7 +153,7 @@ Settings of the repository and the organisation exist only on GitHub, so the com
 **Tag ruleset.** A `v*` tag deploys production, so creating, moving and deleting one is for repository admins only:
 
 ```sh
-gh api -X POST repos/kuutti-ry/kuutti-app/rulesets --input - <<'JSON'
+gh api -X POST repos/kuutti-ry/kumpa-app/rulesets --input - <<'JSON'
 {"name":"Protect release tags","target":"tag","enforcement":"active",
  "bypass_actors":[{"actor_id":5,"actor_type":"RepositoryRole","bypass_mode":"always"}],
  "conditions":{"ref_name":{"include":["refs/tags/v*"],"exclude":[]}},
@@ -166,7 +166,7 @@ JSON
 **Code scanning, secret scanning, Actions allow-list:**
 
 ```sh
-R=repos/kuutti-ry/kuutti-app
+R=repos/kuutti-ry/kumpa-app
 gh api -X PATCH "$R/code-scanning/default-setup" -f state=configured -f 'languages[]=actions' -f 'languages[]=javascript-typescript'
 gh api -X PATCH "$R" --input - <<'JSON'
 {"security_and_analysis":{"secret_scanning_non_provider_patterns":{"status":"enabled"},"secret_scanning_validity_checks":{"status":"enabled"}}}
@@ -180,19 +180,19 @@ JSON
 
 "Any verified creator" is a far larger set than the six we run. `actions/*` and `github/*` (checkout, cache, setup-python, dependency-review, attest-build-provenance, codeql-action) stay allowed as GitHub-owned. After the change every workflow must still run green on `main`; a workflow that names an action outside the list fails at start-up with the action named.
 
-**Actions approve nothing.** "Allow GitHub Actions to create and approve pull requests" is off for the organisation since 2026-11-07 (#609, the audit's record 5): with it on, a workflow pushed to any branch by a member with write could approve its author's pull request with `GITHUB_TOKEN`, and so could the pull-request jobs that hold `pull-requests: write` to comment. Read it back per repository: `gh api repos/kuutti-ry/kuutti-app/actions/permissions/workflow` shows `can_approve_pull_request_reviews` false. No workflow approves; `auto-approve.yml` went with the decision, and the maintainer merges their own pull requests with the admin bypass (`docs/architecture/delivery.md`, Open).
+**Actions approve nothing.** "Allow GitHub Actions to create and approve pull requests" is off for the organisation since 2026-11-07 (#609, the audit's record 5): with it on, a workflow pushed to any branch by a member with write could approve its author's pull request with `GITHUB_TOKEN`, and so could the pull-request jobs that hold `pull-requests: write` to comment. Read it back per repository: `gh api repos/kuutti-ry/kumpa-app/actions/permissions/workflow` shows `can_approve_pull_request_reviews` false. No workflow approves; `auto-approve.yml` went with the decision, and the maintainer merges their own pull requests with the admin bypass (`docs/architecture/delivery.md`, Open).
 
 **Organisation** (an owner; `gh auth refresh -s admin:org` to read these through the API). Verify `kuutti.app`: Settings, Verified and approved domains, Add a domain; put the record name and code into `infra/bootstrap/terraform.tfvars` (`github_domain_verification`), `tofu apply` in `infra/bootstrap`, then press Verify. New-repository security defaults (Dependabot alerts, secret scanning, push protection) on. Third-party application access restricted, applications approved by an owner. Fine-grained personal access tokens require approval; classic tokens have no access to the organisation. Organisation Actions policy equal to the repository's. Review the six members: role in the organisation, role on this repository, nobody holding more than the work needs; write the result into #16.
 
 **Build provenance.** `build.yml` signs a provenance attestation for every image it pushes from `main`, and again under the tag when a release retags that digest (job `attest`). Before deploying an image by hand, in a recovery, check that it is one of ours, built by that workflow from that ref:
 
 ```sh
-gh attestation verify oci://ghcr.io/kuutti-ry/kuutti-api:<sha> --repo kuutti-ry/kuutti-app \
-  --signer-workflow kuutti-ry/kuutti-app/.github/workflows/build.yml --source-ref refs/heads/main
+gh attestation verify oci://ghcr.io/kuutti-ry/kuutti-api:<sha> --repo kuutti-ry/kumpa-app \
+  --signer-workflow kuutti-ry/kumpa-app/.github/workflows/build.yml --source-ref refs/heads/main
 # a release: oci://...:vX.Y.Z with --source-ref refs/tags/vX.Y.Z
 ```
 
-An image built before 2026-10-03 was attested when the organisation was still `kuutti-fi` (#110), and its certificate says so: verify it with `--repo kuutti-fi/kuutti-app --signer-workflow kuutti-fi/kuutti-app/.github/workflows/build.yml`, at the image's present path `ghcr.io/kuutti-ry/kuutti-api`. With the new name it is refused. The old name proves less than it did, because a name can change hands and the IDs cannot: for such an image, read the IDs the certificate carries as well and hold them against this repository's (`gh api repos/kuutti-ry/kuutti-app --jq '{repo_id: .id, owner_id: .owner.id}'`):
+An image built from 2026-10-03 to 2026-11-16 was attested while this repository was `kuutti-ry/kuutti-app` (#702): verify it with `--repo kuutti-ry/kuutti-app --signer-workflow kuutti-ry/kuutti-app/.github/workflows/build.yml`. An image built before 2026-10-03 was attested when the organisation was still `kuutti-fi` (#110), and its certificate says so: verify it with `--repo kuutti-fi/kuutti-app --signer-workflow kuutti-fi/kuutti-app/.github/workflows/build.yml`, at the image's present path `ghcr.io/kuutti-ry/kuutti-api`. With the new name it is refused. The old name proves less than it did, because a name can change hands and the IDs cannot: for such an image, read the IDs the certificate carries as well and hold them against this repository's (`gh api repos/kuutti-ry/kumpa-app --jq '{repo_id: .id, owner_id: .owner.id}'`):
 
 ```sh
 gh attestation verify oci://ghcr.io/kuutti-ry/kuutti-api:<sha> --repo kuutti-fi/kuutti-app \
@@ -761,7 +761,7 @@ Once, after staging is applied and its Dokploy is configured:
 6. **GitHub.** The environment `preview` with no required reviewer (Trust, above: the reviewer is ADR-004 §3's call, off from 2026-10-08) and no deployment branch restriction (pull requests deploy from any branch of this repository), seven variables (the panel's three from the staging outputs, Admin panel above) and two secrets; the environment `preview-cleanup` with no reviewer, the same four variables of #9, the panel's `ADMIN_BUCKET`, and the two secrets (ADR-012); then the switch:
 
    ```sh
-   R=repos/kuutti-ry/kuutti-app
+   R=repos/kuutti-ry/kumpa-app
    gh api -X PUT "$R/environments/preview" --input - <<'JSON'
    {"wait_timer":0,"reviewers":[],"deployment_branch_policy":null}
    JSON

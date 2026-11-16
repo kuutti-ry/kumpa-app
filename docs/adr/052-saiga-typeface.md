@@ -6,7 +6,7 @@
 
 ## Context
 
-Saiga is Spoke Type's typeface. Spoke licensed it to Kuutti ry by e-mail on 20 and 21/10/2026: "The license allows use only on the Kuutti app and other media relating to the Kuutti brand [kollateral, advertising, social media, website]". The maintainer had offered, in the request Spoke answered, to keep the font files out of the public repositories and to ship them only inside the app's builds and the website. The files are Saiga 1.002, "All rights reserved": Light, Regular, Medium, Bold, Extrabold and Black, each with an italic, as OTF, TTF and WOFF2. They are in the association's private repository `kuutti-app-fonts`, with their SHA-256 sums and the e-mail.
+Saiga is Spoke Type's typeface. Spoke licensed it to Kuutti ry by e-mail on 20 and 21/10/2026: "The license allows use only on the Kuutti app and other media relating to the Kuutti brand [kollateral, advertising, social media, website]". The maintainer had offered, in the request Spoke answered, to keep the font files out of the public repositories and to ship them only inside the app's builds and the website. The files are Saiga 1.002, "All rights reserved": Light, Regular, Medium, Bold, Extrabold and Black, each with an italic, as OTF, TTF and WOFF2. They are in the association's private repository `kumpa-app-fonts`, with their SHA-256 sums and the e-mail.
 
 This repository is public. A file once pushed stays reachable: a squash merge leaves a pull request's commits at `refs/pull/<n>/head`, and `main` is never rewritten. A GitHub runner's caches, artifacts and logs are public too: any signed-in user can download an artifact. #394 listed nine ways the files could leak, and designed the fetch. The website went first (its decision 18): Amplify's build fetches four WOFF2 faces at a pinned commit with `FONTS_TOKEN`, falls back to Inter, and a content check keeps fonts out of git.
 
@@ -22,7 +22,7 @@ Saiga covers every character of `messages.yaml` (å, ä and ö among them) but �
 
 ## Decision
 
-1. **The files live in `kuutti-app-fonts` alone, at a pinned commit.** `scripts/saiga.json` names the commit and the five faces the app and the panel use (Regular, Italic, Medium, Bold, Extrabold), with the SHA-256 of each one's TTF (native) and WOFF2 (web) file. It also lists the SHA-256 of all 36 delivered files, for the guard. A new release of Saiga is a new manifest, with the version in every path.
+1. **The files live in `kumpa-app-fonts` alone, at a pinned commit.** `scripts/saiga.json` names the commit and the five faces the app and the panel use (Regular, Italic, Medium, Bold, Extrabold), with the SHA-256 of each one's TTF (native) and WOFF2 (web) file. It also lists the SHA-256 of all 36 delivered files, for the guard. A new release of Saiga is a new manifest, with the version in every path.
 2. **Two places fetch them, never a GitHub workflow.** `scripts/fonts.ts` (`pnpm fonts`) has no dependencies. It writes into `~/.cache/kuutti-fonts/saiga-<version>/` and never into the checkout, all files or none, each verified. It runs:
    - on a member's laptop, with the member's own `gh` login;
    - on the EAS builder, as `apps/mobile`'s `eas-build-pre-install` hook, with `FONTS_TOKEN`, an EAS secret in the environments `preview` and `production`. The hook runs before the install; `eas-build-post-install` would run after prebuild, too late.
@@ -52,7 +52,7 @@ Saiga covers every character of `messages.yaml` (å, ä and ö among them) but �
    - `.claude/settings.json` denies reading font files and the cache.
    - `env:doctor` says whether Saiga is there.
    - A font that got pushed anyway: the maintainer asks GitHub Support to purge it, and decides whether Spoke is told.
-8. **The licence is recorded here and in `kuutti-app-fonts`**, not in `scripts/license-policy.json`, which covers code dependencies. The README's licence section says Saiga is not under the repository's licence. A fork builds and runs in the system font: nothing of the program depends on Saiga.
+8. **The licence is recorded here and in `kumpa-app-fonts`**, not in `scripts/license-policy.json`, which covers code dependencies. The README's licence section says Saiga is not under the repository's licence. A fork builds and runs in the system font: nothing of the program depends on Saiga.
 
 ## Consequences
 
@@ -67,7 +67,7 @@ Saiga covers every character of `messages.yaml` (å, ä and ö among them) but �
 ## Open, the maintainer's
 
 1. **The credential:** a fine-grained token, as on the website, a GitHub App or a deploy key (#394: a, b, c). Then `FONTS_TOKEN` in the EAS environments `preview` and `production` (`docs/runbooks/rotation.md`, 13). Until then EAS builds are in the system font.
-2. **The Expo GitHub App** is installed on all of the organisation's repositories, with contents and administration write, so it can read `kuutti-app-fonts`. Narrowing it is his setting (#394, step 1).
+2. **The Expo GitHub App** is installed on all of the organisation's repositories, with contents and administration write, so it can read `kumpa-app-fonts`. Narrowing it is his setting (#394, step 1).
 3. **The uploads:** Saiga to the staging panel's bucket (`pnpm aws:login`, `pnpm fonts`, `pnpm fonts -- --upload <ADMIN_BUCKET>`), and to production's with #25.
 4. **Spoke's credit:** whether and how, on the site, in the app's licences screen and in the panel. It waits on Spoke (#405).
 5. **The type scale:** set on 2026-11-08 (History), the designer's to change. Saiga Light for what is read, which nobody has seen in the app, is hers to try; embedding it is a native change.
@@ -76,7 +76,7 @@ Saiga covers every character of `messages.yaml` (å, ä and ö among them) but �
 ## Not done, and what would make it needed
 
 - **No stand-in font,** which #394 proposed. React Native's fallback makes the system font the stand-in, with no font file to license or credit. A stand-in returns if a screen comes to depend on Saiga's metrics.
-- **No tag in `kuutti-app-fonts`.** The commit and each file's SHA-256 pin it, as on the website.
+- **No tag in `kumpa-app-fonts`.** The commit and each file's SHA-256 pin it, as on the website.
 - **No Saiga in the e-mails** (#404), which are plain text.
 - **No Light, Black or further italics embedded,** since nothing uses them. Adding a face is a line of `saiga.json`.
 - **No line for Saiga on the licences screen** until Spoke has answered (#405).
