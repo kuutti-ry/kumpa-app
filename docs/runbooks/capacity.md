@@ -2,22 +2,27 @@
 
 CLAUDE.md sizes everything at five thousand people on one box (TD-3, TD-19). That is a claim until it has been measured. Once per milestone, by hand, `pnpm load:smoke` drives staging the way five thousand people would in a bad hour, and the row it prints goes into the table at the end with what the server showed meanwhile (#200). The beta is the wrong moment to learn the ceiling.
 
-**The first run waits for #77's memory alarm** (the maintainer's word, 17/10/2026). Until a run has happened, the table holds no numbers.
+**The first run, 10/11/2026**, on 0.118.3 with six accounts, in three passes: up to 8 visits a second and then up to 20 with `rate-limit-per-minute` at 3,000 for the hour, and up to 50, the script's cap since #652, at 6,500 (the maintainer's numbers). No pass had an error, a timeout or a 5xx, and 24 sockets stayed open to the end of each. The bad hour below peaks at 5.6 visits a second; at 6 the script's p95 was 108 ms and the server's 25 ms, so the claim is measured, with room. **The ceiling is about 50 visits a second, some 260 requests a second, nine times the bad hour.** At 50 the stage still held by the script's rules (p95 228 ms, 27 of 3,000 visits dropped), so the bend itself lies just past it. What gave first:
+
+- **The API's one core.** Its container rose from about a fifth of a core at 8 visits a second to half at 25 and a full core at 50 (100, 102 and 109 %), and there the event loop is what bent (While it runs): the script's p95 tripled from 77 to 228 ms, the log's went from 25 to 109 and then 256 ms, and its p50 from 15 to 93 ms in the stage's last seconds.
+- **Not the database.** Its pool sat at its 10 connections from 4 visits a second on, held by requests waiting on the loop, while its CPU rose only to 41 % at 50.
+
+The costly routes were the queue's read (log p95 621 ms in the third pass, p50 69 ms) and the signed URL (167 ms). Everything in What the run leaves out applies: staging held 106 complete people, the reads decided nothing, and six accounts are not five thousand people. What a second process would change is Past the one core, below. The run's full record, with its sign-in helper, is a comment on #200.
 
 ## What a run is
 
 A **visit** is a person opening the app, reading the queue and looking at their profile. Opening the app asks for the onboarding status, then the home's gate and the pond counter, the counter with the person's session, so it is answered for them and kept by nobody (ADR-013 §18). On every visit, or on one visit in Q, the person then reads the queue once, `GET /rounds/today` (below). The profile view asks for the profile and the photo list. On one visit in N the person also opens the photos screen, which reads the list again and asks for one signed URL per thumbnail (ADR-008). The public part goes out at the visit's start: every fourth visit sends the sign-in's last step, `POST /auth/exchange`, with a code nobody holds: the exchange's shape without the bank (a hash and an indexed lookup, answered `auth_code_used`). In the app, the profile is a screen many openings never reach. The visit's make-up is an assumption, like the bad hour below. A run without sessions sends the public part alone.
 
-**N is set by the exposure budget, not by the app.** Each account may use 60 thumbnail URLs in one run, a tenth of its day's 600, and the script spreads them over the run. In the app, every opening of the photos screen asks for a URL per photo. The URL route is the visit's costliest: a lookup, then a transaction with an advisory lock, a count over the day's rows and an insert, then an RSA signature on the event loop. With the recipe below (seven accounts of six photos, five stages of a minute), N is 18, about a third of a URL per visit. The script prints N and the URLs per visit, and the row records both. If the URL route's ceiling matters, give it more of the run: more test persons, a shorter run, or a short stage of its own.
+**N is set by the exposure budget, not by the app.** Each account may use 60 thumbnail URLs in one run, a tenth of its day's 600, and the script spreads them over the run. In the app, every opening of the photos screen asks for a URL per photo. The URL route is the visit's costliest: a lookup, then a transaction with an advisory lock, a count over the day's rows and an insert, then an RSA signature on the event loop. With the recipe below (six accounts, six photos at most, five stages of a minute), N is 21, under a third of a URL per visit. The script prints N and the URLs per visit, and the row records both. If the URL route's ceiling matters, give it more of the run: more test persons, a shorter run, or a short stage of its own.
 
-**Q is set by the queue's alarm, not by the app.** Thirty reads of the queue a minute shadow-ban an account (`auto_shadow_ban_round_reads`, ADR-041), and a run must never ban its own test persons. So the plan takes at most 40 % of that, as of every other budget, and past it the queue is read on one visit in Q, spread as the photos screen is. With the recipe below Q is 6. The script prints it beside N; the row does not carry it.
+**Q is set by the queue's alarm, not by the app.** Thirty reads of the queue a minute shadow-ban an account (`auto_shadow_ban_round_reads`, ADR-041), and a run must never ban its own test persons. So the plan takes at most 40 % of that, as of every other budget, and past it the queue is read on one visit in Q, spread as the photos screen is. With the recipe below Q is 7. The script prints it beside N; the row does not carry it.
 
 **What a read of the queue costs** (ADR-062, Consequences). A read comes in two shapes.
 
 - With cards left, it reads the day's undecided entries, asks both people's filters of those people alone (`fitsNow`), serves at most ten cards through the card builder, which writes the shown record, and reads the person's budgets and their turn.
 - With none left, it **walks the pool** first: `subjectsOfPond` reads every live account of the one pond with what its filters and completeness ask, the person's history and the likes waiting on them are read, the people left are ordered in memory, on the event loop, the inbox stop is counted, and the next people are written to the day's log, all in the request. One read walks at most three times (`FILL_TRIES`). Somebody at their queue's end walks once on every read, adding nobody.
 
-So the walk comes every ten cards: a person going through three hundred cards a day walks the pool thirty times. Before the queue it came at most once a person a day, and the night built everybody else's rounds. One figure stands so far, taken on the laptop on 01/11/2026 with 4,617 accounts of `pnpm demo:population`, 3,361 of them complete, and the machine busy: a walk took about 360 ms (p95 430 ms), of which `subjectsOfPond` about 330 ms, and asking a page of ten cards fresh (`fitsNow`) about 4 ms. So a few walks a second is what a core holds. A staging run has not replaced it, and which of the two a run measures is not a given (What the run leaves out). `GET /rounds/today` has its own p95 in the script's stage lines and in `kuutti-staging/p95-duration-by-route`, and that is where the cost is read.
+So the walk comes every ten cards: a person going through three hundred cards a day walks the pool thirty times. Before the queue it came at most once a person a day, and the night built everybody else's rounds. One figure stands so far, taken on the laptop on 01/11/2026 with 4,617 accounts of `pnpm demo:population`, 3,361 of them complete, and the machine busy: a walk took about 360 ms (p95 430 ms), of which `subjectsOfPond` about 330 ms, and asking a page of ten cards fresh (`fitsNow`) about 4 ms. So a few walks a second is what a core holds. The first staging run did not replace it (10/11/2026, 106 complete people on staging): the route's p95 in the log was 150 ms up to 8 visits a second, 205 ms up to 20 and 621 ms up to 50 (p50 23, 35 and 69 ms), but which shape each read took the run cannot say, and most of its reads were the cheap one (What the run leaves out). `GET /rounds/today` has its own p95 in the script's stage lines and in `kuutti-staging/p95-duration-by-route`, and that is where the cost is read.
 
 A **stage** offers visits at a fixed rate for `--stage` seconds. It is an open model: a visit that finds every request slot (`--concurrency`) busy is counted as dropped, never queued, so slow answers show up in the numbers instead of slowing the offer. After each stage the script prints the visits, the parts held back, the requests answered a second and how many were thumbnail URLs, p50, p95, p99 and the maximum, the timeouts, the p95 of each route, and every answer that was not the expected one by route, status and error code. A request unanswered after 10 s counts in the percentiles at 10 s, so a p95 with timeouts in it is a lower bound.
 
@@ -76,6 +81,8 @@ curl -sS -A kuutti-load-smoke "$api/auth/exchange" -H 'content-type: application
   | node -e 'const a = JSON.parse(require("fs").readFileSync(0, "utf8")); if (!a.refreshToken) { console.error(a.error?.code ?? "no session"); process.exit(1); } console.log(a.refreshToken)' >> "$file"
 ```
 
+On staging six of the test persons sign in (`docs/vendors/telia.md` 1.4): Sanna, Noa, Onni and Aino at Nordea's demo (`DEMOUSER4`, `DEMOUSER3`, `DEMOUSER1`, `DEMOUSER2`), Kerttu at Säästöpankki (Kerttu's codes are in the same section), and Helmi at Telia's Mobiilivarmenne emulator (`0401234567`, prefilled), which sends itself on after ten seconds. After the bank, Telia's bed asks to pass the person's data on: VAHVISTA. Of the six, only Sanna, Noa and Kerttu have complete profiles, so theirs are the reads that walk the pool. The nightly demo reset erases the personas, and their sessions with them (ADR-018 §8), so a file made on staging lives until the next reset: sign the test persons in on the day of the run, after that day's reset has run. Its schedule says 02:17 Helsinki time, and GitHub has started it hours later.
+
 Repeat this for each test person with a live account, and for most of them more than once. More sessions add no budget: a person's budget is the account's, and all of its sessions share it. But every signed-in request writes its own session's row (`last_used_at`), and five thousand people write five thousand rows. Seven sessions would put all of the run's writes on seven rows. The script goes round an account's sessions, so two to four each spread that write at no cost to the budget. Each sign-in spends one start of the doors' sixty a minute (ADR-026 §4) and adds a `kuutti-load-smoke` device to that person's sessions.
 
 **How the script uses the file:**
@@ -93,7 +100,7 @@ Never put a phone's session in the file: rotating it would sign the phone out at
 
 ## The limit
 
-The script plans each stage against the budgets the API reports in `RateLimit-Limit`, taking at most 40 % of each window, and refuses a plan that would take more. The other 10 % up to half is for the sessions' opening requests and a persona's own phone, so a stage planned to the full ceiling does not trip the rest at half (below). The refusal names the most visits a second the sessions allow, and the `rate-limit-per-minute` a plan needs. With seven accounts and the default 120 a minute, that is about 0.6 visits a second when the photos screen and the queue come on most visits. Each socket's upgrade counts on the address too, and is never given back (below): with the recipe's 28 sockets, the default allows about 0.27.
+The script plans each stage against the budgets the API reports in `RateLimit-Limit`, taking at most 40 % of each window, and refuses a plan that would take more. The other 10 % up to half is for the sessions' opening requests and a persona's own phone, so a stage planned to the full ceiling does not trip the rest at half (below). The refusal names the most visits a second the sessions allow, and the `rate-limit-per-minute` a plan needs. With six accounts and the default 120 a minute, that is about 0.9 visits a second for the recipe below, and 0.37 for a short stage whose every visit has the photos screen and the queue. Each socket's upgrade counts on the address too, and is never given back (below): with the recipe's 24 sockets, the default allows about 0.53.
 
 To find where the box bends, the maintainer raises `/kuutti/staging/rate-limit-per-minute` for the hour. ADR-026 §5 makes the number his; it is read at boot, so a restart of the API applies it, and the value goes back, with another restart, after the run. The one number is both the address's limit and each person's, so for that hour staging's public routes are less protected. That is why a run is announced and short.
 
@@ -101,10 +108,10 @@ To find where the box bends, the maintainer raises `/kuutti/staging/rate-limit-p
 
 ```sh
 pnpm load:smoke -- --target https://api.staging.kuutti.app --confirm-staging \
-  --sessions ~/.kuutti-load-sessions-staging --rates 1,2,4,6,8 --stage 60 --sockets 28
+  --sessions ~/.kuutti-load-sessions-staging --rates 1,2,4,6,8 --stage 60 --sockets 24
 ```
 
-The recipe's 28 sockets are four for each of the seven accounts, the most the script opens.
+The recipe's 24 sockets are four for each of the six accounts, the most the script opens.
 
 | option | what it does | default | at most |
 |---|---|---|---|
@@ -152,7 +159,7 @@ The plan is backed by guards as the run goes:
 - An answer with less than half its window left (`RateLimit-Remaining`) rests that budget for a window: the person's on a signed-in route, the address's on a public one. The stage counts what it held back, and a stage that held back more than 1 % of its parts is not measured.
 - The first 429 of any kind stops the run with exit 2: `rate_limited`, or `photo_budget_exceeded`, whose alarm counts 100 a day.
 - So does the first 401 of a session.
-- So does a socket that does not open, or that the server closes during the run. The script names the socket by its number, with the close code and the error frame's code; a refused upgrade, a 429 from the address's limiter among them, shows only as a failed connection (Node's client sees no status).
+- So does a socket that does not open, or that the server closes during the run. The script names the socket by its number, with the close code and the error frame's code; a refused upgrade, a 429 from the address's limiter among them, shows only as a failed connection (Node's client sees no status). On 10/11/2026 one of the first run's 24 failed so before the API saw it: the log had the other 15 of its batch and no refusal, and the same run again opened all 24. When the log has nothing for the socket, run once more before reading it as the box's.
 
 ## While it runs: what to watch
 
@@ -162,8 +169,8 @@ The script measures from outside: its p95 includes the network from the runner t
 - **The event loop.** The API is one Node process (`CMD ["node", "dist/index.js"]`, no cluster), so its JavaScript runs on one core: JSON and zod, the logger, the URL signatures. On the two-core box, one core flat out shows as about 50 % `CPUUtilization`, not 100 %. When the event loop is what bends, the box sits near 50 %, the database's connections stay under the pool's size, the log's p95 stays flat, and the script's p95 climbs. The gap between the two p95s is the time spent waiting for the loop.
 - **Postgres connections:** RDS `DatabaseConnections`. The API's pool is `DB_POOL_MAX` (10 unless set), and each preview has its own. When the pool is what bends, the connections sit at the pool's size while p95 climbs and the database's CPU does not.
 - **The database:** RDS `CPUUtilization` and `CPUCreditBalance`. Staging's database is a db.t4g.micro and production's a db.t4g.small, so staging's ceiling there is a lower bound for production's.
-- **The box:** EC2 `CPUUtilization` and `CPUCreditBalance` (a t4g.small, two cores; see the event loop above), and the free memory of #77's metric.
-- **The sockets:** they open just before the first stage. Each holds some memory on the box, and the API checks its session at every ping, every 30 s, so 28 sockets add about one session read a second to every stage.
+- **The box:** EC2 `CPUUtilization` and `CPUCreditBalance` (a t4g.small, two cores; see the event loop above), and the free memory of #77's metric. EC2 sends staging's every five minutes (basic monitoring), one or two points for a whole run, so read the box from inside as well, every ten seconds through the run: the api container's CPU, where 100 % is one core flat out (the event loop), and each core's busy share. The command below prints both, through Run Command, the way the headroom document reaches the box (`infra/README.md`), with nothing to type on it. It follows the container it finds at its start, so start it after any restart of the API.
+- **The sockets:** they open just before the first stage. Each holds some memory on the box, and the API checks its session at every ping, every 30 s, so 24 sockets add about one session read a second to every stage.
 - **sharp:** not driven (below).
 
 ```sh
@@ -173,12 +180,32 @@ aws cloudwatch get-metric-statistics --namespace AWS/RDS --metric-name DatabaseC
   --period 60 --start-time "$from" --end-time "$to"
 ```
 
-The same command with `--metric-name CPUUtilization` and `CPUCreditBalance` covers the database. With `--namespace AWS/EC2 --dimensions Name=InstanceId,Value=<id>` it covers the box.
+The same command with `--metric-name CPUUtilization` and `CPUCreditBalance` covers the database. With `--namespace AWS/EC2 --dimensions Name=InstanceId,Value=<id>` it covers the box, five minutes a point.
+
+The box from inside, started just before the run and read after it (`<id>` as above; 600 seconds covers the recipe):
+
+```sh
+cat > /tmp/box.sh <<'SH'
+ctr=$(docker ps --format '{{.Names}}' | grep -E '^staging-api' | head -1)
+cpu() { awk '/^cpu[0-9]/ { t = 0; for (i = 2; i <= 9; i++) t += $i; print $1, $5 + $6, t }' /proc/stat; }
+prev=$(cpu); end=$(($(date +%s) + 600))
+while [ "$(date +%s)" -lt "$end" ]; do
+  sleep 8; api=$(docker stats --no-stream --format '{{.CPUPerc}} {{.MemUsage}}' "$ctr"); now=$(cpu)
+  cores=$(paste -d' ' <(echo "$prev") <(echo "$now") | awk '{ printf "%s %d%% ", $1, 100 * (($6 - $3) - ($5 - $2)) / ($6 - $3) }')
+  prev=$now; echo "$(date -u +%H:%M:%S) api $api | $cores"
+done
+SH
+cid=$(aws ssm send-command --instance-ids <id> --document-name AWS-RunShellScript \
+  --parameters "{\"commands\":[\"echo $(base64 < /tmp/box.sh | tr -d '\n') | base64 -d | bash\"],\"executionTimeout\":[\"720\"]}" \
+  --query Command.CommandId --output text)
+# after the run:
+aws ssm get-command-invocation --command-id "$cid" --instance-id <id> --query StandardOutputContent --output text
+```
 
 ## After the run
 
 1. Put the script's row in the table. Fill the milestone, the log's p95 at the bend, what bent first, and the three server columns.
-2. Set `rate-limit-per-minute` back and restart, if it was raised.
+2. Set `rate-limit-per-minute` back and restart, if it was raised. On staging the parameter did not exist before the first run (the 120 is the code's default), so going back was `aws ssm delete-parameter --name /kuutti/staging/rate-limit-per-minute`. A restart is `sudo docker service update --force <the api service>` on the box (`incident.md` names the service), some twelve seconds on 10/11/2026.
 3. The edge's allow list is empty again: the `trap` of Before a run, step 8, emptied it when its shell exited. `aws wafv2 get-ip-set --scope CLOUDFRONT --region us-east-1 --name kuutti-staging-edge-unlimited --id "$id" --query 'IPSet.Addresses'` says `[]`; if not, run the trap's command by hand.
 4. If `kuutti-staging-api-5xx` mailed, check in `kuutti-staging/errors-by-route` that its 5xx fall in the run's last stage, and say so to the team.
 5. If the first thing to bend is a surprise, open an issue for it.
@@ -189,6 +216,20 @@ One row per milestone run. "held" is the last stage that held, and "bent" the fi
 
 | date | milestone | version | target | accounts · sessions · limit | grid: 1 in N · URLs a visit | sockets: open of held | held: visits/s · req/s · p95 ms | bent: visits/s · req/s · p95 ms (why) | log p95 ms at the bend | first to bend | DB connections, max | box CPU % · free MB | DB CPU % · credits |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 2026-11-10 | R1 Tech hygiene | 0.118.3-11a0210 (11a0210) | staging | 6 · 7 · 3000 | 1 in 21 · 0.29 | 24 of 24 | 8 · 44.1 · 100 | - (did not bend up to 8) | - | nothing; the DB pool at its 10 from 4 | 10 | api 13–28 % of a core at 6–8 (EC2 17 %, five minutes) · 424 | 11.6 · 288 |
+| 2026-11-10 | R1 Tech hygiene | 0.118.3-11a0210 (11a0210) | staging | 6 · 7 · 3000 | 1 in 48 · 0.13 | 24 of 24 | 20 · 107.4 · 69 | - (did not bend up to 20, the script's cap) | - | nothing; the api at 63 % of a core at 20 | 10 | api 38–63 % of a core at 20 (EC2 32 %, five minutes) · 432 | 18 · 288 |
+| 2026-11-10 | R1 Tech hygiene | 0.118.3-11a0210 (11a0210) | staging | 6 · 7 · 6500 | not recorded | 24 of 24 | 50 · 261.4 · 228 (27 of 3,000 visits dropped) | - (held at 50, the cap of #652's script; the bend lies just past it) | 109, then 256, at 50 | the API's one core, full at 50 (the event loop) | 10 | api 86–109 % of a core at 50 (EC2 54–59 %, five minutes) · 412 | 41 · 285 |
+
+## Past the one core
+
+The first run found the API's one core the first to give, at nine times the bad hour. When that margin is spent, the obvious lift is a second API process, by Node's cluster or a second container. It is not free: the API keeps some of its guards in the memory of its one process, and a second process halves each of them, with nothing to say so.
+
+- **The request limits.** The address's, each person's and the sign-in doors' budgets are fixed windows in the process (`apps/api/src/lib/rate-limit.ts`, TD-3, ADR-026 §1 and §4). Two processes give every address and every person twice the budget, and every address twice the doors' starts.
+- **The velocity rule on the queue.** Its count of an account's reads lives in the process (`round_reads` in `apps/api/src/safety/automatic.ts`, ADR-041 §3), so two processes split it, and a scraper takes twice the reads before the shadow ban. The photo rules count the fetch log in the database and are not split; neither is the exposure budget, nor anything else the database holds.
+- **The chat's presence.** The open sockets are a map in the process (`apps/api/src/chat/presence.ts`, ADR-031 §9). Each process would know only its own: an account could hold five sockets on each, the online mark would show only for sockets on the same process, and a push would no longer be spared for somebody whose app is open on the other one (#102). The message push's spacing is in the process too (`message_push_min_interval_minutes`, `apps/api/src/notifications/push.ts`), so a conversation could push once from each. Delivery itself would work, since LISTEN/NOTIFY reaches every process that listens.
+- **The night's jobs.** They run on one timer in the process (`apps/api/src/jobs/nightly.ts`), with no lock: only the migrations take an advisory lock (`boot.ts`). Two processes would run every job twice.
+
+A restart or a deploy already empties the first three, so their loss is the same as on every deploy, only for good. Before a second process, then: the limits and the queue's count where both processes see them (a table in Postgres, not a new service, TD-3), presence the same way or the chat's sockets pinned to one process, and the night's jobs under an advisory lock. Nothing of that is needed while the ceiling stands at nine times the bad hour; it becomes needed when a run's held column comes within twice the bad hour's 5.6 visits a second, or the bad hour itself is raised (#689).
 
 ## What the run leaves out, and what would make it needed
 
@@ -199,4 +240,4 @@ One row per milestone run. "held" is the last stage that held, and "bent" the fi
 - **The walk of the pool, under load.** A run reads the queue and never decides, since a decision would write the test persons' days, which the demo shows. So an account with cards left walks the pool once, at its first read of the Finnish day, and reads the cheap shape from then on; one at its queue's end walks on every read; and which it was shows in the route's p95, not in the row. The walk's size is staging's too: it reads everybody the one pond holds, so it reads what `demo-population` wrote, but it orders only the complete, and a population without faces has none of those. This would be needed before a launch, when people go through the queue at length: then a stage whose reads decide, by test persons made for it, against a population of its full size with faces.
 - **The chat's traffic.** The chat's sockets are held idle, at most four an account, so their count is a lower bound of what the box holds (above). No message is sent, read or pushed through them: sending would write the test persons' conversations, which the demo shows. This would be needed once people use the chat more than the profile: then a stage that sends and reads messages between test persons made for it, and sockets for many more of them.
 - **Many addresses.** The run comes from one, so the address limit it meets is the runner's, not five thousand people's.
-- **Many people.** The run is a handful of accounts and sessions. Their rows are hot: every signed-in request updates its session's row, and the URL route locks per account, so a few rows take all the writes and queue on each other as latency rises. Their data is a few pages the database keeps cached. Five thousand people spread the writes over five thousand rows and need a working set that may not fit. Where the run bends is then neither their best case nor their worst. More sessions per person (above) spread the session writes. The synthetic population (`demo:population`) makes the tables population-sized, but none of its people can sign in (no bank login maps to them), so the driven reads stay on the test persons' rows. This would be needed if the run's ceiling comes close to the claim: then sessions for many more test persons.
+- **Many people.** The run is a handful of accounts and sessions. Their rows are hot: every signed-in request updates its session's row, and the URL route locks per account, so a few rows take all the writes and queue on each other as latency rises. Their data is a few pages the database keeps cached. Five thousand people spread the writes over five thousand rows and need a working set that may not fit. Where the run bends is then neither their best case nor their worst. More sessions per person (above) spread the session writes. The synthetic population (`demo:population`) makes the tables population-sized, but none of its people can sign in (no bank login maps to them), so the driven reads stay on the test persons' rows. On 10/11/2026 staging held 106 complete people, about a fiftieth of the claim, so the first run's walks were small ones. This would be needed if the run's ceiling comes close to the claim: then sessions for many more test persons.
