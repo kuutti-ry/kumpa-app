@@ -2403,17 +2403,17 @@ describe("a photo in a conversation (#350)", () => {
   // Each refusal starts with its own attached photo. Independent cases also give each
   // failure its own name and deadline instead of sharing one timeout across all thirteen.
   it.each([
-    ["photo_rejected_nudity", 400, "Not sent. Photos with nudity cannot be sent on Kuutti.", false],
+    ["photo_rejected_nudity", 400, "Not sent. Photos with nudity cannot be sent on Kumpa.", false],
     [
       "photo_rejected_violence",
       400,
-      "Not sent. Photos with violence or weapons cannot be sent on Kuutti.",
+      "Not sent. Photos with violence or weapons cannot be sent on Kumpa.",
       false,
     ],
     [
       "photo_rejected_other",
       400,
-      "Not sent. This photo cannot be sent on Kuutti; try another one.",
+      "Not sent. This photo cannot be sent on Kumpa; try another one.",
       false,
     ],
     [
@@ -2425,7 +2425,7 @@ describe("a photo in a conversation (#350)", () => {
     [
       "photo_unsupported",
       415,
-      "This file is not a photo Kuutti can use. Choose a JPEG, PNG or WebP picture.",
+      "This file is not a photo Kumpa can use. Choose a JPEG, PNG or WebP picture.",
       false,
     ],
     ["photo_invalid", 422, "The photo could not be read. Try another picture.", false],
@@ -2512,7 +2512,7 @@ describe("a photo in a conversation (#350)", () => {
     await renderWithTheme(<ConversationScreen id={ID} />);
     await screen.findByLabelText("Message");
     const PERMISSION =
-      "Kuutti could not open your photos. Allow access in the phone's settings and try again.";
+      "Kumpa could not open your photos. Allow access in the phone's settings and try again.";
     await press("Add photo");
     expect(launch).toHaveBeenCalledTimes(1);
     expect(attached()).toBeNull();

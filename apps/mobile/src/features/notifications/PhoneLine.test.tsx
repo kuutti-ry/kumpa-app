@@ -41,11 +41,11 @@ const ANDROID_NOT_ASKED = { status: "denied", granted: false, canAskAgain: true,
 const ALLOW = "Allow notifications";
 const OPEN = "Open the phone's settings";
 const LINES = {
-  allowed: "This phone shows Kuutti's notifications.",
+  allowed: "This phone shows Kumpa's notifications.",
   denied:
-    "This phone does not show Kuutti's notifications. You can allow them in the phone's settings.",
-  undetermined: "This phone has not been asked yet whether Kuutti may notify it.",
-  unavailable: "This device cannot show Kuutti's notifications.",
+    "This phone does not show Kumpa's notifications. You can allow them in the phone's settings.",
+  undetermined: "This phone has not been asked yet whether Kumpa may notify it.",
+  unavailable: "This device cannot show Kumpa's notifications.",
 };
 
 const token = (seed: string) => (seed + "x".repeat(43)).slice(0, 43);

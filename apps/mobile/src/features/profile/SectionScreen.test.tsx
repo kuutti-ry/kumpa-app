@@ -606,7 +606,7 @@ describe("SectionScreen", () => {
     await show(<SectionScreen section="lifestyle" />);
     expect(screen.getByText(FAILED_TO_LOAD)).toBeTruthy();
     // Why, in words: the API answered 500.
-    expect(screen.getByText("Kuutti's server had a problem. Try again in a moment.")).toBeTruthy();
+    expect(screen.getByText("Kumpa's server had a problem. Try again in a moment.")).toBeTruthy();
     failing = false;
     await press(screen.getByRole("button", { name: "Try again" }));
     await waitFor(() => expect(screen.getByText("Smoking")).toBeTruthy());

@@ -34,8 +34,8 @@ const auth = jest.requireMock("expo-local-authentication") as {
   authenticateAsync: jest.Mock;
 };
 
-const LOCKED = "Kuutti is locked";
-const FIELD = "Your Kuutti passcode";
+const LOCKED = "Kumpa is locked";
+const FIELD = "Your Kumpa passcode";
 const BANK = "Sign in with the bank instead";
 const CODE = "246810";
 const MINUTE = 60_000;
@@ -120,7 +120,7 @@ function modalOf(node: unknown): Node | undefined {
   return (host.children ?? []).map(modalOf).find(Boolean);
 }
 
-const cover = () => screen.queryByText("Kuutti", { includeHiddenElements: true });
+const cover = () => screen.queryByText("Kumpa", { includeHiddenElements: true });
 const logouts = () =>
   fetchMock.mock.calls.filter(([input]) => String((input as Request).url).endsWith("/auth/logout"));
 
@@ -561,7 +561,7 @@ describe("the phone's face or fingerprint on the lock", () => {
   });
 
   // iOS's biometryNotAvailable, which the module reads as no hardware (#505).
-  const DENIED = /^This iPhone does not let Kuutti use Face ID/;
+  const DENIED = /^This iPhone does not let Kumpa use Face ID/;
 
   it("The lock screen says why the face it was set with is gone", async () => {
     jest.replaceProperty(Platform, "OS", "ios");
@@ -657,7 +657,7 @@ describe("the phone's face or fingerprint on the lock", () => {
     expect(answer).toBe("ok");
     expect(auth.authenticateAsync).toHaveBeenCalledTimes(1);
     expect(auth.authenticateAsync.mock.calls[0]?.[0]).toMatchObject({
-      promptMessage: "Unlock Kuutti",
+      promptMessage: "Unlock Kumpa",
       cancelLabel: "Cancel",
       disableDeviceFallback: true,
     });

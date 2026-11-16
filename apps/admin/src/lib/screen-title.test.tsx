@@ -47,7 +47,7 @@ function shell(children: ReactNode) {
 
 beforeEach(() => {
   window.history.replaceState(null, "", "/");
-  document.title = "Kuutti admin";
+  document.title = "Kumpa admin";
 });
 afterEach(cleanup);
 
@@ -116,8 +116,8 @@ describe("ScreenTitle", () => {
     const { unmount } = render(
       shell(<MemoryRouter initialEntries={["/two"]}>{routes()}</MemoryRouter>),
     );
-    expect(document.title).toBe("Two · Kuutti admin");
+    expect(document.title).toBe("Two · Kumpa admin");
     unmount();
-    expect(document.title).toBe("Kuutti admin");
+    expect(document.title).toBe("Kumpa admin");
   });
 });

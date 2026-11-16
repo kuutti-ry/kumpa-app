@@ -1,6 +1,6 @@
 # Reviewing Finnish (and later Swedish) texts
 
-For native speakers who check Kuutti's app texts. You need no programming, no git and no terminal: a GitHub account for the first way, a spreadsheet for the second. A developer does the rest.
+For native speakers who check the texts of Kumpa, Kuutti ry's app. You need no programming, no git and no terminal: a GitHub account for the first way, a spreadsheet for the second. A developer does the rest.
 
 ## Why a review
 
@@ -14,7 +14,7 @@ Legal texts (terms, privacy, the consents) are not reviewed this way. The Englis
 
 - Read `docs/i18n/tone.md`: the voice (plain, warm, informal *sinä* through verb forms, calm, never blaming) and the rules.
 - Keep `packages/i18n/glossary.yaml` at hand: the fixed Finnish word for each product term. Use it exactly, so the same thing has the same name everywhere.
-- "Kuutti" always stays in the nominative (the glossary's rule): rephrase a sentence that would need "Kuutissa" or "Kuuttia".
+- The app is "Kumpa", and it always stays in the nominative or starts a compound (the glossary's rule): "Kumpa-sovelluksessa", never "Kumpassa" or "Kummassa". The association is "Kuutti ry", with its ending after a colon ("Kuutti ry:lle").
 - A text in curly braces, such as `{name}` or `{seconds, plural, one {# sekunti} other {# sekuntia}}`, is filled in by the app. Keep the braces and the words inside them exactly as they are; only the ordinary words around them and inside the plural forms are yours. Never add a case ending to a `{value}`: rephrase the sentence instead (for example after a colon).
 - Buttons are short. A "note" such as *at most 12 characters* or *2.1× the English: check it fits* means the room is tight.
 

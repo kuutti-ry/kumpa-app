@@ -26,7 +26,7 @@ apps/api/src/profile/card.ts
 apps/mobile/src/features/matching/faceButtons.tsx
 -->
 
-Once matching is open for a person, People shows them everybody who fits them, one card at a time, as far as they like: each card with the reason it is there, and Like, Pass, Later and the fish as buttons. This flow follows the queue from See people on the home screen, through each decision and the star, to a match that opens a conversation, the queue's end with its offer to relax a deal-breaker for the day, and what the night still does. How matching opens is [People on Kuutti](people-on-kuutti.md); the answers and filters a card is read against are [the profile](profile.md).
+Once matching is open for a person, People shows them everybody who fits them, one card at a time, as far as they like: each card with the reason it is there, and Like, Pass, Later and the fish as buttons. This flow follows the queue from See people on the home screen, through each decision and the star, to a match that opens a conversation, the queue's end with its offer to relax a deal-breaker for the day, and what the night still does. How matching opens is [People on Kumpa](people-on-kuutti.md); the answers and filters a card is read against are [the profile](profile.md).
 
 ## Part 1: People reads the queue
 
@@ -78,7 +78,7 @@ flowchart TB
 
 ### Steps
 
-1. On the home screen, under "Matching is open for you.", the person chooses "See people". The button is there only once matching is open for them: [People on Kuutti](people-on-kuutti.md).
+1. On the home screen, under "Matching is open for you.", the person chooses "See people". The button is there only once matching is open for them: [People on Kumpa](people-on-kuutti.md).
 2. The app opens People and asks the API for the next cards. Nothing is built at night: the first read of the Finnish day opens the day's log of whom the queue holds, what was shown and what was decided. A queue left open past midnight is read anew, with no word, when it comes back in sight.
 3. Is matching open for the person: an admin has opened it, and their profile and onboarding are complete, with the account active or shadow-banned? Nobody taking a break, suspended or banned has a queue. No: 4. Yes: 5. Somebody whose matching closed after today's log was opened reads what is left of it and then the queue's end (13); one whose profile stopped being complete meets the end at once. Home says why.
 4. The app says "There is nobody to show you yet."

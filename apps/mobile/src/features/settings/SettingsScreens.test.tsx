@@ -650,7 +650,7 @@ describe("the account's rows", () => {
     await settingsWith("email", tokens.sessionId);
     expect(await screen.findByRole("button", { name: "Send a confirmation code" })).toBeTruthy();
     expect(screen.queryByText("A way to stay in touch")).toBeNull();
-    expect(screen.getByText(/^Optional\. A way for Kuutti to reach you/)).toBeTruthy();
+    expect(screen.getByText(/^Optional\. A way for Kumpa to reach you/)).toBeTruthy();
     // The field's name is in sight, not only for a screen reader.
     expect(screen.getByText("E-mail address")).toBeTruthy();
     noProblems();

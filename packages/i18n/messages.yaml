@@ -46,24 +46,24 @@ load.failed.press:
   machine: { fi: true, sv: true }
 
 load.failed.offline:
-  en: "Kuutti could not be reached. Check your connection."
+  en: "Kumpa could not be reached. Check your connection."
   description: "What a screen says when it did not load, over Try again: no answer came back from the API (no network, or the network dropped). Heard at once (#581)."
-  fi: "Kuuttiin ei saatu yhteyttä. Tarkista verkkoyhteys."
-  sv: "Kuutti kunde inte nås. Kontrollera anslutningen."
+  fi: "Kumpa ei saanut yhteyttä. Tarkista verkkoyhteys."
+  sv: "Kumpa kunde inte nås. Kontrollera anslutningen."
   machine: { fi: true, sv: true }
 
 load.failed.server:
-  en: "Kuutti's server had a problem. Try again in a moment."
+  en: "Kumpa's server had a problem. Try again in a moment."
   description: "What a screen says when it did not load, over Try again: the API answered with a server error (5xx). 'In a moment' is the fact. Heard at once (#581)."
-  fi: "Kuutin palvelimella oli ongelma. Yritä hetken päästä uudelleen."
-  sv: "Kuuttis server hade ett problem. Försök igen om en stund."
+  fi: "Kumpa-palvelimella oli ongelma. Yritä hetken päästä uudelleen."
+  sv: "Kumpas server hade ett problem. Försök igen om en stund."
   machine: { fi: true, sv: true }
 
 load.failed.outdated:
-  en: "This version of the app is older than Kuutti's server."
+  en: "This version of the app is older than Kumpa's server."
   description: "What a screen says when it did not load, over Update the app: the API sent something this build does not know yet (a newer contract). It says why Try again is not offered. Heard at once (#581)."
-  fi: "Tämä sovelluksen versio on vanhempi kuin Kuutin palvelin."
-  sv: "Den här versionen av appen är äldre än Kuuttis server."
+  fi: "Tämä sovelluksen versio on vanhempi kuin Kumpa-palvelin."
+  sv: "Den här versionen av appen är äldre än Kumpas server."
   machine: { fi: true, sv: true }
 
 load.failed.other:
@@ -95,10 +95,10 @@ load.updating:
   machine: { fi: true, sv: true }
 
 load.noUpdate:
-  en: "No update is available for this app yet. Install the newest version of Kuutti."
+  en: "No update is available for this app yet. Install the newest version of Kumpa."
   description: "After 'Update the app' found nothing for this build: only installing the app again helps (in production, from the store)."
-  fi: "Tälle sovellukselle ei ole vielä päivitystä. Asenna Kuutin uusin versio."
-  sv: "Det finns ingen uppdatering för den här appen ännu. Installera den senaste versionen av Kuutti."
+  fi: "Tälle sovellukselle ei ole vielä päivitystä. Asenna Kumpa-sovelluksen uusin versio."
+  sv: "Det finns ingen uppdatering för den här appen ännu. Installera den senaste versionen av Kumpa."
   machine: { fi: true, sv: true }
 
 load.install:
@@ -846,10 +846,10 @@ profile.place.back:
   machine: { fi: true, sv: true }
 
 profile.place.explain:
-  en: "Your postal code tells Kuutti how far people are. Others see a town or your area by name, never the digits."
+  en: "Your postal code tells Kumpa how far people are. Others see a town or your area by name, never the digits."
   description: "Explanation over the postal code field in onboarding's home step (#514, ADR-061 §2, §3). True and short: it must not say Kuutti keeps no postal code, since a large area's code is kept. The home screen says only the second sentence, profile.place.othersSee (#581)."
-  fi: "Postinumerosi kertoo Kuutille, kuinka kaukana ihmiset ovat. Muut näkevät kaupungin tai alueesi nimen, eivät koskaan numeroita."
-  sv: "Ditt postnummer berättar för Kuutti hur långt bort folk är. Andra ser en stad eller ditt område med namn, aldrig siffrorna."
+  fi: "Postinumerostasi Kumpa tietää, kuinka kaukana ihmiset ovat. Muut näkevät kaupungin tai alueesi nimen, eivät koskaan numeroita."
+  sv: "Ditt postnummer berättar för Kumpa hur långt bort folk är. Andra ser en stad eller ditt område med namn, aldrig siffrorna."
   machine: { fi: true, sv: true }
 
 profile.place.othersSee:
@@ -3314,10 +3314,10 @@ about.source.title:
   machine: { fi: true, sv: true }
 
 about.source.body:
-  en: "Kuutti is free software under the AGPL-3.0 licence, published at:"
+  en: "Kumpa is free software under the AGPL-3.0 licence, published at:"
   description: "Source-code offer (AGPL-3.0 section 13), on its screen in Settings and on the tech config screen (#287); the web address follows on its own line."
-  fi: "Kuutti on vapaa ohjelmisto, jonka lisenssi on AGPL-3.0, ja se on julkaistu osoitteessa:"
-  sv: "Kuutti är fri programvara under licensen AGPL-3.0, publicerad på:"
+  fi: "Kumpa on vapaa ohjelmisto, jonka lisenssi on AGPL-3.0, ja se on julkaistu osoitteessa:"
+  sv: "Kumpa är fri programvara under licensen AGPL-3.0, publicerad på:"
   machine: { fi: true, sv: true }
 
 about.source.open:
@@ -3391,10 +3391,10 @@ errors.auth_code_used:
   machine: { fi: true, sv: true }
 
 errors.auth_under_18:
-  en: Kuutti is for adults only.
+  en: Kumpa is for adults only.
   description: Bank login, the identification says the person is under 18. Nothing is stored.
-  fi: Kuutti on vain täysi-ikäisille.
-  sv: Kuutti är bara för vuxna.
+  fi: Kumpa on vain täysi-ikäisille.
+  sv: Kumpa är bara för vuxna.
   machine: { fi: true, sv: true }
 
 errors.auth_provider_error:
@@ -3454,10 +3454,10 @@ errors.unsupported_media_type:
   machine: { fi: true, sv: true }
 
 errors.photo_unsupported:
-  en: This file is not a photo Kuutti can use. Choose a JPEG, PNG or WebP picture.
+  en: This file is not a photo Kumpa can use. Choose a JPEG, PNG or WebP picture.
   description: Photo upload (415), the bytes are not a JPEG, PNG or WebP (an animated GIF, a HEIC, a video).
-  fi: Tämä tiedosto ei ole kuva, jota Kuutti voi käyttää. Valitse JPEG-, PNG- tai WebP-kuva.
-  sv: Den här filen är inte ett foto som Kuutti kan använda. Välj en JPEG-, PNG- eller WebP-bild.
+  fi: Tämä tiedosto ei ole kuva, jota Kumpa voi käyttää. Valitse JPEG-, PNG- tai WebP-kuva.
+  sv: Den här filen är inte ett foto som Kumpa kan använda. Välj en JPEG-, PNG- eller WebP-bild.
   machine: { fi: true, sv: true }
 
 errors.photo_invalid:
@@ -3664,24 +3664,24 @@ errors.message_budget_exceeded:
   machine: { fi: true, sv: true }
 
 errors.photo_rejected_nudity:
-  en: Not sent. Photos with nudity cannot be sent on Kuutti.
+  en: Not sent. Photos with nudity cannot be sent on Kumpa.
   description: "Photo in a conversation (400, #350): the automatic check was sure the photo shows nudity; nothing was stored. The sender's words keep the field."
-  fi: Ei lähetetty. Alastomuutta sisältäviä kuvia ei voi lähettää Kuutissa.
-  sv: Inte skickat. Foton med nakenhet kan inte skickas på Kuutti.
+  fi: Ei lähetetty. Alastomuutta sisältäviä kuvia ei voi lähettää.
+  sv: Inte skickat. Foton med nakenhet kan inte skickas på Kumpa.
   machine: { fi: true, sv: true }
 
 errors.photo_rejected_violence:
-  en: Not sent. Photos with violence or weapons cannot be sent on Kuutti.
+  en: Not sent. Photos with violence or weapons cannot be sent on Kumpa.
   description: "Photo in a conversation (400, #350): the automatic check was sure the photo shows violence or weapons; nothing was stored."
-  fi: Ei lähetetty. Kuvia, joissa on väkivaltaa tai aseita, ei voi lähettää Kuutissa.
-  sv: Inte skickat. Foton med våld eller vapen kan inte skickas på Kuutti.
+  fi: Ei lähetetty. Kuvia, joissa on väkivaltaa tai aseita, ei voi lähettää.
+  sv: Inte skickat. Foton med våld eller vapen kan inte skickas på Kumpa.
   machine: { fi: true, sv: true }
 
 errors.photo_rejected_other:
-  en: Not sent. This photo cannot be sent on Kuutti; try another one.
+  en: Not sent. This photo cannot be sent on Kumpa; try another one.
   description: "Photo in a conversation (400, #350): the automatic check was sure the photo shows something disturbing or hateful; nothing was stored. Names no label."
-  fi: Ei lähetetty. Tätä kuvaa ei voi lähettää Kuutissa; kokeile toista.
-  sv: Inte skickat. Det här fotot kan inte skickas på Kuutti; prova ett annat.
+  fi: Ei lähetetty. Tätä kuvaa ei voi lähettää; kokeile toista.
+  sv: Inte skickat. Det här fotot kan inte skickas på Kumpa; prova ett annat.
   machine: { fi: true, sv: true }
 
 errors.enough_today:
@@ -3797,17 +3797,17 @@ signIn.error.title:
   machine: { fi: true, sv: true }
 
 signIn.error.auth_under_18:
-  en: Kuutti is for adults. You are welcome once you are 18.
+  en: Kumpa is for adults. You are welcome once you are 18.
   description: Sign-in screen, the bank says the person is under 18 (nothing was stored).
-  fi: Kuutti on aikuisille. Olet tervetullut täytettyäsi 18 vuotta.
-  sv: Kuutti är för vuxna. Du är välkommen när du fyllt 18.
+  fi: Kumpa on aikuisille. Olet tervetullut täytettyäsi 18 vuotta.
+  sv: Kumpa är för vuxna. Du är välkommen när du fyllt 18.
   machine: { fi: true, sv: true }
 
 signIn.error.auth_banned:
-  en: This person may not use Kuutti.
+  en: This person may not use Kumpa.
   description: Sign-in screen, the identity is banned (TD-7).
-  fi: Tämä henkilö ei voi käyttää Kuuttia.
-  sv: Den här personen får inte använda Kuutti.
+  fi: Tämä henkilö ei voi käyttää Kumpa-sovellusta.
+  sv: Den här personen får inte använda Kumpa.
   machine: { fi: true, sv: true }
 
 signIn.error.auth_suspended:
@@ -3853,17 +3853,17 @@ signIn.lock.body:
   machine: { fi: true, sv: true }
 
 lock.title:
-  en: "Kuutti is locked"
+  en: "Kumpa is locked"
   description: "Heading of the lock screen, shown over the app at a cold start and after the chosen time in the background, when the person has turned the lock on (#418, ADR-045)."
-  fi: "Kuutti on lukittu"
-  sv: "Kuutti är låst"
+  fi: "Kumpa on lukittu"
+  sv: "Kumpa är låst"
   machine: { fi: true, sv: true }
 
 lock.cover:
-  en: "Kuutti"
+  en: "Kumpa"
   description: "The app's name on the plain cover drawn over the app while it is in the app switcher or in the background, when the lock is on (#418): the snapshot shows this, not the last screen."
-  fi: "Kuutti"
-  sv: "Kuutti"
+  fi: "Kumpa"
+  sv: "Kumpa"
   machine: { fi: true, sv: true }
 
 lock.unlock.face:
@@ -3888,10 +3888,10 @@ lock.unlock.biometrics:
   machine: { fi: true, sv: true }
 
 lock.biometrics.prompt:
-  en: "Unlock Kuutti"
+  en: "Unlock Kumpa"
   description: "The title of the phone's own face or fingerprint prompt (#418)."
-  fi: "Avaa Kuutti"
-  sv: "Lås upp Kuutti"
+  fi: "Avaa Kumpa"
+  sv: "Lås upp Kumpa"
   machine: { fi: true, sv: true }
 
 lock.biometrics.cancel:
@@ -3902,24 +3902,24 @@ lock.biometrics.cancel:
   machine: { fi: true, sv: true }
 
 lock.failed.face:
-  en: "Your face did not unlock Kuutti."
+  en: "Your face did not unlock Kumpa."
   description: "Lock screen, after the phone's face prompt refused or could not run (#418, #464), on a phone whose button says 'Unlock with your face'; a cancel says nothing."
-  fi: "Kasvosi eivät avanneet Kuuttia."
-  sv: "Ditt ansikte låste inte upp Kuutti."
+  fi: "Kumpa ei auennut kasvoillasi."
+  sv: "Ditt ansikte låste inte upp Kumpa."
   machine: { fi: true, sv: true }
 
 lock.failed.fingerprint:
-  en: "Your fingerprint did not unlock Kuutti."
+  en: "Your fingerprint did not unlock Kumpa."
   description: "Lock screen, after the phone's fingerprint prompt refused or could not run (#418, #464), on a phone whose button says 'Unlock with your fingerprint'; a cancel says nothing."
-  fi: "Sormenjälkesi ei avannut Kuuttia."
-  sv: "Ditt fingeravtryck låste inte upp Kuutti."
+  fi: "Kumpa ei auennut sormenjäljelläsi."
+  sv: "Ditt fingeravtryck låste inte upp Kumpa."
   machine: { fi: true, sv: true }
 
 lock.failed.biometrics:
-  en: "Your face or fingerprint did not unlock Kuutti."
+  en: "Your face or fingerprint did not unlock Kumpa."
   description: "Lock screen, after the phone's biometric prompt refused or could not run (#418, #464), on a phone whose button says 'Unlock with your face or fingerprint'; a cancel says nothing. On Android such a phone may take only the finger, so the words promise neither."
-  fi: "Kasvosi tai sormenjälkesi eivät avanneet Kuuttia."
-  sv: "Ditt ansikte eller fingeravtryck låste inte upp Kuutti."
+  fi: "Kumpa ei auennut kasvoillasi tai sormenjäljelläsi."
+  sv: "Ditt ansikte eller fingeravtryck låste inte upp Kumpa."
   machine: { fi: true, sv: true }
 
 lock.lockout.face:
@@ -3944,17 +3944,17 @@ lock.lockout.biometrics:
   machine: { fi: true, sv: true }
 
 lock.denied:
-  en: "This iPhone does not let Kuutti use Face ID. You can allow it in the phone's settings."
+  en: "This iPhone does not let Kumpa use Face ID. You can allow it in the phone's settings."
   description: "Lock screen, on an iPhone only, where the unlock button would be, when the person chose the face and iOS answers that Face ID is not available to Kuutti (#505): after Don't Allow at iOS's question, with Kuutti's Face ID switch off in the iPhone's settings, and now and then for neither, so the words never say the person refused it. Below it are the passcode, if one is set, and the bank."
-  fi: "Tämä iPhone ei anna Kuutin käyttää Face ID:tä. Voit sallia sen puhelimen asetuksista."
-  sv: "Den här iPhonen låter inte Kuutti använda Face ID. Du kan tillåta det i telefonens inställningar."
+  fi: "Kumpa ei saa käyttää Face ID:tä tällä iPhonella. Voit sallia sen puhelimen asetuksista."
+  sv: "Den här iPhonen låter inte Kumpa använda Face ID. Du kan tillåta det i telefonens inställningar."
   machine: { fi: true, sv: true }
 
 lock.passcode.label:
-  en: "Your Kuutti passcode"
+  en: "Your Kumpa passcode"
   description: "Lock screen, the label of the six-digit field (#418); Kuutti's own passcode, not the phone's."
-  fi: "Kuutin pääsykoodisi"
-  sv: "Din lösenkod för Kuutti"
+  fi: "Kumpa-pääsykoodisi"
+  sv: "Din lösenkod för Kumpa"
   machine: { fi: true, sv: true }
 
 lock.passcode.wrong:
@@ -4000,10 +4000,10 @@ lock.bank:
   machine: { fi: true, sv: true }
 
 lock.bank.explain:
-  en: "This signs Kuutti out of this phone and turns the lock off. Nothing on your account changes."
+  en: "This signs Kumpa out of this phone and turns the lock off. Nothing on your account changes."
   description: "Lock screen, above the button that leaves through the bank (#418)."
-  fi: "Tämä kirjaa Kuutin ulos tältä puhelimelta ja poistaa lukituksen. Tililläsi ei muutu mitään."
-  sv: "Det här loggar ut Kuutti från den här telefonen och stänger av låset. Ingenting ändras på ditt konto."
+  fi: "Tämä kirjaa sinut ulos Kumpa-sovelluksesta tällä puhelimella ja poistaa lukituksen. Tililläsi ei muutu mitään."
+  sv: "Det här loggar ut Kumpa från den här telefonen och stänger av låset. Ingenting ändras på ditt konto."
   machine: { fi: true, sv: true }
 
 lock.settings.explain:
@@ -4021,17 +4021,17 @@ lock.settings.biometrics:
   machine: { fi: true, sv: true }
 
 lock.settings.biometricsMissing:
-  en: "This phone has no face or fingerprint unlock that Kuutti can use."
+  en: "This phone has no face or fingerprint unlock that Kumpa can use."
   description: "The lock's settings, instead of the biometrics switch when the phone has none Kuutti can use (#418, #464): none enrolled, or a face that unlocks only the phone itself (an Android class 1 face). An iPhone that keeps Face ID from Kuutti has lock.settings.biometricsDenied instead (#505)."
-  fi: "Tässä puhelimessa ei ole kasvojen- tai sormenjäljentunnistusta, jota Kuutti voi käyttää."
-  sv: "Den här telefonen har ingen upplåsning med ansikte eller fingeravtryck som Kuutti kan använda."
+  fi: "Tässä puhelimessa ei ole kasvojen- tai sormenjäljentunnistusta, jota Kumpa voi käyttää."
+  sv: "Den här telefonen har ingen upplåsning med ansikte eller fingeravtryck som Kumpa kan använda."
   machine: { fi: true, sv: true }
 
 lock.settings.biometricsDenied:
-  en: "This iPhone does not let Kuutti use Face ID."
+  en: "This iPhone does not let Kumpa use Face ID."
   description: "The lock's settings and its offer, on an iPhone only, instead of the biometrics switch when iOS answers that Face ID is not available to Kuutti (#505): after Don't Allow at iOS's question, with Kuutti's Face ID switch off in the iPhone's settings, and now and then for neither, so the words never say the person refused it. The button 'Open the phone's settings' follows."
-  fi: "Tämä iPhone ei anna Kuutin käyttää Face ID:tä."
-  sv: "Den här iPhonen låter inte Kuutti använda Face ID."
+  fi: "Kumpa ei saa käyttää Face ID:tä tällä iPhonella."
+  sv: "Den här iPhonen låter inte Kumpa använda Face ID."
   machine: { fi: true, sv: true }
 
 lock.settings.biometricsFailed:
@@ -4077,10 +4077,10 @@ lock.settings.passcodeSet:
   machine: { fi: true, sv: true }
 
 lock.settings.grace:
-  en: "Lock again after Kuutti has been in the background"
+  en: "Lock again after Kumpa has been in the background"
   description: "The lock's settings, the heading of the four choices of how long the app may be in the background before it locks again (#418); it always locks when it starts."
-  fi: "Lukitse uudelleen, kun Kuutti on ollut taustalla"
-  sv: "Lås igen när Kuutti har varit i bakgrunden"
+  fi: "Lukitse uudelleen, kun Kumpa on ollut taustalla"
+  sv: "Lås igen när Kumpa har varit i bakgrunden"
   machine: { fi: true, sv: true }
 
 lock.settings.graceNow:
@@ -4098,10 +4098,10 @@ lock.settings.graceMinutes:
   machine: { fi: true, sv: true }
 
 lock.offer.title:
-  en: "Lock Kuutti on this phone?"
+  en: "Lock Kumpa on this phone?"
   description: "The lock offered once among the later screens, after the e-mail (#418, ADR-045); never required."
-  fi: "Lukitaanko Kuutti tällä puhelimella?"
-  sv: "Vill du låsa Kuutti på den här telefonen?"
+  fi: "Lukitaanko Kumpa tällä puhelimella?"
+  sv: "Vill du låsa Kumpa på den här telefonen?"
   machine: { fi: true, sv: true }
 
 lock.offer.notNow:
@@ -4259,7 +4259,7 @@ settings.logoutAll.failed:
   machine: { fi: true, sv: true }
 
 admin.title:
-  en: Kuutti admin
+  en: Kumpa admin
   description: Moderation panel, page heading. The panel is English only (TD-17), so admin.* keys need no fi or sv.
 
 admin.source.offer:
@@ -4515,10 +4515,10 @@ onboarding.identityLabel.skip:
   machine: { fi: true, sv: true }
 
 onboarding.seeks.allow:
-  en: "I consent to Kuutti storing whom I seek"
+  en: "I consent to Kuutti ry storing whom I seek"
   description: "Label of the switch on the seek step that gives the special-category consent (#146, ADR-019 §4); the text above it is the legal wording."
-  fi: "Annan Kuutille luvan tallentaa, kenen seuraa etsin"
-  sv: "Jag samtycker till att Kuutti lagrar vem jag söker"
+  fi: "Annan Kuutti ry:lle luvan tallentaa, kenen seuraa etsin"
+  sv: "Jag samtycker till att Kuutti ry lagrar vem jag söker"
   machine: { fi: true, sv: true }
 
 onboarding.home.title:
@@ -4781,10 +4781,10 @@ photos.refused.local:
   machine: { fi: true, sv: true }
 
 photos.error.permission:
-  en: Kuutti could not open your photos. Allow access in the phone's settings and try again.
+  en: Kumpa could not open your photos. Allow access in the phone's settings and try again.
   description: Photos screen, the photo library could not be opened (permission denied).
-  fi: Kuutti ei päässyt kuviisi. Salli pääsy puhelimen asetuksista ja yritä uudelleen.
-  sv: Kuutti kunde inte öppna dina foton. Tillåt åtkomst i telefonens inställningar och försök igen.
+  fi: Kumpa ei päässyt kuviisi. Salli pääsy puhelimen asetuksista ja yritä uudelleen.
+  sv: Kumpa kunde inte öppna dina foton. Tillåt åtkomst i telefonens inställningar och försök igen.
   machine: { fi: true, sv: true }
 
 photos.error.photo_limit:
@@ -4795,10 +4795,10 @@ photos.error.photo_limit:
   machine: { fi: true, sv: true }
 
 photos.error.photo_unsupported:
-  en: This file is not a photo Kuutti can use. Choose a JPEG, PNG or WebP picture.
+  en: This file is not a photo Kumpa can use. Choose a JPEG, PNG or WebP picture.
   description: Photos screen, the API refused the file type.
-  fi: Tämä tiedosto ei ole kuva, jota Kuutti voi käyttää. Valitse JPEG-, PNG- tai WebP-kuva.
-  sv: Den här filen är inte ett foto som Kuutti kan använda. Välj en JPEG-, PNG- eller WebP-bild.
+  fi: Tämä tiedosto ei ole kuva, jota Kumpa voi käyttää. Valitse JPEG-, PNG- tai WebP-kuva.
+  sv: Den här filen är inte ett foto som Kumpa kan använda. Välj en JPEG-, PNG- eller WebP-bild.
   machine: { fi: true, sv: true }
 
 photos.error.photo_invalid:
@@ -4879,10 +4879,10 @@ photos.imageLabel:
   machine: { fi: true, sv: true }
 
 photos.rejected.nudity:
-  en: Not accepted. Photos with nudity cannot be used on Kuutti.
+  en: Not accepted. Photos with nudity cannot be used on Kumpa.
   description: Photos screen, under the badge of a rejected photo; the moderator chose the reason nudity.
-  fi: Ei hyväksytty. Alastomuutta sisältäviä kuvia ei voi käyttää Kuutissa.
-  sv: Inte godkänt. Foton med nakenhet kan inte användas på Kuutti.
+  fi: Ei hyväksytty. Alastomuutta sisältäviä kuvia ei voi käyttää.
+  sv: Inte godkänt. Foton med nakenhet kan inte användas på Kumpa.
   machine: { fi: true, sv: true }
 
 photos.rejected.no_person:
@@ -4900,17 +4900,17 @@ photos.rejected.several_people:
   machine: { fi: true, sv: true }
 
 photos.rejected.minor:
-  en: Not accepted. Photos with children cannot be used on Kuutti.
+  en: Not accepted. Photos with children cannot be used on Kumpa.
   description: Photos screen, rejected because a minor appears in the picture.
-  fi: Ei hyväksytty. Kuvia, joissa on lapsia, ei voi käyttää Kuutissa.
-  sv: Inte godkänt. Foton med barn kan inte användas på Kuutti.
+  fi: Ei hyväksytty. Kuvia, joissa on lapsia, ei voi käyttää.
+  sv: Inte godkänt. Foton med barn kan inte användas på Kumpa.
   machine: { fi: true, sv: true }
 
 photos.rejected.violence:
-  en: Not accepted. Photos with violence or weapons cannot be used on Kuutti.
+  en: Not accepted. Photos with violence or weapons cannot be used on Kumpa.
   description: Photos screen, rejected because of violence or weapons.
-  fi: Ei hyväksytty. Kuvia, joissa on väkivaltaa tai aseita, ei voi käyttää Kuutissa.
-  sv: Inte godkänt. Foton med våld eller vapen kan inte användas på Kuutti.
+  fi: Ei hyväksytty. Kuvia, joissa on väkivaltaa tai aseita, ei voi käyttää.
+  sv: Inte godkänt. Foton med våld eller vapen kan inte användas på Kumpa.
   machine: { fi: true, sv: true }
 
 photos.rejected.contact_details:
@@ -4921,10 +4921,10 @@ photos.rejected.contact_details:
   machine: { fi: true, sv: true }
 
 photos.rejected.other:
-  en: Not accepted. This photo does not fit Kuutti; try another one.
+  en: Not accepted. This photo does not fit Kumpa; try another one.
   description: Photos screen, rejected for a reason outside the list.
-  fi: Ei hyväksytty. Tämä kuva ei sovi Kuuttiin; kokeile toista.
-  sv: Inte godkänt. Det här fotot passar inte på Kuutti; prova ett annat.
+  fi: Ei hyväksytty. Tämä kuva ei sovi tänne; kokeile toista.
+  sv: Inte godkänt. Det här fotot passar inte på Kumpa; prova ett annat.
   machine: { fi: true, sv: true }
 
 photos.rejected.not_reviewed:
@@ -5701,10 +5701,10 @@ settings.decisionButtons.style:
   machine: { fi: true, sv: true }
 
 settings.decisionButtons.style.kuutti:
-  en: "Kuutti"
+  en: "Kumpa"
   description: "Like and Pass screen, a choice (#520), the default: Like and Pass carry the app's own heart and cross. The app's name."
-  fi: "Kuutti"
-  sv: "Kuutti"
+  fi: "Kumpa"
+  sv: "Kumpa"
   machine: { fi: true, sv: true }
 
 settings.decisionButtons.style.shapes:
@@ -6107,7 +6107,7 @@ admin.overview.refresh:
   description: "Admin panel, the button that reloads the front page (#303)."
 
 admin.overview.foundThem.title:
-  en: "Told Kuutti they found someone"
+  en: "Told Kumpa they found someone"
   description: "Admin panel, front page: the heading of the association's measure (#83, ADR-040), how many said they found somebody, by reason."
 
 admin.overview.foundThem.reason:
@@ -6123,7 +6123,7 @@ admin.overview.foundThem.allTime:
   description: "Admin panel, front page: the found-them table's column of every day (#83)."
 
 admin.overview.foundThem.here:
-  en: "On Kuutti"
+  en: "On Kumpa"
   description: "Admin panel, front page: the found-them row of those who found somebody on Kuutti, the association's measure of success (#83)."
 
 admin.overview.foundThem.elsewhere:
@@ -6791,7 +6791,7 @@ admin.announcements.swedishOptional:
   description: "Admin panel, the legend of the form's Swedish part, which may be left empty (#573, the maintainer's decision of 07/11/2026)."
 
 admin.announcements.swedishFallback:
-  en: "People who read Kuutti in Swedish get the English when there is no Swedish."
+  en: "People who read Kumpa in Swedish get the English when there is no Swedish."
   description: "Admin panel, under the Swedish part of the form: who the fallback reaches (#573, the maintainer's decision of 07/11/2026)."
 
 admin.announcements.titleField:
@@ -7203,7 +7203,7 @@ admin.sanction.noRole:
   description: "Admin panel, a person's page, the sanctions (#308): the member of staff holds no role any more."
 
 admin.sanction.nobody:
-  en: "Kuutti itself"
+  en: "Kumpa itself"
   description: "Admin panel, a person's page, the sanctions (#308): a sanction no person applied (automatic)."
 
 admin.sanction.appliedBy:
@@ -7324,10 +7324,10 @@ account.export.working:
   machine: { fi: true, sv: true }
 
 account.export.title:
-  en: Your Kuutti data
+  en: Your Kumpa data
   description: The title of the share sheet the export is handed to.
-  fi: Kuutti-tietosi
-  sv: Dina Kuutti-uppgifter
+  fi: Kumpa-tietosi
+  sv: Dina Kumpa-uppgifter
   machine: { fi: true, sv: true }
 
 account.export.saved:
@@ -7338,17 +7338,17 @@ account.export.saved:
   machine: { fi: true, sv: true }
 
 account.export.fileName:
-  en: kuutti-data
+  en: kumpa-data
   description: "The stem of the export's file name (#237): the zip is <stem>-<date>.zip and the JSON inside it <stem>-<date>.json. ASCII letters, digits and hyphens only, in every language: the name goes into an HTTP header and the phone's Files app. Nothing about the person in it."
-  fi: kuutti-tiedot
-  sv: kuutti-uppgifter
+  fi: kumpa-tiedot
+  sv: kumpa-uppgifter
   machine: { fi: true, sv: true }
 
 account.export.photoCheck.about:
-  en: "Kuutti checks every photo before anyone else sees it. Below are the photos of yours the check did not show to others in the last twelve months, and until when your new photos are checked a little more carefully, if they are. Nothing else follows from them, and both end by themselves."
+  en: "Kumpa checks every photo before anyone else sees it. Below are the photos of yours the check did not show to others in the last twelve months, and until when your new photos are checked a little more carefully, if they are. Nothing else follows from them, and both end by themselves."
   description: "Inside the downloaded data file (#253), the text that opens the photo check part. Plain and calm: a person reads what the check holds about them; never accusing words (strike, flag, violation, offence, suspicious)."
-  fi: "Kuutti tarkistaa jokaisen kuvan ennen kuin kukaan muu näkee sen. Alla ovat kuvasi, joita tarkistus ei näyttänyt muille viimeisten kahdentoista kuukauden aikana, ja mihin asti uudet kuvasi tarkistetaan hieman tarkemmin, jos tarkistetaan. Niistä ei seuraa mitään muuta, ja molemmat päättyvät itsestään."
-  sv: "Kuutti granskar varje foto innan någon annan ser det. Nedan finns de av dina foton som granskningen inte visade för andra under de senaste tolv månaderna, och till när dina nya foton granskas lite noggrannare, om de gör det. Inget annat följer av dem, och båda upphör av sig själva."
+  fi: "Kumpa tarkistaa jokaisen kuvan ennen kuin kukaan muu näkee sen. Alla ovat kuvasi, joita tarkistus ei näyttänyt muille viimeisten kahdentoista kuukauden aikana, ja mihin asti uudet kuvasi tarkistetaan hieman tarkemmin, jos tarkistetaan. Niistä ei seuraa mitään muuta, ja molemmat päättyvät itsestään."
+  sv: "Kumpa granskar varje foto innan någon annan ser det. Nedan finns de av dina foton som granskningen inte visade för andra under de senaste tolv månaderna, och till när dina nya foton granskas lite noggrannare, om de gör det. Inget annat följer av dem, och båda upphör av sig själva."
   machine: { fi: true, sv: true }
 
 account.export.sanction.kind.warn:
@@ -7373,10 +7373,10 @@ account.export.sanction.kind.suspend:
   machine: { fi: true, sv: true }
 
 account.export.sanction.kind.ban:
-  en: "Banned from Kuutti"
+  en: "Banned from Kumpa"
   description: "Inside the downloaded data file (#307, ADR-024 §8), what kind of sanction an entry is: a ban on the person, which keeps them out until it is lifted."
-  fi: "Estetty Kuutista"
-  sv: "Avstängd från Kuutti"
+  fi: "Estetty käyttämästä Kumpa-sovellusta"
+  sv: "Avstängd från Kumpa"
   machine: { fi: true, sv: true }
 
 account.export.sanction.reason.harassment:
@@ -7548,10 +7548,10 @@ account.export.block.about:
   machine: { fi: true, sv: true }
 
 account.export.photoCheck.reason.nudity:
-  en: May show more than Kuutti allows
+  en: May show more than Kumpa allows
   description: Inside the downloaded data file (#253), why the check did not show a photo to others; the nudity group, said gently.
-  fi: Saattaa näyttää enemmän kuin Kuutti sallii
-  sv: Kan visa mer än Kuutti tillåter
+  fi: Saattaa näyttää enemmän kuin Kumpa sallii
+  sv: Kan visa mer än Kumpa tillåter
   machine: { fi: true, sv: true }
 
 account.export.photoCheck.reason.violence:
@@ -7569,10 +7569,10 @@ account.export.photoCheck.reason.disturbing:
   machine: { fi: true, sv: true }
 
 account.export.photoCheck.reason.hate:
-  en: May show a symbol Kuutti does not allow
+  en: May show a symbol Kumpa does not allow
   description: Inside the downloaded data file (#253), why the check did not show a photo to others; the hate symbols group, said without naming it.
-  fi: Saattaa näyttää symbolin, jota Kuutti ei salli
-  sv: Kan visa en symbol som Kuutti inte tillåter
+  fi: Saattaa näyttää symbolin, jota Kumpa ei salli
+  sv: Kan visa en symbol som Kumpa inte tillåter
   machine: { fi: true, sv: true }
 
 account.delete.button:
@@ -7639,10 +7639,10 @@ account.break.button:
   machine: { fi: true, sv: true }
 
 account.break.title:
-  en: "Take a break from Kuutti"
+  en: "Take a break from Kumpa"
   description: "Heading of the break screen (#170)."
-  fi: "Pidä tauko Kuutista"
-  sv: "Ta en paus från Kuutti"
+  fi: "Pidä tauko sovelluksesta"
+  sv: "Ta en paus från Kumpa"
   machine: { fi: true, sv: true }
 
 account.break.hidden:
@@ -7737,10 +7737,10 @@ account.foundThem.question:
   machine: { fi: true, sv: true }
 
 account.foundThem.reason.here:
-  en: "I found someone on Kuutti"
+  en: "I found someone on Kumpa"
   description: "\"Löysin hänet\" (#83), the first reason: the association's measure of success is its share."
-  fi: "Löysin jonkun Kuutista"
-  sv: "Jag hittade någon på Kuutti"
+  fi: "Löysin jonkun täältä"
+  sv: "Jag hittade någon på Kumpa"
   machine: { fi: true, sv: true }
 
 account.foundThem.reason.elsewhere:
@@ -7758,10 +7758,10 @@ account.foundThem.reason.other:
   machine: { fi: true, sv: true }
 
 account.foundThem.send:
-  en: "Tell Kuutti"
+  en: "Tell Kumpa"
   description: "\"Löysin hänet\" (#83): sends the chosen reason; enabled once one is chosen."
-  fi: "Kerro Kuutille"
-  sv: "Berätta för Kuutti"
+  fi: "Kerro meille"
+  sv: "Berätta för Kumpa"
   machine: { fi: true, sv: true }
 
 account.foundThem.sending:
@@ -7788,10 +7788,10 @@ account.research.label:
   machine: { fi: true, sv: true }
 
 account.research.explain:
-  en: "Anonymised events about how you use Kuutti, under a separate research identifier. You can change this at any time."
+  en: "Anonymised events about how you use Kumpa, under a separate research identifier. You can change this at any time."
   description: "Not shown until there is a researcher (#545, ADR-010 §19). Line under the research switch."
-  fi: "Anonymisoituja tapahtumia Kuutin käytöstäsi erillisellä tutkimustunnisteella. Voit muuttaa tätä milloin tahansa."
-  sv: "Anonymiserade händelser om hur du använder Kuutti, under ett separat forskningsid. Du kan ändra det här när som helst."
+  fi: "Anonymisoituja tapahtumia siitä, miten käytät Kumpa-sovellusta, erillisellä tutkimustunnisteella. Voit muuttaa tätä milloin tahansa."
+  sv: "Anonymiserade händelser om hur du använder Kumpa, under ett separat forskningsid. Du kan ändra det här när som helst."
   machine: { fi: true, sv: true }
 
 account.research.failed:
@@ -7823,10 +7823,10 @@ account.email.title:
   machine: { fi: true, sv: true }
 
 account.email.explain:
-  en: "Optional. A way for Kuutti to reach you. Never shown to anyone and never a login. A code confirms the address; nothing else is sent to it without asking you first."
+  en: "Optional. A way for Kumpa to reach you. Never shown to anyone and never a login. A code confirms the address; nothing else is sent to it without asking you first."
   description: "Explanation of the optional e-mail (#148, #385): the honest reason, as the sheet asks, and that the only message is the code until the person agrees to more (TD-18, #196); on the card under its heading."
-  fi: "Vapaaehtoinen. Tapa, jolla Kuutti voi tavoittaa sinut. Ei näytetä kenellekään, eikä koskaan kirjautumista varten. Koodi vahvistaa osoitteen; muuta tänne ei lähetetä kysymättä ensin sinulta."
-  sv: "Frivilligt. Ett sätt för Kuutti att nå dig. Visas aldrig för någon och är aldrig en inloggning. En kod bekräftar adressen; inget annat skickas hit utan att du först tillfrågas."
+  fi: "Vapaaehtoinen. Tapa, jolla Kumpa voi tavoittaa sinut. Ei näytetä kenellekään, eikä koskaan kirjautumista varten. Koodi vahvistaa osoitteen; muuta tänne ei lähetetä kysymättä ensin sinulta."
+  sv: "Frivilligt. Ett sätt för Kumpa att nå dig. Visas aldrig för någon och är aldrig en inloggning. En kod bekräftar adressen; inget annat skickas hit utan att du först tillfrågas."
   machine: { fi: true, sv: true }
 
 account.email.label:
@@ -7956,10 +7956,10 @@ account.email.codeFailed:
   machine: { fi: true, sv: true }
 
 mail.emailCode.subject:
-  en: "Your code for Kuutti"
+  en: "Your code for Kumpa"
   description: "Subject of the message that confirms the optional e-mail (#385, ADR-043). Plain text, names nobody."
-  fi: "Koodisi Kuuttiin"
-  sv: "Din kod till Kuutti"
+  fi: "Koodisi Kumpa-sovellukseen"
+  sv: "Din kod till Kumpa"
   machine: { fi: true, sv: true }
 
 mail.emailCode.code:
@@ -7970,24 +7970,24 @@ mail.emailCode.code:
   machine: { fi: true, sv: true }
 
 mail.emailCode.ignore:
-  en: "Someone added this address in the Kuutti app as a way to stay in touch. If that was not you, you can ignore this message."
+  en: "Someone added this address in the Kumpa app as a way to stay in touch. If that was not you, you can ignore this message."
   description: "Second paragraph of the confirmation message (#385): it names nobody, since the address may be somebody else's, and asks nothing but to ignore it."
-  fi: "Joku lisäsi tämän osoitteen Kuutti-sovellukseen yhteydenpitoa varten. Jos se et ollut sinä, voit jättää tämän viestin huomiotta."
-  sv: "Någon lade till den här adressen i Kuutti-appen för att hålla kontakten. Om det inte var du kan du bortse från det här meddelandet."
+  fi: "Joku lisäsi tämän osoitteen Kumpa-sovellukseen yhteydenpitoa varten. Jos se et ollut sinä, voit jättää tämän viestin huomiotta."
+  sv: "Någon lade till den här adressen i Kumpa-appen för att hålla kontakten. Om det inte var du kan du bortse från det här meddelandet."
   machine: { fi: true, sv: true }
 
 mail.announcement.subject:
-  en: "Kuutti: {title}"
+  en: "Kumpa: {title}"
   description: "The subject of an announcement's email (#573, ADR-068 §5): the app's name and the announcement's own title as an admin wrote it, in the language of the text the person gets (Swedish where written, otherwise English; Finnish for Finnish)."
-  fi: "Kuutti: {title}"
-  sv: "Kuutti: {title}"
+  fi: "Kumpa: {title}"
+  sv: "Kumpa: {title}"
   machine: { fi: true, sv: true }
 
 mail.announcement.why:
-  en: "You get this because you confirmed this address in the Kuutti app. Announcements can be turned off in Settings, under Notifications."
+  en: "You get this because you confirmed this address in the Kumpa app. Announcements can be turned off in Settings, under Notifications."
   description: "An announcement's email (#573, ADR-068 §5), after its body: why the person gets it, and where the Announcements switch is (Settings › Notifications), which stops the email and the push but not the notice in the app. No link: the mail carries none."
-  fi: "Saat tämän, koska vahvistit tämän osoitteen Kuutti-sovelluksessa. Kuutin tiedotteet voi laittaa pois päältä Asetuksista, kohdasta Ilmoitukset."
-  sv: "Du får det här eftersom du bekräftade den här adressen i Kuutti-appen. Meddelanden från Kuutti kan stängas av i Inställningar, under Aviseringar."
+  fi: "Saat tämän, koska vahvistit tämän osoitteen Kumpa-sovelluksessa. Kumpa-tiedotteet voi laittaa pois päältä Asetuksista, kohdasta Ilmoitukset."
+  sv: "Du får det här eftersom du bekräftade den här adressen i Kumpa-appen. Meddelanden från Kumpa kan stängas av i Inställningar, under Aviseringar."
   machine: { fi: true, sv: true }
 
 mail.signature:
@@ -8005,10 +8005,10 @@ account.email.done:
   machine: { fi: true, sv: true }
 
 pond.counter.title:
-  en: "People on Kuutti"
+  en: "People on Kumpa"
   description: "Home screen, the heading of the card that says how many people have completed their profiles on Kuutti (#54, #581, ADR-013), and its accessible name. There is one pond, the whole of Finland (ADR-061 §8), so the card names no area (#500)."
-  fi: "Ihmiset Kuutissa"
-  sv: "Människor på Kuutti"
+  fi: "Ihmiset Kumpa-sovelluksessa"
+  sv: "Människor på Kumpa"
   machine: { fi: true, sv: true }
 
 pond.counter.finished:
@@ -8054,10 +8054,10 @@ pond.counter.seeks.label:
   machine: { fi: true, sv: true }
 
 pond.counter.small:
-  en: "Kuutti is just getting started."
+  en: "Kumpa is just getting started."
   description: "Pond card: the whole of what it says while fewer people than the threshold k (ten) have completed their profiles. No number, and no word of a condition (#581)."
-  fi: "Kuutti on vasta alussa."
-  sv: "Kuutti har precis kommit igång."
+  fi: "Kumpa on vasta alussa."
+  sv: "Kumpa har precis kommit igång."
   machine: { fi: true, sv: true }
 
 # --- The gate card (#500, ADR-060): whether matching is open for the person ---
@@ -8969,10 +8969,10 @@ chat.contact.error.message_budget_exceeded:
 
 # --- The home screen, the settings and the tech config (#143): one button to sign in, the person's own settings after it, the technical view outside production ---
 home.title:
-  en: "Kuutti"
+  en: "Kumpa"
   description: "Home screen heading: the name of the app, as the placeholder page and the sign-in screen say it."
-  fi: "Kuutti"
-  sv: "Kuutti"
+  fi: "Kumpa"
+  sv: "Kumpa"
   machine: { fi: true, sv: true }
 
 home.settings.open:
@@ -9018,10 +9018,10 @@ settings.back:
   machine: { fi: true, sv: true }
 
 settings.about.title:
-  en: "About Kuutti"
+  en: "About Kumpa"
   description: "Settings, heading of the section with the version, the source-code offer (AGPL-3.0 section 13) and the licences (#287)."
-  fi: "Tietoja Kuutista"
-  sv: "Om Kuutti"
+  fi: "Tietoja sovelluksesta"
+  sv: "Om Kumpa"
   machine: { fi: true, sv: true }
 
 tech.title:
@@ -9406,35 +9406,35 @@ notifications.intro:
   en: "A notification says that there is a new message, a new match or an announcement, never what it says or from whom."
   description: "The Notifications panel's one line (#176, ADR-032; #102, ADR-055; #581; #573, ADR-068 §4): what a lock screen will show, which cannot be seen until it has happened and which somebody else may read. A push says which kind and nothing more: no text, no name, and of an announcement not its words."
   fi: "Ilmoitus kertoo, että sinulle on uusi viesti, uusi mätsi tai tiedote, ei koskaan mitä siinä lukee tai keneltä se on."
-  sv: "En avisering säger att det finns ett nytt meddelande, en ny matchning eller ett meddelande från Kuutti, aldrig vad det står eller från vem."
+  sv: "En avisering säger att det finns ett nytt meddelande, en ny matchning eller ett meddelande från Kumpa, aldrig vad det står eller från vem."
   machine: { fi: true, sv: true }
 
 notifications.phone.allowed:
-  en: "This phone shows Kuutti's notifications."
+  en: "This phone shows Kumpa's notifications."
   description: "Said to a screen reader when the phone's answer changes, never drawn (#102, ADR-055 §9, #581). This phone lets Kuutti notify it."
-  fi: "Tämä puhelin näyttää Kuutin ilmoitukset."
-  sv: "Den här telefonen visar Kuuttis aviseringar."
+  fi: "Tämä puhelin näyttää Kumpa-sovelluksen ilmoitukset."
+  sv: "Den här telefonen visar Kumpas aviseringar."
   machine: { fi: true, sv: true }
 
 notifications.phone.denied:
-  en: "This phone does not show Kuutti's notifications. You can allow them in the phone's settings."
+  en: "This phone does not show Kumpa's notifications. You can allow them in the phone's settings."
   description: "Said to a screen reader when the phone's answer changes, never drawn (#102, ADR-055 §9, #581). This phone refuses Kuutti's notifications; the row's value says so and the button to the phone's settings stands first in the panel."
-  fi: "Tämä puhelin ei näytä Kuutin ilmoituksia. Voit sallia ne puhelimen asetuksista."
-  sv: "Den här telefonen visar inte Kuuttis aviseringar. Du kan tillåta dem i telefonens inställningar."
+  fi: "Tämä puhelin ei näytä Kumpa-sovelluksen ilmoituksia. Voit sallia ne puhelimen asetuksista."
+  sv: "Den här telefonen visar inte Kumpas aviseringar. Du kan tillåta dem i telefonens inställningar."
   machine: { fi: true, sv: true }
 
 notifications.phone.undetermined:
-  en: "This phone has not been asked yet whether Kuutti may notify it."
+  en: "This phone has not been asked yet whether Kumpa may notify it."
   description: "Said to a screen reader when the phone's answer changes, never drawn (#102, ADR-055 §9, #581). This phone has not been asked; the row's value says so and Allow notifications stands first in the panel."
-  fi: "Tältä puhelimelta ei ole vielä kysytty, saako Kuutti lähettää sille ilmoituksia."
-  sv: "Den här telefonen har inte frågats än om Kuutti får skicka aviseringar till den."
+  fi: "Tältä puhelimelta ei ole vielä kysytty, saako Kumpa lähettää sille ilmoituksia."
+  sv: "Den här telefonen har inte frågats än om Kumpa får skicka aviseringar till den."
   machine: { fi: true, sv: true }
 
 notifications.phone.unavailable:
-  en: "This device cannot show Kuutti's notifications."
+  en: "This device cannot show Kumpa's notifications."
   description: "The Notifications screen (#102, ADR-055 §9) where no push can reach: the web preview, or a phone that could not be read. The switches still hold for the person's other phones."
-  fi: "Tämä laite ei voi näyttää Kuutin ilmoituksia."
-  sv: "Den här enheten kan inte visa Kuuttis aviseringar."
+  fi: "Tämä laite ei voi näyttää Kumpa-sovelluksen ilmoituksia."
+  sv: "Den här enheten kan inte visa Kumpas aviseringar."
   machine: { fi: true, sv: true }
 
 notifications.phone.openSettings:
@@ -9452,17 +9452,17 @@ notifications.allow:
   machine: { fi: true, sv: true }
 
 notifications.ask.heading:
-  en: "Shall Kuutti tell you?"
+  en: "Shall Kumpa tell you?"
   description: "The home screen's one offer of notifications (#102, ADR-055 §9), shown once matching is open and never again after an answer. Its heading; a short question, no pressure."
   fi: "Kerrotaanko sinulle?"
-  sv: "Ska Kuutti berätta för dig?"
+  sv: "Ska Kumpa berätta för dig?"
   machine: { fi: true, sv: true }
 
 notifications.ask.body:
-  en: "Kuutti can tell this phone when someone likes you back and when a message arrives. A notification says that there is a new message, a new match or an announcement, never what it says or from whom. You choose which kinds in Settings."
+  en: "Kumpa can tell this phone when someone likes you back and when a message arrives. A notification says that there is a new message, a new match or an announcement, never what it says or from whom. You choose which kinds in Settings."
   description: "The home screen's offer of notifications (#102, ADR-055 §9), the reason in words, under its heading: the two pushes a person is told of most, what a push says and never carries (an announcement among the kinds since #573, ADR-068 §4), and where the kinds are chosen. Calm; no promise of more."
-  fi: "Kuutti voi kertoa tälle puhelimelle, kun joku tykkää sinusta takaisin ja kun saat viestin. Ilmoitus kertoo, että sinulle on uusi viesti, uusi mätsi tai tiedote, ei koskaan mitä siinä lukee tai keneltä se on. Lajit valitset asetuksista."
-  sv: "Kuutti kan berätta för den här telefonen när någon gillar dig tillbaka och när ett meddelande kommer. En avisering säger att det finns ett nytt meddelande, en ny matchning eller ett meddelande från Kuutti, aldrig vad det står eller från vem. Du väljer slagen i inställningarna."
+  fi: "Kumpa voi kertoa tälle puhelimelle, kun joku tykkää sinusta takaisin ja kun saat viestin. Ilmoitus kertoo, että sinulle on uusi viesti, uusi mätsi tai tiedote, ei koskaan mitä siinä lukee tai keneltä se on. Lajit valitset asetuksista."
+  sv: "Kumpa kan berätta för den här telefonen när någon gillar dig tillbaka och när ett meddelande kommer. En avisering säger att det finns ett nytt meddelande, en ny matchning eller ett meddelande från Kumpa, aldrig vad det står eller från vem. Du väljer slagen i inställningarna."
   machine: { fi: true, sv: true }
 
 notifications.ask.decline:
@@ -9487,10 +9487,10 @@ push.match:
   machine: { fi: true, sv: true }
 
 push.announcement:
-  en: "An announcement from Kuutti"
+  en: "An announcement from Kumpa"
   description: "A push (#573, ADR-068 §4), its one line: Kuutti has told everybody something, which the person reads in the app's notices and, with a confirmed address, by email. Never the announcement's own words, which never pass through Expo, Apple or Google; the phone shows it on the lock screen. Short, no full stop."
-  fi: "Tiedote Kuutilta"
-  sv: "Ett meddelande från Kuutti"
+  fi: "Kumpa-tiedote"
+  sv: "Ett meddelande från Kumpa"
   machine: { fi: true, sv: true }
 
 push.channel:
@@ -9529,10 +9529,10 @@ notifications.kind.moderation.hint:
   machine: { fi: true, sv: true }
 
 notifications.kind.announcement.label:
-  en: "Announcements from Kuutti"
+  en: "Announcements from Kumpa"
   description: "The Notifications screen (#573, ADR-068 §6), the switch of Kuutti's announcements to everybody: when on, an announcement comes as a push and, to a confirmed address, by email. Distinct from the home screen's Notices heading."
-  fi: "Kuutin tiedotteet"
-  sv: "Meddelanden från Kuutti"
+  fi: "Kumpa-tiedotteet"
+  sv: "Meddelanden från Kumpa"
   machine: { fi: true, sv: true }
 
 notifications.kind.announcement.hint:
@@ -9666,10 +9666,10 @@ settings.invite.code.spoken:
   machine: { fi: true, sv: true }
 
 settings.invite.code.once:
-  en: "Kuutti shows this code only now. Share it with one friend."
+  en: "Kumpa shows this code only now. Share it with one friend."
   description: "The Invitations screen, under a code just made (#107, ADR-044 §2): only its hash is kept, so it is never shown again."
-  fi: "Kuutti näyttää tämän koodin vain nyt. Jaa se yhdelle ystävälle."
-  sv: "Kuutti visar den här koden bara nu. Dela den med en vän."
+  fi: "Kumpa näyttää tämän koodin vain nyt. Jaa se yhdelle ystävälle."
+  sv: "Kumpa visar den här koden bara nu. Dela den med en vän."
   machine: { fi: true, sv: true }
 
 settings.invite.share:
@@ -9819,10 +9819,10 @@ invite.step.skip:
   machine: { fi: true, sv: true }
 
 invite.share.message:
-  en: "You're invited to Kuutti, a free dating app for Finland where everyone signs in with their bank ID. {reward, select, both {The code earns you {friendFish, plural, one {a fish} other {# fish}} and your friend {inviterFish, plural, one {a fish} other {# fish}} once your profile is complete. A fish is a like that says a little more. } friend {The code earns you {friendFish, plural, one {a fish} other {# fish}} once your profile is complete. A fish is a like that says a little more. } other {}}Get the app: {link} After signing in, type this code: {code}"
+  en: "You're invited to Kumpa, a free dating app for Finland where everyone signs in with their bank ID. {reward, select, both {The code earns you {friendFish, plural, one {a fish} other {# fish}} and your friend {inviterFish, plural, one {a fish} other {# fish}} once your profile is complete. A fish is a like that says a little more. } friend {The code earns you {friendFish, plural, one {a fish} other {# fish}} once your profile is complete. A fish is a like that says a little more. } other {}}Get the app: {link} After signing in, type this code: {code}"
   description: "The message the phone's share sheet sends with an invitation (#107, ADR-044 Context 5, §12), to somebody who may not know Kuutti: free, bank-verified, Finland's; what the reader gets (#503), from matching_config invitation_reward, left out when it gives them no fish (reward is both, friend, or anything else; friendFish is the reader's, inviterFish their friend's); after a colon the one link with the code in it (https://api.kuutti.app/i/XXXXX-XXXXX, #574), which sends the friend's phone to its store, and the code (XXXXX-XXXXX) after a colon at the end, to type where the store cannot carry it. Nothing else about the sender."
-  fi: "Sinut on kutsuttu: Kuutti on ilmainen suomalainen deittisovellus, jossa jokainen kirjautuu pankkitunnuksillaan. {reward, select, both {Koodista saat {friendFish, plural, one {kalan} other {# kalaa}} ja ystäväsi saa {inviterFish, plural, one {kalan} other {# kalaa}}, kun profiilisi on valmis. Kala on tykkäys, joka sanoo vähän enemmän. } friend {Koodista saat {friendFish, plural, one {kalan} other {# kalaa}}, kun profiilisi on valmis. Kala on tykkäys, joka sanoo vähän enemmän. } other {}}Lataa sovellus: {link} Kirjoita kirjautumisen jälkeen tämä koodi: {code}"
-  sv: "Du är inbjuden till Kuutti, en gratis dejtingapp för Finland där alla loggar in med sina bankkoder. {reward, select, both {Koden ger dig {friendFish, plural, one {en fisk} other {# fiskar}} och din vän {inviterFish, plural, one {en fisk} other {# fiskar}} när din profil är klar. En fisk är ett gillande som säger lite mer. } friend {Koden ger dig {friendFish, plural, one {en fisk} other {# fiskar}} när din profil är klar. En fisk är ett gillande som säger lite mer. } other {}}Hämta appen: {link} Skriv in den här koden efter inloggningen: {code}"
+  fi: "Sinut on kutsuttu: Kumpa on ilmainen suomalainen deittisovellus, jossa jokainen kirjautuu pankkitunnuksillaan. {reward, select, both {Koodista saat {friendFish, plural, one {kalan} other {# kalaa}} ja ystäväsi saa {inviterFish, plural, one {kalan} other {# kalaa}}, kun profiilisi on valmis. Kala on tykkäys, joka sanoo vähän enemmän. } friend {Koodista saat {friendFish, plural, one {kalan} other {# kalaa}}, kun profiilisi on valmis. Kala on tykkäys, joka sanoo vähän enemmän. } other {}}Lataa sovellus: {link} Kirjoita kirjautumisen jälkeen tämä koodi: {code}"
+  sv: "Du är inbjuden till Kumpa, en gratis dejtingapp för Finland där alla loggar in med sina bankkoder. {reward, select, both {Koden ger dig {friendFish, plural, one {en fisk} other {# fiskar}} och din vän {inviterFish, plural, one {en fisk} other {# fiskar}} när din profil är klar. En fisk är ett gillande som säger lite mer. } friend {Koden ger dig {friendFish, plural, one {en fisk} other {# fiskar}} när din profil är klar. En fisk är ett gillande som säger lite mer. } other {}}Hämta appen: {link} Skriv in den här koden efter inloggningen: {code}"
   machine: { fi: true, sv: true }
 
 settings.contacts.intro:
@@ -10400,10 +10400,10 @@ support.site.label:
   machine: { fi: true, sv: true }
 
 support.independent:
-  en: "These services are not part of Kuutti. Kuutti doesn't see who opens this page or who you call."
+  en: "These services are not part of Kumpa. Kumpa doesn't see who opens this page or who you call."
   description: "Support page (#510), the line under the four services: they have no tie to Kuutti, and opening the page or calling leaves nothing with Kuutti."
-  fi: "Nämä palvelut eivät kuulu Kuuttiin. Kuutti ei näe, kuka avaa tämän sivun tai kenelle soitat."
-  sv: "De här tjänsterna hör inte till Kuutti. Kuutti ser inte vem som öppnar den här sidan eller vem du ringer."
+  fi: "Nämä palvelut eivät kuulu Kumpa-sovellukseen. Kumpa ei näe, kuka avaa tämän sivun tai kenelle soitat."
+  sv: "De här tjänsterna hör inte till Kumpa. Kumpa ser inte vem som öppnar den här sidan eller vem du ringer."
   machine: { fi: true, sv: true }
 
 support.mieli.name:

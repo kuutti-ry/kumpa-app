@@ -19,7 +19,7 @@ const INTRO =
 const KINDS = ["Messages", "Matches", "Moderators' decisions"];
 const HINT = "Nothing is sent to your phones for these yet.";
 /** Kuutti's announcements (#573, ADR-068 §6): off stops the push and the email, never the notice. */
-const ANNOUNCEMENTS = "Announcements from Kuutti";
+const ANNOUNCEMENTS = "Announcements from Kumpa";
 const ANNOUNCEMENTS_HINT =
   "When this is off, an announcement still shows in the app, with no push and no email.";
 /** Every text on the screen, in order. */
@@ -128,15 +128,15 @@ describe("NotificationChoices", () => {
       "Ilmoitus kertoo, että sinulle on uusi viesti, uusi mätsi tai tiedote, ei koskaan mitä siinä lukee tai keneltä se on.",
       "Viestit",
       "Näistä ei vielä lähetetä puhelimillesi mitään.",
-      "Kuutin tiedotteet",
+      "Kumpa-tiedotteet",
       "Kun tämä on pois päältä, tiedote näkyy silti sovelluksessa, mutta ilman ilmoitusta ja sähköpostia.",
     ],
     [
       "sv-FI",
-      "En avisering säger att det finns ett nytt meddelande, en ny matchning eller ett meddelande från Kuutti, aldrig vad det står eller från vem.",
+      "En avisering säger att det finns ett nytt meddelande, en ny matchning eller ett meddelande från Kumpa, aldrig vad det står eller från vem.",
       "Meddelanden",
       "Inget skickas till dina telefoner om detta än.",
-      "Meddelanden från Kuutti",
+      "Meddelanden från Kumpa",
       "När det här är avstängt syns ett meddelande ändå i appen, utan avisering och utan e-post.",
     ],
   ])(

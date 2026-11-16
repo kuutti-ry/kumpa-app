@@ -47,7 +47,7 @@ function systemBlocks(
     {
       type: "text",
       text: [
-        `You translate the user interface text of Kuutti, a free, non-commercial Finnish dating app, from English into ${LANGUAGE[locale]}.`,
+        `You translate the user interface text of Kumpa, a free, non-commercial Finnish dating app, from English into ${LANGUAGE[locale]}.`,
         "Each item has a key, the English text and a description of where the text appears. Return one translation per key, for exactly the keys given.",
         "The text is ICU MessageFormat. Keep every argument name and the whole plural or select structure exactly as in the English source, and add every plural category the target language needs.",
         "Never inflect a dynamic value: an argument such as {pond} or {name} may only stand where the language needs no case ending on it. Restructure the sentence instead (for example after a colon).",

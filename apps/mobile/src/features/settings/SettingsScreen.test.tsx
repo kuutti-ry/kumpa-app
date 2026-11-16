@@ -157,7 +157,7 @@ describe("the settings screen", () => {
 
   it("lists the sections for a signed-out device, with no accessibility problems", async () => {
     await renderWithTheme(<SettingsScreen />);
-    const headings = ["Appearance and language", "About Kuutti"];
+    const headings = ["Appearance and language", "About Kumpa"];
     for (const name of headings) expect(screen.getByRole("heading", { name })).toBeTruthy();
     // A section with no row for a device without a person is not drawn (#511), the account's too (#581).
     for (const name of ["Notifications and contacts", "Privacy and security", "Account"]) {
@@ -220,7 +220,7 @@ describe("the settings screen", () => {
       "Support when it's hard",
       "Invitations",
       "Give feedback",
-      "About Kuutti",
+      "About Kumpa",
       "Version",
       "Terms of use",
       "Privacy",
@@ -1005,7 +1005,7 @@ describe("the lock's row (#418)", () => {
     await screen.findByRole("button", { name: "Your account" });
     await act(() => new Promise<void>((resolve) => setTimeout(resolve, 20)));
     expect(auth.authenticateAsync).toHaveBeenCalledTimes(1);
-    expect(screen.queryByText("Kuutti is locked")).toBeNull();
+    expect(screen.queryByText("Kumpa is locked")).toBeNull();
     expect(row("Lock").props.accessibilityValue).toEqual({ text: "On, closed" });
     expect(within(row("Lock")).getByText("On")).toBeTruthy();
   });

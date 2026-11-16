@@ -16,7 +16,7 @@ describe("SourceOffer", () => {
     await renderWithTheme(<SourceOffer source={SOURCE} />);
     expect(screen.queryByRole("header")).toBeNull();
     expect(
-      screen.getByText("Kuutti is free software under the AGPL-3.0 licence, published at:"),
+      screen.getByText("Kumpa is free software under the AGPL-3.0 licence, published at:"),
     ).toBeTruthy();
     expect(screen.getByText(SOURCE)).toBeTruthy();
     expect(pressables(screen.toJSON() as HostNode).flatMap((n) => a11yProblems(n))).toEqual([]);

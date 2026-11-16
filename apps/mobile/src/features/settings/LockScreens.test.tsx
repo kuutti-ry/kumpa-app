@@ -42,8 +42,8 @@ const stored = () => JSON.parse(store.get("kuutti.lock") ?? "null") as StoredLoc
 
 const TEXT = {
   explain: "The lock stays on this phone, and logging out turns it off.",
-  missing: "This phone has no face or fingerprint unlock that Kuutti can use.",
-  denied: "This iPhone does not let Kuutti use Face ID.",
+  missing: "This phone has no face or fingerprint unlock that Kumpa can use.",
+  denied: "This iPhone does not let Kumpa use Face ID.",
   openSettings: "Open the phone's settings",
   biometrics: "Face or fingerprint",
   failed: "Your face or fingerprint was not confirmed, so it was not turned on.",
@@ -57,7 +57,7 @@ const TEXT = {
   passcodeSet: "A passcode is set.",
   change: "Change the passcode",
   remove: "Remove the passcode",
-  grace: "Lock again after Kuutti has been in the background",
+  grace: "Lock again after Kumpa has been in the background",
   choices: ["Straight away", "1 minute", "5 minutes", "15 minutes"],
 };
 
@@ -219,7 +219,7 @@ describe("the face or fingerprint", () => {
     expect(auth.authenticateAsync).toHaveBeenCalledTimes(1);
     expect(auth.authenticateAsync).toHaveBeenCalledWith(
       expect.objectContaining({
-        promptMessage: "Unlock Kuutti",
+        promptMessage: "Unlock Kumpa",
         cancelLabel: "Cancel",
         disableDeviceFallback: true,
       }),
@@ -228,7 +228,7 @@ describe("the face or fingerprint", () => {
     expect(stored()).toEqual({ biometrics: true, passcode: null, graceMinutes: 1 });
     expect(screen.queryByText(TEXT.failed)).toBeNull();
     // Turned on here, the app stays open: the lock comes at the next start or return.
-    expect(screen.queryByText("Kuutti is locked")).toBeNull();
+    expect(screen.queryByText("Kumpa is locked")).toBeNull();
     noProblems();
   });
 
@@ -573,10 +573,10 @@ describe("an iPhone not letting Kuutti use Face ID (#505)", () => {
   });
 
   it.each([
-    ["fi-FI", "Tämä iPhone ei anna Kuutin käyttää Face ID:tä.", "Avaa puhelimen asetukset"],
+    ["fi-FI", "Kumpa ei saa käyttää Face ID:tä tällä iPhonella.", "Avaa puhelimen asetukset"],
     [
       "sv-FI",
-      "Den här iPhonen låter inte Kuutti använda Face ID.",
+      "Den här iPhonen låter inte Kumpa använda Face ID.",
       "Öppna telefonens inställningar",
     ],
   ])("speaks %s", async (languageTag, words, settings) => {
@@ -801,7 +801,7 @@ describe("the lock's one offer, after the e-mail", () => {
     await show(<LockOfferScreen />);
     expect(store.get("kuutti.preference.lockOffered")).toBe("true");
     expect(screen.getByRole("heading", { name: "When you have a moment" })).toBeTruthy();
-    expect(screen.getByText("Lock Kuutti on this phone?")).toBeTruthy();
+    expect(screen.getByText("Lock Kumpa on this phone?")).toBeTruthy();
     expect(screen.getByText(TEXT.explain)).toBeTruthy();
     expect(button(TEXT.setPasscode)).toBeTruthy();
     noProblems();

@@ -4,7 +4,7 @@
 # the phone. Where the buttons then sit and what they carry on the round is
 # the round screen's jest tests: a mark is silent. This flow holds the setting
 # on a device: chosen, and kept when the row is opened again. Sanna; the flow
-# leaves the setting as it found it, right hand, two hands and Kuutti's style,
+# leaves the setting as it found it, right hand, two hands and Kumpa's style,
 # and the row closed.
 appId: fi.kuutti.app
 name: The Like and Pass setting places them for either hand, and one-handed
@@ -43,7 +43,7 @@ name: The Like and Pass setting places them for either hand, and one-handed
 # The style may lie below the fold. The shapes' button shows ✕ and ○ and is
 # named in words, which is what Maestro reads, the screen reader's name.
 - scrollUntilVisible:
-    element: ".*✓.*Kuutti.*"
+    element: ".*✓.*Kumpa.*"
     direction: DOWN
     centerElement: true
     timeout: 30000
@@ -81,9 +81,9 @@ name: The Like and Pass setting places them for either hand, and one-handed
     direction: DOWN
     centerElement: true
     timeout: 30000
-- tapOn: "Kuutti"
+- tapOn: "Kumpa"
 - extendedWaitUntil:
-    visible: ".*✓.*Kuutti.*"
+    visible: ".*✓.*Kumpa.*"
     timeout: 15000
 - runFlow:
     file: ../common/close-settings-row.yaml

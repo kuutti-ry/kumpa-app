@@ -214,15 +214,15 @@ describe("the support page (#510)", () => {
   it.each([
     [
       "en",
-      "These services are not part of Kuutti. Kuutti doesn't see who opens this page or who you call.",
+      "These services are not part of Kumpa. Kumpa doesn't see who opens this page or who you call.",
     ],
     [
       "fi",
-      "Nämä palvelut eivät kuulu Kuuttiin. Kuutti ei näe, kuka avaa tämän sivun tai kenelle soitat.",
+      "Nämä palvelut eivät kuulu Kumpa-sovellukseen. Kumpa ei näe, kuka avaa tämän sivun tai kenelle soitat.",
     ],
     [
       "sv",
-      "De här tjänsterna hör inte till Kuutti. Kuutti ser inte vem som öppnar den här sidan eller vem du ringer.",
+      "De här tjänsterna hör inte till Kumpa. Kumpa ser inte vem som öppnar den här sidan eller vem du ringer.",
     ],
   ])(
     "says the services are not Kuutti's and that Kuutti does not see, in %s",

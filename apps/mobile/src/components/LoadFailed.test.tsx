@@ -30,12 +30,12 @@ describe("LoadFailed", () => {
     [
       "no answer",
       new TypeError("Network request failed"),
-      "Kuutti could not be reached. Check your connection.",
+      "Kumpa could not be reached. Check your connection.",
     ],
     [
       "a server error",
       new ApiError("profile answered 500", 500),
-      "Kuutti's server had a problem. Try again in a moment.",
+      "Kumpa's server had a problem. Try again in a moment.",
     ],
     ["anything else", new Error("boom"), "Something unexpected went wrong."],
   ])("says why after %s, and tries again on request", async (_, error, why) => {
@@ -54,7 +54,7 @@ describe("LoadFailed", () => {
   it("offers to update an app older than its API, and no retry that cannot help", async () => {
     update.mockReturnValue(new Promise(() => undefined));
     const onRetry = await show(outdated);
-    expect(screen.getByText("This version of the app is older than Kuutti's server.")).toBeTruthy();
+    expect(screen.getByText("This version of the app is older than Kumpa's server.")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
     await act(async () => {
       fireEvent.press(screen.getByRole("button", { name: "Update the app" }));
@@ -84,7 +84,7 @@ describe("LoadFailed", () => {
     });
     expect(
       await screen.findByText(
-        "No update is available for this app yet. Install the newest version of Kuutti.",
+        "No update is available for this app yet. Install the newest version of Kumpa.",
       ),
     ).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Update the app" })).toBeNull();
@@ -106,7 +106,7 @@ describe("the whole-screen frames", () => {
     await renderWithTheme(
       <LoadFailedScreen error={new ApiError("profile answered 503", 503)} onRetry={onRetry} />,
     );
-    expect(screen.getByText("Kuutti's server had a problem. Try again in a moment.")).toBeTruthy();
+    expect(screen.getByText("Kumpa's server had a problem. Try again in a moment.")).toBeTruthy();
     fireEvent.press(screen.getByRole("button", { name: "Try again" }));
     expect(onRetry).toHaveBeenCalledTimes(1);
     expect(pressables(screen.toJSON() as HostNode).flatMap((node) => a11yProblems(node))).toEqual(

@@ -21,7 +21,7 @@ apps/api/src/safety/reports.ts
 apps/api/src/chat/first-messages.ts
 -->
 
-The moderators' side of Kuutti: how a member of staff signs in to the admin panel, works a report to a decision, warns, shadow-bans, suspends or bans a person, reviews the shadow bans the automatic rules applied, and uses the panel's other screens. It is written for moderators, admins and anyone who wants to see what happens to a person after somebody reports them. How a person makes a report is in [Report and block](report-and-block.md#part-1-blocking-and-reporting); the photo queue and taking down one photo are drawn in [Photos](photos.md#part-6-the-photo-queue), the Matching switch in [People on Kuutti](people-on-kuutti.md#part-2-an-admin-opens-or-closes-matching), and an announcement to everybody in [Announcements](announcements.md).
+The moderators' side of Kuutti: how a member of staff signs in to the admin panel, works a report to a decision, warns, shadow-bans, suspends or bans a person, reviews the shadow bans the automatic rules applied, and uses the panel's other screens. It is written for moderators, admins and anyone who wants to see what happens to a person after somebody reports them. How a person makes a report is in [Report and block](report-and-block.md#part-1-blocking-and-reporting); the photo queue and taking down one photo are drawn in [Photos](photos.md#part-6-the-photo-queue), the Matching switch in [People on Kumpa](people-on-kuutti.md#part-2-an-admin-opens-or-closes-matching), and an announcement to everybody in [Announcements](announcements.md).
 
 A confirmation can be left with Cancel or Escape before submission, or after a refusal. While its request or follow-up is pending, the step stays open with Cancel unavailable; closing it could not undo the request. A completed action is not offered again while its page catches up.
 
@@ -192,7 +192,7 @@ flowchart TB
     s47["Sees A warning from a moderator among the notices on home"]
     s48["Sees no change, while everyone else stops seeing them"]
     s50["Is signed out, and the bank login says from which day they can sign in again"]
-    s52["Is signed out, and the bank login says this person may not use Kuutti"]
+    s52["Is signed out, and the bank login says this person may not use Kumpa"]
   end
   subgraph api["The API"]
     s43{"Allowed for this person and this role?"}
@@ -258,9 +258,9 @@ flowchart TB
 49. A suspension: the API ends every session of the person's accounts at once.
 50. The person is signed out at their next request, and their bank login is refused with "This account is suspended. You can sign in again from:" and the day, in Finland's time ([Signing in](sign-in.md#part-1-signing-in)): 53.
 51. A ban, an admin's: the API ends every session and closes the person's conversations for good, which the people in them read as ended conversations ([Chat](chat.md#part-4-ending-a-conversation)). It binds the person's identity, so it keeps them out with any account, and no new account is possible.
-52. The person is signed out at their next request, and their bank login is refused with "This person may not use Kuutti.": 54.
+52. The person is signed out at their next request, and their bank login is refused with "This person may not use Kumpa.": 54.
 53. The night's jobs lift a suspension once its day has come, by nobody, and settle the account; the next bank login resumes it. A bank login on the end day before the night's run is still refused.
-54. The panel says "Applied:" and the sanction, and the person's page lists every sanction, newest first: its kind ("Warning", "Shadow ban", "Suspension", "Ban"), its reason, when and until when, the note, "Applied by:" who, and when it was "Lifted:" or "Looked at again:" and by whom, each by identity id with their role now, "no role now", or "Kuutti itself" for what no person did. "Lift" and "Look at it again" are offered where the role allows and while each is still open; a ban's only to an admin.
+54. The panel says "Applied:" and the sanction, and the person's page lists every sanction, newest first: its kind ("Warning", "Shadow ban", "Suspension", "Ban"), its reason, when and until when, the note, "Applied by:" who, and when it was "Lifted:" or "Looked at again:" and by whom, each by identity id with their role now, "no role now", or "Kumpa itself" for what no person did. "Lift" and "Look at it again" are offered where the role allows and while each is still open; a ban's only to an admin.
 55. Lift: 56. Look at it again: 57.
 56. "Lift" opens "Lift:" and the sanction, a step that says what lifting does: "The warning is marked lifted. Nothing else changes for the person.", "Others see the person again, unless something else still open hides them." or, for a suspension or a ban, "The person may sign in again, unless something else still open stops them." The API writes the audit row, lifts the sanction and settles the person from what is still open. No session comes back: a suspended or banned person signs in anew. Nobody lifts a sanction on their own identity, and one already lifted answers "It is lifted already.": 59.
 57. "Look at it again" is a second member of staff's look: "Your note", and under "Decision", "Keep it" or "Lift it" with the lift's sentence beside it, only "Keep it" for one already lifted; then "Apply". Applied by somebody else, and not looked at again yet: 58. Otherwise: 44.
@@ -360,7 +360,7 @@ flowchart TB
     s79(["Photos: the photo queue, see Photos"])
     s80["Feedback: what people sent, a bug first and praise last"]
     s85(["Shows the person's page: state, card, photos on request, sanctions, feedback, what staff did and saw"])
-    s86(["Matching, an admin's: the one switch, see People on Kuutti"])
+    s86(["Matching, an admin's: the one switch, see People on Kumpa"])
     s87(["Announcements, an admin's: see Announcements"])
     s89["Shows the change, now and new, to confirm with Change it"]
     s91(["Says why in words, and nothing is written"])
@@ -391,7 +391,7 @@ flowchart TB
 
 76. The moderator chooses a screen from the menu.
 77. Which screen? Overview: 78. Photos: 79. Feedback: 80. A person: 83. For an admin: Matching: 86, Announcements: 87, Tunables: 88, Audit log: 93, Staff: 94. Reports and Automatic shadow bans are parts 2 and 4.
-78. "Overview", the front page: a card for each of "Reports", "Automatic shadow bans", "Photos" and "Feedback", each linked to its screen, saying how many wait and how long the oldest has waited ("Oldest:"), or "nothing waits.", by the API's clock, with "Late" and the response time in hours past `moderation_response_hours` (the automatic bans past `auto_shadow_ban_review_hours`); reports the reader is a party to and automatic bans on their own identity are not counted. Below, "Told Kuutti they found someone": how many, by reason ("On Kuutti", "Elsewhere", "Another reason"), over the last days the code counts and "In all", naming nobody ([Found them](found-them.md)). "Refresh" reads it again. The end.
+78. "Overview", the front page: a card for each of "Reports", "Automatic shadow bans", "Photos" and "Feedback", each linked to its screen, saying how many wait and how long the oldest has waited ("Oldest:"), or "nothing waits.", by the API's clock, with "Late" and the response time in hours past `moderation_response_hours` (the automatic bans past `auto_shadow_ban_review_hours`); reports the reader is a party to and automatic bans on their own identity are not counted. Below, "Told Kumpa they found someone": how many, by reason ("On Kumpa", "Elsewhere", "Another reason"), over the last days the code counts and "In all", naming nobody ([Found them](found-them.md)). "Refresh" reads it again. The end.
 79. "Photos", the photo queue, is [Photos](photos.md#part-6-the-photo-queue)'s. The end.
 80. "Feedback": what people sent from the app and nobody has handled, how many wait, a bug first and praise last, oldest first within a kind ("Bug", "Idea", "Complaint", "Praise"), each with its text, the app's version, the platform, the language and the time, and "Account" with the sender's id, which links to the person's page ([Settings, consents and feedback](settings-and-feedback.md)).
 81. The moderator chooses "Mark as handled" on a row.
@@ -399,7 +399,7 @@ flowchart TB
 83. "A person": the "Account id", pasted from a report, a photo, an automatic ban or a feedback row, then "Open the page"; there is no search by name or anything else, and what is not an id is "This is not an account id." Reports, automatic bans, photos in review and feedback rows link to the page as well, by their "Account" and its id.
 84. The API writes the look to the audit log first, then answers. An id of no account: "No account has this id."
 85. The page, "Account" and its id, shows under "State" the account's state and since when, its "Standing", until when, and when it "Registered"; "As the card shows them": the name, the age, the gender, the bio and the answers as others see them; "Photos", each with its state and when it was uploaded, shown only on "Show photo", each look an audit row, and beside an approved one "Take down…" ([Photos](photos.md#part-7-taking-down-an-approved-photo)); "Sanctions", with the actions and the list (part 3); "Feedback sent"; and "What staff did and saw" about them, the newest first, up to a limit. Never the keyed code, the bank's references, the research id or the e-mail. The account appears while its separate sanctions history loads. A deleted account shows its deletion date and nothing else. A response for a page left behind cannot replace the account or report now open. The end.
-86. "Matching", an admin's: the one switch that opens or closes matching for everybody, in [People on Kuutti](people-on-kuutti.md#part-2-an-admin-opens-or-closes-matching). The end.
+86. "Matching", an admin's: the one switch that opens or closes matching for everybody, in [People on Kumpa](people-on-kuutti.md#part-2-an-admin-opens-or-closes-matching). The end.
 87. "Announcements", an admin's: one admin writes an announcement to everybody and another approves it, in [Announcements](announcements.md#part-1-one-admin-writes-it). The end.
 88. "Tunables", an admin's: every tunable by its key, with its value; opened, its versions, newest first, with the value, "From" when, "By" whom and "Why". The admin writes the "New value" and "Why the change", and chooses "Review the change". A value not of the key's type is caught in the form: "This is not a value of the key's type."
 89. The panel asks to "Change" the key, with "Now:" and "New:", and offers "Change it" and "Cancel".
@@ -423,7 +423,7 @@ flowchart TB
 - Maestro: the panel's own flows are Playwright's ([README](../../apps/admin/e2e/README.md)): [sign-in.spec.ts](../../apps/admin/e2e/sign-in.spec.ts), [roles.spec.ts](../../apps/admin/e2e/roles.spec.ts) (a screen the role does not open), [report.spec.ts](../../apps/admin/e2e/report.spec.ts) (a report with its pointed photo, dismissed), [sanctions.spec.ts](../../apps/admin/e2e/sanctions.spec.ts) (a person's page, a suspension applied and lifted, a take-down); the app's [sign-in-refusals.yaml](../../apps/mobile/e2e/flows/sign-in-refusals.yaml) walks a banned person refused at the bank login (step 52)
 - ADRs: [ADR-006](../adr/006-photo-moderation.md) §5 and §6 (staff sessions, the audit log), [ADR-023](../adr/023-feedback-from-the-app.md) (feedback), [ADR-024](../adr/024-sanctions.md) (sanctions), [ADR-025](../adr/025-admin-host.md) (the panel's host), [ADR-026](../adr/026-limits-per-person-and-sign-in-doors.md) §4 (too many sign-ins), [ADR-030](../adr/030-reports-and-blocks.md) §6, §8, §12 and §13 (what each side learns, the frozen copy, the photo a report points at), [ADR-031](../adr/031-chat.md) §4 (what a shadow ban withholds in a conversation), [ADR-033](../adr/033-automatic-shadow-bans.md) (automatic shadow bans), [ADR-040](../adr/040-found-them.md) (the front page's count), [ADR-041](../adr/041-velocity.md) (velocity), [ADR-050](../adr/050-admin-components.md) (the panel's components), [ADR-051](../adr/051-admin-flows-with-playwright.md) (the panel's flows), [ADR-062](../adr/062-one-queue.md) §9 (no ceiling on cards, the alarms that stand)
 - Rules: the register's [Safety](../decisions.md#safety), [Sign-in and identity](../decisions.md#sign-in-and-identity), [Photos](../decisions.md#photos) and [Retention](../decisions.md#retention) rows
-- Other flows: [Report and block](report-and-block.md), [Photos](photos.md), [People on Kuutti](people-on-kuutti.md), [Announcements](announcements.md), [Signing in](sign-in.md)
+- Other flows: [Report and block](report-and-block.md), [Photos](photos.md), [People on Kumpa](people-on-kuutti.md), [Announcements](announcements.md), [Signing in](sign-in.md)
 
 ## History
 
@@ -459,3 +459,4 @@ flowchart TB
 - 2026-11-13 (#657): a failed exchange request returns to Sign in with the existing failure message.
 - 2026-11-13 (#380): pending confirmations stay open; session checks precede staff screens, late page answers are ignored, and completed feedback receives focus without offering the action again.
 - 2026-11-16 (#687): a clock counted back over the queue's log is refused past the year the log is kept, in words of its own.
+- 2026-11-16 (#700, PR #701): the panel's overview and its sanctions, and a ban's refusal at the bank, name the app Kumpa.

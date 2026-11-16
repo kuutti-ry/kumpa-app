@@ -66,12 +66,12 @@ flowchart TB
 1. The person opens "Your photos" from "Your profile", its "Photos" row, starred as "Needed before your card can be shown" ([Profile](profile.md#part-1-the-profile-and-a-section)). The screen says "Hold a photo and drag it to change the order. A new photo is checked before anyone else sees it." Below the limit the count of photos is not drawn: a screen reader hears it each time it changes, the one word that a photo landed. The arrow at the top, "Back to your profile", and "Done" at the end both go back; the screen has no back gesture, which the drag would start. Onboarding's step 7 is this screen with no arrow, its Continue the only way on.
 2. Does the person have fewer photos than `max_photos`? Every photo counts, one not accepted too. Yes: 4. No: 3.
 3. Above "Add a photo" stands how many photos there are, of at most `max_photos`, and the button is unavailable; removing a photo (step 59) makes room. The flow ends here.
-4. The person chooses "Add a photo" and picks one picture from the phone's photo library; the app offers no camera, and says nothing until the upload starts. A cancelled choice changes nothing; when the app may not open the photos, it says "Kuutti could not open your photos. Allow access in the phone's settings and try again." Each notice of this screen closes with "OK".
+4. The person chooses "Add a photo" and picks one picture from the phone's photo library; the app offers no camera, and says nothing until the upload starts. A cancelled choice changes nothing; when the app may not open the photos, it says "Kumpa could not open your photos. Allow access in the phone's settings and try again." Each notice of this screen closes with "OK".
 5. Not built yet (#184): the phone's own nudity check, which would refuse a nude picture before anything is sent, with "This photo cannot be used." Until the native build carries it, every picture passes.
 6. The app saves a copy of the picture, no larger than the size it uploads, without the camera and location data the original carried.
 7. The app sends the copy, saying "Uploading…" with the percent.
 8. Can the API use the picture, and is there room for it? It must be a JPEG, PNG or WebP it can read and not too large, the account must have fewer than `max_photos` photos, and the API must not be busy with too many photos at once. Yes: 10. No: 9.
-9. The app says why in words, such as "The photo is too large. Choose a smaller picture.", "This file is not a photo Kuutti can use. Choose a JPEG, PNG or WebP picture.", "You already have the maximum number of photos. Remove one to add another." or "Many photos are being processed right now. Try again in a moment."; anything else, "That did not go through. Try again." Nothing of the picture is kept: what a failure left in storage the API removes, and what even that misses the night sweeps (step 62). The flow ends here.
+9. The app says why in words, such as "The photo is too large. Choose a smaller picture.", "This file is not a photo Kumpa can use. Choose a JPEG, PNG or WebP picture.", "You already have the maximum number of photos. Remove one to add another." or "Many photos are being processed right now. Try again in a moment."; anything else, "That did not go through. Try again." Nothing of the picture is kept: what a failure left in storage the API removes, and what even that misses the night sweeps (step 62). The flow ends here.
 10. The API makes three sizes of a clean copy (a small one for the grid, the card's, and the full size), with none of the original's metadata, and keeps no original.
 11. The API keeps the photo last in the person's order, seen by its owner only, and hands it to the automatic check at once: part 2.
 
@@ -134,7 +134,7 @@ flowchart TB
 21. The tile loses its hourglass and says nothing more: a photo that is through has no word of its own: part 4.
 22. The API rejects the photo itself, with a reason from a closed list and never a label's name: nudity, violence or weapons, "other" for something disturbing or hateful, no person ("Not accepted. A profile photo has to show you.") or several people ("Not accepted. A profile photo shows you alone.").
 23. When the usual lines were sure of a hard label, the API leaves a note of its kind and time, nothing of the picture; what only the closer look rejected leaves none. The night drops a note once it is older than the retention the code holds it to, and the notes go with the account; they are never shown in the admin panel, and the person reads them in plain words in their copy of their data. Nothing else follows from them: a ban stays a person's decision.
-24. The tile says why, such as "Not accepted. Photos with nudity cannot be used on Kuutti.", or "Not accepted" where there is no reason to give: part 3.
+24. The tile says why, such as "Not accepted. Photos with nudity cannot be used on Kumpa.", or "Not accepted" where there is no reason to give: part 3.
 25. The API queues the photo for a person.
 26. The tile is dimmed under an hourglass and says "In review", the same words as while the check had not answered; nobody else sees it: part 6.
 
@@ -187,7 +187,7 @@ flowchart TB
     s35["Your card shows the approved photos only, in the person's order"]
     s36["Shows one tip at a time by the photos, if one applies"]
     s38["Your profile lists what is missing, and home says Yours still lacks something"]
-    s40(["Home's matching card says the profile is finished, and whether matching is open: see People on Kuutti"])
+    s40(["Home's matching card says the profile is finished, and whether matching is open: see People on Kumpa"])
   end
   subgraph api["The API"]
     s37{"The approved photos a finished profile needs, and the rest done?"}
@@ -216,7 +216,7 @@ flowchart TB
 37. Does the profile have the approved photos a finished profile needs, a number the code fixes ([ADR-009](../adr/009-profile-and-card.md) §4; how many onboarding's photos step asks for is under [Onboarding's Open](onboarding.md#open)), and the rest of it done: a name, a bio of enough characters, a ready line or two answered questions, whom one seeks and the age window? Yes: 40. No: 38.
 38. "Your profile" lists what is missing under "Before your card can be shown", the approved photos among it, and so does "Your card" over the card; home's matching card says "Matching opens for finished profiles. Yours still lacks something."
 39. The person adds more photos (part 1) or waits for those in review. The flow ends here.
-40. Home's matching card asks again whenever home or the app comes to the front, so nothing waits for the night: "Your profile is finished. Matching has not opened yet." until an admin opens matching, then "Matching is open for you." with "See people" ([People on Kuutti](people-on-kuutti.md#part-1-what-home-shows)). "Your card" now says "This is what others see."
+40. Home's matching card asks again whenever home or the app comes to the front, so nothing waits for the night: "Your profile is finished. Matching has not opened yet." until an admin opens matching, then "Matching is open for you." with "See people" ([People on Kumpa](people-on-kuutti.md#part-1-what-home-shows)). "Your card" now says "This is what others see."
 41. Once matching is open, the card, with its approved photos only, comes into the People of whoever it fits, both ways, and into Starred for whoever starred the person ([the queue](queue.md#part-2-a-card-and-its-decision)): the photos one at a time, the main one first, each asked for only when it first comes to the front. The main photo is also the person's face in a conversation list ([Chat](chat.md)), and a row of Starred shows the first approved photo the viewer was shown.
 42. Another person is given the thumb and the card size of an approved photo on a card the server showed them, while its owner is active and no block stands between the two, each fetch counted against the day's `photo_fetches_per_day` for its size, and never the full size, which is the owner's alone ([ADR-056](../adr/056-attestation-later-no-screenshot-notice.md) §3). A photo taken down (part 7), refused or removed is given to nobody from then on, and the photos of an owner on a break, shadow-banned, suspended or banned are given to nobody meanwhile. The flow ends here.
 
@@ -364,7 +364,7 @@ flowchart TB
 73. The owner's tile loses its hourglass and its "In review" the next time they open "Your photos"; nothing tells them sooner, though home's matching card reads the new answer whenever home comes to the front: part 4.
 74. The moderator chooses the "Reason the person is told" from the list: "Nudity", "No person visible", "Several people", "A child appears", "Violence or weapons", "Contact details, handle or link" or "Other". None is preset ("Choose a reason"), and "Reject photo" stays unavailable until one is chosen; "Cancel" goes back.
 75. The API rejects the photo with that reason and names the moderator on its review and in an audit row. A moderator's rejection leaves no note and offers no appeal. The panel says "Rejected" in the photo's place.
-76. The owner's grid says the reason in words, such as "Not accepted. Photos with children cannot be used on Kuutti.", the next time they open "Your photos". The flow ends here.
+76. The owner's grid says the reason in words, such as "Not accepted. Photos with children cannot be used on Kumpa.", the next time they open "Your photos". The flow ends here.
 77. The night's jobs reject the photo as not reviewed, naming nobody, with no appeal and no audit row; the moderators get no warning before. `photo_queue_reject_days` at 0 switches this off.
 78. The owner's grid says "Not accepted. Nobody reviewed this photo in time; you can add it again." The flow ends here.
 
@@ -419,7 +419,7 @@ flowchart TB
 85. The panel says "The photo is no longer approved: it was taken down meanwhile. Reload the page to see it as it is." or "The photo is gone: its owner removed it meanwhile." Nothing is written. The flow ends here.
 86. The API rejects the photo with that reason, keyed on its approved state, so of two decisions at once one is written, and names the moderator on its review and in an audit row. Nothing is deleted, and it is no sanction: the person's standing, their other photos and the check's notes stay as they are.
 87. The panel says "Taken down." in the photos' own line and shows the photo as it now stands: a person's page is read again, which is another look in the audit log, and a report's page takes the new state from the answer and is not read again. The completed take-down is not offered again while that page is being read. The flow ends here for the moderator.
-88. The owner's grid says the reason in words, such as "Not accepted. This photo does not fit Kuutti; try another one.", with no "Ask a person to look", the next time they open "Your photos"; nothing tells them sooner. The flow ends here.
+88. The owner's grid says the reason in words, such as "Not accepted. This photo does not fit Kumpa; try another one.", with no "Ask a person to look", the next time they open "Your photos"; nothing tells them sooner. The flow ends here.
 89. From then on nobody else is given the photo, though a link handed out before works out its short while, and the card shows the person's other approved photos. Left with fewer approved photos than a finished profile needs, the person is shown to nobody and reads no queue until another photo is approved (step 37). The flow ends here.
 
 ## Where it lives
@@ -466,3 +466,4 @@ flowchart TB
 - 2026-11-07 (#616, PR #641): "Your photos" opened from the profile has the arrow back at the top beside "Done" at the end, and the profile's Photos row is starred as needed for the card.
 - 2026-11-13 (#657): approval waits for the picture to load; the nightly retry reaches every eligible pending photo once per run, including those behind failed checks.
 - 2026-11-13 (#380): approval waits for the actual image to load; its outcome receives focus, and a pending or completed take-down cannot be sent again through a stale page. The phone also ignores a late photo answer after a different photo was requested.
+- 2026-11-16 (#700, PR #701): the refusals of a photo name the app Kumpa.

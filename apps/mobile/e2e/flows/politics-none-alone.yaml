@@ -13,7 +13,7 @@ name: The parties screen lists the parties and none of them, which stands alone,
     timeout: 15000
 - waitForAnimationToEnd
 - assertNotVisible: "Stored under the sensitive-answers consent.*|Tallennetaan arkaluonteisten vastausten suostumuksella.*|Lagras under det samtycke till känsliga svar.*"
-- assertNotVisible: "I consent to Kuutti storing whom I seek|Annan Kuutille luvan tallentaa, kenen seuraa etsin|Jag samtycker till att Kuutti lagrar vem jag söker"
+- assertNotVisible: "I consent to Kuutti ry storing whom I seek|Annan Kuutti ry:lle luvan tallentaa, kenen seuraa etsin|Jag samtycker till att Kuutti ry lagrar vem jag söker"
 - assertNotVisible: "Search|Hae|Sök"
 - assertVisible: "Centre Party|Keskusta|Centern"
 - assertVisible: "National Coalition Party|Kokoomus|Samlingspartiet"

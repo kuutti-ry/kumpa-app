@@ -257,8 +257,8 @@ describe("parseConfig for mail (#385, ADR-043 §4)", () => {
     }
   });
 
-  it("sends as Kuutti's noreply unless the sender is set, and refuses an empty one", () => {
-    expect(parseConfig(environments.production).MAIL_FROM).toBe("Kuutti <noreply@kuutti.app>");
+  it("sends as Kumpa's noreply unless the sender is set, and refuses an empty one", () => {
+    expect(parseConfig(environments.production).MAIL_FROM).toBe("Kumpa <noreply@kuutti.app>");
     expect(
       parseConfig({ ...environments.staging, MAIL_FROM: "Kuutti Staging <noreply@kuutti.app>" })
         .MAIL_FROM,

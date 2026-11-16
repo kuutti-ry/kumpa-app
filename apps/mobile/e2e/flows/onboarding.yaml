@@ -82,7 +82,7 @@ name: A registered person is taken through onboarding one question per screen, a
 - assertVisible: "Nobody outside your choice is ever shown to you, and you are never shown to anyone who did not pick you\\.|Ketään valintasi ulkopuolelta ei koskaan näytetä sinulle, eikä sinua näytetä kenellekään, joka ei valinnut sinua\\.|Ingen utanför ditt val visas någonsin för dig, och du visas aldrig för någon som inte valde dig\\."
 - tapOn: "Anyone|Kenet tahansa|Vem som helst"
 - scrollUntilVisible:
-    element: "I consent to Kuutti storing whom I seek|Annan Kuutille luvan tallentaa, kenen seuraa etsin|Jag samtycker till att Kuutti lagrar vem jag söker"
+    element: "I consent to Kuutti ry storing whom I seek|Annan Kuutti ry:lle luvan tallentaa, kenen seuraa etsin|Jag samtycker till att Kuutti ry lagrar vem jag söker"
     direction: DOWN
     centerElement: true
     timeout: 60000
@@ -93,8 +93,8 @@ name: A registered person is taken through onboarding one question per screen, a
 # text's beside it. So the switch is the "0" right of them. The consent is
 # saved before Continue opens.
 - tapOn:
-    text: "0|(I consent to Kuutti storing whom I seek|Annan Kuutille luvan tallentaa, kenen seuraa etsin|Jag samtycker till att Kuutti lagrar vem jag söker), off"
-    rightOf: "I consent to Kuutti storing whom I seek|Annan Kuutille luvan tallentaa, kenen seuraa etsin|Jag samtycker till att Kuutti lagrar vem jag söker"
+    text: "0|(I consent to Kuutti ry storing whom I seek|Annan Kuutti ry:lle luvan tallentaa, kenen seuraa etsin|Jag samtycker till att Kuutti ry lagrar vem jag söker), off"
+    rightOf: "I consent to Kuutti ry storing whom I seek|Annan Kuutti ry:lle luvan tallentaa, kenen seuraa etsin|Jag samtycker till att Kuutti ry lagrar vem jag söker"
 - extendedWaitUntil:
     visible:
       text: "Continue|Jatka|Fortsätt"
@@ -146,7 +146,7 @@ name: A registered person is taken through onboarding one question per screen, a
     timeout: 15000
 - assertVisible: "Step 6 of 8|Vaihe 6 / 8|Steg 6 av 8"
 # Both sentences here, where the digits are first asked for; Home keeps the second alone (#581).
-- assertVisible: "Your postal code tells Kuutti how far people are\\. Others see a town or your area by name, never the digits\\.|Postinumerosi kertoo Kuutille, kuinka kaukana ihmiset ovat\\. Muut näkevät kaupungin tai alueesi nimen, eivät koskaan numeroita\\.|Ditt postnummer berättar för Kuutti hur långt bort folk är\\. Andra ser en stad eller ditt område med namn, aldrig siffrorna\\."
+- assertVisible: "Your postal code tells Kumpa how far people are\\. Others see a town or your area by name, never the digits\\.|Postinumerostasi Kumpa tietää, kuinka kaukana ihmiset ovat\\. Muut näkevät kaupungin tai alueesi nimen, eivät koskaan numeroita\\.|Ditt postnummer berättar för Kumpa hur långt bort folk är\\. Andra ser en stad eller ditt område med namn, aldrig siffrorna\\."
 # The field, below its label of the same name; an empty field has no text to match.
 - tapOn:
     below: "Postal code|Postinumero|Postnummer"
@@ -251,6 +251,6 @@ name: A registered person is taken through onboarding one question per screen, a
 # Home straight after the bio: research is not asked (#545). The one
 # pond's counter; the photos wait in the local queue, so matching waits for them.
 - extendedWaitUntil:
-    visible: "People on Kuutti|Ihmiset Kuutissa|Människor på Kuutti"
+    visible: "People on Kumpa|Ihmiset Kumpa-sovelluksessa|Människor på Kumpa"
     timeout: 15000
 - assertVisible: "Matching opens for finished profiles\\. Yours still lacks something\\.|Seuranhaku avautuu valmiille profiileille\\. Sinun profiilistasi puuttuu vielä jotakin\\.|Matchningen öppnar för färdiga profiler\\. I din saknas ännu något\\."

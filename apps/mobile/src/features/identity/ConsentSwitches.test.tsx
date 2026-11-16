@@ -221,7 +221,7 @@ describe("ConsentSwitch", () => {
     const calls = fetchMock([serverError]);
     await show(<ConsentSwitch kind="special_category" />);
     expect(screen.getByText(FAILED_TO_LOAD)).toBeTruthy();
-    expect(screen.getByText("Kuutti's server had a problem. Try again in a moment.")).toBeTruthy();
+    expect(screen.getByText("Kumpa's server had a problem. Try again in a moment.")).toBeTruthy();
     consentsApi({ given: true });
     await act(async () => {
       fireEvent.press(screen.getByRole("button", { name: "Try again" }));

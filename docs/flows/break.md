@@ -78,14 +78,14 @@ flowchart TB
 
 1. The person opens Settings with the gear on home, and the row "Your account", there while they are signed in.
 2. They choose "Take a break", between "I found someone" and "Delete my account".
-3. The app opens "Take a break from Kuutti", a screen of its own, with three lines: "Your profile leaves everybody's view. Nobody new sees you while you are away.", "You are signed out on every device, this one included." and "Your next bank login brings you back. Nothing is deleted and nothing is asked again, though meanwhile a like waiting for you can run out, and a quiet conversation moves to Archived." The button "Start the break" waits for the switch.
+3. The app opens "Take a break from Kumpa", a screen of its own, with three lines: "Your profile leaves everybody's view. Nobody new sees you while you are away.", "You are signed out on every device, this one included." and "Your next bank login brings you back. Nothing is deleted and nothing is asked again, though meanwhile a like waiting for you can run out, and a quiet conversation moves to Archived." The button "Start the break" waits for the switch.
 4. The person turns on "I understand what a break means", a switch whose words turn it too.
 5. They choose "Start the break". The app says "Starting your break…".
 6. The API checks that the account is active, a shadow-banned one alike, so that the ban shows to nobody: it becomes active once onboarding has the answers and the consents matching needs, and an account still at the start has nothing to hide yet. It checks too that no other device started a break a moment earlier. Yes: 8. No: 7.
 7. The app says "The break could not be started. Try again." Nothing has changed and the person stays signed in. A request that fails on the way ends here too.
 8. The API puts the account on a break and keeps aside the state it had, in one go with 9 and 10. A research event notes the break, without a reason, only for somebody who said yes to research before it stopped being asked.
 9. It ends every session of the account, and with each session goes its phone's registration for notifications, so nothing is pushed to the person while they are away. The other devices are signed out at their next request to the API.
-10. Nothing is deleted: the profile, the photos, the answers, the consents, the e-mail, the likes the person gave, and the stars they put and those on them stay as they were. While the break lasts, the count on People on Kuutti leaves the person out ([People on Kuutti](people-on-kuutti.md#part-3-the-nights-count)), and their profile photos are refused to everybody else.
+10. Nothing is deleted: the profile, the photos, the answers, the consents, the e-mail, the likes the person gave, and the stars they put and those on them stay as they were. While the break lasts, the count on People on Kumpa leaves the person out ([People on Kumpa](people-on-kuutti.md#part-3-the-nights-count)), and their profile photos are refused to everybody else.
 11. The app signs this phone out to the sign-in screen, which says "Your account is on a break" over "Sign in with your bank". Opened again later, the app shows the plain sign-in screen.
 12. Meanwhile nobody meets the person's card in People, not even a card already in someone's queue for today ([People](queue.md#part-1-people-reads-the-queue)), and the person leaves the Starred list of whoever starred them, while the star waits for their return ([People](queue.md#part-4-the-star-and-starred)). So no new like or match reaches them.
 13. Somebody the person matched with keeps the conversation, with the person's name but without their photo, and can still write; the messages wait for the person's return, pushed to nobody, since the person has no session.
@@ -94,7 +94,7 @@ flowchart TB
 16. An announcement to everybody made meanwhile is e-mailed to the person's confirmed address while their Announcements switch is on, and its notice waits on home until they are back ([Announcements](announcements.md#part-3-everybody-is-told)).
 17. Whenever they want, the person signs in with their bank again, as in [Signing in](sign-in.md#part-1-signing-in). There is no waiting time: a break may end a minute after it began.
 18. The API sees the break and brings the account back to the state it had before it; for somebody who said yes to research before it stopped being asked, how many days the break lasted is noted there.
-19. The app goes home, which says once "Welcome back. Your profile is visible again."; someone who had not finished their profile lands on the step they left. The person's card is in People again from the next read, and People opens for them again, while matching is open for them ([People on Kuutti](people-on-kuutti.md#part-2-an-admin-opens-or-closes-matching)).
+19. The app goes home, which says once "Welcome back. Your profile is visible again."; someone who had not finished their profile lands on the step they left. The person's card is in People again from the next read, and People opens for them again, while matching is open for them ([People on Kumpa](people-on-kuutti.md#part-2-an-admin-opens-or-closes-matching)).
 
 ## Where it lives
 
@@ -121,3 +121,4 @@ flowchart TB
 - 2026-11-03 (#502, PR #578): the daily round gives way to the one queue: while the break lasts nobody meets the person in People and they have none of their own, and once back they are in it from the next read.
 - 2026-11-03 (#575, PR #582): a star put on the person waits through the break, and they leave the Starred list of whoever starred them until they are back.
 - 2026-11-07 (#573, PR #643): an announcement made during a break reaches a confirmed address by e-mail, and its notice waits on home for the return.
+- 2026-11-16 (#700, PR #701): the break's screen names the app Kumpa, and the home card is People on Kumpa.

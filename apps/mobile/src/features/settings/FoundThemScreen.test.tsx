@@ -7,7 +7,7 @@ import { expectPinnedHeader } from "@/test/layout";
 import { renderWithTheme } from "@/test/render";
 import { FoundThemScreen } from "./FoundThemScreen";
 
-// "Löysin hänet" (#83, ADR-040): the three reasons in words, Tell Kuutti off
+// "Löysin hänet" (#83, ADR-040): the three reasons in words, Tell Kumpa off
 // until one is chosen, nothing pressable while the answer is on its way,
 // thanks after the answer, an account that answered before thanked and never
 // asked again, a second answer read as done, a failure that keeps the choice,
@@ -55,7 +55,7 @@ const press = (name: string, role: "button" | "radio" = "button") =>
     fireEvent.press(screen.getByRole(role, { name }));
     await new Promise<void>((resolve) => setTimeout(resolve, 20));
   });
-const tellButton = () => screen.getByRole("button", { name: /^(Tell Kuutti|Sending)/ });
+const tellButton = () => screen.getByRole("button", { name: /^(Tell Kumpa|Sending)/ });
 const thanked = () =>
   waitFor(() =>
     expect(screen.getByRole("heading", { name: "Thank you for telling us." })).toBeTruthy(),
@@ -72,7 +72,7 @@ describe("the found-them screen", () => {
     const sent = api(false, () => new Response(null, { status: 204 }));
     await saveSession(tokens);
     await renderWithTheme(<FoundThemScreen />);
-    await screen.findByRole("radio", { name: "I found someone on Kuutti" });
+    await screen.findByRole("radio", { name: "I found someone on Kumpa" });
 
     expectPinnedHeader("I found someone", "Back");
     expect(screen.getByRole("heading", { name: "Which is it?" })).toBeTruthy();
@@ -89,7 +89,7 @@ describe("the found-them screen", () => {
     await press("I found someone elsewhere", "radio");
     expect(screen.getByRole("radio", { name: "✓ I found someone elsewhere" })).toBeTruthy();
     expect(tellButton().props.accessibilityState?.disabled).toBe(false);
-    await press("Tell Kuutti");
+    await press("Tell Kumpa");
 
     await thanked();
     expect(sent).toEqual([{ method: "POST", body: { reason: "elsewhere" } }]);
@@ -113,8 +113,8 @@ describe("the found-them screen", () => {
     );
     await saveSession(tokens);
     await renderWithTheme(<FoundThemScreen />);
-    await press("I found someone on Kuutti", "radio");
-    await press("Tell Kuutti");
+    await press("I found someone on Kumpa", "radio");
+    await press("Tell Kumpa");
     await thanked();
   });
 
@@ -126,13 +126,13 @@ describe("the found-them screen", () => {
     await saveSession(tokens);
     await renderWithTheme(<FoundThemScreen />);
     await press("Another reason", "radio");
-    await press("Tell Kuutti");
+    await press("Tell Kumpa");
     const failed = await screen.findByText("That did not go through. Try again.");
     // Said at once by a screen reader, wherever its focus is.
     expect(failed.props.accessibilityLiveRegion).toBe("assertive");
     expect(screen.getByRole("radio", { name: "✓ Another reason" })).toBeTruthy();
     fail = false;
-    await press("Tell Kuutti");
+    await press("Tell Kumpa");
     await thanked();
     expect(sent.map((s) => (s.body as { reason: string }).reason)).toEqual(["other", "other"]);
   });
@@ -142,16 +142,16 @@ describe("the found-them screen", () => {
     const sent = api(false, () => new Promise<Response>((resolve) => (arrive = resolve)));
     await saveSession(tokens);
     await renderWithTheme(<FoundThemScreen />);
-    await press("I found someone on Kuutti", "radio");
-    await press("Tell Kuutti");
+    await press("I found someone on Kumpa", "radio");
+    await press("Tell Kumpa");
 
     const sending = screen.getByRole("button", { name: "Sending…" });
     expect(sending.props.accessibilityState?.disabled).toBe(true);
-    for (const name of ["✓ I found someone on Kuutti", "I found someone elsewhere"]) {
+    for (const name of ["✓ I found someone on Kumpa", "I found someone elsewhere"]) {
       expect(screen.getByRole("radio", { name }).props.accessibilityState?.disabled).toBe(true);
     }
     await press("I found someone elsewhere", "radio");
-    expect(screen.getByRole("radio", { name: "✓ I found someone on Kuutti" })).toBeTruthy();
+    expect(screen.getByRole("radio", { name: "✓ I found someone on Kumpa" })).toBeTruthy();
 
     await act(async () => arrive(new Response(null, { status: 204 })));
     await thanked();
@@ -170,7 +170,7 @@ describe("the found-them screen", () => {
     await renderWithTheme(<FoundThemScreen />);
     expect(await screen.findByText("No session on this device.")).toBeTruthy();
     expect(screen.queryByRole("radio")).toBeNull();
-    expect(screen.queryByRole("button", { name: "Tell Kuutti" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Tell Kumpa" })).toBeNull();
     // Not even the read is asked.
     expect(globalThis.fetch).not.toHaveBeenCalled();
   });
