@@ -45,7 +45,7 @@ Months counted: none, since billing starts at the move to production and none ha
 | item | ours |
 |---|---|
 | public keys, RSA 2048 or longer, **two separate JWKs**: `"use": "sig"` (signs our request objects and client assertions) and `"use": "enc"` (Telia encrypts the ID token to it) | generated per `infra/README.md` Secrets; the private halves live in SSM `/kuutti/<env>/telia-signing-key` and `/kuutti/<env>/telia-encryption-key`; the public JWKs go to Telia by e-mail (an OpenID Federation entity statement is the alternative; not used yet) |
-| redirect URIs, HTTPS, **no wildcards** | staging `https://api.staging.kuutti.app/auth/callback`; production `https://api.kuutti.app/auth/callback` (#25). Pull-request previews cannot be registered, and no mock IdP is deployed beside them, so they have no bank login (ADR-014 §1) |
+| redirect URIs, HTTPS, **no wildcards** | staging `https://api.staging.kuutti.app/auth/callback`; production `https://api.kuutti.app/auth/callback` (#25) |
 | display name `ftn_spname`, at most 40 characters, shown to the user during login | `Kuutti` |
 | technical contact (Appendix 4) | the maintainer, with the project mailbox in copy |
 
@@ -62,7 +62,7 @@ What the offer asks for, in one mail from the project mailbox to id-maintenance@
 
 Registered kids, staging, generated 2026-10-07 (public values; the API logs the same two at boot): `sig` `h3459Y74bDyIP_F8RPGkACWjOouvJzgdw0vGtZ9bi7I`, `enc` `faflNFy64dbC2qZ25QUUPN1bfBePnOpcJAaUfV3l-QQ`. The three staging secrets exist in SSM since the same day (`telia-signing-key`, `telia-encryption-key`, `hetu-hmac-key`).
 
-Telia answers with the `client_id`. It is public (every authorization URL carries it): set it as the default of `telia_client_id` in `infra/envs/staging/variables.tf` and merge; CI's apply then writes `oidc-issuer`, `oidc-client-id`, `oidc-redirect-uri` and `oidc-acr-values` under `/kuutti/staging/`. The two private keys must be in SSM before that (`telia-keys.sh … --put`): the API refuses to boot against a Telia issuer without them. Redeploy the API in Dokploy and read the boot line "bank identification": the two kids it logs must equal the kids of the JWKs Telia registered. A pull-request preview never gets any of this: `parseConfig` drops the Telia client, both keys and the HMAC key from a preview's configuration (ADR-014 §1).
+Telia answers with the `client_id`. It is public (every authorization URL carries it): set it as the default of `telia_client_id` in `infra/envs/staging/variables.tf` and merge; CI's apply then writes `oidc-issuer`, `oidc-client-id`, `oidc-redirect-uri` and `oidc-acr-values` under `/kuutti/staging/`. The two private keys must be in SSM before that (`telia-keys.sh … --put`): the API refuses to boot against a Telia issuer without them. Redeploy the API in Dokploy and read the boot line "bank identification": the two kids it logs must equal the kids of the JWKs Telia registered.
 
 The first login on the test bed (2026-10-08) showed what was left to watch: `acr` came back as `loatest2` (the adapter accepts the level asked for, so a login that completes proves it), `prompt=login` sent each attempt through the bank with a fresh `auth_time` (ADR-016's check passed), the JWE header's `kid` was ours, and the outer query of `client_id` and `request` was accepted (the cheat sheet: `request=` is read, anything else discarded).
 

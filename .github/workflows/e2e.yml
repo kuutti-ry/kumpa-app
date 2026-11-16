@@ -46,7 +46,7 @@ permissions:
 
 jobs:
   # The dev client holds only the native side, which its fingerprint names (the
-  # one preview.yml and eas-build.yml compare; the commit in `extra` is left
+  # one eas-build.yml compares; the commit in `extra` is left
   # out, and Metro serves the config anyway). A pull request that leaves the
   # native side alone finds main's; one that changes it builds once, and its
   # later pushes find that. The key's tail names how it is built, so a change of

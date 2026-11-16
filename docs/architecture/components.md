@@ -24,7 +24,7 @@ flowchart TB
   accDescr: The pnpm workspace holds three apps, four packages and the mock bank. The phone app, its web target and the admin panel talk to the API over HTTPS, typed by paths generated from the API's own route contracts, and the phone app also holds one WebSocket. The API uses the contracts, the texts, the database package and the Telia kit from npm, and keeps its data in PostgreSQL. The notices package serves build scripts only, and the mock bank runs on a developer's machine and on CI's runners only.
   subgraph apps["The apps, apps/"]
     c1["The phone app: Expo, iOS and Android, a dev client"]
-    c2["The phone app's web target: pull-request previews and local runs only"]
+    c2["The phone app's web target: local runs only"]
     c3["The admin panel: Vite, React and shadcn/ui, a static build"]
     c4["The API: Hono on Node, one process"]
     c5["The OpenAPI document, written from the API's route contracts"]
@@ -41,7 +41,7 @@ flowchart TB
   end
   c12[("PostgreSQL: the one database")]
   c1 -->|"HTTPS, and one WebSocket on GET /ws"| c4
-  c1 -->|"exported for the web"| c2
+  c1 -->|"served by Metro for the web"| c2
   c2 -->|"HTTPS and GET /ws, as the app"| c4
   c3 -->|"HTTPS on the /admin routes"| c4
   c4 -->|"pnpm openapi"| c5
@@ -61,7 +61,7 @@ flowchart TB
 ### Steps
 
 1. **The phone app** (`apps/mobile`): Expo with a dev client, for iOS and Android. It calls the API over HTTPS through `openapi-fetch`, typed by the generated paths (6), and holds one WebSocket to `GET /ws` while it is signed in and in front (see Chat). It imports the contracts (6) and the texts (7). Its build script for the licences screen uses the notices package (9). It is exported for the web as its web target (2).
-2. **The web target** is the same code, exported with `expo export --platform web`. It exists for pull-request previews (EAS Hosting, alias `pr-<n>`) and for local runs, never as a product web surface (rule 8). It talks to the API as the phone app does; it cannot set a header on a WebSocket, which is why the socket takes its token in the first frame.
+2. **The web target** is the same code, served for the web by Metro on a developer's machine (`pnpm env:up`, or `expo start --web`). It exists for local runs only, never as a product web surface (rule 8), and nothing deploys it (ADR-070). It talks to the API as the phone app does; it cannot set a header on a WebSocket, which is why the socket takes its token in the first frame.
 3. **The admin panel** (`apps/admin`): Vite and React, with shadcn/ui's components on Tailwind compiled into one stylesheet (ADR-050), built to static files. It calls the API's `/admin` routes over HTTPS through `openapi-fetch`, typed by the same generated paths, and imports the contracts (6) and the texts (7).
 4. **The API** (`apps/api`): Hono on Node in one process, which serves HTTP, the chat's WebSocket and the nightly jobs (part 2). It imports the contracts (6), the texts (7), the database package (8) and the Telia kit (10), and keeps its data in PostgreSQL (12) through a pool. Its route contracts are written out as the OpenAPI document (5). Its build script for the image's third-party notices uses the notices package (9).
 5. **The OpenAPI document** (`apps/api/openapi.json`) is written by `pnpm openapi` from the routes the API declares with `createRoute`, and the same command turns it into the generated paths in the contracts package with `openapi-typescript` (ADR-003). CI runs the command and fails on a difference. The running API serves the document at `/openapi.json` everywhere except production.
@@ -70,7 +70,7 @@ flowchart TB
 8. **The database package** (`packages/db`, `@kuutti/db`): the Drizzle schema, the migrations drizzle-kit generated, the runner that applies them under an advisory lock (rule 10), and the seed. Its demo tools (`@kuutti/db/demo`) are for command lines and tests only; the linter keeps them out of the apps (part 4). It depends on the contracts (6), and its seed uses the kit's hetu helpers (10) to write the personas.
 9. **Notices** (`packages/notices`, `@kuutti/notices`): reads the licence files and NOTICE files of what a bundle ships. Two build scripts use it: the phone app's licences screen and the API image's `THIRD_PARTY_NOTICES`. No app imports it at run time.
 10. **The Telia kit** (`@kuutti-ry/tunnistus-oidc`): the OIDC client in Telia's dialect, discovery, key helpers, the hetu format and the broker's test double. It comes from npm and lives in its own repository, kuutti-ry/tunnistus-oidc, MIT (ADR-017 §6); it is not a workspace package. The API's identity slice holds the adapter that keeps Kuutti's part of a login. Deployed, the kit talks to Telia's broker (the context view); on a developer's machine, to the mock bank (11).
-11. **The mock bank** (`services/mock-idp`): navikt/mock-oauth2-server with one issuer, `ftn`, started by `docker compose` beside PostgreSQL and the S3 stand-in. Its login page names the demo personas (ADR-014). It runs on a developer's machine and on CI's runners (`ci.yml`'s compose job and `e2e.yml`'s jobs) only; no mock bank is deployed beside a preview.
+11. **The mock bank** (`services/mock-idp`): navikt/mock-oauth2-server with one issuer, `ftn`, started by `docker compose` beside PostgreSQL and the S3 stand-in. Its login page names the demo personas (ADR-014). It runs on a developer's machine and on CI's runners (`ci.yml`'s compose job and `e2e.yml`'s jobs) only; no mock bank is ever deployed.
 12. **PostgreSQL**: the one database. The API reaches it through one pool; the migrations reach it through the database package's runner, which the API calls at boot before it listens.
 
 ## Part 2: inside the API's one process
@@ -114,7 +114,7 @@ flowchart TB
 ### Steps
 
 13. **The server.** `index.ts` loads the configuration through `lib/` (23), boots (14), arms the night's timer (21), and serves the app on `PORT` with `serve()` from `@hono/node-server`, whose own WebSocket upgrade runs over `ws` on the same server (ADR-031 §9). Every request goes to the app-wide middleware (15). On SIGTERM it tells every socket `restarting`, drains the requests in flight within ten seconds, then stops the listener and the pool.
-14. **Boot** (`boot.ts`) turns error reporting on where a DSN is configured, reads the bank's discovery document through the kit, creates a preview's own database on its first boot, opens the pool, runs the migrations under their advisory lock, builds media (S3 and the photo check), makes the live hub, builds mail and push, builds the app, and lists the nightly jobs. A deployed box with half a bank configuration fails here rather than serving a login that answers 503.
+14. **Boot** (`boot.ts`) turns error reporting on where a DSN is configured, reads the bank's discovery document through the kit, opens the pool, runs the migrations under their advisory lock, builds media (S3 and the photo check), makes the live hub, builds mail and push, builds the app, and lists the nightly jobs. A deployed box with half a bank configuration fails here rather than serving a login that answers 503.
 15. **The app-wide middleware**, in order: the request id, the request's language, the request log, secure headers, `X-Robots-Tag: noindex`, the CORS allowlist, the body cap (the two photo uploads have their own 10 MB cap on their routes), and the limiter keyed by the client address (ADR-026). A request goes on to a guard (16), or straight to its route when the route answers without a session (the health probe, the sign-in's own routes, the public counter); the socket's upgrade goes to the socket (18).
 16. **The guards.** One session guard for every route that reads a person's data (rule 6), and three staff guards: any member of staff (moderator or admin), moderators and admins, and admins alone. Each hands the request it admits to one limiter keyed by the person, and the address gets its count back. The routes that answer without a session are listed in `PUBLIC_ROUTES`; a test checks that no other route lacks a guard. The counter is the one of them that takes a session when one is offered, through the same guard, for the bar of the caller's own pond (ADR-013 §18).
 17. **The routes** of the nine slices (part 3) and the health probe. They reach PostgreSQL through the pool (24), and the outside services (S3, Rekognition, SES, Telia, Expo's push) through what boot handed them. Where two slices must not import each other, `app.ts` hands one slice's function to the other as a callback (part 4).
@@ -199,9 +199,9 @@ flowchart LR
 - Local services: `services/mock-idp`, `docker-compose.yml`
 - The boundary: `biome.json` (overrides), `.claude/rules/layout.md`, `package.json` (`lint`)
 - The generated client: `apps/api/scripts/openapi.ts`, `apps/api/openapi.json`, `.github/workflows/ci.yml` (the drift check)
-- The web target: `.github/workflows/preview.yml` (the export and the EAS Hosting alias)
+- The web target: `scripts/dev-env.ts` (Metro on 8081 serves it), `apps/mobile/package.json` (`web`)
 - Specs: `features/identity`, `features/media`, `features/pond`, `features/matching`, `features/chat`, `features/safety`, `features/notifications`
-- ADRs: [ADR-003](../adr/003-types-across-the-client-server-boundary.md) (the generated client), [ADR-014](../adr/014-demo-mode.md) (the mock bank and the demo tools), [ADR-017](../adr/017-tunnistus-oidc-package.md) §6 (the kit's own repository), [ADR-021](../adr/021-tests-at-every-level.md) (the levels the packages carry), [ADR-026](../adr/026-limits-per-person-and-sign-in-doors.md) (the limiters), [ADR-031](../adr/031-chat.md) §9 (the socket in the process)
+- ADRs: [ADR-003](../adr/003-types-across-the-client-server-boundary.md) (the generated client), [ADR-014](../adr/014-demo-mode.md) (the mock bank and the demo tools), [ADR-017](../adr/017-tunnistus-oidc-package.md) §6 (the kit's own repository), [ADR-021](../adr/021-tests-at-every-level.md) (the levels the packages carry), [ADR-026](../adr/026-limits-per-person-and-sign-in-doors.md) (the limiters), [ADR-031](../adr/031-chat.md) §9 (the socket in the process), [ADR-070](../adr/070-no-pull-request-previews.md) (the web target is local only)
 - Issues: #1 and #2 (the slices and their boundary), #44 (the kit to npm), #349 (the socket), #416 (the notices package)
 
 ## Open

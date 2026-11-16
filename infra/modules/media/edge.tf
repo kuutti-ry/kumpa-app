@@ -94,7 +94,7 @@ resource "aws_wafv2_web_acl" "edge" {
         aggregate_key_type    = "IP"
 
         # Counted, and refused, is everything the distribution sends to the
-        # box: the API, Dokploy, the previews and the ACME path. Not counted:
+        # box: the API, Dokploy and the ACME path. Not counted:
         scope_down_statement {
           and_statement {
             # A signed photo, in the one shape the API signs

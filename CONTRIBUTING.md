@@ -71,10 +71,6 @@ Checks that everything is right:
 
 On a phone, install the dev client build (see `apps/mobile/README.md`), open it, and connect to Metro on this machine; the API URL is derived from the Metro host. The real Telia test bed exists only on staging.
 
-## Pull request previews
-
-Every pull request from this repository gets a comment with four previews (#9, #313): the API of that commit on the staging box with its own seeded database, the web target of the app on EAS Hosting pointed at that API, the moderation panel of that commit under `/pr-<n>/` on the panel's staging host, and, when native code, auth, push or camera changed, an EAS Update for the dev client with a QR code. The API's preview has no bank and no photos (ADR-014 §1, ADR-005), so the app's lanes do not get past the sign-in screen: anything behind it is tried locally with `pnpm env:up` and the mock bank. The panel's preview calls the staging API instead, so a member of staff signs in at the panel's root and opens the preview in the same tab (ADR-025 §6). They appear within about ten minutes of a push and disappear when the pull request closes or after seven days. At most three pull requests hold a preview at a time; the fourth gets a comment saying so. Forks and Dependabot get none: a preview needs the repository's own secrets. Details in `infra/README.md`, Previews.
-
 ## Releases
 
 A release is an annotated tag on `main`, made by the maintainer:
@@ -94,7 +90,7 @@ Open an issue from one of the templates. Its first field, and the first paragrap
 
 - `main` is the only long-lived branch. It cannot be deleted or force-pushed, and nothing reaches it except a squash-merged pull request whose checks are green.
 - Work on a branch of this repository (members of the `contributors` team have write) or on a fork; open the pull request against `main` with `Refs #<issue>` in the body (the `issue-link` check refuses a missing reference and a closing keyword: a merge closes nothing by itself; the issue is closed after it, once nothing is left on it, and what testing finds becomes a new issue).
-- A pull request from a contributor needs one approving review, and one more when its changes are attributed to no person (a coding agent's pull request); the preview lanes (API, web, native) run on every push without approval, holding the staging and Expo tokens: write access to this repository is that trust (ADR-004 §3). Their removal needs nobody: a sweep from `main`, started by every merge, retires the previews of closed and merged pull requests (ADR-012).
+- A pull request from a contributor needs one approving review, and one more when its changes are attributed to no person (a coding agent's pull request). A pull request deploys nothing before it merges: a change is tried locally with `pnpm env:up` and the mock bank, in CI, and with the end-to-end flows on a pull request labelled `e2e`, and on staging after the merge (ADR-070).
 - History is linear: no merge commits. Pull requests are squash-merged, nothing else (the ruleset allows only squash).
 - Dependency updates arrive as Dependabot pull requests.
 

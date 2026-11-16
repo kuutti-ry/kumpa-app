@@ -4,8 +4,8 @@
  * Saiga for the web target (ADR-052). Native ignores these rules: a phone has
  * Saiga embedded by its build (plugins/withSaiga.js). The dev server answers
  * the files from ~/.cache/kuutti-fonts, to this computer alone
- * (metro.config.js); an export has none, so a pull request's web preview is in
- * the system font, as the stack of tailwind.config.js has it.
+ * (metro.config.js); a web export has none, so it is in the system font, as
+ * the stack of tailwind.config.js has it.
  */
 @font-face {
   font-family: Saiga;

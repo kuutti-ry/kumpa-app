@@ -19,12 +19,12 @@ import { type IdentityBroker, OidcBroker } from "./identity/index.ts";
 import { runNightly } from "./jobs/nightly.ts";
 import { CHALLENGE } from "./test/attempt.ts";
 import { MIGRATIONS } from "./test/global-setup.ts";
-import { captureLogger, type LogLine, TEST_DATABASE_URL, testConfig } from "./test/harness.ts";
+import { captureLogger, type LogLine, testConfig } from "./test/harness.ts";
 import { testSigningKeys } from "./test/media.ts";
 
 // The boot sequence (index.ts is only the process around it) against a
-// database of its own: a boot migrates, counts the counter and, for a
-// preview, creates and seeds a database, all of which commits. The shared
+// database of its own: a boot migrates and counts the counter, which
+// commits. The shared
 // test database stays as the transactional tests expect it. Nothing goes to
 // the network: discovery is a stub or the Telia double, Sentry is a fake.
 
@@ -65,11 +65,9 @@ const STEPS = new Set([
   "bank identification",
   "bank identification off: OIDC_ISSUER is not set",
   "bank identification unavailable; is the mock IdP running?",
-  "preview database",
   "migrations",
   "audit boundary",
   "audit boundary not enforced: run infra/scripts/db-audit-owner.sh",
-  "seed",
   "media",
   "photos off: media delivery is not configured (infra/modules/media)",
 ]);
@@ -682,73 +680,4 @@ describe("boot: a deployed box", () => {
     expect(staging.jobs.map((j) => j.name)).toContain("prune-rounds");
     expect(production.jobs.map((j) => j.name)).toContain("prune-rounds");
   });
-});
-
-describe("boot: a pull-request preview (#9)", () => {
-  // Seven digits at most (the preview pattern); a 9 in front keeps it apart from preview-database.test.ts.
-  const prNumber = `9${String(process.pid % 1_000_000).padStart(6, "0")}`;
-  const database = `kuutti_pr_${prNumber}`;
-
-  afterAll(async () => {
-    const admin = createPool({ connectionString: TEST_DATABASE_URL, max: 1 });
-    try {
-      // The boots' pools are ended; wait for their sessions to leave before the drop.
-      for (let attempt = 0; attempt < 100; attempt += 1) {
-        const open = await admin.query<{ n: string }>(
-          "SELECT count(*) AS n FROM pg_stat_activity WHERE datname = $1",
-          [database],
-        );
-        if (Number(open.rows[0]?.n) === 0) break;
-        await new Promise((done) => setTimeout(done, 20));
-      }
-      await admin.query(`DROP DATABASE IF EXISTS ${database} WITH (FORCE)`);
-    } finally {
-      await admin.end();
-    }
-  });
-
-  it("creates its own database on first boot, migrates and seeds it, and finds it the second time", async () => {
-    const preview = {
-      APP_ENV: "preview",
-      PR_NUMBER: prNumber,
-      DATABASE_URL: TEST_DATABASE_URL,
-      // Staging's bucket and distribution, which a preview reads from the
-      // shared prefix and drops before media is set up (lib/config.ts).
-      S3_BUCKET: "kuutti-media-staging",
-      MEDIA_URL_BASE: "https://api.staging.kuutti.app",
-      CLOUDFRONT_KEY_PAIR_ID: "K2JCJMDEHXQW5F",
-      CLOUDFRONT_SIGNING_KEY: "staging's key, which a preview never holds",
-    };
-    const first = await booted(preview);
-    expect(steps(first.lines)).toEqual([
-      "error reporting",
-      "bank identification off: OIDC_ISSUER is not set",
-      "preview database",
-      "migrations",
-      // The preview role owns its throwaway database: no boundary there by design, and no warning.
-      "audit boundary",
-      "seed",
-      "photos off: media delivery is not configured (infra/modules/media)",
-    ]);
-    expect(line(first.lines, "preview database")).toMatchObject({ database, state: "created" });
-    expect(line(first.lines, "migrations")).toMatchObject({ state: "applied" });
-    const { rows } = await first.pool.query<{ db: string; open: boolean; config: string }>(
-      `SELECT current_database() AS db,
-              (SELECT value = 'true'::jsonb FROM matching_config
-                WHERE key = 'matching_open' ORDER BY version DESC LIMIT 1) AS open,
-              (SELECT count(*) FROM matching_config) AS config`,
-    );
-    expect(rows[0]?.db).toBe(database);
-    // The seed ran: it is what opens matching in a preview (ADR-060 §10).
-    expect(rows[0]?.open).toBe(true);
-    expect(Number(rows[0]?.config)).toBeGreaterThan(0);
-    // A preview has no bank: the login sends the app back with a reason, not a 503.
-    const res = await startLogin(first.app);
-    expect(res.status).toBe(302);
-    expect(res.headers.get("location")).toContain("error=auth_unavailable");
-
-    const second = await booted(preview);
-    expect(line(second.lines, "preview database")).toMatchObject({ database, state: "exists" });
-    expect(line(second.lines, "migrations")).toMatchObject({ state: "nothing-to-do" });
-  }, 120_000);
 });

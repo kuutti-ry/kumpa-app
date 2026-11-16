@@ -62,7 +62,7 @@ async function reach(
   const refusal =
     expectedRefusal ??
     (command === "seed"
-      ? "refusing to seed production: previews and local databases only (TD-19)"
+      ? "refusing to seed production: local databases only"
       : "refusing production without --env production");
   const allowed = typeof refusal === "string" ? [refusal] : refusal;
   expect(result).toMatchObject({ code: 2, out: [] });
@@ -116,7 +116,7 @@ describe("the command attack's driver", () => {
 });
 
 describe("the seed, where production is named (#250)", () => {
-  // A production target is refused even among duplicate flags; the control uses one preview.
+  // A production target is refused even among duplicate flags; the control names development.
   for (const [how, args, refusal] of [
     ["in one word, --env=production", ["--env=production"], undefined],
     [
@@ -128,7 +128,7 @@ describe("the seed, where production is named (#250)", () => {
   ] as const) {
     attack(`seed: production named ${how}, is seeded`, {
       attempt: () => reach("seed", [...args], undefined, refusal),
-      control: () => reach("seed", ["--env=preview"]),
+      control: () => reach("seed", ["--env=development"]),
       succeeds: connected,
     });
   }

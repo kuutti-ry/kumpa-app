@@ -12,7 +12,7 @@ In these diagrams every arrow is built. Mermaid's sequence diagrams take a messa
 
 ## The jobs, in order
 
-"Everywhere" is every process the API runs in: staging, a developer's machine, and each pull request's preview against its own database. Production runs the same list.
+"Everywhere" is every process the API runs in: staging and a developer's machine. Production runs the same list.
 
 | # | Job, as the log names it | Where the work lives | Reads | Writes | Runs |
 |---|---|---|---|---|---|
@@ -60,7 +60,7 @@ sequenceDiagram
 1. Each API process arms one timer at its start, for the next 04:00 in Helsinki (`NIGHTLY_HOUR`). The timer does not keep the process alive by itself. Two containers that overlap during a deploy each arm one; the jobs that must not run twice at once take an advisory lock in the database (steps 12 and 13).
 2. The jobs run one at a time, in the order of the table: each waits for the one before it. A rejected operation is caught and the chain continues; a never-settling operation still holds the chain. There is no uncancellable timeout that lets its writes overlap the following job.
 3. A job answers with counts, never with who: how many sessions, days, photos; the counter's with the day and whether its figures moved. A job that throws answers with its error.
-4. One line per job: `nightly job done` with the job's name and its counts, or `nightly job failed` with its name and the error, which the logger redacts as everywhere. A failure is logged, never thrown, so one broken job stops neither the next job nor the server. On a deployed box Docker's `awslogs` driver sends every container's lines to the log group `/kuutti/{env}/api`, one stream per container, kept 30 days; a preview's container writes to the same group under its own stream. On a developer's machine the lines go to the terminal.
+4. One line per job: `nightly job done` with the job's name and its counts, or `nightly job failed` with its name and the error, which the logger redacts as everywhere. A failure is logged, never thrown, so one broken job stops neither the next job nor the server. On a deployed box Docker's `awslogs` driver sends every container's lines to the log group `/kuutti/{env}/api`, one stream per container, kept 30 days. On a developer's machine the lines go to the terminal.
 5. After the last job the timer is armed again for the next 04:00.
 6. A metric filter on the log group counts each `nightly job failed` line as `NightlyFailures`.
 7. The alarm `kuutti-{env}-nightly-job-failed` sums a day: one or more is ALARM, and a day with none is OK again. Both go to the environment's topic.

@@ -1,5 +1,5 @@
 import { resolve } from "node:path";
-import { createPool, migrate, type Pool, seed } from "@kuutti/db";
+import { createPool, migrate, type Pool } from "@kuutti/db";
 import { discoverProvider, type ProviderMetadata } from "@kuutti-ry/tunnistus-oidc";
 import { type App, createApp } from "./app.ts";
 import { archiveJob, createLive, type Live } from "./chat/index.ts";
@@ -17,7 +17,6 @@ import { ensureFirstSnapshot, pondCounterJob } from "./jobs/pond-counter.ts";
 import { type Config, developmentOrTest } from "./lib/config.ts";
 import type { Logger } from "./lib/logger.ts";
 import { mailerFor } from "./lib/mail.ts";
-import { ensurePreviewDatabase } from "./lib/preview-database.ts";
 import { pusherFor } from "./lib/push.ts";
 import { initSentry, sentryReporter } from "./lib/sentry.ts";
 import { pruneRounds } from "./matching/index.ts";
@@ -56,8 +55,8 @@ export type Booted = {
 
 /**
  * Everything between a validated configuration and a server that may listen:
- * error reporting, the bank's discovery, the preview's database, the pool and
- * its migrations, media, the app and the nightly jobs. index.ts is the
+ * error reporting, the bank's discovery, the pool and its migrations, media,
+ * the app and the nightly jobs. index.ts is the
  * process around it (the configuration's exit, the server, the signals), so
  * every step here runs in a test against a real database.
  */
@@ -135,23 +134,6 @@ export async function boot({
     logger.warn("bank identification off: OIDC_ISSUER is not set");
   }
 
-  // A pull-request preview serves from its own kuutti_pr_<n> on the staging
-  // instance, created here on first boot and dropped by preview-cleanup.yml
-  // when the pull request closes (#9, TD-19). Never a copy of anything.
-  if (config.preview) {
-    const admin = createPool({
-      connectionString: config.preview.adminDatabaseUrl,
-      max: 1,
-      applicationName: `kuutti-api-preview-${config.preview.prNumber}-setup`,
-    });
-    try {
-      const state = await ensurePreviewDatabase(admin, config.preview.database);
-      logger.info({ database: config.preview.database, state }, "preview database");
-    } finally {
-      await admin.end();
-    }
-  }
-
   const pool = createPool({
     connectionString: config.databaseUrl,
     max: config.DB_POOL_MAX,
@@ -177,18 +159,10 @@ export async function boot({
   // The audit table's role boundary (#49, ADR-006) is set by the maintainer,
   // not by a migration: a deployed box says so at every boot until it is.
   const audit = await auditBoundary(pool);
-  // A preview runs as kuutti_preview, owner of its own throwaway database: no boundary there by design.
   if (!audit.enforced && (config.APP_ENV === "staging" || config.APP_ENV === "production")) {
     logger.warn(audit, "audit boundary not enforced: run infra/scripts/db-audit-owner.sh");
   } else {
     logger.info(audit, "audit boundary");
-  }
-
-  // Previews are always seeded (rules/db.md); the seed is idempotent, so every
-  // boot converges on the same matching_config, with matching open (ADR-060 §10).
-  if (config.preview) {
-    const seeded = await seed(pool, `preview-pr-${config.preview.prNumber}`);
-    logger.info(seeded, "seed");
   }
 
   // Photos (#48): the bucket and the URL signer, or nothing and the photo

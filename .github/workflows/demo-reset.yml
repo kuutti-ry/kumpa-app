@@ -12,7 +12,7 @@ name: Demo reset
 # workflow only says "now". It sends the one Run Command document
 # envs/staging declares (modules/compute) to the staging box through the plan
 # role, which the bootstrap allows to send exactly that document to exactly
-# that box, as preview-cleanup.yml drops a preview database (ADR-012). The
+# that box. The
 # document fetches the pictures' release into the container's cache first (a
 # new container starts without it) and then runs the reset, which also brings
 # the synthetic people's consents to the wording in force (ADR-014 §12); the

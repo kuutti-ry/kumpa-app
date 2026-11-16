@@ -33,18 +33,13 @@ output "backup_prefix" {
   value = module.compute.backup_prefix
 }
 
-output "preview_database_document" {
-  description = "Run Command document preview-cleanup.yml sends to drop a pull request's database (#9)."
-  value       = module.compute.preview_database_document
-}
-
 output "demo_reset_document" {
   description = "Run Command document demo-reset.yml sends to return the demo personas to where they begin (#613, ADR-018 §8)."
   value       = module.compute.demo_reset_document
 }
 
 output "api_url" {
-  description = "GitHub environment variable API_URL; ADMIN_API_URL in the environment preview, since the panel's previews call this API (ADR-025 §6)."
+  description = "GitHub environment variable API_URL."
   value       = "https://api.staging.${var.domain}"
 }
 
@@ -53,18 +48,13 @@ output "dokploy_url" {
   value       = "https://dokploy.staging.${var.domain}"
 }
 
-output "preview_api_domain" {
-  description = "GitHub environment variable PREVIEW_API_DOMAIN (#9): previews answer on pr-<n>.<this>."
-  value       = "preview.api.staging.${var.domain}"
-}
-
 output "admin_url" {
-  description = "GitHub environment variable ADMIN_URL, in the environments staging and preview: the moderation panel's host (#313, ADR-025)."
+  description = "GitHub environment variable ADMIN_URL, in the environment staging: the moderation panel's host (#313, ADR-025)."
   value       = module.admin.url
 }
 
 output "admin_bucket" {
-  description = "GitHub environment variable ADMIN_BUCKET, in the environments staging, preview and preview-cleanup (ADR-025 §5-§8)."
+  description = "GitHub environment variable ADMIN_BUCKET, in the environment staging (ADR-025 §5)."
   value       = module.admin.bucket
 }
 

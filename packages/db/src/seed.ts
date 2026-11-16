@@ -236,9 +236,9 @@ export async function openMatching(db: Queryable, createdBy: string): Promise<bo
 
 /**
  * Idempotent: upserts keyed by (key, version) and by the identity's hash. Safe
- * to run on every boot of a preview. It opens matching on every run, as the
- * switch's next version where it stands closed, so that development, previews
- * and CI have a queue from the first start (ADR-060 §10). Production refuses it.
+ * to run again. It opens matching on every run, as the switch's next version
+ * where it stands closed, so that development and CI have a queue from the
+ * first start (ADR-060 §10). Production refuses it.
  */
 export async function seed(pool: Pool, createdBy = "seed"): Promise<SeedResult> {
   const db = drizzle(pool);

@@ -37,11 +37,10 @@ export function SourceOffer() {
     return () => controller.abort();
   }, []);
 
-  // A plain link: a static file beside the build, outside the router, under
-  // the build's base (/pr-<n>/ for a preview).
+  // A plain link: a static file beside the build, outside the router.
   const licences = (
     <p>
-      <a href={`${import.meta.env.BASE_URL}licenses.txt`}>{t("admin.licenses.link")}</a>
+      <a href="/licenses.txt">{t("admin.licenses.link")}</a>
     </p>
   );
   if (state.kind === "loading") {

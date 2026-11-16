@@ -166,8 +166,8 @@ export function createApp(deps: Deps) {
   app.use("*", requestLocale(servedLocales(deps.config.APP_ENV)));
   app.use("*", requestLogger(deps.logger, { trustedProxy: deps.config.TRUSTED_PROXY }));
   app.use("*", secureHeaders());
-  // No environment of this API is a web surface (rule 8); previews have public
-  // URLs that a crawler may still find (#9).
+  // No environment of this API is a web surface (rule 8), yet each deployed
+  // one has a public URL that a crawler may still find.
   app.use("*", async (c, next) => {
     await next();
     c.header("X-Robots-Tag", "noindex, nofollow");
@@ -440,7 +440,7 @@ export function createApp(deps: Deps) {
   }
   // Swagger UI over the same document, on a developer's machine only: the page
   // pulls swagger-ui-dist from jsDelivr, and no deployed environment of this
-  // API is a web surface (rule 8). Staging and previews keep /openapi.json alone.
+  // API is a web surface (rule 8). Staging keeps /openapi.json alone.
   if (developmentOrTest(deps.config.APP_ENV)) {
     app.get("/docs", swaggerUI({ url: "/openapi.json", version: "5.33.1", title: "Kuutti API" }));
   }

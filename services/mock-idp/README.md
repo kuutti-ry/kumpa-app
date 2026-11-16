@@ -84,7 +84,7 @@ Type artificial codes only, with an individual number of 900 to 999; never a rea
 
 ## What it does not do
 
-On purpose: no signed request object, no `private_key_jwt` client authentication, no encrypted ID token, no §24 retention, no real `acr` policy. The real Telia test bed is wired on staging only, because its redirect URIs are fixed (TD-2). The mock runs on a developer's machine and in CI's compose job, nowhere else. Staging and production identify through Telia. A preview may never use the real broker (`docs/vendors/telia.md`) and has no mock deployed beside it today, so bank identification is off there. A mock bank on a public host would let anybody be anybody; deploying one is a decision of its own (ADR-014).
+On purpose: no signed request object, no `private_key_jwt` client authentication, no encrypted ID token, no §24 retention, no real `acr` policy. The real Telia test bed is wired on staging only, because its redirect URIs are fixed (TD-2). The mock runs on a developer's machine and in CI's compose job, nowhere else. Staging and production identify through Telia. A mock bank on a public host would let anybody be anybody; deploying one is a decision of its own (ADR-014).
 
 ## Checking it
 

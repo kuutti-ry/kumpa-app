@@ -519,7 +519,6 @@ describe("no web surface", () => {
     expect(body).toContain("https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.33.1/");
 
     for (const deployed of [
-      testConfig({ APP_ENV: "preview", PR_NUMBER: "125" }),
       testConfig({ APP_ENV: "staging" }),
       testConfig({
         APP_ENV: "production",

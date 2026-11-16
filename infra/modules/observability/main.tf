@@ -326,7 +326,7 @@ resource "aws_cloudwatch_metric_alarm" "photo_budget_refusals" {
 # of the product answer 429 too (likes, cards, messages, photos): a person
 # meets each a few times a day, so a hundred refusals in five minutes is a
 # script, a loop in a build or a limit set too low, whichever limit it was.
-# The saved query below says which. A preview logs to the same group.
+# The saved query below says which.
 resource "aws_cloudwatch_log_metric_filter" "refusals" {
   name           = "${local.name}-api-refusals"
   log_group_name = var.log_group_name
@@ -372,9 +372,7 @@ resource "aws_cloudwatch_query_definition" "refusals" {
 # Every nightly job ends in one line (apps/api/src/jobs/nightly.ts), and a
 # failure is {"msg":"nightly job failed","job":...}. It is worth a mail the same
 # morning: the jobs keep promises with dates in them (the sweep of sessions, the
-# end of suspensions, the year of the queue's log). A preview's
-# container logs to the same group and runs the same jobs; the line's stream,
-# named after the container, tells which.
+# end of suspensions, the year of the queue's log).
 resource "aws_cloudwatch_log_metric_filter" "nightly_failures" {
   name           = "${local.name}-nightly-failures"
   log_group_name = var.log_group_name

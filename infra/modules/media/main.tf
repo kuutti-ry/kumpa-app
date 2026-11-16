@@ -8,9 +8,9 @@
 # whose certificate Traefik holds.
 #
 # The same distribution fronts the rest of what the box serves on 443, under
-# extra_aliases: Dokploy's control plane and, on staging, the previews
-# (ADR-005 §7, #198), so that the box can admit CloudFront alone. Traefik routes
-# them by the forwarded Host, as it routes the API. Let's Encrypt's HTTP-01
+# extra_aliases: Dokploy's control plane (ADR-005 §7, #198), so that the box
+# can admit CloudFront alone. Traefik routes it by the forwarded Host, as it
+# routes the API. Let's Encrypt's HTTP-01
 # challenge for a name behind the distribution reaches Traefik over plain HTTP,
 # through a third origin (below).
 
@@ -353,9 +353,8 @@ resource "aws_cloudfront_distribution" "this" {
     }
   }
 
-  # Nothing may be cached here: the API, Dokploy and the previews share this
-  # behaviour, and a cache key without the Host would hand one host's answer
-  # to another, a preview's to the API's callers among them.
+  # Nothing may be cached here: the API and Dokploy share this behaviour, and
+  # a cache key without the Host would hand one host's answer to the other.
   default_cache_behavior {
     target_origin_id         = "api"
     viewer_protocol_policy   = "redirect-to-https"

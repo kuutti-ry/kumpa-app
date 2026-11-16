@@ -8,7 +8,7 @@
  * never reaches a phone (Jest, Babel, the CLIs, the web target). What ships is
  * what Metro bundles, so the script exports the production bundles of both
  * phone platforms with their source maps, as the update lane does
- * (preview.yml, deploy.yml), and keeps the packages whose files the maps name.
+ * (deploy.yml), and keeps the packages whose files the maps name.
  * Without Hermes bytecode and without minifying: neither changes the module
  * set (the same 113 package directories either way, 15/10/2026), and hermesc
  * has no arm64 Linux binary, which CI's test-mobile runs on. The native
@@ -233,8 +233,8 @@ export function licenceList(notices: Notices): LicenceList {
 
 /**
  * The production bundles of both phone platforms with their source maps, as the
- * update lane exports them, into `outDir`; the web target is the preview's,
- * not a phone's. Expo's own CLI through this Node, so nothing on PATH is
+ * update lane exports them, into `outDir`; the web target is a developer's
+ * browser's, not a phone's. Expo's own CLI through this Node, so nothing on PATH is
  * needed; CI=1 keeps the CLI from asking anything.
  */
 function exportBundles(outDir: string): void {

@@ -36,7 +36,7 @@ Production, unless the row says otherwise.
 | The project mailbox (`custody.md`) | what members, authorities and processors wrote to the association, and its answers (`incident.md`, `police-disclosure.md`) | yes | not defined | section 1, step 4; then 4.12 |
 | The disclosure record and the incident record, kept by the association outside the repository | each request from an authority and its answer; each incident and breach (`police-disclosure.md`, The record; `incident.md`) | yes | disclosure record: five years, a proposal for counsel; incident record: not defined | section 1, step 4; then 4.12 |
 | Members' phones | the session in the secure store; any export they downloaded | their own | until they uninstall | the notice tells them |
-| Staging, its previews and their databases | Telia's test persons and the synthetic population | no real person (ADR-018) | until torn down | 4.7 |
+| Staging and its database | Telia's test persons and the synthetic population | no real person (ADR-018) | until torn down | 4.7 |
 
 ## 1. Before the notice
 
@@ -117,7 +117,7 @@ Empty the media bucket `kuutti-media-prod-<account>`. Versioning is off, so a de
 
 ### 4.5 Keys and passwords
 
-Delete every secret parameter under `/kuutti/prod/` and `/kuutti/staging/` with `aws ssm delete-parameter`: the Telia keys, the CloudFront key, `db-app-password`, `db-preview-password`, and the staging HMAC key. Delete the parameters made by hand the same way; they are not resources and outlive the teardown:
+Delete every secret parameter under `/kuutti/prod/` and `/kuutti/staging/` with `aws ssm delete-parameter`: the Telia keys, the CloudFront key, `db-app-password` and the staging HMAC key. Delete the parameters made by hand the same way; they are not resources and outlive the teardown:
 
 - `/kuutti/<env>/sentry-dsn` (`infra/README.md`, Observability);
 - `/kuutti/staging/sentry-self-test`, if it is still set (`sentry-setup.md`);
@@ -142,7 +142,6 @@ The maintainer runs `tofu destroy` in `infra/envs/prod`, after the apply of 4.4,
 
 - `prevent_destroy` on the API security group (`infra/modules/network/main.tf`), and in the bootstrap on the hosted zone and the state bucket. Removing those lines is part of that change.
 - Buckets with objects in them; none has `force_destroy`. Empty them first, as in 4.3: production's media bucket (4.3); before the staging destroy, staging's media bucket `kuutti-media-staging-<account>` (synthetic photos; staging's `media_enabled` defaults to `true`, `infra/envs/staging/variables.tf`); and the panel's bucket `kuutti-admin-staging-<account>` (production's, once #25 adds one). The panel's bucket keeps no versions either (`infra/modules/admin/main.tf`).
-- The previews: `preview-cleanup.yml` removes them, or they go with the staging box and instance.
 
 Dokploy and its configuration go with the box.
 
@@ -155,7 +154,7 @@ Dokploy and its configuration go with the box.
 
 ### 4.9 The repository
 
-Archive it on GitHub. The source stays public under the AGPL and holds no member data. Before that, delete the environment secrets and the environments (`staging`, `prod`, `preview`, `preview-cleanup`). The weekly export stops with its role; its copies go with the state bucket (4.11).
+Archive it on GitHub. The source stays public under the AGPL and holds no member data. Before that, delete the environment secrets and the environments (`staging`, `prod`). The weekly export stops with its role; its copies go with the state bucket (4.11).
 
 ### 4.10 The website and the domain
 

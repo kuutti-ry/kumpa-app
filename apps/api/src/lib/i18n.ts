@@ -27,7 +27,7 @@ const RequestLocale = z.enum(LOCALES);
 /**
  * The catalogues an environment serves (#55, TD-17): production only the
  * released languages, so text that is still machine text is never served
- * there; staging, previews and local runs all of them, so a reviewer reads
+ * there; staging and local runs all of them, so a reviewer reads
  * Swedish before it is released.
  */
 export const servedLocales = (appEnv: string): readonly Locale[] =>

@@ -12,9 +12,8 @@
  * Saiga, Kuutti's typeface (ADR-052). Its files are never in the repository
  * nor on a GitHub runner: the maintainer puts the faces in each environment's
  * bucket by hand (`pnpm fonts -- --upload <bucket>`), at the origin's root,
- * where a pull request's preview finds them too, and the dev server answers
- * them from this computer's ~/.cache/kuutti-fonts (vite.config.ts). Where they
- * are missing the panel is in the system's font.
+ * and the dev server answers them from this computer's ~/.cache/kuutti-fonts
+ * (vite.config.ts). Where they are missing the panel is in the system's font.
  */
 @font-face {
   font-family: Saiga;
