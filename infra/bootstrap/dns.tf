@@ -127,16 +127,17 @@ import {
 
 # The public half of the key Google signs the Workspace's mail with, the
 # selector "google". A TXT string holds at most 255 characters, so the key is
-# two strings, split where the Workspace's Admin console split it. A new key
-# from Google replaces both.
+# two strings, the first of 255. A new key from Google replaces both: the
+# Admin console generated this one on 2026-11-16, replacing that of #450, and
+# signs with it once "Start authentication" is pressed after the apply.
 resource "aws_route53_record" "google_dkim" {
   zone_id = aws_route53_zone.main.zone_id
   name    = "google._domainkey.${var.domain}"
   type    = "TXT"
   ttl     = 300
   records = [join("\" \"", [
-    "v=DKIM1; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvqLTCdakQ5D+LJUEWLQE0nx4O3T8P0z9vu8NqKboujRg3MtHKSKe+okW7VLONmAiaMdfYGHJnpDJTr9s97W7A2kzoMy7APkKBJfW7fFNioqiN4CdMwADOPph5Yfkf9A97cGGbsZv8d",
-    "KNUwyJ/Q1SiHCPNrYXgJl6vSZlguoc+b+LzslM+z4SEk0d6iXmfr7DnECG51iCmpFz04jXtmcJwBj4lQXnLmMDG/Y56p6oexvSN7qCw/7eRTMVhcderPnzn8tjoGKNJFl682EcU7zV9RuivQwawDXG1mFHS1tCdIPJ75b/c1z62dSsDJyWzpx9W5ZMlLmDxQWFLUZ0y+9bAwIDAQAB",
+    "v=DKIM1; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqyEa1av/oao0++y1j9TRXz9A3ZqAEjb/A5fbhEWIIWg9R85/PWqKxQGmfL0WFcrPI6ENaectTwtoNO6tXvX3rTKCRYPIlf860qdazozP9s/Un2SvRiAlSoKie5aAqFAIi46JFYcH7slPnXZVB5u0dX8MamyDpPk21HJXoyimfbqhcKl2U20AtvUxFqnyX7c/z",
+    "rILrSpEBlpRvgQ3Dn40Y1G36QaxwjOlnudmVorF5p+6rG+FzjTwUGFgHQwrHDRDeItTVscEh2E9mNhjnf2JPjVxLpV7YK7Bg6Z7Zh0e8EFUTCs0Yl8exBp94+n4eSAt6jnf2qjK0KeXc04Kkx41KQIDAQAB",
   ])]
 }
 
