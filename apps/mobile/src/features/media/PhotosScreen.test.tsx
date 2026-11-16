@@ -447,7 +447,7 @@ describe("PhotosScreen", () => {
   describe("as onboarding's photos step (#581)", () => {
     const EXPLAIN =
       "Hold a photo and drag it to change the order. A new photo is checked before anyone else sees it.";
-    const REFUSED = "Not accepted. This photo does not fit Kuutti; try another one.";
+    const REFUSED = "Not accepted. This photo does not fit Kumpa; try another one.";
     const FAILED = "That did not go through. Try again.";
     const showStep = async () => {
       const onContinue = jest.fn();
@@ -1126,7 +1126,7 @@ describe("PhotosScreen", () => {
     await press(await screen.findByRole("button", { name: "Add a photo" }));
     expect(
       await screen.findByText(
-        "Kuutti could not open your photos. Allow access in the phone's settings and try again.",
+        "Kumpa could not open your photos. Allow access in the phone's settings and try again.",
       ),
     ).toBeTruthy();
   });

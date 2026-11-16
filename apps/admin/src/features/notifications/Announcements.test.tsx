@@ -168,7 +168,7 @@ describe("writing one", () => {
     // Swedish is optional, and the form says who reads the English instead.
     expect(
       screen.getByText(
-        "People who read Kuutti in Swedish get the English when there is no Swedish.",
+        "People who read Kumpa in Swedish get the English when there is no Swedish.",
       ),
     ).toBeInTheDocument();
     fill("English", EN);

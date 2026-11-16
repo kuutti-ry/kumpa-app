@@ -10,17 +10,17 @@ import { LockScreen, type PasscodeAnswer } from "./LockScreen";
 // asked once as it shows and again on the button; the passcode, a wrong one
 // said in words with the tries left; and the bank, always there.
 
-const FIELD = "Your Kuutti passcode";
+const FIELD = "Your Kumpa passcode";
 const BANK = "Sign in with the bank instead";
-const FAILED = "Your face did not unlock Kuutti.";
+const FAILED = "Your face did not unlock Kumpa.";
 /** The way back from the phone's pause, the same for every kind. */
 const PAUSED_UNTIL = "Lock the phone and open it with its own code, then try again.";
 /** A refusal in the words of the kind the button names (#464). */
 const REFUSAL = {
   failed: {
     face: FAILED,
-    fingerprint: "Your fingerprint did not unlock Kuutti.",
-    either: "Your face or fingerprint did not unlock Kuutti.",
+    fingerprint: "Your fingerprint did not unlock Kumpa.",
+    either: "Your face or fingerprint did not unlock Kumpa.",
   },
   lockout: {
     face: `The phone has paused face unlock after too many tries. ${PAUSED_UNTIL}`,
@@ -29,7 +29,7 @@ const REFUSAL = {
   },
 } as const;
 const DENIED =
-  "This iPhone does not let Kuutti use Face ID. You can allow it in the phone's settings.";
+  "This iPhone does not let Kumpa use Face ID. You can allow it in the phone's settings.";
 const UNLOCK = {
   face: "Unlock with your face",
   fingerprint: "Unlock with your fingerprint",
@@ -88,12 +88,12 @@ beforeEach(() => {
 afterEach(() => jest.restoreAllMocks());
 
 describe("LockScreen", () => {
-  it("says Kuutti is locked, with the passcode and the bank, and no accessibility problems", async () => {
+  it("says Kumpa is locked, with the passcode and the bank, and no accessibility problems", async () => {
     await show();
-    expect(screen.getByRole("heading", { name: "Kuutti is locked" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Kumpa is locked" })).toBeTruthy();
     expect(field()).toBeTruthy();
     expect(button(BANK)).toBeTruthy();
-    expect(screen.getByText(/signs Kuutti out of this phone and turns the lock off/)).toBeTruthy();
+    expect(screen.getByText(/signs Kumpa out of this phone and turns the lock off/)).toBeTruthy();
     expect(screen.queryByRole("button", { name: /Unlock with/ })).toBeNull();
     noProblems();
   });
@@ -262,13 +262,13 @@ describe("LockScreen", () => {
       [
         "fi-FI",
         "Avaa sormenjäljelläsi",
-        "Sormenjälkesi ei avannut Kuuttia.",
+        "Kumpa ei auennut sormenjäljelläsi.",
         "Puhelin on keskeyttänyt sormenjäljentunnistuksen liian monen yrityksen jälkeen. Lukitse puhelin ja avaa se puhelimen omalla koodilla. Yritä sitten uudelleen.",
       ],
       [
         "sv-FI",
         "Lås upp med fingeravtrycket",
-        "Ditt fingeravtryck låste inte upp Kuutti.",
+        "Ditt fingeravtryck låste inte upp Kumpa.",
         "Telefonen har pausat upplåsning med fingeravtryck efter för många försök. Lås telefonen och öppna den med telefonens egen kod. Försök sedan igen.",
       ],
     ])("speaks %s, in the agreement of the kind", async (languageTag, unlock, failed, paused) => {
@@ -348,11 +348,11 @@ describe("LockScreen", () => {
     it.each([
       [
         "fi-FI",
-        "Tämä iPhone ei anna Kuutin käyttää Face ID:tä. Voit sallia sen puhelimen asetuksista.",
+        "Kumpa ei saa käyttää Face ID:tä tällä iPhonella. Voit sallia sen puhelimen asetuksista.",
       ],
       [
         "sv-FI",
-        "Den här iPhonen låter inte Kuutti använda Face ID. Du kan tillåta det i telefonens inställningar.",
+        "Den här iPhonen låter inte Kumpa använda Face ID. Du kan tillåta det i telefonens inställningar.",
       ],
     ])("speaks %s", async (languageTag, words) => {
       (useLocales as jest.Mock).mockReturnValue([{ languageTag }]);

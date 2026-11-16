@@ -34,7 +34,7 @@ name: Taking a break signs the person out everywhere, and the next bank login br
     timeout: 60000
 - tapOn: "Take a break|Pidä tauko|Ta en paus"
 - extendedWaitUntil:
-    visible: "Take a break from Kuutti|Pidä tauko Kuutista|Ta en paus från Kuutti"
+    visible: "Take a break from Kumpa|Pidä tauko sovelluksesta|Ta en paus från Kumpa"
     timeout: 15000
 - assertVisible: "You are signed out on every device, this one included\\.|Sinut kirjataan ulos kaikilta laitteilta, myös tältä\\.|Du loggas ut på alla enheter, även den här\\."
 # The tick: a switch whose label repeats the words beside it (README).

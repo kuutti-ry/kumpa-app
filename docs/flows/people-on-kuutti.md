@@ -1,4 +1,4 @@
-# People on Kuutti and the Matching switch
+# People on Kumpa and the Matching switch
 
 <!-- draws
 apps/mobile/src/features/home/HomeScreen.tsx
@@ -30,8 +30,8 @@ What home tells a person between a finished profile and the first people: whethe
 
 ```mermaid
 flowchart TB
-  accTitle: People on Kuutti, part 1: what home shows
-  accDescr: Home shows the matching card under the notices and People on Kuutti last. The matching card says one of three things: the profile still lacks something, it is finished and matching has not opened, or matching is open, with See people. People on Kuutti says how many people have completed their profiles, or nothing below the threshold, and whom they seek as one bar when every band is large enough.
+  accTitle: People on Kumpa, part 1: what home shows
+  accDescr: Home shows the matching card under the notices and People on Kumpa last. The matching card says one of three things: the profile still lacks something, it is finished and matching has not opened, or matching is open, with See people. People on Kumpa says how many people have completed their profiles, or nothing below the threshold, and whom they seek as one bar when every band is large enough.
   subgraph person["The person"]
     s5(["Finishes the profile: see Profile"])
     s10(["Chooses See people: see the queue"])
@@ -42,9 +42,9 @@ flowchart TB
     s4["Matching opens for finished profiles. Yours still lacks something."]
     s7["Your profile is finished. Matching has not opened yet."]
     s9["Matching is open for you., with See people, Starred while its list shows somebody, and once the offer of notifications"]
-    s11["People on Kuutti: reads the counter with the person's session, when home opens"]
+    s11["People on Kumpa: reads the counter with the person's session, when home opens"]
     s13{"Can a number be said?"}
-    s14["Kuutti is just getting started."]
+    s14["Kumpa is just getting started."]
     s15{"Can the bar be said too?"}
     s16["N people have completed their profiles."]
     s17["N people have completed their profiles and are looking for:, over the bar and its three shares"]
@@ -77,7 +77,7 @@ flowchart TB
 
 ### Steps
 
-1. The person has finished onboarding (see [Onboarding](onboarding.md)), or opens the app with nothing open there. Home shows "Kuutti", any notices first, then what there is to do: the matching card, "Your profile" and "Conversations"; and last the card "People on Kuutti", so that numbers nobody acts on come after the one thing to do.
+1. The person has finished onboarding (see [Onboarding](onboarding.md)), or opens the app with nothing open there. Home shows "Kumpa", any notices first, then what there is to do: the matching card, "Your profile" and "Conversations"; and last the card "People on Kumpa", so that numbers nobody acts on come after the one thing to do.
 2. The matching card asks the API whether matching is open for the person whenever home comes to the front and whenever the app comes back to the foreground, so a person whose photos were approved meanwhile, or for whom an admin opened matching with the app in a pocket, sees the new answer. What it knew stays on screen until the answer is there; with nothing yet it says "Loading…", and a read that fails says why, with Try again. Each of its sentences says Matching, so the card has no heading of its own.
 3. Is the person complete? Only an account in good standing, active, with every answer of onboarding (the gender, whom they seek with the sensitive-answers consent of the current wording, the age window, the intent, and a home the list of places knows), the terms and the privacy summary in their current wording, and a finished profile, whose photos must be approved. It is read whenever asked and kept nowhere, so nothing about it waits for a count. A shadow-banned account reads like an active one, so the ban shows to nobody. No: 4. Yes: 6.
 4. "Matching opens for finished profiles. Yours still lacks something." Most often the photos still wait for the check or for a moderator. No number is said, and nothing on the card can be tapped to move ahead.
@@ -85,12 +85,12 @@ flowchart TB
 6. Has an admin opened matching? There is one switch, for the whole country (part 2). No: 7. Yes: 9.
 7. "Your profile is finished. Matching has not opened yet." Nothing a person does opens it, and no count, share or night does.
 8. Until an admin opens matching, asking again changes nothing the card says: part 2.
-9. "Matching is open for you.", and under it "See people", the way to the queue; under that "Starred" while the Starred list shows somebody, a star on somebody it leaves out now not counting ([the queue](queue.md), part 4); and once, while this phone has not been asked, the offer of notifications, "Shall Kuutti tell you?", with "Allow notifications" and "No thanks" of equal weight: see [Notifications and notices](notifications.md). Either answer is kept on the phone, and the offer never comes back.
+9. "Matching is open for you.", and under it "See people", the way to the queue; under that "Starred" while the Starred list shows somebody, a star on somebody it leaves out now not counting ([the queue](queue.md), part 4); and once, while this phone has not been asked, the offer of notifications, "Shall Kumpa tell you?", with "Allow notifications" and "No thanks" of equal weight: see [Notifications and notices](notifications.md). Either answer is kept on the phone, and the offer never comes back.
 10. The person chooses "See people": see [the queue](queue.md).
-11. "People on Kuutti", the last card on home: when home opens, the app reads the counter with the person's session. While it reads the card says "Loading…", and a read that fails says why, with Try again.
+11. "People on Kumpa", the last card on home: when home opens, the app reads the counter with the person's session. While it reads the card says "Loading…", and a read that fails says why, with Try again.
 12. The API serves what the night's figures allow it to say (part 3), the same for everybody and naming nobody: the number of finished profiles, said only where at least `pond_counter_k` people stand behind it, a threshold the panel may raise above a floor in code but never lower. For the person's own session it adds the shares of whom those people seek; the public site reads the same number with no session and hears no shares.
 13. A number may be said: 15. None, as while fewer than `pond_counter_k` people have finished: 14.
-14. "Kuutti is just getting started." No number, and nothing says that a profile still being finished exists.
+14. "Kumpa is just getting started." No number, and nothing says that a profile still being finished exists.
 15. The bar is said only when each of its three bands holds at least `pond_counter_k` people; one band under it hides the whole bar, since two shares would give the third. Yes: 17. No: 16.
 16. "N people have completed their profiles."
 17. "N people have completed their profiles and are looking for:", and right under it one continuous bar in colours: those who seek men at one end, those who seek women at the other, those who seek both in the middle, with no gap or split between them. Under the bar, in its order, each band's share beside a swatch of its colour, "N % men", "N % everyone" and "N % women": the words and the order carry the meaning, never the colour alone, and a screen reader hears the three in one sentence. The shares move in steps, never by one, each at least one step and together a hundred. Whether somebody also seeks non-binary people moves no band, and somebody who seeks neither men nor women is in the number and in no band.
@@ -99,7 +99,7 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-  accTitle: People on Kuutti, part 2: an admin opens or closes matching
+  accTitle: People on Kumpa, part 2: an admin opens or closes matching
   accDescr: An admin opens Matching in the panel, chooses Open matching or Close matching, and confirms what the panel says the press will do. The API turns the one switch for the whole country and writes one row to the audit log. Nobody is pushed: each person's matching card says it the next time home comes to the front.
   subgraph app["The app"]
     s25(["Next time home or the app comes to the front, the matching card says it: part 1, step 2"])
@@ -142,10 +142,10 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-  accTitle: People on Kuutti, part 3: the night's count
+  accTitle: People on Kumpa, part 3: the night's count
   accDescr: Once a night the counter counts the finished profiles, and in three bands whom those on the current consent seek. The number moves only when it has moved by pond_counter_k or more since it was taken, and the bands move on their own, once pond_counter_k people have come, gone or changed band. Home says what stands the next time it opens.
   subgraph app["The app"]
-    s34(["Next time home opens, People on Kuutti says what stands: part 1, step 11"])
+    s34(["Next time home opens, People on Kumpa says what stands: part 1, step 11"])
   end
   subgraph night["The night's jobs"]
     s26(["Once a night, the counter counts"])
@@ -179,11 +179,11 @@ flowchart TB
 31. Have at least `pond_counter_k` people come, gone or changed band since the bands were last taken, whether or not the number moved? The bands move on their own, so that a number that moved by `pond_counter_k` while the bands moved by one cannot say what that one person seeks. Yes: 32. No: 33.
 32. The bands move: 34.
 33. The bands stand as they were.
-34. The next time home opens, "People on Kuutti" says what now stands: part 1, step 11.
+34. The next time home opens, "People on Kumpa" says what now stands: part 1, step 11.
 
 ## Where it lives
 
-- Screens: [index.tsx](../../apps/mobile/app/index.tsx) (home), [HomeScreen.tsx](../../apps/mobile/src/features/home/HomeScreen.tsx) (what home shows, in its order); in the pond feature [GateCard.tsx](../../apps/mobile/src/features/pond/GateCard.tsx) and [useGate.ts](../../apps/mobile/src/features/pond/useGate.ts) (the matching card), [PondCard.tsx](../../apps/mobile/src/features/pond/PondCard.tsx), [usePondCounter.ts](../../apps/mobile/src/features/pond/usePondCounter.ts) and [SeeksBar.tsx](../../apps/mobile/src/features/pond/SeeksBar.tsx) (People on Kuutti), [client.ts](../../apps/mobile/src/features/pond/client.ts); the ways on from the open card, [RoundButton.tsx](../../apps/mobile/src/features/matching/RoundButton.tsx), [StarsButton.tsx](../../apps/mobile/src/features/matching/StarsButton.tsx) and [PushOffer.tsx](../../apps/mobile/src/features/notifications/PushOffer.tsx); the panel's [MatchingSwitch.tsx](../../apps/admin/src/features/pond/MatchingSwitch.tsx), with its place in the menu, admins only, in [app.tsx](../../apps/admin/src/app.tsx)
+- Screens: [index.tsx](../../apps/mobile/app/index.tsx) (home), [HomeScreen.tsx](../../apps/mobile/src/features/home/HomeScreen.tsx) (what home shows, in its order); in the pond feature [GateCard.tsx](../../apps/mobile/src/features/pond/GateCard.tsx) and [useGate.ts](../../apps/mobile/src/features/pond/useGate.ts) (the matching card), [PondCard.tsx](../../apps/mobile/src/features/pond/PondCard.tsx), [usePondCounter.ts](../../apps/mobile/src/features/pond/usePondCounter.ts) and [SeeksBar.tsx](../../apps/mobile/src/features/pond/SeeksBar.tsx) (People on Kumpa), [client.ts](../../apps/mobile/src/features/pond/client.ts); the ways on from the open card, [RoundButton.tsx](../../apps/mobile/src/features/matching/RoundButton.tsx), [StarsButton.tsx](../../apps/mobile/src/features/matching/StarsButton.tsx) and [PushOffer.tsx](../../apps/mobile/src/features/notifications/PushOffer.tsx); the panel's [MatchingSwitch.tsx](../../apps/admin/src/features/pond/MatchingSwitch.tsx), with its place in the menu, admins only, in [app.tsx](../../apps/admin/src/app.tsx)
 - API: `GET /gate` and `GET /ponds/counter` in the pond slice's [routes.ts](../../apps/api/src/pond/routes.ts), with [counter.ts](../../apps/api/src/pond/counter.ts) (what may be said, and the session's own shares); who is complete in [pool.ts](../../apps/api/src/jobs/pool.ts), handed to the route in [app.ts](../../apps/api/src/app.ts); `GET /admin/matching` and `POST /admin/matching` in [admin-routes.ts](../../apps/api/src/pond/admin-routes.ts), the turn itself in [repo.ts](../../apps/api/src/pond/repo.ts); the night's count [pond-counter.ts](../../apps/api/src/jobs/pond-counter.ts), run by [nightly.ts](../../apps/api/src/jobs/nightly.ts) in the order [boot.ts](../../apps/api/src/boot.ts) gives; when the number and the bands may be said and move in [packages/schema/src/pond-counter.ts](../../packages/schema/src/pond-counter.ts), the card's three answers in [packages/schema/src/gate.ts](../../packages/schema/src/gate.ts); the pond slice's [README](../../apps/api/src/pond/README.md)
 - Spec: [opening.feature](../../features/pond/opening.feature), [counter.feature](../../features/pond/counter.feature)
 - Maestro: [home-and-tech.yaml](../../apps/mobile/e2e/flows/home-and-tech.yaml), [round.yaml](../../apps/mobile/e2e/flows/round.yaml) (its start: from the open matching card to the queue), [onboarding.yaml](../../apps/mobile/e2e/flows/onboarding.yaml) (its end: home while the photos wait); the panel's Playwright flow [roles.spec.ts](../../apps/admin/e2e/roles.spec.ts) (who may open Matching)
@@ -213,3 +213,4 @@ flowchart TB
 - 2026-11-05 (#581, PR #596): People on Kuutti says one number, the finished profiles, over one continuous bar in colours; the split by gender, the total and the profiles still being finished go.
 - 2026-11-05 (#581, PR #602): home puts what there is to do first: the matching card under the notices, then Your profile and Conversations, and People on Kuutti last.
 - 2026-11-15 (#607, PR #683): no row stands for the pond any more. The switch is a setting of its own, read and turned at `/admin/matching`, and the counter answers one set of figures and no list. Nothing a person or an admin sees or does changes.
+- 2026-11-16 (#700, PR #701): home's title and its card name the app Kumpa: People on Kumpa, and below k "Kumpa is just getting started."

@@ -30,7 +30,7 @@ const secureStore = jest.requireMock("expo-secure-store") as { __store: Map<stri
 
 const CONVERSATION = "0b4f3a0e-7c2f-4e2b-9a9a-1a2b3c4d5e6f";
 const CODE = "246810";
-const PASSCODE = "Your Kuutti passcode";
+const PASSCODE = "Your Kumpa passcode";
 const BANK = "Sign in with the bank instead";
 const token = (seed: string) => (seed + "x".repeat(43)).slice(0, 43);
 /** Expo's token for a device token the phone hands over. */

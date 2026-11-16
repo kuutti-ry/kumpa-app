@@ -394,7 +394,7 @@ describe("OnboardingScreen", () => {
     expect(
       screen.getByRole("link", { name: `Read the full text on kuutti.app (version ${SPECIAL})` }),
     ).toBeTruthy();
-    await press(screen.getByLabelText("I consent to Kuutti storing whom I seek"));
+    await press(screen.getByLabelText("I consent to Kuutti ry storing whom I seek"));
     await flush();
     expect(server.consents.at(-1)).toEqual(consented("special_category"));
     await press(screen.getByRole("button", { name: "Continue" }));
@@ -768,21 +768,21 @@ describe("OnboardingScreen", () => {
         "home",
         "Step 6 of 8",
         "Where do you live?",
-        "Your postal code tells Kuutti how far people are. Others see a town or your area by name, never the digits.",
+        "Your postal code tells Kumpa how far people are. Others see a town or your area by name, never the digits.",
       ],
       [
         "fi-FI",
         "home",
         "Vaihe 6 / 8",
         "Missä asut?",
-        "Postinumerosi kertoo Kuutille, kuinka kaukana ihmiset ovat. Muut näkevät kaupungin tai alueesi nimen, eivät koskaan numeroita.",
+        "Postinumerostasi Kumpa tietää, kuinka kaukana ihmiset ovat. Muut näkevät kaupungin tai alueesi nimen, eivät koskaan numeroita.",
       ],
       [
         "sv-FI",
         "home",
         "Steg 6 av 8",
         "Var bor du?",
-        "Ditt postnummer berättar för Kuutti hur långt bort folk är. Andra ser en stad eller ditt område med namn, aldrig siffrorna.",
+        "Ditt postnummer berättar för Kumpa hur långt bort folk är. Andra ser en stad eller ditt område med namn, aldrig siffrorna.",
       ],
       [
         "en-US",
@@ -1004,7 +1004,7 @@ describe("OnboardingScreen", () => {
       await flush();
       expect(screen.getByText("Two photos of you")).toBeTruthy();
       expect(
-        screen.getByText("Not accepted. This photo does not fit Kuutti; try another one."),
+        screen.getByText("Not accepted. This photo does not fit Kumpa; try another one."),
       ).toBeTruthy();
       expect(readOnly()).toBe(true);
       await addPhoto(server);
@@ -1303,7 +1303,7 @@ describe("OnboardingScreen", () => {
     await show(<OnboardingScreen />);
     await waitFor(() => expect(screen.getByText("Whom are you looking for?")).toBeTruthy());
     await press(row("Anyone"));
-    await press(screen.getByLabelText("I consent to Kuutti storing whom I seek"));
+    await press(screen.getByLabelText("I consent to Kuutti ry storing whom I seek"));
     await press(screen.getByRole("button", { name: "Continue" }));
     await waitFor(() => expect(screen.getByText("Two photos of you")).toBeTruthy());
     expect(screen.queryByText("What ages?")).toBeNull();
@@ -1390,7 +1390,7 @@ describe("OnboardingScreen", () => {
       await waitFor(() => expect(screen.getByText("Ketä etsit?")).toBeTruthy());
       expect(screen.getByText("Arkaluonteiset tiedot")).toBeTruthy();
       expect(screen.getByText("Englanninkielinen teksti on sitova; tämä on käännös.")).toBeTruthy();
-      await press(screen.getByLabelText("Annan Kuutille luvan tallentaa, kenen seuraa etsin"));
+      await press(screen.getByLabelText("Annan Kuutti ry:lle luvan tallentaa, kenen seuraa etsin"));
       await flush();
       expect(server.consents.at(-1)).toEqual({ ...consented("special_category"), locale: "fi" });
     } finally {
@@ -1401,8 +1401,8 @@ describe("OnboardingScreen", () => {
   // The legal texts are written in English and Finnish: a Swedish phone reads
   // the English, which binds, so nothing there is a translation (#208).
   it.each([
-    ["en-US", "Whom are you looking for?", "I consent to Kuutti storing whom I seek"],
-    ["sv-FI", "Vem söker du?", "Jag samtycker till att Kuutti lagrar vem jag söker"],
+    ["en-US", "Whom are you looking for?", "I consent to Kuutti ry storing whom I seek"],
+    ["sv-FI", "Vem söker du?", "Jag samtycker till att Kuutti ry lagrar vem jag söker"],
   ])(
     "asks a %s phone for the sensitive answers' consent in the English text itself, and calls nothing a translation",
     async (tag, question, allow) => {
@@ -1514,7 +1514,7 @@ describe("OnboardingScreen", () => {
     await show(<OnboardingScreen />);
     await waitFor(() => expect(screen.getByText("Whom are you looking for?")).toBeTruthy());
     await press(row("Men"));
-    await press(screen.getByLabelText("I consent to Kuutti storing whom I seek"));
+    await press(screen.getByLabelText("I consent to Kuutti ry storing whom I seek"));
     await press(screen.getByRole("button", { name: "Continue" }));
     await flush();
     await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/"));
@@ -1541,7 +1541,7 @@ describe("OnboardingScreen", () => {
     expect(server.seeks).toBeNull();
     // The status was read again, so the switch can be given once more.
     server.seeksRefused = false;
-    await press(screen.getByLabelText("I consent to Kuutti storing whom I seek"));
+    await press(screen.getByLabelText("I consent to Kuutti ry storing whom I seek"));
     await press(screen.getByRole("button", { name: "Continue" }));
     await flush();
     await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/"));
@@ -1550,7 +1550,7 @@ describe("OnboardingScreen", () => {
 
   describe("the seeks step and a stored answer (#542)", () => {
     const TITLE = "Whom are you looking for?";
-    const CONSENT = "I consent to Kuutti storing whom I seek";
+    const CONSENT = "I consent to Kuutti ry storing whom I seek";
     const selected = checked;
     const continueDisabled = () =>
       screen.getByRole("button", { name: "Continue" }).props.accessibilityState?.disabled;
@@ -1751,7 +1751,7 @@ describe("OnboardingScreen", () => {
     const api = failingUntilOk("/onboarding");
     await show(<OnboardingScreen />);
     await waitFor(() => expect(screen.getByText(FAILED_TO_LOAD)).toBeTruthy());
-    expect(screen.getByText("Kuutti's server had a problem. Try again in a moment.")).toBeTruthy();
+    expect(screen.getByText("Kumpa's server had a problem. Try again in a moment.")).toBeTruthy();
     api.ok();
     await press(screen.getByRole("button", { name: "Try again" }));
     await flush();
@@ -1777,7 +1777,7 @@ describe("OnboardingScreen", () => {
 
   describe("the home (#514, ADR-061)", () => {
     const EXPLAIN =
-      "Your postal code tells Kuutti how far people are. Others see a town or your area by name, never the digits.";
+      "Your postal code tells Kumpa how far people are. Others see a town or your area by name, never the digits.";
     const NOT_FOUND = "We can't find that code. Choose the nearest area from the list.";
     const homeCalls = (calls: ReturnType<typeof fakeApi>["calls"]) =>
       calls.filter((c) => c.path === "/account/home");
@@ -2155,7 +2155,7 @@ describe("OnboardingScreen", () => {
     await show(<OnboardingScreen />);
     await waitFor(() => expect(screen.getByText("Whom are you looking for?")).toBeTruthy());
     expect(screen.getByText(/Update the app to continue/)).toBeTruthy();
-    expect(screen.queryByLabelText("I consent to Kuutti storing whom I seek")).toBeNull();
+    expect(screen.queryByLabelText("I consent to Kuutti ry storing whom I seek")).toBeNull();
     await press(row("Women"));
     expect(
       screen.getByRole("button", { name: "Continue" }).props.accessibilityState?.disabled,

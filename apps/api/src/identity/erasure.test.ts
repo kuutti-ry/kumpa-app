@@ -343,13 +343,13 @@ describe("account erasure", () => {
 
     const res = await app.request("/account/export", { headers: a.headers });
     expect(res.headers.get("content-disposition")).toBe(
-      'attachment; filename="kuutti-data-2026-10-01.zip"',
+      'attachment; filename="kumpa-data-2026-10-01.zip"',
     );
     expect(res.headers.get("cache-control")).toBe("no-store");
     const { document: body, files } = await openExport(res);
     // The document beside the photos, both named without anything about the person.
     expect([...files.keys()].sort()).toEqual(
-      ["kuutti-data-2026-10-01.json", `photos/${photo.id}.webp`].sort(),
+      ["kumpa-data-2026-10-01.json", `photos/${photo.id}.webp`].sort(),
     );
     expect(body.exportedAt).toBe(at.toISOString());
     expect(body.exportedBy).toBe("0.0.0-test");
@@ -750,21 +750,21 @@ describe("the photo check's notes in erasure and export (#253)", () => {
     });
     // The file is named in the request's language too, ASCII only.
     expect(fi.headers.get("content-disposition")).toMatch(
-      /^attachment; filename="kuutti-tiedot-\d{4}-\d{2}-\d{2}\.zip"$/,
+      /^attachment; filename="kumpa-tiedot-\d{4}-\d{2}-\d{2}\.zip"$/,
     );
     const { document: body, files } = await openExport(fi);
-    expect([...files.keys()]).toEqual([expect.stringMatching(/^kuutti-tiedot-.*\.json$/)]);
-    expect(body.photoCheck.about).toMatch(/^Kuutti tarkistaa jokaisen kuvan/);
+    expect([...files.keys()]).toEqual([expect.stringMatching(/^kumpa-tiedot-.*\.json$/)]);
+    expect(body.photoCheck.about).toMatch(/^Kumpa tarkistaa jokaisen kuvan/);
     expect(body.photoCheck.photosNotShown).toEqual([
       {
         at: first.toISOString(),
         kind: "nudity",
-        reason: "Saattaa näyttää enemmän kuin Kuutti sallii",
+        reason: "Saattaa näyttää enemmän kuin Kumpa sallii",
       },
       {
         at: second.toISOString(),
         kind: "hate",
-        reason: "Saattaa näyttää symbolin, jota Kuutti ei salli",
+        reason: "Saattaa näyttää symbolin, jota Kumpa ei salli",
       },
     ]);
     expect(body.photoCheck.carefulCheckUntil).toBe(
@@ -774,8 +774,8 @@ describe("the photo check's notes in erasure and export (#253)", () => {
     // In English too, and in words that accuse nobody.
     const en = await exportOf(app, a.headers);
     expect(en.photoCheck.photosNotShown.map((p) => p.reason)).toEqual([
-      "May show more than Kuutti allows",
-      "May show a symbol Kuutti does not allow",
+      "May show more than Kumpa allows",
+      "May show a symbol Kumpa does not allow",
     ]);
     expect(JSON.stringify(en.photoCheck)).not.toMatch(/strike|flag|violat|offen[cs]e|suspic|ban/i);
 
@@ -982,7 +982,7 @@ describe("the sanctions in erasure and export (#307, ADR-024 §8)", () => {
     expect(document.sanctions).toEqual([
       {
         kind: "ban",
-        kindInWords: "Banned from Kuutti",
+        kindInWords: "Banned from Kumpa",
         reason: "misrepresentation",
         reasonInWords: "Pretending to be someone else, or telling untruths about oneself",
         appliedAt: after(4).toISOString(),

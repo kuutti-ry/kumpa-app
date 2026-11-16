@@ -32,8 +32,8 @@ describe("t()", () => {
 
   it("falls back to English for a key a locale does not have (fi to en, sv to en)", () => {
     // admin.* is English only, so it is missing from fi and sv by design.
-    expect(typedT(createI18n({ locale: "fi" }))("admin.title")).toBe("Kuutti admin");
-    expect(typedT(createI18n({ locale: "sv" }))("admin.title")).toBe("Kuutti admin");
+    expect(typedT(createI18n({ locale: "fi" }))("admin.title")).toBe("Kumpa admin");
+    expect(typedT(createI18n({ locale: "sv" }))("admin.title")).toBe("Kumpa admin");
   });
 
   it("offers en-XA only when a dev build hands the catalogue in", () => {
@@ -62,7 +62,7 @@ describe("t()", () => {
     t("errors.rate_limited", { seconds: "3" });
     // @ts-expect-error load.retry takes no arguments
     t("load.retry", { extra: 1 });
-    expect(t("home.title")).toBe("Kuutti");
+    expect(t("home.title")).toBe("Kumpa");
   });
 });
 

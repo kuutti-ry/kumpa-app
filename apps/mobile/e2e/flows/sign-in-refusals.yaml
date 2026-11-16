@@ -19,7 +19,7 @@ name: The bank login refuses the banned, the recently deleted and those under 18
 - extendedWaitUntil:
     visible: "Sign-in did not complete|Kirjautuminen ei onnistunut|Inloggningen slutfördes inte"
     timeout: 30000
-- assertVisible: "This person may not use Kuutti.|Tämä henkilö ei voi käyttää Kuuttia.|Den här personen får inte använda Kuutti."
+- assertVisible: "This person may not use Kumpa.|Tämä henkilö ei voi käyttää Kumpa-sovellusta.|Den här personen får inte använda Kumpa."
 
 - runFlow:
     file: ../common/bank-login.yaml
@@ -34,7 +34,7 @@ name: The bank login refuses the banned, the recently deleted and those under 18
     env:
       PERSONA: Lauri Hämäläinen
 - extendedWaitUntil:
-    visible: "Kuutti is for adults.*|Kuutti on aikuisille.*|Kuutti är för vuxna.*"
+    visible: "Kumpa is for adults.*|Kumpa on aikuisille.*|Kumpa är för vuxna.*"
     timeout: 30000
 
 - runFlow:
@@ -48,7 +48,7 @@ name: The bank login refuses the banned, the recently deleted and those under 18
           env:
             PERSONA: Venla Nieminen
       - extendedWaitUntil:
-          visible: "Kuutti is for adults.*|Kuutti on aikuisille.*|Kuutti är för vuxna.*"
+          visible: "Kumpa is for adults.*|Kumpa on aikuisille.*|Kumpa är för vuxna.*"
           timeout: 30000
 
 - runFlow:

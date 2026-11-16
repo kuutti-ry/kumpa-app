@@ -36,7 +36,7 @@ flowchart TB
   subgraph app["The app"]
     s2{"Never asked on this phone, and the offer never answered?"}
     s3(["Shows no offer; Settings can still ask: part 2"])
-    s4["Shows Shall Kuutti tell you?, with Allow notifications and No thanks"]
+    s4["Shows Shall Kumpa tell you?, with Allow notifications and No thanks"]
     s6["Keeps the answer on this phone; the offer never comes back"]
     s7["Shows the phone's own question"]
     s9(["Nothing reaches this phone; everything else works"])
@@ -60,10 +60,10 @@ flowchart TB
 
 ### Steps
 
-1. The person opens home once their matching is open ([People on Kuutti](people-on-kuutti.md)), where the card that holds See people also holds the offer: there is something to tell now. It never comes at the first start.
+1. The person opens home once their matching is open ([People on Kumpa](people-on-kuutti.md)), where the card that holds See people also holds the offer: there is something to tell now. It never comes at the first start.
 2. The app offers only while this phone was never asked by its own question and the offer was never answered on it. Never asked: 4. Otherwise: 3.
 3. No offer. A phone asked before keeps its answer, and Settings shows what it leaves to do (part 2). The web preview never offers.
-4. Under See people: "Shall Kuutti tell you?", "Kuutti can tell this phone when someone likes you back and when a message arrives. A notification says that there is a new message, a new match or an announcement, never what it says or from whom. You choose which kinds in Settings.", and two buttons of equal weight, "Allow notifications" and "No thanks". Both wait from a tap until the answer is in.
+4. Under See people: "Shall Kumpa tell you?", "Kumpa can tell this phone when someone likes you back and when a message arrives. A notification says that there is a new message, a new match or an announcement, never what it says or from whom. You choose which kinds in Settings.", and two buttons of equal weight, "Allow notifications" and "No thanks". Both wait from a tap until the answer is in.
 5. No thanks: 6. Allow notifications: 7.
 6. Either answer is kept on this phone first, so the offer never comes back on it, not even after the app was closed under the phone's question. After No thanks: 9.
 7. With the answer kept as in 6, the app shows the phone's own question, for a banner and a sound, never a badge.
@@ -109,10 +109,10 @@ flowchart TB
 
 12. The person opens Settings with the gear on the home screen. Its Notifications row says, as its value, "Not allowed on this phone", marked, when the phone refuses them, since then nothing arrives whatever the switches say; "Not asked on this phone yet"; or "All on", "All off", or how many kinds are on and off. A press opens the row in place, under itself.
 13. The API answers the four kinds, in this order, each on unless the person switched it off: messages, matches, moderators' decisions and announcements. A kind the person never touched is on, and is stored only once they switch it.
-14. First what the phone's answer leaves to do: "Open the phone's settings" when it refuses them, "Allow notifications" when it was never asked, and nothing when it allows them; a device that cannot show them, the web preview, says "This device cannot show Kuutti's notifications." Then "A notification says that there is a new message, a new match or an announcement, never what it says or from whom." Then one switch per kind: "Messages", "Matches", "Moderators' decisions" with "Nothing is sent to your phones for these yet.", and "Announcements from Kuutti" with "When this is off, an announcement still shows in the app, with no push and no email." While the choices are read it says "Loading…"; if they cannot be read, it says why, with Try again.
+14. First what the phone's answer leaves to do: "Open the phone's settings" when it refuses them, "Allow notifications" when it was never asked, and nothing when it allows them; a device that cannot show them, the web preview, says "This device cannot show Kumpa's notifications." Then "A notification says that there is a new message, a new match or an announcement, never what it says or from whom." Then one switch per kind: "Messages", "Matches", "Moderators' decisions" with "Nothing is sent to your phones for these yet.", and "Announcements from Kumpa" with "When this is off, an announcement still shows in the app, with no push and no email." While the choices are read it says "Loading…"; if they cannot be read, it says why, with Try again.
 15. The phone's button: 16. A switch, by the switch or by its name: 18.
 16. "Open the phone's settings" opens the phone's own settings for Kuutti; "Allow notifications" shows the phone's own question, as the home screen's offer does (part 1), and waits while it is open. No dialog of Kuutti's asks.
-17. When the app comes back to the front it reads the phone's answer again; a change is said aloud, as "This phone shows Kuutti's notifications.", and the row's value follows.
+17. When the app comes back to the front it reads the phone's answer again; a change is said aloud, as "This phone shows Kumpa's notifications.", and the row's value follows.
 18. The API takes the change for the person's own account; every switch waits while it is on its way. Taken: 19. Not taken (no answer, or the account deleted meanwhile): 21.
 19. The API keeps the choice for the account, not on the phone, so every phone of the person's and every push reads the same: Messages and Matches decide their pushes, Announcements an announcement's push and e-mail but never its notice, and Moderators' decisions nothing yet (part 3).
 20. The app shows every switch as the API now keeps it, and the row's value says so. The choice is there the next time, on any phone.
@@ -125,7 +125,7 @@ flowchart TB
   accTitle: Notifications and notices, part 3: what a push says
   accDescr: A message, a match or an approved announcement hands the API somebody to tell. Nothing is pushed in the quiet hours, but an announcement waits for them to end. A push goes only for a kind switched on, to a signed-in phone that lets Kuutti notify, and says one line of the app's own words with its kind alone. A tap opens Conversations, or home for an announcement.
   subgraph person["The person"]
-    s30["Sees one line: You have a new message, You have a new match, or An announcement from Kuutti"]
+    s30["Sees one line: You have a new message, You have a new match, or An announcement from Kumpa"]
     s31["Taps it"]
   end
   subgraph app["The app"]
@@ -165,7 +165,7 @@ flowchart TB
 27. The person's switch for the kind is read fresh, and so are their phones: only those signed in now that registered while they let Kuutti notify. Switched off, or no such phone: 28. Otherwise: 29.
 28. Nothing is pushed, and nothing is kept to send later: the person sees it all when they next open the app.
 29. The API sends each phone one line of the app's own words in that phone's language, through Expo, which hands it to Apple or Google, with its kind alone: never a message's text, a name, an account, the conversation or an announcement's own words, no title and no badge. A newer push of a kind takes the older one's place on the phone, and none is delivered to a phone that was off once the quiet hours have begun or the Finnish day has ended.
-30. The phone shows "You have a new message", "You have a new match" or "An announcement from Kuutti". With the app in front it shows as a banner and in the phone's list, silently.
+30. The phone shows "You have a new message", "You have a new match" or "An announcement from Kumpa". With the app in front it shows as a banner and in the phone's list, silently.
 31. The person taps it.
 32. The app opens Conversations for a message or a match, and home for an announcement, whose notice is there (part 4); after the app lock, if it is on. Nothing opens while signed out, and a sign-out clears the phone's list of Kuutti's notifications.
 
@@ -248,3 +248,4 @@ flowchart TB
 - 2026-11-03 (#502, PR #578): the day's round push and its switch go with the daily round.
 - 2026-11-03 (#503, PR #579): a third notice: the invitation the person used counted, with the fish it earned them.
 - 2026-11-07 (#573, PR #643): an announcement to everybody leaves a notice in Kuutti's own words and has its own push and its own switch, which stops the push and the e-mail, never the notice; a tap on its push opens home.
+- 2026-11-16 (#700, PR #701): the offer, the settings and the announcement's push name the app Kumpa.

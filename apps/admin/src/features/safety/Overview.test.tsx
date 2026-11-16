@@ -202,7 +202,7 @@ describe("the front page", () => {
   it("shows no line, no link and no failure when the API names no queue at all", async () => {
     fetchMock([answer(overview([]))]);
     show();
-    await screen.findByRole("table", { name: "Told Kuutti they found someone" });
+    await screen.findByRole("table", { name: "Told Kumpa they found someone" });
     expect(screen.queryAllByRole("listitem")).toHaveLength(0);
     expect(screen.queryByRole("link")).toBeNull();
     expect(screen.queryByRole("alert")).toBeNull();
@@ -374,18 +374,18 @@ describe("the front page", () => {
       ),
     ]);
     show();
-    const table = await screen.findByRole("table", { name: "Told Kuutti they found someone" });
+    const table = await screen.findByRole("table", { name: "Told Kumpa they found someone" });
     // A section of the page, under its title, which with the columns says what is counted: no note beside it (#581).
     const title = screen.getByRole("heading", {
       level: 3,
-      name: "Told Kuutti they found someone",
+      name: "Told Kumpa they found someone",
     });
-    expect(title.parentElement?.textContent).toBe("Told Kuutti they found someone");
+    expect(title.parentElement?.textContent).toBe("Told Kumpa they found someone");
     expect(within(table).getByRole("columnheader", { name: "Last 30 days" })).toBeTruthy();
     const rows = within(table).getAllByRole("row");
     expect(rows.map((row) => row.textContent)).toEqual([
       "ReasonLast 30 daysIn all",
-      "On Kuutti312",
+      "On Kumpa312",
       "Elsewhere14",
       "Another reason02",
     ]);

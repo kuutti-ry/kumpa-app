@@ -8,7 +8,7 @@ import { PasscodeField } from "./PasscodeField";
 // by its label to a screen reader, and handed on at the sixth digit with no
 // button to reach for.
 
-const LABEL = "Your Kuutti passcode";
+const LABEL = "Your Kumpa passcode";
 
 /** The field as a screen holds it: its value in state, both calls seen. */
 function Held({

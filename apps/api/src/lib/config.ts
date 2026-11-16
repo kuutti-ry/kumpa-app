@@ -77,7 +77,7 @@ const Env = z.object({
   // it is log in development and test and off everywhere else.
   MAIL: z.enum(["ses", "log", "off"]).optional(),
   // The sender of every message: the SES identity kuutti.app (infra/bootstrap/mail.tf).
-  MAIL_FROM: z.string().min(1).default("Kuutti <noreply@kuutti.app>"),
+  MAIL_FROM: z.string().min(1).default("Kumpa <noreply@kuutti.app>"),
   // Push (#102, ADR-055 §8): expo through Expo's push service (the SSM
   // parameter `push`); log on a developer's machine and in tests, which writes
   // the kind of each push to the log and sends nothing; off sends nothing.

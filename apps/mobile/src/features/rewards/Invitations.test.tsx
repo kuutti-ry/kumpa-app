@@ -55,7 +55,7 @@ const TEXT = {
     "When a friend you invite finishes their profile, you get a fish and your friend gets a fish.",
   fish: "A fish is a like that comes first in the other person's queue, ahead of ordinary likes.",
   made: "Your invitation is ready. Its code is below.",
-  once: "Kuutti shows this code only now. Share it with one friend.",
+  once: "Kumpa shows this code only now. Share it with one friend.",
   withdrawn: "The invitation was withdrawn. Its code no longer works.",
   notYet: "You can invite friends once your profile is complete.",
   redeem: "Have an invitation code?",
@@ -141,7 +141,7 @@ describe("Invitations", () => {
     expect(screen.getByText("Loading…").props.accessibilityLiveRegion).toBe("polite");
     await act(async () => waiting.shift()?.(refusal("internal_error", 500)));
     expect(screen.getByText(FAILED_TO_LOAD)).toBeTruthy();
-    expect(screen.getByText("Kuutti's server had a problem. Try again in a moment.")).toBeTruthy();
+    expect(screen.getByText("Kumpa's server had a problem. Try again in a moment.")).toBeTruthy();
     noProblems();
     await act(async () => fireEvent.press(button("Try again")));
     expect(screen.getByText("Loading…")).toBeTruthy();
@@ -342,7 +342,7 @@ describe("Invitations", () => {
   });
 
   const INVITED =
-    "You're invited to Kuutti, a free dating app for Finland where everyone signs in with their bank ID.";
+    "You're invited to Kumpa, a free dating app for Finland where everyone signs in with their bank ID.";
   // The one link (#574) on the API the app talks to, here the local default.
   const GET_IT =
     "Get the app: http://localhost:3000/i/ABCDE-FGHJK After signing in, type this code: ABCDE-FGHJK";
