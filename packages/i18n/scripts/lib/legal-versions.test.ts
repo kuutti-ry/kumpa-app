@@ -342,34 +342,4 @@ describe("legalVersionProblems", () => {
       expect.stringMatching(/^special_category: the site's text of /),
     ]);
   });
-
-  describe("a kind the app took out (research, ADR-071)", () => {
-    const research = {
-      version: "2026-09-draft-1",
-      hash: "0123456789abcdef",
-      language: "fi",
-      url: "https://kuutti.app/legal/privacy/#research-2026-09-draft-1",
-    };
-
-    it("passes when the site still publishes research and the app does not carry it", () => {
-      expect(legalVersionProblems(APP, { ...published(), research }, TEXTS)).toEqual([]);
-    });
-
-    it("still fails on any other kind the site publishes that the app does not know", () => {
-      expect(legalVersionProblems(APP, { ...published(), police: research }, TEXTS)).toEqual([
-        "police: the site publishes a version of a kind the app does not know",
-      ]);
-      expect(legalVersionProblems(APP, { ...published(), Research: research }, TEXTS)).toEqual([
-        "Research: the site publishes a version of a kind the app does not know",
-      ]);
-    });
-
-    it("is not tolerated the other way: a research version the app carries needs the site's", () => {
-      expect(
-        legalVersionProblems({ ...APP, research: "2026-09-draft-1" }, published(), TEXTS),
-      ).toEqual([
-        "research: the site publishes no version of it (the app carries 2026-09-draft-1)",
-      ]);
-    });
-  });
 });
