@@ -173,11 +173,11 @@ Feature: The home
     When they download their export
     Then it says the place Kallio and the card's Helsinki, and holds no key
 
-  Scenario: A home reaches no log line, no error and no event
-    Given a signed-in account with the research consent
+  Scenario: A home reaches no log line and no error
+    Given a signed-in account
     When it gives a postal code from the list, one the list lacks, and something that is no postal code
     Then the write's log line names the account alone
-    And no log line, error detail or event holds the digits or the place
+    And no log line or error detail holds the digits or the place
 
   Scenario: A moderator reads no home
     Given a person with a home

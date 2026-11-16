@@ -14,7 +14,7 @@ docker-compose.yml
 .claude/rules/layout.md
 -->
 
-What Kuutti is made of, as the repository holds it: the three apps, the four packages, the Telia kit from npm and the mock bank; what is inside the API's one process; the ten slices and which app holds which; and the import boundary between slices. It is written for a contributor or a reviewer who wants the whole before reading the code. Where each part runs is the deployment view, and the outside services are the context view. This view draws ADR-003 (the generated client), ADR-017 §6 (the kit in its own repository), ADR-031 §9 (the socket in the same process) and the layout rules of `.claude/rules/layout.md`.
+What Kuutti is made of, as the repository holds it: the three apps, the four packages, the Telia kit from npm and the mock bank; what is inside the API's one process; the nine slices and which app holds which; and the import boundary between slices. It is written for a contributor or a reviewer who wants the whole before reading the code. Where each part runs is the deployment view, and the outside services are the context view. This view draws ADR-003 (the generated client), ADR-017 §6 (the kit in its own repository), ADR-031 §9 (the socket in the same process) and the layout rules of `.claude/rules/layout.md`.
 
 ## Part 1: the workspace
 
@@ -30,7 +30,7 @@ flowchart TB
     c5["The OpenAPI document, written from the API's route contracts"]
   end
   subgraph packages["The packages, packages/"]
-    c6["Contracts: zod schemas, the socket's frames, the research event registry, the generated paths"]
+    c6["Contracts: zod schemas, the socket's frames, the generated paths"]
     c7["Texts: messages.yaml and a typed t()"]
     c8["The database package: Drizzle schema, generated migrations, the migrate runner, the seed"]
     c9["Notices: the licence texts a bundle must carry"]
@@ -65,7 +65,7 @@ flowchart TB
 3. **The admin panel** (`apps/admin`): Vite and React, with shadcn/ui's components on Tailwind compiled into one stylesheet (ADR-050), built to static files. It calls the API's `/admin` routes over HTTPS through `openapi-fetch`, typed by the same generated paths, and imports the contracts (6) and the texts (7).
 4. **The API** (`apps/api`): Hono on Node in one process, which serves HTTP, the chat's WebSocket and the nightly jobs (part 2). It imports the contracts (6), the texts (7), the database package (8) and the Telia kit (10), and keeps its data in PostgreSQL (12) through a pool. Its route contracts are written out as the OpenAPI document (5). Its build script for the image's third-party notices uses the notices package (9).
 5. **The OpenAPI document** (`apps/api/openapi.json`) is written by `pnpm openapi` from the routes the API declares with `createRoute`, and the same command turns it into the generated paths in the contracts package with `openapi-typescript` (ADR-003). CI runs the command and fails on a difference. The running API serves the document at `/openapi.json` everywhere except production.
-6. **Contracts** (`packages/schema`, `@kuutti/schema`): the zod schemas that validate every request at the API's boundary and type its answers, the socket's frames both ways, the research event registry, and the generated paths both clients are typed by. It is the only place a feature's code is shared between the apps (layout rules).
+6. **Contracts** (`packages/schema`, `@kuutti/schema`): the zod schemas that validate every request at the API's boundary and type its answers, the socket's frames both ways, and the generated paths both clients are typed by. It is the only place a feature's code is shared between the apps (layout rules).
 7. **Texts** (`packages/i18n`, `@kuutti/i18n`): `messages.yaml`, a typed `t()`, i18next and ICU, for the phone app, the API and the admin panel. Horizontal: every slice uses it and none owns it.
 8. **The database package** (`packages/db`, `@kuutti/db`): the Drizzle schema, the migrations drizzle-kit generated, the runner that applies them under an advisory lock (rule 10), and the seed. Its demo tools (`@kuutti/db/demo`) are for command lines and tests only; the linter keeps them out of the apps (part 4). It depends on the contracts (6), and its seed uses the kit's hetu helpers (10) to write the personas.
 9. **Notices** (`packages/notices`, `@kuutti/notices`): reads the licence files and NOTICE files of what a bundle ships. Two build scripts use it: the phone app's licences screen and the API image's `THIRD_PARTY_NOTICES`. No app imports it at run time.
@@ -84,7 +84,7 @@ flowchart TB
     c14["Boot: error reporting, the bank's discovery, the pool, migrations, media, mail, push, the app and the jobs"]
     c15["App-wide middleware: request id, language, request log, secure headers, noindex, CORS allowlist, body cap, the address's limiter"]
     c16["The guards: the session guard and three staff guards, each with the person's limiter"]
-    c17["The routes of the ten slices, and the health probe"]
+    c17["The routes of the nine slices, and the health probe"]
     c18["The chat's socket, GET /ws: the Origin check, the upgrade over ws, the token in the first frame"]
     c19["The live hub: open sockets and presence in memory, the frames each person may see"]
     c20["The chat listener: LISTEN on kuutti_chat over one pooled connection"]
@@ -114,10 +114,10 @@ flowchart TB
 ### Steps
 
 13. **The server.** `index.ts` loads the configuration through `lib/` (23), boots (14), arms the night's timer (21), and serves the app on `PORT` with `serve()` from `@hono/node-server`, whose own WebSocket upgrade runs over `ws` on the same server (ADR-031 §9). Every request goes to the app-wide middleware (15). On SIGTERM it tells every socket `restarting`, drains the requests in flight within ten seconds, then stops the listener and the pool.
-14. **Boot** (`boot.ts`) turns error reporting on where a DSN is configured, reads the bank's discovery document through the kit, opens the pool, runs the migrations under their advisory lock, makes the research events' partitions, builds media (S3 and the photo check), makes the live hub, builds mail and push, builds the app, and lists the nightly jobs. A deployed box with half a bank configuration fails here rather than serving a login that answers 503.
+14. **Boot** (`boot.ts`) turns error reporting on where a DSN is configured, reads the bank's discovery document through the kit, opens the pool, runs the migrations under their advisory lock, builds media (S3 and the photo check), makes the live hub, builds mail and push, builds the app, and lists the nightly jobs. A deployed box with half a bank configuration fails here rather than serving a login that answers 503.
 15. **The app-wide middleware**, in order: the request id, the request's language, the request log, secure headers, `X-Robots-Tag: noindex`, the CORS allowlist, the body cap (the two photo uploads have their own 10 MB cap on their routes), and the limiter keyed by the client address (ADR-026). A request goes on to a guard (16), or straight to its route when the route answers without a session (the health probe, the sign-in's own routes, the public counter); the socket's upgrade goes to the socket (18).
-16. **The guards.** One session guard for every route that reads a person's data (rule 6), and three staff guards: any member of staff (moderator, admin or researcher), moderators and admins, and admins alone. Each hands the request it admits to one limiter keyed by the person, and the address gets its count back. The routes that answer without a session are listed in `PUBLIC_ROUTES`; a test checks that no other route lacks a guard. The counter is the one of them that takes a session when one is offered, through the same guard, for the bar of the caller's own pond (ADR-013 §18).
-17. **The routes** of the ten slices (part 3) and the health probe. They reach PostgreSQL through the pool (24), and the outside services (S3, Rekognition, SES, Telia, Expo's push) through what boot handed them. Where two slices must not import each other, `app.ts` hands one slice's function to the other as a callback (part 4).
+16. **The guards.** One session guard for every route that reads a person's data (rule 6), and three staff guards: any member of staff (moderator or admin), moderators and admins, and admins alone. Each hands the request it admits to one limiter keyed by the person, and the address gets its count back. The routes that answer without a session are listed in `PUBLIC_ROUTES`; a test checks that no other route lacks a guard. The counter is the one of them that takes a session when one is offered, through the same guard, for the bar of the caller's own pond (ADR-013 §18).
+17. **The routes** of the nine slices (part 3) and the health probe. They reach PostgreSQL through the pool (24), and the outside services (S3, Rekognition, SES, Telia, Expo's push) through what boot handed them. Where two slices must not import each other, `app.ts` hands one slice's function to the other as a callback (part 4).
 18. **The chat's socket**, `GET /ws`. The upgrade passes the app-wide middleware (15), so the address's limiter counts it, but no guard: the token comes in the first frame and is checked by the session guard's own code. A browser's Origin must be the API's own host or on the allowlist. A frame is at most 256 KiB, bounded before it is read. The socket only tells; writing stays on the HTTP routes. The socket registers with the hub (19). The Chat view has the steps.
 19. **The live hub** (`chat/live.ts`, `chat/presence.ts`): which accounts have a socket open, in the process's memory and never in a table, and the frames each person may see, read through that person's own participant row. It reads PostgreSQL through the pool (24).
 20. **The chat listener** (`chat/listen.ts`) holds one connection of the pool for `LISTEN kuutti_chat`. The triggers of `0001_baseline_sql.sql` notify on that channel when a transaction commits, with ids and numbers only (25). The listener hands each notification to the hub, one at a time, in the order Postgres delivers them (19).
@@ -140,7 +140,6 @@ Code inside each app is organised by slice, never by layer (`.claude/rules/layou
 | matching | yes | yes | no directory | yes | heavy, heavy, none |
 | chat | yes | yes | no directory | yes | heavy, heavy, none |
 | safety | yes | yes | yes: the overview, reports, accounts, sanctions, automatic bans, feedback, staff, the audit log, matching_config | yes | medium, thin, heavy |
-| research | yes | a README only | no directory | its attack pile only | medium, none, none |
 | rewards | yes | yes | no directory | no | light, light, none |
 | notifications | yes | yes | yes: announcements to everybody | yes | light, light, announcements |
 
@@ -153,9 +152,8 @@ Besides the slices, the API has `health/`, `jobs/` (the nightly timer, and what 
 5. **matching**: the queue and its day's log, deal-breakers, likes, the fish, the match. API and phone app; specs in `features/matching`.
 6. **chat**: conversations, messages, the socket, contacts shared, the archive. API and phone app; specs in `features/chat`.
 7. **safety**: reports, blocks, sanctions, the audit log, the automatic shadow bans, velocity. In all three apps; the admin panel's screens are in this slice, but for the staff sign-in, the photo queue, the Matching switch and the announcements. Specs in `features/safety`.
-8. **research**: the event registry's one door (`track`), the `research_id` mapping, the partitions and the research copy. The API alone has code; the phone app's directory holds a README only.
-9. **rewards**: invitations and the reward ledger. API and phone app.
-10. **notifications**: the notification choices, the notices in the app and the push (#102, ADR-055): whom to tell of a message or a match, and the devices' tokens; and the announcements to everybody (#573, ADR-068). In all three apps (the admin panel's Announcements screen); specs in `features/notifications`.
+8. **rewards**: invitations and the reward ledger. API and phone app.
+9. **notifications**: the notification choices, the notices in the app and the push (#102, ADR-055): whom to tell of a message or a match, and the devices' tokens; and the announcements to everybody (#573, ADR-068). In all three apps (the admin panel's Announcements screen); specs in `features/notifications`.
 
 ## Part 4: the import boundary
 
@@ -184,7 +182,7 @@ flowchart LR
 
 ### Steps
 
-26. **A file of one slice.** The example is the API's `chat/messages.ts`, which imports its own slice's `./repo.ts` and `./conversations.ts` (27), the media, profile and research slices through their `index.ts` (28), `../lib/errors.ts` (30), and `@kuutti/db` and `@kuutti/schema` (31).
+26. **A file of one slice.** The example is the API's `chat/messages.ts`, which imports its own slice's `./repo.ts` and `./conversations.ts` (27), the media and profile slices through their `index.ts` (28), `../lib/errors.ts` (30), and `@kuutti/db` and `@kuutti/schema` (31).
 27. **Its own slice's files**: allowed, by relative path inside the slice.
 28. **A neighbour's `index.ts`**: allowed. It is the neighbour's public surface; anything another slice needs is exported there, or moves down into `lib/`.
 29. **A neighbour's other files**: refused. `pnpm lint` fails with "Slices import from a neighbour only through its index.ts, never its internals".

@@ -98,7 +98,6 @@ async function written(db: Queryable) {
     audit: await count(db, "SELECT count(*) AS n FROM audit_log"),
     decided: await count(db, "SELECT count(*) AS n FROM report WHERE decided_at IS NOT NULL"),
     notices: await count(db, "SELECT count(*) AS n FROM notice"),
-    events: await count(db, "SELECT count(*) AS n FROM events"),
   };
 }
 
@@ -1168,12 +1167,8 @@ describe("recusal and the guard", () => {
     }
   });
 
-  test("The report's routes refuse without a session, and refuse a researcher", async ({
-    ctx,
-    app,
-  }) => {
+  test("The report's routes refuse without a session", async ({ ctx, app }) => {
     const member = await signedInAccount(ctx.client);
-    const researcher = await staffSession(ctx.client, "researcher");
     const expired = await staffSession(ctx.client);
     await ctx.client.query(
       "UPDATE admin_session SET expires_at = now() - interval '1 minute' WHERE id = $1",
@@ -1190,7 +1185,6 @@ describe("recusal and the guard", () => {
       ["a product session's token", member.headers, 401, "unauthenticated"],
       ["an expired session", expired.headers, 401, "session_expired"],
       ["a revoked session", revoked.headers, 401, "session_revoked"],
-      ["a researcher", researcher.headers, 403, "admin_forbidden"],
     ] as const) {
       for (const answer of [
         await open(app, headers, id),

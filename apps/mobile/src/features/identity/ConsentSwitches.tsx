@@ -21,18 +21,13 @@ import { useSession } from "./session";
 
 export type ConsentState = "loading" | "unavailable" | "on" | "off" | "outdated";
 
-// shortcut: no switch gives or withdraws research until there is a researcher (#545, ADR-010 §19),
-// though the API keeps the kind. R3 Research (#194) widens this to WithdrawableConsentKind, and the
-// compiler names each table below to fill; Settings' row comes back with it.
-type SwitchedKind = Exclude<WithdrawableConsentKind, "research">;
-
 /**
  * A withdrawable consent as the API holds it (#46, #146, ADR-010 §4): on when
  * an active consent of the kind names the current wording, off otherwise, and
  * outdated when the wording built into this app is older than the API's: no
  * consent for a text this app never showed.
  */
-function stateOf(kind: SwitchedKind, consents: ConsentsResponse): ConsentState {
+function stateOf(kind: WithdrawableConsentKind, consents: ConsentsResponse): ConsentState {
   const current = consents.currentVersions[kind];
   if (bundledVersion(kind) !== current) return "outdated";
   const active = consents.consents.some(
@@ -41,7 +36,7 @@ function stateOf(kind: SwitchedKind, consents: ConsentsResponse): ConsentState {
   return active ? "on" : "off";
 }
 
-const statesOf = (consents: ConsentsResponse): Record<SwitchedKind, ConsentState> => ({
+const statesOf = (consents: ConsentsResponse): Record<WithdrawableConsentKind, ConsentState> => ({
   special_category: stateOf("special_category", consents),
 });
 
@@ -52,7 +47,7 @@ const statesOf = (consents: ConsentsResponse): Record<SwitchedKind, ConsentState
  * it again (ADR-019 §4).
  */
 function useConsentSwitch(
-  kind: SwitchedKind,
+  kind: WithdrawableConsentKind,
   signedIn: boolean,
   locale: string,
   onStored?: (consents: ConsentsResponse) => void,
@@ -126,7 +121,7 @@ export function ConsentSwitch({
   kind,
   onStored,
 }: {
-  kind: SwitchedKind;
+  kind: WithdrawableConsentKind;
   onStored?: (consents: ConsentsResponse) => void;
 }) {
   const { t, locale } = useT();
@@ -182,12 +177,12 @@ export function ConsentSwitch({
  * "unavailable" when it failed.
  */
 export function useConsentStates(): {
-  states: Record<SwitchedKind, ConsentState>;
+  states: Record<WithdrawableConsentKind, ConsentState>;
   stored: (consents: ConsentsResponse) => void;
 } {
   const session = useSession();
   const signedIn = session.status === "signed-in";
-  const [states, setStates] = useState<Record<SwitchedKind, ConsentState>>({
+  const [states, setStates] = useState<Record<WithdrawableConsentKind, ConsentState>>({
     special_category: "loading",
   });
   useFocusEffect(

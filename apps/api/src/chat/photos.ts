@@ -1,5 +1,5 @@
 import { type Queryable, transaction } from "@kuutti/db";
-import { type ChatMessage, elapsedBand, messageLength, messageLengthBand } from "@kuutti/schema";
+import { type ChatMessage, messageLength } from "@kuutti/schema";
 import { advisoryLock } from "../lib/db.ts";
 import { AppError } from "../lib/errors.ts";
 import { matchingConfigNumbers } from "../lib/matching-config.ts";
@@ -13,7 +13,6 @@ import {
   storeMessagePhoto,
 } from "../media/index.ts";
 import { contactDetailsIn } from "../profile/index.ts";
-import { track } from "../research/index.ts";
 import {
   type ChatDeps,
   contactDetailsRefused,
@@ -30,7 +29,7 @@ import * as repo from "./repo.ts";
 // The pipeline is the profile photo's (rule 4), with purpose `message`; the
 // check reads it before anything is stored; the photo's row and its message
 // are one transaction. The caption follows the text rules and, like a text,
-// reaches no log line or event (rule 5).
+// reaches no log line.
 
 const MESSAGE_PHOTOS_PER_DAY_KEY = "message_photos_per_day";
 /** The sends a person may try in a day, refused ones included (the route's limiter). */
@@ -49,13 +48,7 @@ type Outcome =
   | { kind: "stored"; row: repo.MessageRow; side: repo.Side }
   | { kind: "closed" }
   | { kind: "over_budget" }
-  | {
-      kind: "created";
-      row: repo.MessageRow;
-      side: repo.Side;
-      openedAt: Date;
-      previousAt: Date | null;
-    };
+  | { kind: "created"; row: repo.MessageRow; side: repo.Side };
 
 /**
  * One photo sent (#350). Refused before any pixel is touched where the
@@ -111,25 +104,8 @@ export async function sendPhoto(
       throw budgetRefusal(at, day.end);
     case "stored":
       return { message: await present(deps, input.accountId, outcome), created: false };
-    case "created": {
-      const message = await present(deps, input.accountId, outcome);
-      await track(
-        { db: deps.db, logger: deps.logger, now: () => at },
-        input.accountId,
-        "message_sent",
-        {
-          kind: "photo",
-          length: messageLengthBand(messageLength(input.caption ?? "")),
-          firstInConversation: message.seq === 1,
-          sinceOpened: elapsedBand(at.getTime() - outcome.openedAt.getTime()),
-          sincePrevious:
-            outcome.previousAt === null
-              ? null
-              : elapsedBand(at.getTime() - outcome.previousAt.getTime()),
-        },
-      );
-      return { message, created: true };
-    }
+    case "created":
+      return { message: await present(deps, input.accountId, outcome), created: true };
   }
 }
 
@@ -208,13 +184,7 @@ async function writePhotoMessage(
     at: photo.at,
     photoId,
   });
-  return {
-    kind: "created",
-    row,
-    side: state.side,
-    openedAt: state.openedAt,
-    previousAt: state.lastMessageAt,
-  };
+  return { kind: "created", row, side: state.side };
 }
 
 /** The sender's own message, its photo signed for them. */

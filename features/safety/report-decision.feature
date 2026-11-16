@@ -100,12 +100,12 @@ Feature: Opening and deciding a report
     When "M" opens either report, asks for a photo of its copy, or decides it
     Then every answer is the not_found of an unknown report, nothing is written, and another moderator opens and decides both
 
-  Scenario: The report's routes refuse without a session, and refuse a researcher
+  Scenario: The report's routes refuse without a session
     Given a report waits
-    When it is opened, its photo asked for and decided with no session, an expired one, a revoked one, and as a researcher
-    Then the answers are 401 and 403, and nothing is written
+    When it is opened, its photo asked for and decided with no session, a product session's token, an expired one and a revoked one
+    Then every answer is 401, and nothing is written
 
-  Scenario: No word of the note or the copy reaches a log line, an error answer or an event
+  Scenario: No word of the note or the copy reaches a log line or an error answer
     Given "A" reported "B" from a conversation whose messages, photo caption and note carry the message fixture
-    When a moderator opens it, asks for its photo and dismisses it, and a party and a researcher try the same
-    Then no log line, error answer or event carries the fixture
+    When a moderator opens it, asks for its photo and dismisses it, and a party tries the same
+    Then no log line or error answer carries the fixture

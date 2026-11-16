@@ -19,10 +19,9 @@ import { useHapticTap } from "@/theme/haptics";
  * launch with VoiceOver or TalkBack active, a dialog says that photos are
  * read with a description and where the setting is. Dismissed once, it is
  * remembered on the device and never shown again. The screen-reader state
- * is read here and goes nowhere else: not to the API, not into a research
- * event, not to Sentry, not into a log line; what the device keeps is that
- * the hint was seen, under a name that says nothing about why
- * (`photoDescriptionsHintSeen`). A list of who uses a screen reader is a
+ * is read here and goes nowhere else: not to the API, not to Sentry, not
+ * into a log line; what the device keeps is that the hint was seen, under a
+ * name that says nothing about why (`photoDescriptionsHintSeen`). A list of who uses a screen reader is a
  * list of disabled people (article 9, ADR-019 §6).
  */
 export function ScreenReaderHint() {

@@ -57,6 +57,20 @@
       "when": 1794814860558,
       "tag": "0007_photo_access_at",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1794848993626,
+      "tag": "0008_no_research",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794849013210,
+      "tag": "0009_no_research_kinds",
+      "breakpoints": true
     }
   ]
 }

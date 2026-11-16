@@ -13,7 +13,6 @@ import {
 
 const APP = {
   privacy: "2026-09-draft-1",
-  research: "2026-09-draft-1",
   special_category: "2026-10-draft-2",
   terms: "2026-09-draft-1",
 };
@@ -21,17 +20,13 @@ const APP = {
 /**
  * The wordings the site carries as the app has them, by language (stand-ins).
  * The site says which of a consent's wordings counts: the English of the
- * sensitive answers, the Finnish of the research opt-in.
+ * sensitive answers, unless the site says another.
  */
 const EN = {
-  "legal.research.title": "Research",
-  "legal.research.summary": "DRAFT: research.",
   "legal.special_category.title": "Sensitive answers",
   "legal.special_category.summary": "The sensitive answers, in full.",
 };
 const FI = {
-  "legal.research.title": "Tutkimus",
-  "legal.research.summary": "LUONNOS: tutkimus.",
   "legal.special_category.title": "Arkaluonteiset tiedot",
   "legal.special_category.summary": "Arkaluonteiset vastaukset, kokonaan.",
 };
@@ -61,13 +56,6 @@ const SITE = {
     url: "https://kuutti.app/legal/privacy/#privacy-2026-09-draft-1",
     dated: "2026-10-06",
   },
-  research: {
-    version: "2026-09-draft-1",
-    hash: siteFingerprint("Tutkimus", "LUONNOS: tutkimus."),
-    language: "fi",
-    url: "https://kuutti.app/legal/privacy/#research-2026-09-draft-1",
-    dated: "2026-09-26",
-  },
   special_category: {
     version: "2026-10-draft-2",
     hash: SENSITIVE_EN,
@@ -89,11 +77,11 @@ describe("siteFingerprint", () => {
 
 describe("parsePublished", () => {
   it("reads the version, the address and the fingerprint of each kind and leaves the day", () => {
-    expect(published().research).toEqual({
-      version: "2026-09-draft-1",
-      hash: SITE.research.hash,
-      language: "fi",
-      url: "https://kuutti.app/legal/privacy/#research-2026-09-draft-1",
+    expect(published().special_category).toEqual({
+      version: "2026-10-draft-2",
+      hash: SENSITIVE_EN,
+      language: "en",
+      url: "https://kuutti.app/legal/privacy/#special_category-2026-10-draft-2",
     });
   });
 
@@ -235,13 +223,15 @@ describe("legalVersionProblems", () => {
   });
 
   it("fails on a kind either side lacks", () => {
-    const { research: _, ...withoutResearch } = SITE;
+    const { special_category: _, ...withoutSensitive } = SITE;
     expect(
-      legalVersionProblems(APP, parsePublished(JSON.stringify(withoutResearch)), TEXTS),
-    ).toEqual(["research: the site publishes no version of it (the app carries 2026-09-draft-1)"]);
-    const { research: __, ...appWithout } = APP;
+      legalVersionProblems(APP, parsePublished(JSON.stringify(withoutSensitive)), TEXTS),
+    ).toEqual([
+      "special_category: the site publishes no version of it (the app carries 2026-10-draft-2)",
+    ]);
+    const { special_category: __, ...appWithout } = APP;
     expect(legalVersionProblems(appWithout, published(), TEXTS)).toEqual([
-      "research: the site publishes a version of a kind the app does not know",
+      "special_category: the site publishes a version of a kind the app does not know",
     ]);
   });
 
@@ -269,11 +259,11 @@ describe("legalVersionProblems", () => {
     // The site bumped the version with its old text, or edited its text in
     // place, or the app's wording moved: either way two texts, one version.
     const site = published();
-    site.research = { ...SITE.research, hash: "72a206b59f5659c5" };
+    site.special_category = { ...SITE.special_category, hash: "72a206b59f5659c5" };
     expect(legalVersionProblems(APP, site, TEXTS)).toEqual([
-      `research: the site's text of 2026-09-draft-1 (fi, 72a206b59f5659c5) is not this app's legal.research.title and summary in that language (${SITE.research.hash}). The site carries this wording as the app has it, so one of the two changed without the other: one version, one text`,
+      `special_category: the site's text of 2026-10-draft-2 (en, 72a206b59f5659c5) is not this app's legal.special_category.title and summary in that language (${SENSITIVE_EN}). The site carries this wording as the app has it, so one of the two changed without the other: one version, one text`,
     ]);
-    // The sensitive answers' English is the one the site holds.
+    // The English is the one the site holds here.
     const retitled = { ...EN, "legal.special_category.title": "Special answers" };
     expect(legalVersionProblems(APP, published(), { en: retitled, fi: FI })).toEqual([
       expect.stringMatching(
@@ -287,11 +277,10 @@ describe("legalVersionProblems", () => {
   });
 
   it("holds the wording the site says counts and no other: the translation beside it is the golden row's", () => {
-    // The Finnish of the sensitive answers and the English of the research
-    // opt-in are not in the site's document (src/consent.test.ts ties each
-    // to its version in this repository).
+    // The Finnish of the sensitive answers is not in the site's document
+    // (src/consent.test.ts ties it to its version in this repository).
     const moved = {
-      en: { ...EN, "legal.research.summary": "DRAFT: something else." },
+      en: EN,
       fi: { ...FI, "legal.special_category.summary": "Jotain muuta." },
     };
     expect(legalVersionProblems(APP, published(), moved)).toEqual([]);
@@ -343,14 +332,44 @@ describe("legalVersionProblems", () => {
 
   it("reports a wrong link and a parted wording of one kind together", () => {
     const site = published();
-    site.research = {
-      ...SITE.research,
+    site.special_category = {
+      ...SITE.special_category,
       hash: "72a206b59f5659c5",
-      url: "https://kuutti.app/legal/research/",
+      url: "https://kuutti.app/legal/special_category/",
     };
     expect(legalVersionProblems(APP, site, TEXTS)).toEqual([
-      expect.stringMatching(/^research: the app links to /),
-      expect.stringMatching(/^research: the site's text of /),
+      expect.stringMatching(/^special_category: the app links to /),
+      expect.stringMatching(/^special_category: the site's text of /),
     ]);
+  });
+
+  describe("a kind the app took out (research, ADR-071)", () => {
+    const research = {
+      version: "2026-09-draft-1",
+      hash: "0123456789abcdef",
+      language: "fi",
+      url: "https://kuutti.app/legal/privacy/#research-2026-09-draft-1",
+    };
+
+    it("passes when the site still publishes research and the app does not carry it", () => {
+      expect(legalVersionProblems(APP, { ...published(), research }, TEXTS)).toEqual([]);
+    });
+
+    it("still fails on any other kind the site publishes that the app does not know", () => {
+      expect(legalVersionProblems(APP, { ...published(), police: research }, TEXTS)).toEqual([
+        "police: the site publishes a version of a kind the app does not know",
+      ]);
+      expect(legalVersionProblems(APP, { ...published(), Research: research }, TEXTS)).toEqual([
+        "Research: the site publishes a version of a kind the app does not know",
+      ]);
+    });
+
+    it("is not tolerated the other way: a research version the app carries needs the site's", () => {
+      expect(
+        legalVersionProblems({ ...APP, research: "2026-09-draft-1" }, published(), TEXTS),
+      ).toEqual([
+        "research: the site publishes no version of it (the app carries 2026-09-draft-1)",
+      ]);
+    });
   });
 });

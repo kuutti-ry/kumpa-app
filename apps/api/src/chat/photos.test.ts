@@ -13,7 +13,7 @@ import {
 import sharp from "sharp";
 import { describe, expect } from "vitest";
 import { createApp } from "../app.ts";
-import { CURRENT_CONSENT_VERSIONS, eraseAccount } from "../identity/index.ts";
+import { eraseAccount } from "../identity/index.ts";
 import type { Moderator } from "../media/index.ts";
 import {
   deleteOrphanedObjects,
@@ -975,38 +975,6 @@ describe("a photo in a message", () => {
     expect(many.sent.size).toBe(EXPORT_MESSAGE_PHOTOS_MAX + 1);
     expect(many.sent.get(ids[0] ?? "")?.file).toBeNull();
     expect(many.sent.get(ids.at(-1) ?? "")?.file).toBe(`photos/${ids.at(-1)}.webp`);
-  });
-
-  test('the event says a photo and its caption\'s length as a band, "0" without one', async ({
-    ctx,
-  }) => {
-    const { app } = await appWith(ctx, { moderator: scriptedModerator(checked([])) });
-    const a = await person(ctx, "Aino");
-    const b = await person(ctx, "Bea");
-    const consent = await app.request("/consents", {
-      method: "POST",
-      headers: { ...a.headers, "content-type": "application/json" },
-      body: JSON.stringify({
-        kind: "research",
-        version: CURRENT_CONSENT_VERSIONS.research,
-        locale: "fi",
-      }),
-    });
-    expect(consent.status).toBe(200);
-    const id = await conversationBetween(ctx.client, a.accountId, b.accountId);
-    expect((await sendPhoto(app, a, id, form(await fixturePng(300, 300)))).status).toBe(201);
-    expect(
-      (await sendPhoto(app, a, id, form(await fixturePng(301, 300), { caption: `Hei ${MARK}` })))
-        .status,
-    ).toBe(201);
-    const events = await ctx.client.query<{ props: { kind: string; length: string } }>(
-      "SELECT props FROM events WHERE name = 'message_sent' ORDER BY props->>'firstInConversation' DESC",
-    );
-    expect(events.rows.map((r) => [r.props.kind, r.props.length])).toEqual([
-      ["photo", "0"],
-      ["photo", "1-20"],
-    ]);
-    expect(JSON.stringify(events.rows)).not.toContain(MARK);
   });
 });
 

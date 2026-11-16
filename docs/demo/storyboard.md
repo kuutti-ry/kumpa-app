@@ -81,7 +81,7 @@ Two logins the product refuses, by the code that refuses anybody (TD-7).
 
 As Aino again: Settings → the account card.
 
-- "Your Kumpa data": the export, everything held about her, as JSON (ADR-007): the account, her home in words, never a code, the profile, the preferences and deal-breakers, every consent ever given, the research mapping, the photos with short-lived links.
+- "Your Kumpa data": the export, everything held about her, as JSON (ADR-007): the account, her home in words, never a code, the profile, the preferences and deal-breakers, every consent ever given, the photos with short-lived links.
 - "Delete your account?" → "Delete everything": the erasure path. She is signed out; a sign-in within thirty days is refused with the date, as Ilona's was.
 
 Then `pnpm demo:reset` (locally) or the reset in the container (staging): everybody back to where they begin, the stories told anew.

@@ -69,7 +69,7 @@ const consentRoute = createRoute({
   path: "/consents",
   summary: "Record a consent for the current wording",
   description:
-    "The kind (terms, privacy, research, or special_category for whom one seeks, politics and religion), the consent_version the person read and the language it was shown in. An old version is refused with agreement_outdated; the same consent twice is recorded once.",
+    "The kind (terms, privacy, or special_category for whom one seeks, politics and religion), the consent_version the person read and the language it was shown in. An old version is refused with agreement_outdated; the same consent twice is recorded once.",
   ...bearer,
   request: { body: { required: true, ...json(ConsentRequest) } },
   responses: {
@@ -79,7 +79,7 @@ const consentRoute = createRoute({
     404: errorContent("No live account (erased meanwhile)."),
     409: errorContent("agreement_outdated: the wording has a newer version."),
     429: errorContent(
-      "too_many_changes: the research opt-in was given and withdrawn more than the day allows.",
+      "too_many_changes: the special-category consent was given and withdrawn more than the day allows.",
     ),
   },
 });
@@ -87,9 +87,9 @@ const consentRoute = createRoute({
 const withdrawRoute = createRoute({
   method: "delete",
   path: "/consents/{kind}",
-  summary: "Withdraw the research opt-in or the special-category consent",
+  summary: "Withdraw the special-category consent",
   description:
-    "The two consents a person withdraws; terms and privacy end with the account. Withdrawing special_category takes whom the person seeks and the politics and religion of the profile with it, and onboarding asks the seek question again. The rows stay as the record of what was agreed and when.",
+    "The one consent a person withdraws; terms and privacy end with the account. Withdrawing special_category takes whom the person seeks and the politics and religion of the profile with it, and onboarding asks the seek question again. The rows stay as the record of what was agreed and when.",
   ...bearer,
   request: { params: z.object({ kind: WithdrawableConsentKind }).strict() },
   responses: {

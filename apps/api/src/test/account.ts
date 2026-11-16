@@ -1,9 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import type { Queryable } from "@kuutti/db";
 import type { ModeratorRole } from "@kuutti/schema";
-import { expect } from "vitest";
-import type { App } from "../app.ts";
-import { CURRENT_CONSENT_VERSIONS } from "../identity/index.ts";
 import { hashToken } from "../lib/auth-middleware.ts";
 import { SPECIAL_CATEGORY_CONSENT_VERSION } from "../profile/index.ts";
 
@@ -189,18 +186,4 @@ export async function staffSession(
     role,
     headers: { authorization: `Bearer ${accessToken}` },
   };
-}
-
-/** The research consent of the current wording, through the route as the app gives it (#50). */
-export async function joinStudy(app: App, headers: Record<string, string>): Promise<void> {
-  const answer = await app.request("/consents", {
-    method: "POST",
-    headers: { ...headers, "content-type": "application/json" },
-    body: JSON.stringify({
-      kind: "research",
-      version: CURRENT_CONSENT_VERSIONS.research,
-      locale: "fi",
-    }),
-  });
-  expect(answer.status).toBe(200);
 }

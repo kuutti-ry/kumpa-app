@@ -191,26 +191,6 @@ describe("App", () => {
     expect(await screen.findByText("Signed in as moderator")).toBeInTheDocument();
     expect(await screen.findByRole("heading", { level: 2, name: "Overview" })).toBeInTheDocument();
     expect(await frontPageLink("Photos")).toBeInTheDocument();
-    expect(screen.queryByText("Your role does not open any screen of this panel.")).toBeNull();
-  });
-
-  it("signed in as a researcher, shows no menu, says the role opens no screen and never asks for one", async () => {
-    window.sessionStorage.setItem(
-      "kuutti.admin.session",
-      JSON.stringify({ ...staff, role: "researcher" }),
-    );
-    const calls: string[] = [];
-    renderApp(staffApi("researcher", calls));
-    expect(
-      await screen.findByText("Your role does not open any screen of this panel."),
-    ).toBeInTheDocument();
-    expect(screen.getByText(/Signed in as researcher/)).toBeInTheDocument();
-    expect(screen.queryByRole("navigation")).toBeNull();
-    expect(screen.queryByRole("heading", { name: "Photos" })).toBeNull();
-    expect(screen.queryByRole("heading", { name: "Overview" })).toBeNull();
-    expect(calls).not.toContain("GET /admin/overview");
-    expect(calls).not.toContain("GET /admin/photos/queue");
-    expect(calls).not.toContain("GET /admin/feedback");
   });
 
   it("a session revoked while the panel is open goes back to the sign-in, saying so (#250)", async () => {

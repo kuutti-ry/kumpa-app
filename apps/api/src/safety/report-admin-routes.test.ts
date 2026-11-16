@@ -314,12 +314,8 @@ describe("GET /admin/reports", () => {
     expect(await auditRows(ctx)).toEqual(before);
   });
 
-  test("without a session the answer is 401, and a researcher is refused with 403", async ({
-    ctx,
-    app,
-  }) => {
+  test("without a session the answer is 401", async ({ ctx, app }) => {
     const member = await signedInAccount(ctx.client);
-    const researcher = await staffSession(ctx.client, "researcher");
     for (const [what, headers] of [
       ["no token", {}],
       ["a product session's token", member.headers],
@@ -328,8 +324,5 @@ describe("GET /admin/reports", () => {
       expect(response.status, what).toBe(401);
       expect(await errorCode(response), what).toBe("unauthenticated");
     }
-    const refused = await queue(app, researcher.headers);
-    expect(refused.status).toBe(403);
-    expect(await errorCode(refused)).toBe("admin_forbidden");
   });
 });

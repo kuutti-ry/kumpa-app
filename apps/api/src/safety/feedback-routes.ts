@@ -16,7 +16,6 @@ import { AppError, noLiveAccount } from "../lib/errors.ts";
 import { matchingConfigNumber } from "../lib/matching-config.ts";
 import { bearer, errorContent, json, staffErrors, unauthenticated } from "../lib/openapi.ts";
 import { dayWindow, secondsUntil } from "../media/index.ts";
-import { track } from "../research/index.ts";
 import { recordAudit } from "./audit.ts";
 import {
   FEEDBACK_PER_DAY_KEY,
@@ -28,15 +27,14 @@ import {
 
 // Feedback from inside the app (#171, ADR-023): a person sends a kind and a
 // few lines; the moderators read them in the panel and mark them handled,
-// which is an audit_log row. The text goes into no log line and no research
-// event (rule 5): the event carries the kind alone.
+// which is an audit_log row. The text goes into no log line.
 
 const sendRoute = createRoute({
   method: "post",
   path: "/feedback",
   summary: "Send feedback to the moderators",
   description:
-    "A kind (bug, idea, complaint, praise) and a few lines, with the app's version, the platform and the language the app read. Stored for the moderators' panel; the text reaches no log line and no research event. At most matching_config feedback_per_day a day per account, the Finnish calendar day.",
+    "A kind (bug, idea, complaint, praise) and a few lines, with the app's version, the platform and the language the app read. Stored for the moderators' panel; the text reaches no log line. At most matching_config feedback_per_day a day per account, the Finnish calendar day.",
   ...bearer,
   request: { body: { required: true, ...json(FeedbackRequest) } },
   responses: {
@@ -96,10 +94,6 @@ export function feedbackRoutes(deps: Deps, guard: MiddlewareHandler<AppEnv>) {
       },
       "feedback sent",
     );
-    // Research (#171): the kind alone; nothing without the research consent, which track() checks.
-    await track({ db: deps.db, logger: deps.logger, now: () => at }, accountId, "feedback_sent", {
-      kind: body.kind,
-    });
     return c.body(null, 204);
   });
 

@@ -4,17 +4,14 @@ import { GUILD_OPTIONS, UNIVERSITIES } from "./guilds.ts";
 /**
  * The profile fields (#47, #145, TD-16, ADR-009, ADR-019): one registry, read
  * by the API for validation and for the card, by the app for the form and the
- * card, by the research snapshot of #50 for its coarse categories, and by the
- * population generator of the demo. Each field carries a kind with its options
+ * card, and by the population generator of the demo. Each field carries a kind with its options
  * or bounds, and two roles: what the person's own value may do (`role`) and
  * what preference about other people's value may exist (`preferenceAbout`).
  * The roles are data here and nowhere in code paths, so the card, the pool,
  * the round builder and the deal-breakers read one table (ADR-019 §2).
  * `specialCategory` marks an article 9 field: its value is refused until the
  * person has given the explicit consent of the current wording, and it never
- * enters an event (ADR-009 §2, ADR-019 §4). `research` lets a single-choice
- * field into the research snapshot, one field at a time with the nightly
- * census's answer in hand (ADR-011 §9). Option texts are messages.yaml
+ * is never logged (ADR-009 §2, ADR-019 §4). Option texts are messages.yaml
  * keys `profile.option.<field>.<option>`. A closed list keeps the card free of
  * contact details and of text a moderator would have to read; adding an
  * option is a change here and no migration.
@@ -37,18 +34,15 @@ export type FieldRole = "hard" | "soft" | "info" | "hidden";
 export type PreferenceAbout = "hard" | "deal_breaker" | "soft" | "none";
 
 type Roles = { role: FieldRole; preferenceAbout: PreferenceAbout; specialCategory?: boolean };
-/** Only a single choice may enter the research snapshot (ADR-011 §9): the other helpers do not take the flag. */
-type SingleRoles = Roles & { research?: boolean };
 type Options = readonly [string, ...string[]];
 
-const roles = (r: SingleRoles) => ({
+const roles = (r: Roles) => ({
   role: r.role,
   preferenceAbout: r.preferenceAbout,
   specialCategory: r.specialCategory ?? false,
-  research: r.research ?? false,
 });
 
-const single = <T extends Options>(options: T, r: SingleRoles) => ({
+const single = <T extends Options>(options: T, r: Roles) => ({
   kind: "single" as const,
   options,
   ...roles(r),
@@ -314,11 +308,10 @@ export const POLITICS_OPTIONS = [
 export const PARTY_OPTIONS = POLITICS_OPTIONS.filter((option) => option !== "none_of_them");
 
 export const PROFILE_FIELDS = {
-  /** Asked in onboarding (#146); "open to either" matches long-term and casual (#147), a dance partner only a dance partner (#175). The one field in the research snapshot (ADR-011 §9). */
+  /** Asked in onboarding (#146); "open to either" matches long-term and casual (#147), a dance partner only a dance partner (#175). */
   intent: single(["long_term", "casual", "open_to_either", "dance_partner"], {
     role: "hard",
     preferenceAbout: "hard",
-    research: true,
   }),
   /** Offered after a non-binary gender only, by the screen (#146), and cleared by a change away from it (#552); display only, never matching. */
   identityLabel: single(

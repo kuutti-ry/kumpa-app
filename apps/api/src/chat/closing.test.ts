@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { MessagePage } from "@kuutti/schema";
 import { describe, expect } from "vitest";
 import { createApp } from "../app.ts";
-import { CURRENT_CONSENT_VERSIONS, eraseAccount } from "../identity/index.ts";
+import { eraseAccount } from "../identity/index.ts";
 import { applySanction } from "../safety/index.ts";
 import { withMatchingConfig } from "../test/account.ts";
 import { errorCode } from "../test/answers.ts";
@@ -20,7 +20,7 @@ import { captureLogger, count, jsonHeaders, test, testConfig } from "../test/har
 // features/chat/closing.feature (#351): the unmatch, which ends a
 // conversation for both and blocks nobody; the ended conversation as both
 // read it, naming nobody before and after either person's erasure (ADR-031
-// Open 10); the shares a close ends; the one research event; and who may ask.
+// Open 10); the shares a close ends; and who may ask.
 
 const DAY = 86_400_000;
 
@@ -212,35 +212,12 @@ describe("ending a conversation", () => {
     expect((await detailOf(ctx.app, b, ended)).contacts.theirs).toEqual([]);
   });
 
-  test("An unmatch is a research event for the other person, and a block is none", async ({
+  test("An unmatch where a block already stands is written as the block's, on the blocker's side", async ({
     ctx,
   }) => {
     const a = await person(ctx, "Aino");
-    const b = await person(ctx, "Bea");
-    for (const who of [a, b]) {
-      const answer = await ctx.app.request("/consents", {
-        method: "POST",
-        headers: jsonHeaders(who.headers),
-        body: JSON.stringify({
-          kind: "research",
-          version: CURRENT_CONSENT_VERSIONS.research,
-          locale: "fi",
-        }),
-      });
-      expect(answer.status).toBe(200);
-    }
-    const first = await conversationBetween(ctx.client, a.accountId, b.accountId, {
-      messages: [
-        { from: "a", body: "Hei" },
-        { from: "b", body: "Moi" },
-      ],
-    });
-    const second = await conversationBetween(ctx.client, a.accountId, b.accountId);
-    expect((await unmatch(ctx.app, a, first)).status).toBe(204);
-    expect((await unmatch(ctx.app, a, first)).status).toBe(204);
-    expect((await blockFrom(ctx.app, a, second)).status).toBe(204);
     // A block set before a block wrote its close (#351): the unmatch writes it
-    // as the block's, the blocker's side, and no event, as a block writes none.
+    // as the block's, the blocker's side, as the block would have.
     const c = await person(ctx, "Cia");
     const third = await conversationBetween(ctx.client, a.accountId, c.accountId);
     await ctx.client.query(
@@ -254,15 +231,6 @@ describe("ending a conversation", () => {
       [third],
     );
     expect(closed.rows).toEqual([{ closed_how: "block", closed_by: "b" }]);
-    const events = await ctx.client.query<{ props: unknown; research_id: string }>(
-      "SELECT props, research_id FROM events WHERE name = 'conversation_closed'",
-    );
-    expect(events.rows.map((r) => r.props)).toEqual([{ how: "unmatch", messages: "1-5" }]);
-    const owner = await ctx.client.query<{ account_id: string }>(
-      "SELECT account_id FROM research_subject WHERE research_id = $1",
-      [events.rows[0]?.research_id],
-    );
-    expect(owner.rows).toEqual([{ account_id: b.accountId }]);
   });
 
   test("Ending a conversation that has ended answers the same and changes nothing", async ({
@@ -274,18 +242,6 @@ describe("ending a conversation", () => {
       await person(ctx, "Cia"),
       await person(ctx, "Dan"),
     ];
-    for (const who of [a, b, c, d]) {
-      const answer = await ctx.app.request("/consents", {
-        method: "POST",
-        headers: jsonHeaders(who.headers),
-        body: JSON.stringify({
-          kind: "research",
-          version: CURRENT_CONSENT_VERSIONS.research,
-          locale: "fi",
-        }),
-      });
-      expect(answer.status).toBe(200);
-    }
     const message = [{ from: "b" as const, body: "Moi" }];
     const ended = await conversationBetween(ctx.client, a.accountId, b.accountId, {
       messages: message,
@@ -313,11 +269,9 @@ describe("ending a conversation", () => {
           [[ended, blocked, banned]],
         )
         .then((r) => new Map(r.rows.map(({ id, ...close }) => [id, close])));
-    const events = () =>
-      count(ctx, "SELECT count(*) AS n FROM events WHERE name = 'conversation_closed'");
-    const before = { closes: await closes(), events: await events() };
+    const before = await closes();
     expect(
-      new Map([...before.closes].map(([id, close]) => [id, [close.closed_how, close.closed_by]])),
+      new Map([...before].map(([id, close]) => [id, [close.closed_how, close.closed_by]])),
     ).toEqual(
       new Map([
         [ended, ["unmatch", "b"]],
@@ -325,12 +279,10 @@ describe("ending a conversation", () => {
         [banned, ["sanction", "b"]],
       ]),
     );
-    // B's unmatch wrote A's one event; the block and the ban none.
-    expect(before.events).toBe(1);
     for (const id of [ended, blocked, banned]) {
       expect((await unmatch(ctx.app, a, id)).status, id).toBe(204);
     }
-    expect({ closes: await closes(), events: await events() }).toEqual(before);
+    expect(await closes()).toEqual(before);
   });
 
   test("The report window in the detail runs while the conversation is open or archived, and to the millisecond after a close", async ({

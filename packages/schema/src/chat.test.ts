@@ -5,19 +5,11 @@ import {
   ConversationList,
   ConversationSummary,
   Counterpart,
-  type DaysBand,
-  daysBand,
-  type ElapsedBand,
   ExportedConversation,
-  elapsedBand,
   MESSAGE_BODY_CEILING,
   MESSAGES_PAGE_DEFAULT,
-  type MessageCountBand,
-  type MessageLengthBand,
   MessagesQuery,
-  messageCountBand,
   messageLength,
-  messageLengthBand,
   ReadRequest,
   SendMessageRequest,
   SendPhotoRequest,
@@ -25,7 +17,7 @@ import {
 } from "./chat.ts";
 
 // The chat's contracts (#348, ADR-031): what a send, a page and a read mark
-// accept, and the research events' bands.
+// accept.
 
 const CLIENT_ID = "6f1c1c4e-9a8e-4a0b-9c3a-0c8d1e2f3a4b";
 
@@ -200,72 +192,6 @@ describe("the counterpart and the conversation", () => {
         theirs: [{ at, kind: "text", length: 3, body: "Moi" }],
       }).theirs,
     ).toEqual([{ at, kind: "text", length: 3 }]);
-  });
-});
-
-describe("the research events' bands", () => {
-  it("band a length at each edge", () => {
-    const cases: Array<[number, MessageLengthBand]> = [
-      // A photo sent without a caption (#350); a text is never empty.
-      [0, "0"],
-      [1, "1-20"],
-      [20, "1-20"],
-      [21, "21-80"],
-      [80, "21-80"],
-      [81, "81-280"],
-      [280, "81-280"],
-      [281, "281-1000"],
-      [1000, "281-1000"],
-      [1001, "1001+"],
-      [2000, "1001+"],
-    ];
-    for (const [length, band] of cases)
-      expect(messageLengthBand(length), String(length)).toBe(band);
-  });
-
-  it("band a wait at each edge", () => {
-    const MINUTE = 60_000;
-    const HOUR = 60 * MINUTE;
-    const DAY = 24 * HOUR;
-    const cases: Array<[number, ElapsedBand]> = [
-      [0, "under_1m"],
-      [MINUTE - 1, "under_1m"],
-      [MINUTE, "1m_1h"],
-      [HOUR - 1, "1m_1h"],
-      [HOUR, "1h_1d"],
-      [DAY - 1, "1h_1d"],
-      [DAY, "1d_7d"],
-      [7 * DAY - 1, "1d_7d"],
-      [7 * DAY, "7d_plus"],
-      [400 * DAY, "7d_plus"],
-    ];
-    for (const [ms, band] of cases) expect(elapsedBand(ms), String(ms)).toBe(band);
-  });
-
-  it("band a count of messages and a number of days at each edge", () => {
-    const counts: Array<[number, MessageCountBand]> = [
-      [0, "0"],
-      [1, "1-5"],
-      [5, "1-5"],
-      [6, "6-20"],
-      [20, "6-20"],
-      [21, "21-100"],
-      [100, "21-100"],
-      [101, "101+"],
-    ];
-    for (const [n, band] of counts) expect(messageCountBand(n), String(n)).toBe(band);
-    const days: Array<[number, DaysBand]> = [
-      [0, "0-6"],
-      [6, "0-6"],
-      [7, "7-13"],
-      [13, "7-13"],
-      [14, "14-29"],
-      [29, "14-29"],
-      [30, "30-89"],
-      [89, "30-89"],
-      [90, "90+"],
-    ];
-    for (const [n, band] of days) expect(daysBand(n), String(n)).toBe(band);
   });
 });
 

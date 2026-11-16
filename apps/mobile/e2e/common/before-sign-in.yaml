@@ -1,9 +1,9 @@
 # The screen before the bank (#418, ADR-010 §15), when it stands where the
 # sign-in button would: the norms with the terms and the privacy summary, both
-# accepted. Research is not asked (#545). The phone remembers them after its
-# first sign-in, so most logins never see it; the first flow on a fresh phone
-# (each CI job's) always does, and so does every try after a refusal until a
-# sign-in records them, since the app drops the answers of a refused attempt.
+# accepted. The phone remembers them after its first sign-in, so most logins
+# never see it; the first flow on a fresh phone (each CI job's) always does,
+# and so does every try after a refusal until a sign-in records them, since
+# the app drops the answers of a refused attempt.
 # Asked as `notVisible`, in half a second, and tapped behind a flag the condition
 # clears (README). Ends at the sign-in button, with `output.beforeSignIn` saying
 # whether the screen came. Runs from bank-login.yaml.

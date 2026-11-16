@@ -89,7 +89,7 @@ beforeEach(async () => {
     if (url.pathname === "/consents") {
       return json({
         consents: [],
-        currentVersions: { terms: "t", privacy: "p", research: "r", special_category: "s" },
+        currentVersions: { terms: "t", privacy: "p", special_category: "s" },
       });
     }
     return json({ error: { code: "not_found" } }, 404);

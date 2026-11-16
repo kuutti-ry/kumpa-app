@@ -10,7 +10,6 @@ import {
   SessionTokens,
 } from "./identity.ts";
 import { GenderUpdate, PreferencesUpdate } from "./onboarding.ts";
-import { RESEARCH_EVENTS, ResearchSnapshot } from "./research.ts";
 import { attack } from "./test/attack.ts";
 
 // CONTRACT pile (#380): hand-written wire payloads, rather than values made
@@ -206,25 +205,10 @@ const responses: Probe[] = [
     good: { items: [], total: 0 },
   },
 ];
-const research: Probe[] = [
-  {
-    name: "accept a feedback event carrying the person's words",
-    schema: RESEARCH_EVENTS.feedback_sent.props,
-    bad: { kind: "bug", text: feedback.text },
-    good: { kind: "bug" },
-  },
-  {
-    name: "accept an exact location inside a research snapshot",
-    schema: ResearchSnapshot,
-    bad: { gender: "woman", fields: { intent: "long_term", postalCode: "00100" } },
-    good: { gender: "woman", fields: { intent: "long_term" } },
-  },
-];
 
 for (const [direction, probes] of [
   ["requests", requests],
   ["responses", responses],
-  ["event boundary", research],
 ] as const) {
   describe(`contract attacks: ${direction} (#380)`, () => {
     for (const { name, schema, bad, good } of probes) {

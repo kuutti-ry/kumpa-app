@@ -248,8 +248,8 @@ name: A registered person is taken through onboarding one question per screen, a
     timeout: 60000
 - tapOn: "Save and continue|Tallenna ja jatka|Spara och fortsätt"
 
-# Home straight after the bio: research is not asked (#545). The one
-# pond's counter; the photos wait in the local queue, so matching waits for them.
+# Home straight after the bio. The one pond's counter; the photos wait in the
+# local queue, so matching waits for them.
 - extendedWaitUntil:
     visible: "People on Kumpa|Ihmiset Kumpa-sovelluksessa|Människor på Kumpa"
     timeout: 15000

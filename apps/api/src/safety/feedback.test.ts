@@ -1,4 +1,3 @@
-import { CURRENT_CONSENT_VERSIONS } from "../identity/index.ts";
 import { signedInAccount, staffSession, withMatchingConfig } from "../test/account.ts";
 import { describe, expect, jsonHeaders as json, type TestContext, test } from "../test/harness.ts";
 import { recordFeedback } from "./feedback.ts";
@@ -113,7 +112,7 @@ describe("the feedback route's edges", () => {
   });
 });
 
-describe("the day's cap and the event", () => {
+describe("the day's cap", () => {
   test("The sixth send of a day is refused in words", async ({ ctx }) => {
     await withMatchingConfig(ctx.client, { feedback_per_day: 5 });
     const a = await signedInAccount(ctx.client);
@@ -131,34 +130,6 @@ describe("the day's cap and the event", () => {
       reason: "budget",
     });
     expect((await send(ctx, b.headers)).status).toBe(204);
-  });
-
-  test("The research event carries the kind alone", async ({ ctx }) => {
-    const enrolled = await signedInAccount(ctx.client);
-    const outside = await signedInAccount(ctx.client);
-    const consent = await ctx.app.request("/consents", {
-      method: "POST",
-      headers: json(enrolled.headers),
-      body: JSON.stringify({
-        kind: "research",
-        version: CURRENT_CONSENT_VERSIONS.research,
-        locale: "fi",
-      }),
-    });
-    expect(consent.status).toBe(200);
-    expect((await send(ctx, enrolled.headers, { kind: "idea" })).status).toBe(204);
-    expect((await send(ctx, outside.headers, { kind: "praise" })).status).toBe(204);
-    const { rows } = await ctx.client.query<{ props: unknown; account_id: string }>(
-      `SELECT e.props, s.account_id FROM events e
-       JOIN research_subject s ON s.research_id = e.research_id
-       WHERE e.name = 'feedback_sent'`,
-    );
-    expect(rows).toEqual([{ props: { kind: "idea" }, account_id: enrolled.accountId }]);
-    const all = await ctx.client.query<{ n: string }>(
-      "SELECT count(*) AS n FROM events WHERE name = 'feedback_sent'",
-    );
-    expect(Number(all.rows[0]?.n)).toBe(1);
-    expect(JSON.stringify(rows)).not.toContain(TEXT);
   });
 });
 
@@ -242,7 +213,6 @@ describe("the panel", () => {
   test("Feedback refuses without a session, and the panel refuses a member", async ({ ctx }) => {
     const a = await signedInAccount(ctx.client);
     const moderator = await staffSession(ctx.client);
-    const researcher = await staffSession(ctx.client, "researcher");
     for (const headers of [{}, moderator.headers]) {
       expect((await send(ctx, headers)).status).toBe(401);
     }
@@ -251,8 +221,6 @@ describe("the panel", () => {
       expect((await list(ctx, headers)).status).toBe(401);
       expect((await handle(ctx, headers, id)).status).toBe(401);
     }
-    expect((await list(ctx, researcher.headers)).status).toBe(403);
-    expect((await handle(ctx, researcher.headers, id)).status).toBe(403);
     expect(await rowsOf(ctx, a.accountId)).toEqual([]);
   });
 });

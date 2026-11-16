@@ -5,8 +5,8 @@ import * as repo from "./repo.ts";
 /**
  * An account as staff read it on a person's page (#306): the row with its raw
  * state (a shadow ban shows here, to staff only), and the identity's
- * standing with its dates. Never the hash, the broker's ids, the research id
- * or the e-mail; the caller picks what it shows. Null for an unknown id.
+ * standing with its dates. Never the hash, the broker's ids or the e-mail;
+ * the caller picks what it shows. Null for an unknown id.
  */
 export async function accountForStaff(
   db: Queryable,

@@ -601,15 +601,14 @@ describe("staff sessions: refusals, validation and the sweep", () => {
   }) => {
     const { app } = await appWith(ctx);
     const moderator = await staffSession(ctx.client, "moderator");
-    const researcher = await staffSession(ctx.client, "researcher");
+    const admin = await staffSession(ctx.client, "admin");
     const whoami = async (headers: Record<string, string>) =>
       app.request("/admin/whoami", { headers });
-    expect(await (await whoami(researcher.headers)).json()).toMatchObject({ role: "researcher" });
+    expect(await (await whoami(admin.headers)).json()).toMatchObject({ role: "admin" });
     expect(
-      (await app.request("/admin/auth/logout", { method: "POST", headers: researcher.headers }))
-        .status,
+      (await app.request("/admin/auth/logout", { method: "POST", headers: admin.headers })).status,
     ).toBe(204);
-    expect((await whoami(researcher.headers)).status).toBe(401);
+    expect((await whoami(admin.headers)).status).toBe(401);
     const still = await whoami(moderator.headers);
     expect(still.status).toBe(200);
     expect(await still.json()).toMatchObject({ role: "moderator" });

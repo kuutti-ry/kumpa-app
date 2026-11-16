@@ -34,8 +34,3 @@ Feature: Taking a break
     Then nothing changes
     When "A" takes a break with confirmation
     Then "B"'s account and sessions are untouched
-
-  Scenario: A break and its end are noted for research without a reason
-    Given "A" gave the research consent
-    When "A" takes a break and comes back after three days
-    Then an account_paused event and an account_resumed event of three days exist, and neither carries text

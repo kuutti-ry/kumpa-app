@@ -3,8 +3,7 @@ import { AccountState } from "./account-state.ts";
 
 /**
  * Onboarding and consents (#46, ADR-010): the four answers matching cannot
- * start without, the consents nothing may start without, and the research
- * opt-in. Gender is self-declared (rule 3); seeks and the age window are the
+ * start without and the consents nothing may start without. Gender is self-declared (rule 3); seeks and the age window are the
  * hard filters of rule 7; a consent names the version of the text it is for.
  */
 
@@ -112,17 +111,16 @@ export const HomeUpdate = z
 export type HomeUpdate = z.infer<typeof HomeUpdate>;
 
 /**
- * The kinds of consent: the two nothing may start without, the research
- * opt-in, and the explicit consent for the special categories of article 9
+ * The kinds of consent: the two nothing may start without, and the explicit consent for the special categories of article 9
  * (whom one seeks, politics, religion; one wording, ADR-019 §4). Each names
  * a legal.<kind>.* wording with a consent_version.
  */
-export const CONSENT_KINDS = ["terms", "privacy", "research", "special_category"] as const;
+export const CONSENT_KINDS = ["terms", "privacy", "special_category"] as const;
 export const ConsentKind = z.enum(CONSENT_KINDS).meta({ id: "ConsentKind" });
 export type ConsentKind = z.infer<typeof ConsentKind>;
 
-/** The kinds a person withdraws; terms and privacy end with the account (ADR-010 §4). */
-const WITHDRAWABLE_CONSENT_KINDS = ["research", "special_category"] as const;
+/** The kind a person withdraws; terms and privacy end with the account (ADR-010 §4). */
+const WITHDRAWABLE_CONSENT_KINDS = ["special_category"] as const;
 export const WithdrawableConsentKind = z
   .enum(WITHDRAWABLE_CONSENT_KINDS)
   .meta({ id: "WithdrawableConsentKind" });
@@ -157,7 +155,6 @@ export const ConsentVersions = z
   .object({
     terms: z.string().max(40),
     privacy: z.string().max(40),
-    research: z.string().max(40),
     special_category: z.string().max(40),
   })
   .meta({
@@ -179,7 +176,7 @@ export type ConsentsResponse = z.infer<typeof ConsentsResponse>;
  * The steps of onboarding in the order the app asks them (#146, the field
  * sheet): the two consents on the welcome screen, the name, the gender, whom
  * one seeks (with the special-category consent), the intent, the age window,
- * the home, three photos, two prompts or a bio. Research is never one of them.
+ * the home, three photos, two prompts or a bio.
  */
 export const ONBOARDING_STEPS = [
   "terms",
@@ -225,8 +222,6 @@ export const OnboardingStatus = z
       privacy: z.string().max(40).nullable(),
       /** The special-category consent given with the seek answer (ADR-019 §4), when its version is the current one. */
       specialCategory: z.string().max(40).nullable(),
-      /** The active research opt-in, when its version is the current one. */
-      research: z.object({ version: z.string().max(40), givenAt: z.iso.datetime() }).nullable(),
     }),
     currentVersions: ConsentVersions,
     /**

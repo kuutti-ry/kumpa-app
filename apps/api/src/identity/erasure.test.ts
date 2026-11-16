@@ -389,7 +389,7 @@ describe("account erasure", () => {
     // can spell a word by chance (CI, 13/10/2026): the whole document is checked.
     const text = JSON.stringify(body);
     expect(text).not.toContain(b.accountId);
-    expect(text).not.toMatch(/hetu|hmac|research_id|researchId/i);
+    expect(text).not.toMatch(/hetu|hmac/i);
     expect(text).not.toContain(staff.identityId);
   });
 
@@ -800,7 +800,7 @@ describe("account erasure and export: what the verification of 08/10 found (#51)
         `INSERT INTO consent (account_id, kind, version, locale_shown, given_at, withdrawn_at) VALUES
            ($1, 'terms', 'v1', 'fi', now() - interval '2 days', NULL),
            ($1, 'privacy', 'v1', 'fi', now() - interval '2 days', NULL),
-           ($1, 'research', 'v1', 'fi', now() - interval '2 days', $2)`,
+           ($1, 'special_category', 'v1', 'fi', now() - interval '2 days', $2)`,
         [who.accountId, who === a ? new Date() : null],
       );
     }

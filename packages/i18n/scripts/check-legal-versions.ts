@@ -6,8 +6,8 @@
  * or a local copy with --file (the site's dist/ before it is deployed, a
  * fixture), and fails when a kind's version in CONSENT_VERSIONS is not the
  * site's, when either side lacks a kind, when the app's link to a text is
- * not the address the site publishes, or when the site's research or
- * sensitive-answers text is not this app's wording of it in the language the
+ * not the address the site publishes, or when the site's sensitive-answers
+ * text is not this app's wording of it in the language the
  * site says counts (English or Finnish, which the legal texts are written
  * in). A document that cannot be read fails too, after three tries on a
  * network failure or a 5xx: nothing passes on a 404. The mirror is the site's

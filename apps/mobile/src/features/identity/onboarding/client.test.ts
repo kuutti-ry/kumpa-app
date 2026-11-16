@@ -23,8 +23,8 @@ const STATUS = {
   gender: "woman",
   home: null,
   preferences: { seeks: ["man"], ageWindow: { min: 30, max: 40 } },
-  consents: { terms: "v1", privacy: "v1", specialCategory: "s1", research: null },
-  currentVersions: { terms: "v1", privacy: "v1", research: "v1", special_category: "s1" },
+  consents: { terms: "v1", privacy: "v1", specialCategory: "s1" },
+  currentVersions: { terms: "v1", privacy: "v1", special_category: "s1" },
   nextChange: { gender: null },
   missing: [],
   complete: true,
@@ -120,8 +120,8 @@ describe("the onboarding client", () => {
   it("withdraws a consent by its kind in the path, and fails on a refusal", async () => {
     let answer = json({ ...CONSENTS, consents: [] });
     const seen = answering(() => answer);
-    expect((await withdrawConsent("research")).consents).toEqual([]);
-    expect(seen[0]).toMatchObject({ method: "DELETE", path: "/consents/research" });
+    expect((await withdrawConsent("special_category")).consents).toEqual([]);
+    expect(seen[0]).toMatchObject({ method: "DELETE", path: "/consents/special_category" });
     answer = refusal("not_found", 404);
     await expect(withdrawConsent("special_category")).rejects.toMatchObject({
       status: 404,

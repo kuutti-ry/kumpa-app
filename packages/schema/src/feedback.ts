@@ -4,7 +4,7 @@ import { z } from "zod";
  * Feedback from inside the app (#171, ADR-023): a kind, a few lines, and what
  * the app reads for the moderators, its version, the platform and the
  * language, never typed by the person. No attachments. The text reaches no
- * log line and no research event (rule 5); the event carries the kind alone.
+ * log line (rule 5).
  */
 export const FeedbackKind = z
   .enum(["bug", "idea", "complaint", "praise"])
@@ -40,7 +40,7 @@ export type FeedbackRequest = z.infer<typeof FeedbackRequest>;
 export const FeedbackItem = z
   .object({
     id: z.uuid(),
-    /** The sender's account id: pseudonymous to staff, never hetu_hmac or research_id. */
+    /** The sender's account id: pseudonymous to staff, never hetu_hmac. */
     accountId: z.uuid(),
     kind: FeedbackKind,
     text: z.string().min(1).max(FEEDBACK_TEXT_MAX),

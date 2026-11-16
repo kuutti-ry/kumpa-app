@@ -11,18 +11,14 @@ import { type NightlyJob, runNightly } from "./nightly.ts";
 // The night itself (#380): runNightly runs the list boot.ts builds, one job
 // after another; "Each job runs alone and its failure is logged, never thrown,
 // so one broken job does not stop the others or the server" (nightly.ts), a
-// line of which carries no address (CLAUDE.md, Logs); the research copy runs
-// before the prune that checks it (rules/api.md), the end of suspensions
-// before the counter (ADR-024 §5). And the pile of attacks on the jobs is held
+// line of which carries no address (CLAUDE.md, Logs); the end of suspensions
+// runs before the counter (ADR-024 §5). And the pile of attacks on the jobs is held
 // to that list: a job added to it later with no attacks fails here.
 
 /** Every job of the night's list, and the file beside it that attacks it (none is left out). */
 const PILE: Record<string, string> = {
   "sweep-sessions": "identity/sessions.attack.test.ts",
   "sweep-admin-sessions": "identity/admin-session.attack.test.ts",
-  "research-export": "research/copy.attack.test.ts",
-  "research-events-partitions": "research/partitions.attack.test.ts",
-  "research-anonymity": "research/anonymity.attack.test.ts",
   "end-suspensions": "safety/sanctions.attack.test.ts",
   "pond-counter": "jobs/pond-counter.attack.test.ts",
   "invitation-count": "jobs/invitation-count.attack.test.ts",
@@ -42,8 +38,8 @@ let names: string[] = [];
 beforeAll(async () => {
   names = await withTemporaryDatabase(async (url) => {
     const { logger } = await captureLogger();
-    // Photos on CloudFront, the fullest list: the research copy, the look and the
-    // sweep come only with a store. No S3_* key, and no job is run: nothing reaches a bucket.
+    // Photos on CloudFront, the fullest list: the look and the sweep come only
+    // with a store. No S3_* key, and no job is run: nothing reaches a bucket.
     const config = testConfig({
       DATABASE_URL: url,
       MEDIA_URL_BASE: "https://api.test",
@@ -128,15 +124,6 @@ attack("the night: a job's database error puts the address it quotes into the ni
     ]),
   }),
   succeeds: (seen) => expect(seen.text).toContain(ADDRESS),
-});
-
-attack("the night: the research copy runs after the prune that drops its months", {
-  attempt: () => ({ order: names }),
-  control: () => ({ order: [...names].reverse() }),
-  succeeds: (seen) =>
-    expect(seen.order.indexOf("research-export")).toBeGreaterThan(
-      seen.order.indexOf("research-events-partitions"),
-    ),
 });
 
 attack("the night: the pond counter runs before the suspensions past their day end", {

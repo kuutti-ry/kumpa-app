@@ -1083,7 +1083,7 @@ export interface paths {
         put?: never;
         /**
          * Tell Kuutti you found somebody
-         * @description "Löysin hänet" (#83, ADR-040): the reason, from a closed list, counted once per account in an anonymous daily count that names nobody, and a research event for those who said yes to research. An indication only: nothing else changes, no state, no session, no round, no conversation.
+         * @description "Löysin hänet" (#83, ADR-040): the reason, from a closed list, counted once per account in an anonymous daily count that names nobody. An indication only: nothing else changes, no state, no session, no round, no conversation.
          */
         post: {
             parameters: {
@@ -2368,7 +2368,7 @@ export interface paths {
         put?: never;
         /**
          * Record a consent for the current wording
-         * @description The kind (terms, privacy, research, or special_category for whom one seeks, politics and religion), the consent_version the person read and the language it was shown in. An old version is refused with agreement_outdated; the same consent twice is recorded once.
+         * @description The kind (terms, privacy, or special_category for whom one seeks, politics and religion), the consent_version the person read and the language it was shown in. An old version is refused with agreement_outdated; the same consent twice is recorded once.
          */
         post: {
             parameters: {
@@ -2428,7 +2428,7 @@ export interface paths {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description too_many_changes: the research opt-in was given and withdrawn more than the day allows. */
+                /** @description too_many_changes: the special-category consent was given and withdrawn more than the day allows. */
                 429: {
                     headers: {
                         [name: string]: unknown;
@@ -2456,8 +2456,8 @@ export interface paths {
         put?: never;
         post?: never;
         /**
-         * Withdraw the research opt-in or the special-category consent
-         * @description The two consents a person withdraws; terms and privacy end with the account. Withdrawing special_category takes whom the person seeks and the politics and religion of the profile with it, and onboarding asks the seek question again. The rows stay as the record of what was agreed and when.
+         * Withdraw the special-category consent
+         * @description The one consent a person withdraws; terms and privacy end with the account. Withdrawing special_category takes whom the person seeks and the politics and religion of the profile with it, and onboarding asks the seek question again. The rows stay as the record of what was agreed and when.
          */
         delete: {
             parameters: {
@@ -2524,7 +2524,7 @@ export interface paths {
         put?: never;
         /**
          * Send feedback to the moderators
-         * @description A kind (bug, idea, complaint, praise) and a few lines, with the app's version, the platform and the language the app read. Stored for the moderators' panel; the text reaches no log line and no research event. At most matching_config feedback_per_day a day per account, the Finnish calendar day.
+         * @description A kind (bug, idea, complaint, praise) and a few lines, with the app's version, the platform and the language the app read. Stored for the moderators' panel; the text reaches no log line. At most matching_config feedback_per_day a day per account, the Finnish calendar day.
          */
         post: {
             parameters: {
@@ -5816,7 +5816,7 @@ export interface paths {
         };
         /**
          * A person's page
-         * @description One account by its id: its raw state and the identity's standing, the profile as the card shows it, the photos (the pictures by GET /admin/photos/{id}/card), the feedback the person sent, and the audit rows about them. Never the hash, the broker's ids, the research id or the e-mail. An erased account answers its deletion date and nothing else. Every look is an audit row.
+         * @description One account by its id: its raw state and the identity's standing, the profile as the card shows it, the photos (the pictures by GET /admin/photos/{id}/card), the feedback the person sent, and the audit rows about them. Never the hash, the broker's ids or the e-mail. An erased account answers its deletion date and nothing else. Every look is an audit row.
          */
         get: {
             parameters: {
@@ -7595,7 +7595,6 @@ export interface components {
                 at: string;
             }[];
             photoCheck: components["schemas"]["ExportedPhotoCheck"];
-            research: components["schemas"]["ResearchExport"];
             exports: {
                 /** Format: date-time */
                 at: string;
@@ -7640,7 +7639,7 @@ export interface components {
             withdrawnAt: string | null;
         };
         /** @enum {string} */
-        ConsentKind: "terms" | "privacy" | "research" | "special_category";
+        ConsentKind: "terms" | "privacy" | "special_category";
         /** @enum {string} */
         IdentityStanding: "ok" | "suspended" | "banned";
         /** @enum {string} */
@@ -7814,12 +7813,6 @@ export interface components {
         };
         /** @enum {string} */
         PhotoCheckKind: "nudity" | "violence" | "disturbing" | "hate";
-        ResearchExport: {
-            enrolled: boolean;
-            /** Format: date-time */
-            since: string | null;
-            consentVersion: string | null;
-        };
         ExportedFeedback: {
             /** Format: date-time */
             at: string;
@@ -8177,7 +8170,7 @@ export interface components {
             role: components["schemas"]["ModeratorRole"];
         };
         /** @enum {string} */
-        ModeratorRole: "moderator" | "admin" | "researcher";
+        ModeratorRole: "moderator" | "admin";
         AdminAuthExchangeRequest: {
             code: string;
         };
@@ -8431,11 +8424,6 @@ export interface components {
                 terms: string | null;
                 privacy: string | null;
                 specialCategory: string | null;
-                research: {
-                    version: string;
-                    /** Format: date-time */
-                    givenAt: string;
-                } | null;
             };
             currentVersions: components["schemas"]["ConsentVersions"];
             nextChange: {
@@ -8449,7 +8437,6 @@ export interface components {
         ConsentVersions: {
             terms: string;
             privacy: string;
-            research: string;
             special_category: string;
         };
         /** @enum {string} */
@@ -8468,7 +8455,7 @@ export interface components {
             locale: "fi" | "sv" | "en";
         };
         /** @enum {string} */
-        WithdrawableConsentKind: "research" | "special_category";
+        WithdrawableConsentKind: "special_category";
         FeedbackRequest: {
             kind: components["schemas"]["FeedbackKind"];
             text: string;

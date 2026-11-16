@@ -108,7 +108,6 @@ sequenceDiagram
   end
   api->>db: Insert the message with the next sequence, set the last message's time, leave the archive, commit
   par the answer to the sender
-    api->>db: The research event message_sent, in bands, where the sender takes part in research
     api->>api: After a conversation's first message, the safety slice's automatic rules
     api->>phone: 201 with the message and its sequence
     api-)push: After the answer, to whom the chat lets read it and has no live socket, You have a new message, never the text or the conversation
@@ -130,15 +129,14 @@ sequenceDiagram
 25. A closed conversation, a block either way, or a counterpart who deleted their account: 409 `conversation_closed`, and nothing is written.
 26. Over `matching_config message_max_length` after trimming: 400 `message_too_long`. An e-mail address, a link, a phone number or a handle in the text: 400 `contact_details`, which names the kind found and never the text.
 27. The message is inserted with the conversation's next sequence, in the statement that moves the conversation on: the next sequence, the last message's time, and out of the archive. Two sends at once take consecutive sequences with no gap. The transaction commits.
-28. After the commit, the research event `message_sent` with the kind, the length's band and the waits' bands, never the text (rule 5). It is written only for a person whose research consent stands, keyed by `research_id` (ADR-011).
-29. After a conversation's first message, the safety slice's automatic rules check the sender (ADR-033). The chat hands over counts and times only, and the check changes no answer.
-30. The sender's phone gets 201 with the stored message and its sequence.
-31. The push (#102, ADR-055 §4), after the answer: the route hands the conversation and the sequence to the notifications slice, which asks the chat whom it lets read the message (`messageReaders`: the other participant, through their own participant row, in a conversation still open for them, so nothing crosses a block or a close and a shadow-banned sender's withheld message tells nobody). It leaves out whoever has a live socket (the hub's `online`), whose message switch is off (ADR-032), or who was pushed of this conversation within `matching_config message_push_min_interval_minutes`, and sends nothing in the quiet hours (`push_quiet_from_hour` to `push_quiet_to_hour`, Helsinki). Each live device of whoever is left gets one push through Expo: "You have a new message" in the device's language and the kind, never the text, a name or the conversation, and it lives no longer than the quiet hours' start or the day's end; Apple or Google wakes the phone with it. The push runs after the answer, which never waits for it, so the answer's time says nothing of whether anybody was pushed; a failure is logged. A photo's send does the same.
+28. After a conversation's first message, the safety slice's automatic rules check the sender (ADR-033). The chat hands over counts and times only, and the check changes no answer.
+29. The sender's phone gets 201 with the stored message and its sequence.
+30. The push (#102, ADR-055 §4), after the answer: the route hands the conversation and the sequence to the notifications slice, which asks the chat whom it lets read the message (`messageReaders`: the other participant, through their own participant row, in a conversation still open for them, so nothing crosses a block or a close and a shadow-banned sender's withheld message tells nobody). It leaves out whoever has a live socket (the hub's `online`), whose message switch is off (ADR-032), or who was pushed of this conversation within `matching_config message_push_min_interval_minutes`, and sends nothing in the quiet hours (`push_quiet_from_hour` to `push_quiet_to_hour`, Helsinki). Each live device of whoever is left gets one push through Expo: "You have a new message" in the device's language and the kind, never the text, a name or the conversation, and it lives no longer than the quiet hours' start or the day's end; Apple or Google wakes the phone with it. The push runs after the answer, which never waits for it, so the answer's time says nothing of whether anybody was pushed; a failure is logged. A photo's send does the same.
     Before each Expo submission, including a later batch or mixed-project retry, the sender checks that each token still belongs to the original account and live session. It holds the account, sorted session and sorted token row locks through the bounded provider request. Session lifecycle writers take the same session lock order. A transfer or session end that committed first removes that device from the submission; a change that waits follows the request already in progress. Delivery already accepted by Expo cannot be recalled.
-32. Meanwhile Postgres delivers the message trigger's notification to the chat listener on `kuutti_chat` when the transaction commits, and drops it if the transaction rolls back. It carries the conversation and the sequence, never the text.
-33. The hub takes one notification at a time, in commit order. It reads who is in the conversation, then the message through each person's own participant row, with every rule of the reads: nothing crosses a block, and a shadow-banned sender's message reaches only the sender while the ban stays open.
-34. Each live socket of the other person gets a `message` frame. A photo's frame carries no URL; the phone reads that one message again over HTTP for its signed URLs (ADR-031 §10).
-35. The sender's own live sockets get the same frame, so the sender's other phones show it too.
+31. Meanwhile Postgres delivers the message trigger's notification to the chat listener on `kuutti_chat` when the transaction commits, and drops it if the transaction rolls back. It carries the conversation and the sequence, never the text.
+32. The hub takes one notification at a time, in commit order. It reads who is in the conversation, then the message through each person's own participant row, with every rule of the reads: nothing crosses a block, and a shadow-banned sender's message reaches only the sender while the ban stays open.
+33. Each live socket of the other person gets a `message` frame. A photo's frame carries no URL; the phone reads that one message again over HTTP for its signed URLs (ADR-031 §10).
+34. The sender's own live sockets get the same frame, so the sender's other phones show it too.
 
 ## Part 3: read marks, ends, and a lost connection
 
@@ -146,7 +144,7 @@ sequenceDiagram
 sequenceDiagram
   accTitle: Chat, part 3: read marks, ends, and a lost connection
   accDescr: A read mark is sent over HTTP and moves only up. On commit a trigger notifies, and the writer's side gets a read frame, unless a shadow ban of the reader withholds the mark. An archive, a return from it or a close sends each side the conversation's state, and an ended session closes its sockets at once. When a phone's connection drops, the other person sees it go offline, and the phone reconnects with a growing wait and resumes from Postgres. A lost listener or a deploy closes every socket with restarting, and the phones resume the same way.
-  autonumber 36
+  autonumber 35
   participant phone as The sender's phone
   participant api as The API
   participant db as PostgreSQL
@@ -174,21 +172,21 @@ sequenceDiagram
 
 ### Steps
 
-36. The reader's phone sends its read mark over HTTP, `POST /conversations/{id}/read`, up to the newest sequence it has shown.
-37. The mark moves up only, never past the newest message, and not at all in a closed conversation: a close stops both marks where it found them, so a mark moving after an end cannot tell an end from a block (ADR-030 §12).
-38. The reader's phone gets 204, in a closed conversation too.
-39. On commit, and only when the mark moved, the read trigger notifies with the conversation, the reader's side and the new mark.
-40. The other side's live sockets, the writer's, get a `read` frame with the mark as the writer's own row reads it. A closed conversation delivers none. Nor does a mark that a shadow ban of the reader withholds (#470): the writer sees the reader's mark go no further than the newest message from before the ban, as they see the reader never online. The true mark shows at the lift on the next read over HTTP or resume, and live with the reader's next mark; a frame that moved nothing would still say the reader is reading.
-41. On commit, the conversation trigger notifies when a conversation is archived (the night's archive, see The night's jobs), brought back by a new message, or closed (an end, a block, a report, a ban, an erasure, or a second match of the two, which closes one left archived as an end, ADR-062 §7). It does not fire when only the close's kind or side is rewritten.
-42. Each side's live sockets get a `conversation` frame with its state as that side may read it: open, archived, closed as one of the two endings a person reads, or `gone` for its blocker. A block has a notification of its own, which reaches the blocker's side alone; the other person hears only the close's frame, as for any end, so no frame tells a block or a report from an end (ADR-030 §6 and §12).
-43. On commit, the session trigger notifies when a session is revoked or deleted: a logout, a break, a sanction, an erasure, the night's sweep.
-44. That session's sockets get `session_revoked` and close with 1008 at once, whatever ended the session.
-45. The phone's connection drops: a lost network, the app sent to the background, or a sign-out, which close the socket on the phone's side too.
-46. When the person's last visible socket closes, the counterparts of their open and archived conversations get `presence` offline.
-47. The phone reconnects after a wait spread over the second half of a backoff that starts at a second and doubles up to thirty, refreshing its session first when the access token is stale, then steps 1 to 15. Postgres holds every message, so a reconnect loses nothing and the resume doubles nothing. After `too_many_sockets` it waits until the app is next brought to the front.
-48. When the listener's connection is lost, the notifications in the gap are lost with it, so every socket is told `restarting` and closed with 1012, and the phones resume from Postgres as in step 47.
-49. The listener connects and listens again after a second, doubling up to thirty seconds. Until it does, a new socket is refused as in step 5.
-50. On SIGTERM, before a deploy replaces the container, every socket is told `restarting` and closed with 1012; one that does not finish its closing handshake within a second is cut. The phones reconnect to the next process and resume. The registry is the process's memory, so a restart costs only presence.
+35. The reader's phone sends its read mark over HTTP, `POST /conversations/{id}/read`, up to the newest sequence it has shown.
+36. The mark moves up only, never past the newest message, and not at all in a closed conversation: a close stops both marks where it found them, so a mark moving after an end cannot tell an end from a block (ADR-030 §12).
+37. The reader's phone gets 204, in a closed conversation too.
+38. On commit, and only when the mark moved, the read trigger notifies with the conversation, the reader's side and the new mark.
+39. The other side's live sockets, the writer's, get a `read` frame with the mark as the writer's own row reads it. A closed conversation delivers none. Nor does a mark that a shadow ban of the reader withholds (#470): the writer sees the reader's mark go no further than the newest message from before the ban, as they see the reader never online. The true mark shows at the lift on the next read over HTTP or resume, and live with the reader's next mark; a frame that moved nothing would still say the reader is reading.
+40. On commit, the conversation trigger notifies when a conversation is archived (the night's archive, see The night's jobs), brought back by a new message, or closed (an end, a block, a report, a ban, an erasure, or a second match of the two, which closes one left archived as an end, ADR-062 §7). It does not fire when only the close's kind or side is rewritten.
+41. Each side's live sockets get a `conversation` frame with its state as that side may read it: open, archived, closed as one of the two endings a person reads, or `gone` for its blocker. A block has a notification of its own, which reaches the blocker's side alone; the other person hears only the close's frame, as for any end, so no frame tells a block or a report from an end (ADR-030 §6 and §12).
+42. On commit, the session trigger notifies when a session is revoked or deleted: a logout, a break, a sanction, an erasure, the night's sweep.
+43. That session's sockets get `session_revoked` and close with 1008 at once, whatever ended the session.
+44. The phone's connection drops: a lost network, the app sent to the background, or a sign-out, which close the socket on the phone's side too.
+45. When the person's last visible socket closes, the counterparts of their open and archived conversations get `presence` offline.
+46. The phone reconnects after a wait spread over the second half of a backoff that starts at a second and doubles up to thirty, refreshing its session first when the access token is stale, then steps 1 to 15. Postgres holds every message, so a reconnect loses nothing and the resume doubles nothing. After `too_many_sockets` it waits until the app is next brought to the front.
+47. When the listener's connection is lost, the notifications in the gap are lost with it, so every socket is told `restarting` and closed with 1012, and the phones resume from Postgres as in step 46.
+48. The listener connects and listens again after a second, doubling up to thirty seconds. Until it does, a new socket is refused as in step 5.
+49. On SIGTERM, before a deploy replaces the container, every socket is told `restarting` and closed with 1012; one that does not finish its closing handshake within a second is cut. The phones reconnect to the next process and resume. The registry is the process's memory, so a restart costs only presence.
 
 ## Where it lives
 
@@ -197,7 +195,7 @@ sequenceDiagram
 - Database: `packages/db/drizzle/0000_baseline.sql` (the tables), `0001_baseline_sql.sql` (the triggers on `kuutti_chat`, shared contacts among them)
 - Phone app: `apps/mobile/src/features/chat/socket.ts` (connect, auth, resume, ping, backoff, refresh ahead), `store.tsx` (the socket while signed in and in front), `client.ts` (the HTTP routes), `ConversationScreen.tsx` (the rest over `?after=`, a photo's message read again)
 - Specs: `features/chat/live.feature`, `features/chat/conversations.feature`, `features/chat/closing.feature`
-- ADRs: [ADR-031](../adr/031-chat.md) §3 (the send), §4 (what each side reads), §8 (the archive), §9 (the socket, delivery on commit, presence and resume), §10 (a photo); [ADR-030](../adr/030-reports-and-blocks.md) §6 and §12 (no frame tells a block from an end); [ADR-024](../adr/024-sanctions.md) §6 (a shadow ban is never online); [ADR-026](../adr/026-limits-per-person-and-sign-in-doors.md) (the limiters); [ADR-027](../adr/027-sign-in-code-bound-to-the-device.md) (the one refresh); [ADR-033](../adr/033-automatic-shadow-bans.md) (the first message's check); [ADR-011](../adr/011-research-events.md) (the event); [ADR-032](../adr/032-notification-choices-and-notices.md) (the choices the push reads); [ADR-055](../adr/055-push.md) §4 (the message's push); [ADR-038](../adr/038-the-match.md) (the match opens the conversation); [ADR-062](../adr/062-one-queue.md) §7 (a second match)
+- ADRs: [ADR-031](../adr/031-chat.md) §3 (the send), §4 (what each side reads), §8 (the archive), §9 (the socket, delivery on commit, presence and resume), §10 (a photo); [ADR-030](../adr/030-reports-and-blocks.md) §6 and §12 (no frame tells a block from an end); [ADR-024](../adr/024-sanctions.md) §6 (a shadow ban is never online); [ADR-026](../adr/026-limits-per-person-and-sign-in-doors.md) (the limiters); [ADR-027](../adr/027-sign-in-code-bound-to-the-device.md) (the one refresh); [ADR-033](../adr/033-automatic-shadow-bans.md) (the first message's check); [ADR-032](../adr/032-notification-choices-and-notices.md) (the choices the push reads); [ADR-055](../adr/055-push.md) §4 (the message's push); [ADR-038](../adr/038-the-match.md) (the match opens the conversation); [ADR-062](../adr/062-one-queue.md) §7 (a second match)
 - Issues: #348 (conversations and messages), #349 (the socket), #350 (photos), #351 (ends), #103 (contacts shared), #105 (the automatic rules), #102 (the push)
 
 ## Open

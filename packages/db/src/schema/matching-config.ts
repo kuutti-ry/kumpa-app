@@ -2,8 +2,8 @@ import { integer, jsonb, pgTable, text, timestamp, uniqueIndex, uuid } from "dri
 
 /**
  * Every tunable of the matching mechanics is a row here, never a constant in
- * code (design principles). Versioned so the research partner can vary a knob
- * and the change is a row with a date and an author, not a deploy.
+ * code (design principles). Versioned so that a change of a knob is a row with
+ * a date and an author, not a deploy.
  */
 export const matchingConfig = pgTable(
   "matching_config",

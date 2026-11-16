@@ -133,9 +133,9 @@ describe("the consent versions", () => {
   });
 
   it("count a wording without its Finnish yet, in English alone", () => {
-    const out = compile({ "legal.research.title": legal({}) })["consent.ts"];
-    expect(out).toContain('"research": "2026-09-01",');
-    expect(out).toContain('"research": ["en"],');
+    const out = compile({ "legal.special_category.title": legal({}) })["consent.ts"];
+    expect(out).toContain('"special_category": "2026-09-01",');
+    expect(out).toContain('"special_category": ["en"],');
   });
 
   it("ignore keys outside legal.* and legal keys without a version", () => {

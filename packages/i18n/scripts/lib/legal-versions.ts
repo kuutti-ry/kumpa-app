@@ -48,12 +48,20 @@ export function parsePublished(text: string): Published {
 
 /**
  * The kinds whose text on the site is this app's own wording, verbatim
- * (kumpa-app-site src/content/consents): the research opt-in and the
- * sensitive answers have no longer text than legal.<kind>.title and summary.
+ * (kumpa-app-site src/content/consents): the sensitive answers have no
+ * longer text than legal.<kind>.title and summary.
  * The site says which language's wording counts, and its fingerprint is of
  * that one.
  */
-const VERBATIM_KINDS: readonly string[] = ["research", "special_category"];
+const VERBATIM_KINDS: readonly string[] = ["special_category"];
+
+/**
+ * Kinds this app took out while the site may still publish them: the research
+ * opt-in went from the app first (ADR-071, #208), since the site's own check
+ * holds it to this app's kinds on main.
+ * shortcut: one name; delete it once the site's versions.json no longer lists research.
+ */
+const RETIRED_KINDS: readonly string[] = ["research"];
 
 /** The app's texts by language, key by key: the generated catalogues the legal texts are written in. */
 export type LegalTexts = Readonly<Record<string, Readonly<Record<string, string>>>>;
@@ -111,12 +119,13 @@ export async function fetchPublished(
 /**
  * The app's versions against the site's, kind by kind: the same version, the
  * app's link to it (`legalPageUrl`) the address the site publishes, and for
- * the research opt-in and the sensitive answers, whose text on the site is
+ * the sensitive answers, whose text on the site is
  * this app's legal.<kind>.title and summary, the same fingerprint in the
  * language the site says counts, so the two copies cannot part under one
  * version. A language the app has no such text in is a problem too, never a
  * pass. The site leads, since its text is the one that binds: a new version
- * is published there first, and this fails until the app carries it too.
+ * is published there first, and this fails until the app carries it too. A
+ * kind the app took out may stay on the site (RETIRED_KINDS).
  */
 export function legalVersionProblems(
   app: Readonly<Record<string, string>>,
@@ -167,7 +176,7 @@ export function legalVersionProblems(
     }
   }
   for (const kind of Object.keys(published)) {
-    if (!Object.hasOwn(app, kind)) {
+    if (!Object.hasOwn(app, kind) && !RETIRED_KINDS.includes(kind)) {
       problems.push(`${kind}: the site publishes a version of a kind the app does not know`);
     }
   }

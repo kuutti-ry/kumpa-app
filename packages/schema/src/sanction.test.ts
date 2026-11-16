@@ -251,7 +251,7 @@ describe("the panel's sanction", () => {
 
   it("lists each with the staff's roles now, each a role or null, none left out (#308)", () => {
     expect(SanctionEntry.parse(entry)).toEqual(entry);
-    for (const role of ["moderator", "admin", "researcher", null]) {
+    for (const role of ["moderator", "admin", null]) {
       expect(SanctionEntry.safeParse({ ...entry, liftedByRole: role }).success).toBe(true);
     }
     expect(codes(SanctionEntry, { ...entry, createdByRole: "owner" })).toEqual(["invalid_value"]);

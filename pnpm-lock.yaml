@@ -366,12 +366,6 @@ importers:
       hono:
         specifier: ^4.13.16
         version: 4.13.16
-      hyparquet:
-        specifier: 1.31.5
-        version: 1.31.5
-      hyparquet-writer:
-        specifier: 0.17.0
-        version: 0.17.0
       p-limit:
         specifier: ^7.3.3
         version: 7.3.3
@@ -5872,12 +5866,6 @@ packages:
   human-signals@2.1.0:
     resolution: {integrity: sha512-B4FFZ6q/T2jhhksgkbEW3HBvWIfDW85snkQgawt07S7J5QXTk6BkNV+0yAeZrM5QpMAdYlocGoljn0sJ/WQkFw==}
     engines: {node: '>=10.17.0'}
-
-  hyparquet-writer@0.17.0:
-    resolution: {integrity: sha512-GZ4QeopztjSli/Sz1dSOP/TrSKtwG2ydP2yuPMxeiZnho+PCXF7x+wx8OIVtpQn8rcv559IH1EJMHnTbv0sn+Q==}
-
-  hyparquet@1.31.5:
-    resolution: {integrity: sha512-KPVfaxW8xOiO2/4fjeiBfFNEXhGVw9tfcb9ha2iNZdJ3J/yBjEwIeAnTyyuhllFFTb9YO9wg0DfRAOnm6KCvBg==}
 
   hyperlinker@1.0.0:
     resolution: {integrity: sha512-Ty8UblRWFEcfSuIaajM34LdPXIhbs1ajEX/BBPv24J+enSVaEVY63xQ6lTO9VRYS5LAoghIG0IDJ+p+IPzKUQQ==}
@@ -14267,12 +14255,6 @@ snapshots:
       - supports-color
 
   human-signals@2.1.0: {}
-
-  hyparquet-writer@0.17.0:
-    dependencies:
-      hyparquet: 1.31.5
-
-  hyparquet@1.31.5: {}
 
   hyperlinker@1.0.0: {}
 

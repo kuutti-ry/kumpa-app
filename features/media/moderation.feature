@@ -173,11 +173,6 @@ Feature: Photo moderation before anyone else sees a photo
     When a moderator asks for its card
     Then a signed URL for the card variant is issued and audit_log has a photo.view row naming the moderator
 
-  Scenario: A researcher may not touch the photo queue
-    Given a session with the researcher role
-    When it lists the queue, views a card or decides
-    Then every answer is admin_forbidden and nothing is written
-
   Scenario: The photo routes for staff refuse a product session and no session
     When a product session or nobody calls the staff photo routes
     Then every answer is 401 and nothing is written

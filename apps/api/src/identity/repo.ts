@@ -1242,7 +1242,7 @@ export async function listConsents(
   return rows.map(consentFrom);
 }
 
-/** Erasure (#51, ADR-010 §14): the consent rows go with the account; the events keep their own consent_version. */
+/** Erasure (#51, ADR-010 §14): the consent rows go with the account. */
 export async function deleteConsentsOfAccount(db: Queryable, accountId: string): Promise<number> {
   const result = await db.query("DELETE FROM consent WHERE account_id = $1", [accountId]);
   return result.rowCount ?? 0;
@@ -1329,12 +1329,12 @@ export async function activeConsents(db: Queryable, accountId: string): Promise<
   return rows.map(consentFrom);
 }
 
-/** Research consents given within a day before the next is refused: the rows are kept for good, so churn is capped. */
+/** Consents of a kind given within a day before the next is refused: the rows are kept for good, so churn is capped. */
 export const CONSENT_CHURN_PER_DAY = 10;
 
 /**
  * One row per consent given: the same kind and version, still active, is
- * not written twice; a withdrawn research consent given again is a new row.
+ * not written twice; a withdrawn special-category consent given again is a new row.
  * A tombstone takes none (#51).
  */
 export async function recordConsent(

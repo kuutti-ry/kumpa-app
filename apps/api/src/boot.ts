@@ -18,7 +18,6 @@ import { type Config, developmentOrTest } from "./lib/config.ts";
 import type { Logger } from "./lib/logger.ts";
 import { mailerFor } from "./lib/mail.ts";
 import { pusherFor } from "./lib/push.ts";
-import { createS3Client } from "./lib/s3.ts";
 import { initSentry, sentryReporter } from "./lib/sentry.ts";
 import { pruneRounds } from "./matching/index.ts";
 import {
@@ -29,14 +28,6 @@ import {
   sweepPendingPhotos,
 } from "./media/index.ts";
 import { createPush, type Push } from "./notifications/index.ts";
-import {
-  copiedBeforeDrop,
-  ensureEventPartitions,
-  researchAnonymityJob,
-  researchCopyJob,
-  researchEventsJob,
-  s3CopyStore,
-} from "./research/index.ts";
 import {
   auditBoundary,
   endSuspensions,
@@ -165,8 +156,6 @@ export async function boot({
   // Migrations run before the server listens, under the advisory lock (rule 10).
   const migration = await migrate(pool, resolve(config.MIGRATIONS_DIR));
   logger.info(migration, "migrations");
-  // The events table's partitions for this month and the next (#50, ADR-011), before anything can track.
-  logger.info(await ensureEventPartitions(pool, new Date()), "research event partitions");
   // The audit table's role boundary (#49, ADR-006) is set by the maintainer,
   // not by a migration: a deployed box says so at every boot until it is.
   const audit = await auditBoundary(pool);
@@ -228,31 +217,10 @@ export async function boot({
   // Nightly housekeeping inside the process (rules/api.md): ended sessions and
   // stale login attempts (#35).
   const now = () => new Date();
-  // The research copy (#194, ADR-029) goes to the bucket the photos use, under
-  // research/, wherever media has one: on staging and beside a developer's
-  // stand-in, never where nothing is configured.
-  // shortcut: none in production either. The copy keeps the research_id past
-  // the ninety days the research text promises, and whether the text or the
-  // copy changes is the maintainer's (ADR-029, Open); his answer lifts this.
-  const copy =
-    media.setup.mode === "off" || config.APP_ENV === "production"
-      ? undefined
-      : { db: pool, now, store: s3CopyStore(createS3Client(config), config.S3_BUCKET) };
   const counter = { db: pool, logger, now };
   const jobs: NightlyJob[] = [
     { name: "sweep-sessions", run: () => sweepSessions({ db: pool, now }) },
     { name: "sweep-admin-sessions", run: () => sweepAdminSessions({ db: pool, now }) },
-    // Yesterday's research events to the copy, before the prune can drop a month of them (#194).
-    ...(copy ? [researchCopyJob(copy)] : []),
-    // Next month's events partition ready, months past retention dropped (#50),
-    // a month's copy checked first where there is one (ADR-029 §6).
-    researchEventsJob({
-      db: pool,
-      now,
-      ...(copy ? { beforeDrop: (months) => copiedBeforeDrop({ ...copy, logger }, months) } : {}),
-    }),
-    // The census of the research block: a cell under k is a warning (ADR-011 §9).
-    researchAnonymityJob({ db: pool, logger }),
     // Suspensions past their day end (#307, ADR-024 §5), before the counter,
     // so a person let back in is counted the same night.
     { name: "end-suspensions", run: async () => ({ ended: await endSuspensions(pool, now()) }) },

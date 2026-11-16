@@ -236,24 +236,24 @@ describe("an erasure that commits between the session guard and the handler", ()
   test("the onboarding, gender and consent routes answer 404 and write nothing for the tombstone", async ({
     ctx,
   }) => {
-    const research = {
-      kind: "research",
-      version: CURRENT_CONSENT_VERSIONS.research,
+    const special = {
+      kind: "special_category",
+      version: CURRENT_CONSENT_VERSIONS.special_category,
       locale: "fi",
     };
     const calls: Array<Call & { given?: boolean }> = [
       { method: "GET", path: "/onboarding" },
       { method: "PUT", path: "/account/gender", body: { gender: "woman" } },
-      { method: "POST", path: "/consents", body: research },
-      // A research consent given before, which the losing withdrawal must leave as it was.
-      { method: "DELETE", path: "/consents/research", given: true },
+      { method: "POST", path: "/consents", body: special },
+      // A special-category consent given before, which the losing withdrawal must leave as it was.
+      { method: "DELETE", path: "/consents/special_category", given: true },
     ];
     for (const call of calls) {
       const me = await signedInAccount(ctx.client, undefined, { state: "registered" });
       if (call.given) {
         const plain = await appOn(ctx.client);
         expect(
-          (await send(plain.app, me.headers, { method: "POST", path: "/consents", body: research }))
+          (await send(plain.app, me.headers, { method: "POST", path: "/consents", body: special }))
             .status,
         ).toBe(200);
       }
@@ -272,7 +272,7 @@ describe("an erasure that commits between the session guard and the handler", ()
         home_place: null,
       });
       const consents = await ctx.client.query<{ withdrawn: boolean }>(
-        "SELECT withdrawn_at IS NOT NULL AS withdrawn FROM consent WHERE account_id = $1 AND kind = 'research'",
+        "SELECT withdrawn_at IS NOT NULL AS withdrawn FROM consent WHERE account_id = $1 AND kind = 'special_category'",
         [me.accountId],
       );
       // No consent recorded for the tombstone; the one given before went with the

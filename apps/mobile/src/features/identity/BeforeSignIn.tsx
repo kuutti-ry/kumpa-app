@@ -49,8 +49,6 @@ export function NormsAndConsents() {
   );
 }
 
-// shortcut: nothing is asked about research until there is a researcher (#545, ADR-010 §19).
-// R3 Research (#194) brings the question back after the button below, as §15 describes it.
 /**
  * The screen before the bank login (#418, ADR-010 §15): the norms with the
  * terms and the privacy summary, which a person must accept to go on, so the

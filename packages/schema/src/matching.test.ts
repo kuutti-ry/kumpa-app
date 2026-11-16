@@ -26,35 +26,14 @@ import {
   StarList,
   StarParams,
   StarredPerson,
-  sinceSeenBand,
 } from "./matching.ts";
 
 // The queue's contracts and its day's log (#96, #502, ADR-034, ADR-062): the
-// bands a decision's research event carries, the entry addressed by its day and
+// entry addressed by its day and
 // place, the decision, and the read of the next cards, at their boundaries.
 
 const codes = (schema: z.ZodType, input: unknown) =>
   schema.safeParse(input).error?.issues.map((issue) => issue.code) ?? [];
-
-describe("the band since a card was seen", () => {
-  it.each([
-    [-5_000, "under_3s"],
-    [0, "under_3s"],
-    [2_999, "under_3s"],
-    [3_000, "3s_10s"],
-    [9_999, "3s_10s"],
-    [10_000, "10s_30s"],
-    [29_999, "10s_30s"],
-    [30_000, "30s_2m"],
-    [119_999, "30s_2m"],
-    [120_000, "2m_10m"],
-    [599_999, "2m_10m"],
-    [600_000, "10m_plus"],
-    [86_400_000, "10m_plus"],
-  ] as const)("reads %d ms as %s, a clock stepped back as the shortest", (ms, band) => {
-    expect(sinceSeenBand(ms)).toBe(band);
-  });
-});
 
 describe("an entry's distance", () => {
   const distance = RoundEntry.shape.distance;

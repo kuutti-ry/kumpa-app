@@ -11,7 +11,7 @@ import type { App } from "../app.ts";
 import { archiveJob, conversationBetween } from "../chat/index.ts";
 import { eraseAccount, lockAccountForSanction } from "../identity/index.ts";
 import { finnishDay } from "../lib/finnish-day.ts";
-import { joinStudy, withMatchingConfig } from "../test/account.ts";
+import { withMatchingConfig } from "../test/account.ts";
 import { STOPPED_CLOCK as T } from "../test/global-setup.ts";
 import { captureLogger, describe, expect, test } from "../test/harness.ts";
 import { pidOf, waitsFor, watched, withTwoConnections } from "../test/races.ts";
@@ -32,8 +32,8 @@ import { decide } from "./rounds.ts";
 // The match (#100, ADR-038, features/matching/matches.feature): two likes
 // make a conversation in the statement of the second, the answer names it,
 // a like that made one is final, the expiry, the same moment, the archive of
-// a silent match, the events, what keeps a match from being made, a second
-// match (ADR-062 §7) and the your-turn limit (§5). Which conversations are on a
+// a silent match, what keeps a match from being made, a second match
+// (ADR-062 §7) and the your-turn limit (§5). Which conversations are on a
 // person's turn is chat/your-turn.test.ts.
 
 /** 12:00 in Finland, one Friday. */
@@ -297,32 +297,6 @@ describe("a match", () => {
 
     expect(await answered(await decideBy(app, a, 1, "fish"))).toBeNull();
     expect(await between(ctx.client, a, b)).toBe(0);
-  });
-
-  test("a match is a match event for each of the two, saying whose like made it", async ({
-    ctx,
-  }) => {
-    const [a, b] = await cast(ctx.client, 2);
-    if (!a || !b) throw new Error("cast not written");
-    const earlier = await appAt(ctx.client, new Date(T.getTime() - 60_000));
-    await joinStudy(earlier, a.headers);
-    await joinStudy(earlier, b.headers);
-    await likedBefore(ctx.client, b, a, 1);
-    await roundOf(ctx.client, a, [b]);
-
-    await answered(await decideBy(await appAt(ctx.client), a, 1, "like"));
-
-    // Each event by whose it is: the one whose like made the match says so.
-    const { rows } = await ctx.client.query<{ account_id: string; props: { completed: boolean } }>(
-      `SELECT s.account_id, e.props FROM events e
-         JOIN research_subject s ON s.research_id = e.research_id
-        WHERE e.name = 'match'`,
-    );
-    expect(rows).toHaveLength(2);
-    expect(Object.fromEntries(rows.map((row) => [row.account_id, row.props]))).toEqual({
-      [a.accountId]: { completed: true },
-      [b.accountId]: { completed: false },
-    });
   });
 
   test("A match nobody writes in is put away after silent_match_archive_days, and a message keeps it", async ({

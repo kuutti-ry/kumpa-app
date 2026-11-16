@@ -48,7 +48,7 @@ const RELEASED_TRANSLATIONS: readonly string[] = TRANSLATED_LOCALES.filter((loca
   (RELEASED_LOCALES as readonly string[]).includes(locale),
 );
 
-// A wording still marked a draft (#46, ADR-010 §7; since §20 the research opt-in alone).
+// A wording still marked a draft (#46, ADR-010 §7).
 const DRAFT_VERSION = /draft|luonnos|utkast/i;
 // Anywhere in the wording, as its own word, however it is capitalised.
 const DRAFT_TEXT = /(?<![\p{L}])(DRAFT|LUONNOS|UTKAST)(?![\p{L}])/iu;

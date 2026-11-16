@@ -66,7 +66,6 @@ const STEPS = new Set([
   "bank identification off: OIDC_ISSUER is not set",
   "bank identification unavailable; is the mock IdP running?",
   "migrations",
-  "research event partitions",
   "audit boundary",
   "audit boundary not enforced: run infra/scripts/db-audit-owner.sh",
   "media",
@@ -178,13 +177,12 @@ const startLogin = (app: { request: (path: string) => Response | Promise<Respons
   app.request(`/auth/start?platform=ios&code_challenge=${CHALLENGE}`);
 
 describe("boot", () => {
-  it("migrates, partitions, checks the audit boundary and sets up media, in that order, and the app answers", async () => {
+  it("migrates, checks the audit boundary and sets up media, in that order, and the app answers", async () => {
     const { app, lines } = await booted();
     expect(steps(lines)).toEqual([
       "error reporting",
       "bank identification off: OIDC_ISSUER is not set",
       "migrations",
-      "research event partitions",
       "audit boundary",
       "media",
     ]);
@@ -224,14 +222,11 @@ describe("boot", () => {
     }
   });
 
-  // Without an object store there is no research copy either (#194).
   it("arms the nightly jobs, each of which runs against the database it was given", async () => {
     const { jobs } = await booted();
     expect(jobs.map((j) => j.name)).toEqual([
       "sweep-sessions",
       "sweep-admin-sessions",
-      "research-events-partitions",
-      "research-anonymity",
       "end-suspensions",
       "pond-counter",
       "invitation-count",
@@ -250,7 +245,7 @@ describe("boot", () => {
     expect(lines().filter((l) => l.msg === "nightly job failed")).toEqual([]);
   });
 
-  it("with an object store, photos the automatic check missed get a nightly look, and the research copy is written", async () => {
+  it("with an object store, photos the automatic check missed get a nightly look", async () => {
     const { jobs, lines } = await booted({
       S3_ENDPOINT: "http://127.0.0.1:9000",
       S3_FORCE_PATH_STYLE: "true",
@@ -261,15 +256,7 @@ describe("boot", () => {
       "moderate-pending-photos",
       "sweep-orphaned-objects",
     ]);
-    // And the research copy, to the same bucket, right before the prune that checks it (#194).
-    expect(jobs.map((j) => j.name).slice(2, 4)).toEqual([
-      "research-export",
-      "research-events-partitions",
-    ]);
-    expect(jobs).toHaveLength(16);
-    // The prune asks the copy first; tonight no month is due, so the bucket is asked nothing.
-    const partitions = jobs.find((j) => j.name === "research-events-partitions");
-    expect(await partitions?.run()).toMatchObject({ dropped: 0, uncopied: 0 });
+    expect(jobs).toHaveLength(13);
     // Nothing is pending in this database: the look finds nothing and asks the store nothing.
     // The sweep is not run here: the stand-in's bucket is shared with the developer's own
     // stack, whose rows are in another database, so it would take their photos for orphans.
@@ -661,7 +648,6 @@ describe("boot: a deployed box", () => {
         "error reporting",
         "bank identification off: OIDC_ISSUER is not set",
         "migrations",
-        "research event partitions",
         "audit boundary not enforced: run infra/scripts/db-audit-owner.sh",
         "photos off: media delivery is not configured (infra/modules/media)",
       ]);
@@ -675,7 +661,7 @@ describe("boot: a deployed box", () => {
     },
   );
 
-  it("with its photos on CloudFront, staging writes the research copy and production does not, and both prune the rounds", async () => {
+  it("with its photos on CloudFront, staging and production both prune the rounds", async () => {
     const media = {
       S3_BUCKET: "kuutti-media-test",
       MEDIA_URL_BASE: "https://api.test",
@@ -684,21 +670,14 @@ describe("boot: a deployed box", () => {
     };
     const staging = await booted({ APP_ENV: "staging", ...media });
     expect(line(staging.lines, "media")).toMatchObject({ mode: "cloudfront" });
-    expect(staging.jobs.map((j) => j.name)).toContain("research-export");
-
-    // Not before the maintainer has answered the ninety days of the research
-    // text (ADR-029, Open): no copy, and the prune is as it was without one.
     const production = await booted({
       APP_ENV: "production",
       ADMIN_APP_URL: "https://admin.kuutti.app",
       ...media,
     });
     expect(line(production.lines, "media")).toMatchObject({ mode: "cloudfront" });
-    expect(production.jobs.map((j) => j.name)).not.toContain("research-export");
     // Rounds are kept a year, so production keeps them as staging does (ADR-062 §13).
     expect(staging.jobs.map((j) => j.name)).toContain("prune-rounds");
     expect(production.jobs.map((j) => j.name)).toContain("prune-rounds");
-    const partitions = production.jobs.find((j) => j.name === "research-events-partitions");
-    expect(await partitions?.run()).not.toHaveProperty("uncopied");
   });
 });

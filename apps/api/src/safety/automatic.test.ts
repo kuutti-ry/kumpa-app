@@ -851,12 +851,8 @@ describe("the moderators' review", () => {
     expect(front.queues.find((q) => q.queue === "automatic_bans")?.waiting).toBe(2);
   });
 
-  test("The automatic shadow bans refuse without a session and refuse a researcher", async ({
-    ctx,
-    app,
-  }) => {
+  test("The automatic shadow bans refuse without a session", async ({ ctx, app }) => {
     const member = await signedInAccount(ctx.client);
-    const researcher = await staffSession(ctx.client, "researcher");
     const expired = await staffSession(ctx.client);
     await ctx.client.query(
       "UPDATE admin_session SET expires_at = now() - interval '1 minute' WHERE id = $1",
@@ -874,7 +870,6 @@ describe("the moderators' review", () => {
       ["a product session's token", member.headers, 401, "unauthenticated"],
       ["an expired session", expired.headers, 401, "session_expired"],
       ["a revoked session", revoked.headers, 401, "session_revoked"],
-      ["a researcher", researcher.headers, 403, "admin_forbidden"],
     ] as const) {
       const answer = await app.request("/admin/sanctions/automatic", { headers });
       expect(answer.status, what).toBe(status);

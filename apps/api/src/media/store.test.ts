@@ -193,11 +193,7 @@ describe("listing a prefix", () => {
     await store.put("media/a/thumb.webp", new Uint8Array([1]), "image/webp");
     clock = new Date("2026-11-06T00:00:00.000Z");
     await store.put("media/b/thumb.webp", new Uint8Array([1]), "image/webp");
-    await store.put(
-      "research/2026/11/2026-11-05.parquet",
-      new Uint8Array([1]),
-      "application/octet-stream",
-    );
+    await store.put("elsewhere/2026-11-05.bin", new Uint8Array([1]), "application/octet-stream");
     store.objects.set("media/c/thumb.webp", new Uint8Array([1]));
     const byKey = (a: { key: string }, b: { key: string }) => a.key.localeCompare(b.key);
     expect((await store.list("media/")).sort(byKey)).toEqual([

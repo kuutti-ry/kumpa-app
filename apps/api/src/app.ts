@@ -229,7 +229,8 @@ export function createApp(deps: Deps) {
   // The staff guards differ in their roles alone (ADR-024 §3), each under the person's budget.
   const staff = (roles: readonly ModeratorRole[]) =>
     requireAdmin({ db: deps.db, store: adminSessionStore, roles, limit: perPerson });
-  const anyStaff = staff(["moderator", "admin", "researcher"]);
+  // Every member of staff is a moderator or an admin, so the staff session's
+  // own routes take the moderators' guard.
   const moderators = staff(["moderator", "admin"]);
   // A ban and its lift and review (#307, ADR-024 §3).
   const admins = staff(["admin"]);
@@ -240,7 +241,7 @@ export function createApp(deps: Deps) {
   const roundRead = roundReadRule(ruleDeps);
 
   app.route("/", healthRoutes(deps));
-  app.route("/", authRoutes(deps, guard, anyStaff));
+  app.route("/", authRoutes(deps, guard, moderators));
   app.route("/", accountRoutes(deps, guard));
   app.route("/", wellKnownRoutes(deps));
   app.route("/", invitationLinkRoutes(deps));

@@ -57,7 +57,6 @@ const versionOf = (kind: string): string => {
 };
 const TERMS = versionOf("terms");
 const PRIVACY = versionOf("privacy");
-const RESEARCH = versionOf("research");
 const SPECIAL = versionOf("special_category");
 /** The answers of the fake home route, by code: an area kept, and one too small to keep. */
 const HOMES: Readonly<Record<string, HomeSummary>> = {
@@ -157,7 +156,6 @@ function fakeApi(
       // A ready line counts like a bio (#239), as the API's completeness has it.
       ...(bio.length >= 50 || server.profile?.bioPreset || prompts >= 2 ? [] : ["prompts_or_bio"]),
     ];
-    const research = server.consents.find((c) => c.kind === "research" && !c.withdrawnAt);
     return {
       state: missing.some((step) => ACTIVATION.includes(step)) ? "registered" : "active",
       age: options.age ?? 36,
@@ -168,12 +166,10 @@ function fakeApi(
         terms: has("terms", TERMS) ? TERMS : null,
         privacy: has("privacy", PRIVACY) ? PRIVACY : null,
         specialCategory: has("special_category", SPECIAL) ? SPECIAL : null,
-        research: research ? { version: RESEARCH, givenAt: "2026-09-26T10:00:00.000Z" } : null,
       },
       currentVersions: {
         terms: current(TERMS),
         privacy: current(PRIVACY),
-        research: current(RESEARCH),
         special_category: SPECIAL,
       },
       nextChange: { gender: server.genderFrom },
@@ -332,8 +328,8 @@ const row = (name: string) =>
 const checked = (name: string) => row(name).props.accessibilityState?.checked;
 const consented = (kind: string) => ({
   kind,
-  version: { terms: TERMS, privacy: PRIVACY, research: RESEARCH, special_category: SPECIAL }[
-    kind as "terms" | "privacy" | "research" | "special_category"
+  version: { terms: TERMS, privacy: PRIVACY, special_category: SPECIAL }[
+    kind as "terms" | "privacy" | "special_category"
   ],
   locale: "en",
 });
@@ -454,7 +450,6 @@ describe("OnboardingScreen", () => {
     await press(screen.getByRole("button", { name: "Save and continue" }));
     await flush();
     await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/"));
-    expect(screen.queryByText("Help us learn how matching works")).toBeNull();
     expect(server.consents.map((c) => c.kind)).toEqual(["terms", "privacy", "special_category"]);
     expect(calls.filter((c) => c.method !== "GET").map((c) => c.path)).toEqual([
       "/profile",
@@ -1339,7 +1334,6 @@ describe("OnboardingScreen", () => {
     }
     // A step outside the count: nothing personal is numbered before the name.
     expect(screen.queryByText(/^Step \d+ of \d+$/)).toBeNull();
-    expect(screen.queryByText("Help us learn how matching works")).toBeNull();
     checkA11y();
     await press(screen.getByRole("button", { name: "I'm in, and I accept both" }));
     await flush();
@@ -1467,7 +1461,7 @@ describe("OnboardingScreen", () => {
     expect(store.has(AGREED)).toBe(false);
   });
 
-  /** Everything answered: nothing is missing, and research is no step of onboarding (#418). */
+  /** Everything answered: nothing is missing. */
   function allAnswered(server: ReturnType<typeof fakeApi>["server"]) {
     server.consents.push(consented("terms"), consented("privacy"), consented("special_category"));
     server.gender = "woman";
@@ -1518,7 +1512,6 @@ describe("OnboardingScreen", () => {
     await press(screen.getByRole("button", { name: "Continue" }));
     await flush();
     await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/"));
-    expect(screen.queryByText("Help us learn how matching works")).toBeNull();
     expect(server.seeks).toEqual(["man"]);
   });
 
@@ -1708,8 +1701,7 @@ describe("OnboardingScreen", () => {
     });
   });
 
-  it("Onboarding leaves after the last profile step without asking about research", async () => {
-    // A first walk with no research answer at all: the status says none was given.
+  it("goes home after the last profile step, the words the last thing saved", async () => {
     const { server, calls } = fakeApi();
     atWords(server);
     await show(<OnboardingScreen />);
@@ -1719,31 +1711,10 @@ describe("OnboardingScreen", () => {
     await press(screen.getByRole("button", { name: "Save and continue" }));
     await flush();
     await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/"));
-    expect(screen.queryByText("Help us learn how matching works")).toBeNull();
-    expect(screen.queryByRole("button", { name: "Yes, I take part" })).toBeNull();
     // Home takes over at once and says what comes next: nothing is drawn for the moment before it (#581).
     expect(drawn()).toEqual([]);
-    // The words are the last thing saved, and nothing asks about research (#545).
+    // The words are the last thing saved.
     expect(calls.filter((c) => c.method !== "GET").map((c) => c.path)).toEqual(["/profile"]);
-    expect(server.consents.some((c) => c.kind === "research")).toBe(false);
-  });
-
-  it("is not held up by a research wording newer than the app's, since it asks none", async () => {
-    const { server, calls } = fakeApi();
-    allAnswered(server);
-    const answers = globalThis.fetch;
-    globalThis.fetch = jest.fn(async (input: Request | string, init?: RequestInit) => {
-      const response = await answers(input, init);
-      const request = input instanceof Request ? input : new Request(input, init);
-      if (new URL(request.url).pathname !== "/onboarding") return response;
-      const body = await response.json();
-      return json({ ...body, currentVersions: { ...body.currentVersions, research: "2027-01" } });
-    }) as unknown as typeof fetch;
-    await show(<OnboardingScreen />);
-    await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/"));
-    expect(screen.queryByText(/Update the app to continue/)).toBeNull();
-    expect(screen.queryByText("Help us learn how matching works")).toBeNull();
-    expect(calls.filter((c) => c.method !== "GET")).toEqual([]);
   });
 
   it("says the status could not be read, and reads it again on request", async () => {

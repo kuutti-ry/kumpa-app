@@ -27,7 +27,7 @@ const photoId = "00000000-0000-4000-8000-000000000001";
 const accountId = "00000000-0000-4000-8000-000000000002";
 
 describe("the staff sign-in", () => {
-  it.each(["moderator", "admin", "researcher"])("knows the role %s", (role) => {
+  it.each(["moderator", "admin"])("knows the role %s", (role) => {
     expect(ModeratorRole.parse(role)).toBe(role);
   });
 
