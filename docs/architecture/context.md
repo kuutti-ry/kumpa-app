@@ -73,7 +73,7 @@ flowchart TB
 7. Telia Tunnistus: the broker of Finnish bank IDs; staging uses Telia's pre-production bed and its test persons. The API reads Telia's discovery document and keys at boot. A sign-in sends the browser to Telia, the person logs in at their bank every time, and Telia sends the browser back to the API's callback with a code. The API exchanges the code with a signed client assertion and decrypts the ID token. A pull request's preview has no bank login; a developer's machine uses the mock bank ([Deployment](deployment.md), part 1).
 8. Expo EAS Update: the app's JavaScript bundle. The app checks for an update at each start, on the channel its build names: `staging` for the development and preview builds and for the staging build that Google Play's internal testing track carries, `production` for the production build. Updates are not code-signed (ADR-004).
 9. Sentry, in its EU data region: error reports from the API and the app, with every category of data the SDK would collect by itself switched off in the API. Each is on only where a DSN is set: the parameter `sentry-dsn` for the API, `EXPO_PUBLIC_SENTRY_DSN` for the app.
-10. The website `kuutti.app`, on AWS Amplify Hosting, built from its own repository `kuutti-ry/kuutti-app-site`. The app opens the full legal texts there. No arrow joins the website and the API: the API's browser allowlist on staging names the panel's origin alone.
+10. The website `kuutti.app`, on AWS Amplify Hosting, built from its own repository `kuutti-ry/kumpa-app-site`. The app opens the full legal texts there. No arrow joins the website and the API: the API's browser allowlist on staging names the panel's origin alone.
 11. Push through Expo (#102, ADR-055): the API sends each push to Expo's push service over HTTPS, at most a hundred a request, and Expo hands it to Apple's APNs or Google's FCM, which wake the phone. A push carries the device's token, one line of the app's own words in the device's language (a new message, a new match) and its kind, never a message's text, a name, an account or the conversation, whose id would pair the two phones for the vendors. The app registers its token with the API (`PUT /push-token`) once the phone lets Kuutti notify; the API sends where the parameter `push` says `expo`, as on staging, and reads receipts back once, fifteen minutes later, to forget tokens Apple or Google no longer know. What Expo receives and keeps: `docs/vendors/expo.md`.
 12. App attestation by Apple and Google: planned for later, not built. The third of ADR-056 §1's triggers has come with the queue, which serves cards outside a bounded round (ADR-062); starting it is the maintainer's call, on its own issue. Screenshots are never noticed, so no service stands for them (ADR-056 §4).
 
@@ -168,7 +168,7 @@ flowchart TB
   n42["Google Play: the internal testing track"]
   n43["App Store Connect: TestFlight's internal testing"]
   subgraph site["The website"]
-    n38["kuutti-ry/kuutti-app-site, its own repository"]
+    n38["kuutti-ry/kumpa-app-site, its own repository"]
     n39["Amplify Hosting: kuutti.app and kumpa.fi"]
   end
   n28 -->|"pushes a branch, opens a pull request"| n29
@@ -202,7 +202,7 @@ flowchart TB
 35. EAS Update: the JavaScript, published after each staging deploy to the `staging` channel and after a production deploy to `production`, while `EAS_ENABLED` is on; and, for a pull request whose native side, sign-in, notification or photo code changed, to the branch `pr-<n>`.
 36. EAS Hosting: a pull request's web export of the app at the alias `pr-<n>`, a developer's preview against that pull request's API only.
 37. Sentry: `deploy.yml` uploads the published update's source maps, so that Sentry can read the app's stack traces.
-38. `kuutti-ry/kuutti-app-site`: the website's own repository, with its build spec and its headers.
+38. `kuutti-ry/kumpa-app-site`: the website's own repository, with its build spec and its headers.
 39. Amplify Hosting: a push to the site's `main` deploys `kuutti.app`, and the same site at `kumpa.fi`. CI here reads the deployed site's `/legal/versions.json` to hold the app's consent versions to the site's.
 40. `kuutti-ry/kumpa-app-fonts`: the association's private repository of Saiga, Kuutti's typeface, which Spoke Type licensed to Kuutti ry for Kuutti only and which is never public as a file (ADR-052). EAS Build and the website's Amplify read it at a pinned commit, each with a read-only token of its own, and hold every file to its SHA-256. No GitHub workflow reads it or holds a token for it, and a member's laptop reads it with the member's own login (`pnpm fonts`).
 41. The panel's bucket, `fonts/saiga-<version>/`: Saiga's faces, which the maintainer uploads from a laptop, since the panel is built on GitHub's runners, which never have them. The deploy leaves the folder alone, and the panel's CSP allows fonts from its own origin.

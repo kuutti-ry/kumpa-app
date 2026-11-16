@@ -88,7 +88,7 @@ Rows the schema's DSL cannot express, so two of the three are `generate --custom
 
 ## Open, the maintainer's
 
-1. The privacy notice's line on the year, and when production's switch opens: the notice's wording is his, on `kuutti-ry/kuutti-app-site`.
+1. The privacy notice's line on the year, and when production's switch opens: the notice's wording is his, on `kuutti-ry/kumpa-app-site`.
 2. Answered 2026-11-01 (ADR-036, #503): the model is not run again for one pool, and the first months' counts from the round records check it (#190).
 3. The inbox stop's and the alarms' values after the first months' counts: both are in the panel.
 

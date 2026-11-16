@@ -123,7 +123,7 @@ data "aws_cloudfront_cache_policy" "caching_optimized" {
 }
 
 # The panel's headers (ADR-025 §3), on every behaviour: the website's house set
-# (kuutti-app-site) plus what a script needs. The API's origin is the only
+# (kumpa-app-site) plus what a script needs. The API's origin is the only
 # place the panel talks to and the name the signed photo URLs are on
 # (ADR-005); no third party, no inline script or style, and the panel's forms
 # all prevent their default. Override throughout, so this policy is the one

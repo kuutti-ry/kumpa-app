@@ -2,7 +2,7 @@
 
 - Status: proposed (built as written here at the maintainer's word of 2026-10-24, "Saiga IN!", with his choice that day that the panel's copy is uploaded by hand; the token, the Expo GitHub App's reach, the uploads and Spoke's credit are his, the type scale his of 2026-11-08, the designer's to change, see History and Open)
 - Date: 2026-10-24
-- Follows: TD-2 (Expo and EAS as the native shell and the update channel), TD-9 (the design tokens, NativeWind), ADR-004 §3 (write access is the trust of what runs with `EXPO_TOKEN`), ADR-025 §3, §4 and §5 (the panel's CSP, its caching and its deploy), ADR-047 (the drawings follow the code), ADR-050 (the panel's components, system fonts only), CLAUDE.md (Decisions: the delivery of a licensed asset is infrastructure; Security: secrets; Accessibility: the OS's font scaling), the website's decision 18 (`kuutti-app-site`); issues #394, #408, #405
+- Follows: TD-2 (Expo and EAS as the native shell and the update channel), TD-9 (the design tokens, NativeWind), ADR-004 §3 (write access is the trust of what runs with `EXPO_TOKEN`), ADR-025 §3, §4 and §5 (the panel's CSP, its caching and its deploy), ADR-047 (the drawings follow the code), ADR-050 (the panel's components, system fonts only), CLAUDE.md (Decisions: the delivery of a licensed asset is infrastructure; Security: secrets; Accessibility: the OS's font scaling), the website's decision 18 (`kumpa-app-site`); issues #394, #408, #405
 
 ## Context
 

@@ -151,7 +151,7 @@ The second person and the chair for S1, by phone or in person. For S2 and S3, th
 
 Draft, for the association's counsel. Today Kuutti cannot reach people one by one: there are no push notifications (#102) and nothing sends mail (#196); the optional e-mail address (TD-18) is stored, but no code sends to it. What exists:
 
-- a notice on `kuutti.app`, through the site's repository `kuutti-ry/kuutti-app-site` (a push to its `main` deploys, `infra/README.md`, The website);
+- a notice on `kuutti.app`, through the site's repository `kuutti-ry/kumpa-app-site` (a push to its `main` deploys, `infra/README.md`, The website);
 - once the app is listed (#193), the store listing's text, by the maintainer.
 
 A text that goes out is written in Finnish first, the binding language (TD-17), then Swedish and English by a person, never by machine (`.claude/rules/i18n.md` treats legal texts that way). It says what happened, what it means for the reader, what Kuutti has done and what the reader can do. The contact it names is the one the privacy policy names (#190), never a postal address. The board approves it.

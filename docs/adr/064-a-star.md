@@ -73,7 +73,7 @@ The maintainer's of 03/11/2026, each put to him with its alternatives: §2, the 
 
 ## Open, the maintainer's
 
-1. The privacy notice's line on stars: its wording is his, on `kuutti-ry/kuutti-app-site`.
+1. The privacy notice's line on stars: its wording is his, on `kuutti-ry/kumpa-app-site`.
 2. The words Star, Starred, Tähti, Tähdellä merkityt, Stjärna and Stjärnmärkta, with the native review (#55). The icon is Lucide's, a placeholder until #410.
 3. Whether a block, or a ban for good, should take the stars between the two people off at once rather than at erasure.
 4. Whether a read of the list should count as a read towards the alarm of ADR-041, or be limited some other way, so that it is harder to watch one chosen person with it. Meanwhile the request limit alone.

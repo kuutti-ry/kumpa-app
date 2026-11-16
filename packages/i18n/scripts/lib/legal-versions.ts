@@ -48,7 +48,7 @@ export function parsePublished(text: string): Published {
 
 /**
  * The kinds whose text on the site is this app's own wording, verbatim
- * (kuutti-app-site src/content/consents): the research opt-in and the
+ * (kumpa-app-site src/content/consents): the research opt-in and the
  * sensitive answers have no longer text than legal.<kind>.title and summary.
  * The site says which language's wording counts, and its fingerprint is of
  * that one.
@@ -60,7 +60,7 @@ export type LegalTexts = Readonly<Record<string, Readonly<Record<string, string>
 
 /**
  * The site's fingerprint of a consent's wording (`pinnedText` and
- * `fingerprint` in kuutti-app-site src/lib/consent.ts): the first 16 hex
+ * `fingerprint` in kumpa-app-site src/lib/consent.ts): the first 16 hex
  * digits of the SHA-256 of `# <heading>`, a blank line and the body, with LF
  * line ends and no blank edges. Not CONSENT_TEXT_HASHES, which hashes the
  * keys too: the two values are not comparable.
