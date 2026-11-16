@@ -166,16 +166,15 @@ resource "aws_route53_record" "github_org_verification" {
 # (2026-11-16): the MX, Google's verification and the SPF were made with the
 # CLI that day for Gmail's activation and are adopted with import blocks, as
 # Google's key for kuutti.app was in #450. What the SPF and the MX mean is
-# kuutti.app's story above. Google's DKIM key for kumpa.fi comes from the
-# Admin console once generated for this domain; until then Google's mail from
-# a kumpa.fi address passes on SPF alone.
+# kuutti.app's story above. Google's DKIM key for kumpa.fi came from the
+# Admin console the same day and is declared below, never clicked.
 #
 # The DMARC and the CAA are kuutti.app's, declared here first, on the
 # maintainer's word of 2026-11-16. A domain with a mailbox and no DMARC lets
 # anyone send as it with only a soft fail. Google's envelope carries the
-# sender's own address, so its mail aligns under aspf=s even before its key
-# is published; until then, a forwarded message that breaks SPF has no
-# signature to pass on and is rejected. The CAA names Amazon's issuers alone:
+# sender's own address, so its mail aligns under aspf=s, and its signature
+# as d=kumpa.fi aligns under adkim=s, which carries a forwarded message that
+# breaks SPF. The CAA names Amazon's issuers alone:
 # Amplify's ACM certificate is the only one the domain has, and no box serves
 # it, so Let's Encrypt has no place here.
 # ---------------------------------------------------------------------------
@@ -243,4 +242,18 @@ resource "aws_route53_record" "kumpa_caa" {
     "0 issue \"amazonaws.com\"",
     "0 iodef \"mailto:admin@${var.domain}\"",
   ]
+}
+
+# Google's key for kumpa.fi, generated in the Admin console on 2026-11-16 with
+# kumpa.fi selected: a key of its own, not kuutti.app's. A TXT string holds at
+# most 255 characters, so the key is two strings, the first of exactly 255.
+resource "aws_route53_record" "kumpa_google_dkim" {
+  zone_id = aws_route53_zone.kumpa.zone_id
+  name    = "google._domainkey.kumpa.fi"
+  type    = "TXT"
+  ttl     = 300
+  records = [join("\" \"", [
+    "v=DKIM1; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArK2qppUBPBG5ruwgWoKlLCJblJnFGsi24Ln+be+Q2+VMo3gi4dvWYTCdAbVpmxz1AG6A+ck7+rf5bZ/yKT8PDYaSZTFTrDPpHgIe3u9Lnq9Ls5wUilBBbGy0fakmVNqCwQT3kx95IhIt7DpGMhG4tUvee/bUtBSpjRkSthiGU8DWGi/2fW7ikbu6kSnBAVv43",
+    "A0lgAB187vd52xIXhPlZBZc9gUHqgBBSqZjgZ9boep2KdvoOynp3hbcZPH8XmGAsdniOSHbrea1ol/T15pfufD+PX795KJbh7CaI1+0/rCAqn4g2B53Gf8ilo+sw64WtFHHsywlzmH04DEKQjNaewIDAQAB",
+  ])]
 }
