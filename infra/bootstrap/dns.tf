@@ -153,3 +153,63 @@ resource "aws_route53_record" "github_org_verification" {
   ttl     = 300
   records = [var.github_domain_verification.code]
 }
+
+# ---------------------------------------------------------------------------
+# The second domain. kumpa.fi was registered through Route 53 in this account
+# in November 2026, the same click-ops as kuutti.app's, and its hosted zone is
+# adopted the same way. It serves the website beside kuutti.app, which stays
+# the home: Amplify Hosting wrote the apex alias, www and the certificate's
+# validation record, ADR-001's documented exception, so they are not declared
+# here.
+#
+# The domain is a secondary domain of the association's Google Workspace
+# (2026-11-16): the MX, Google's verification and the SPF were made with the
+# CLI that day for Gmail's activation and are adopted with import blocks, as
+# Google's key for kuutti.app was in #450. What the SPF and the MX mean is
+# kuutti.app's story above. Google's DKIM key for kumpa.fi comes from the
+# Admin console once generated for this domain; until then Google's mail from
+# a kumpa.fi address passes on SPF alone.
+# ---------------------------------------------------------------------------
+
+import {
+  to = aws_route53_zone.kumpa
+  id = "Z009772612PD4XK4EUJKZ"
+}
+
+resource "aws_route53_zone" "kumpa" {
+  name    = "kumpa.fi"
+  comment = "HostedZone created by Route53 Registrar"
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+import {
+  to = aws_route53_record.kumpa_mx
+  id = "Z009772612PD4XK4EUJKZ_kumpa.fi_MX"
+}
+
+resource "aws_route53_record" "kumpa_mx" {
+  zone_id = aws_route53_zone.kumpa.zone_id
+  name    = "kumpa.fi"
+  type    = "MX"
+  ttl     = 300
+  records = ["1 smtp.google.com."]
+}
+
+import {
+  to = aws_route53_record.kumpa_txt
+  id = "Z009772612PD4XK4EUJKZ_kumpa.fi_TXT"
+}
+
+resource "aws_route53_record" "kumpa_txt" {
+  zone_id = aws_route53_zone.kumpa.zone_id
+  name    = "kumpa.fi"
+  type    = "TXT"
+  ttl     = 300
+  records = [
+    "google-site-verification=B0InikoK6q0-A4gtwI4N2So6V7VKprw6_iq2C5J_8j8",
+    "v=spf1 include:_spf.google.com ~all",
+  ]
+}

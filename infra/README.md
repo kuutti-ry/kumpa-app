@@ -8,7 +8,7 @@ Commands below use `tofu`. Terraform is command-compatible if you have it instea
 
 | path | contents | when |
 |---|---|---|
-| `bootstrap/` | state bucket, GitHub OIDC provider, CI roles, budget and billing alarm, the hosted zone of the project domain, the domain's SES identity (#385, ADR-043) | once, before anything else |
+| `bootstrap/` | state bucket, GitHub OIDC provider, CI roles, budget and billing alarm, the hosted zones of the project domain and of `kumpa.fi`, the domain's SES identity (#385, ADR-043) | once, before anything else |
 | `modules/` | `network`, `compute`, `data` (#7); `observability` (#11); `media` (#48, ADR-005: live on staging since 2026-10-09, dormant in production until its cutover below); `admin` (#313, ADR-025: the moderation panel's host, composed by staging; production with #25); `research` (#194, ADR-029: the research copy's rights, the researcher's read-only role and its access log, composed by staging with `media`; production with ADR-029's open points) | as the work needs them |
 | `envs/staging`, `envs/prod` | one composition per environment: the modules plus the non-secret parameters | #7 |
 | `github/` | repository settings, branch protection, environments | not adopted; `gh api` below until the GitHub provider question is settled |
@@ -875,7 +875,7 @@ The script refuses to overwrite a key and `put-parameter` runs without `--overwr
 
 ## The website
 
-`kuutti.app` is served by Amplify Hosting from the site's own repository, `kuutti-ry/kuutti-app-site`: its `amplify.yml` is the build spec, its `customHttp.yml` the headers, and a push to its `main` deploys. The placeholder page this repository served from `site/` until 2026-09-28 is gone.
+`kuutti.app` is served by Amplify Hosting from the site's own repository, `kuutti-ry/kuutti-app-site`: its `amplify.yml` is the build spec, its `customHttp.yml` the headers, and a push to its `main` deploys. The same site answers at `kumpa.fi`, a second custom domain of the app (2026-11-16), with `www.kumpa.fi` redirected to it; `kuutti.app` stays the home. The `kumpa.fi` zone was made by its registration and is adopted in `bootstrap/dns.tf` with Google Workspace's records; Amplify's records there are this section's exception too. The placeholder page this repository served from `site/` until 2026-09-28 is gone.
 
 The Amplify app (`kuutti-app-site`, eu-central-1) is the console-created exception of ADR-001: connecting Amplify to a repository is an installation of the Amplify GitHub App, a browser consent that no provider and no CLI call performs without a personal access token, which the ADR forbids. Creating it, once, in the Amplify console: *Create new app*, GitHub; on GitHub's page give the Amplify GitHub App access to `kuutti-app-site` (*Only select repositories*); repository `kuutti-ry/kuutti-app-site`, branch `main`, not a monorepo; the build settings are read from the repository's `amplify.yml`; *Save and deploy*. Then *Custom domains*, *Add domain*, `kuutti.app` from the Route 53 list: Amplify issues the certificate and writes the validation and alias records into the zone itself (10 to 30 minutes).
 
