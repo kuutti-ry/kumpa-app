@@ -10,9 +10,9 @@
 # welcome step's heading, which bank-login.yaml taps through. With the app's lock
 # on, a cold start shows the lock over all of it (ADR-045): one of our screens
 # too, and left standing, since the lock's flow expects it; sign-out.yaml leaves
-# it through the bank. "Kuutti" alone would match the dev client's loading screen,
-# and the lock's plain cover, which says nothing else, is hidden from Maestro as
-# from a screen reader.
+# it through the bank. A bare name would match the dev client's loading screen,
+# which shows the native name, or home's title, and the lock's plain cover, which
+# says nothing else, is hidden from Maestro as from a screen reader.
 # Metro is on 8081 unless METRO_PORT says otherwise (a second Metro, from a
 # worktree, beside the one of the checkout). On Android the emulator's
 # 127.0.0.1 is the host's through adb reverse.
