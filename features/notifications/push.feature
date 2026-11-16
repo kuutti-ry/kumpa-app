@@ -6,7 +6,7 @@ Feature: Pushes say that there is something, never what or from whom
   built at night nothing is ready to tell of. A push is one line of the app's
   own words in the phone's language and its kind: never a message's text, a
   name, an account or the conversation (§1). Who may be told of a message is
-  the chat's rule (ADR-031 §5): nothing crosses a block or a close, and a
+  the chat's rule (ADR-031 §4 and §9): nothing crosses a block or a close, and a
   shadow-banned sender's words reach nobody. Nothing is pushed in the quiet
   hours, nor of a kind the person switched off (ADR-032), and a device's
   token is its session's.

@@ -85,14 +85,18 @@ const neubrutalistButton = cva(cn(BASE, "border-2"), {
 });
 
 // Saiga Regular: as dark as the system font's Semibold, the weight a phone
-// gives a button's words (#408).
+// gives a button's words (#408). A drawn button centres its words as it
+// centres its content, so a label wrapped at the largest text stays in the
+// middle and does not sit to the left (#250). A ghost button is a row or a
+// link and reads from the start; a drawn one laid out from the start (a row
+// of a list) says text-left on its words, as it says justify-start.
 const buttonTextVariants = cva("font-sans text-control font-normal", {
   variants: {
     variant: {
-      default: "text-primary-foreground",
-      destructive: "text-destructive-foreground",
-      outline: "text-foreground",
-      secondary: "text-secondary-foreground",
+      default: "text-center text-primary-foreground",
+      destructive: "text-center text-destructive-foreground",
+      outline: "text-center text-foreground",
+      secondary: "text-center text-secondary-foreground",
       ghost: "text-foreground",
     },
   },

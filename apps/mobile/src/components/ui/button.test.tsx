@@ -187,6 +187,47 @@ describe("Button", () => {
     );
     expect(screen.getByText("Label").props.className).toMatch(pattern);
   });
+
+  // A label wrapped at the largest text sat to the left of a centred button
+  // (#250): a drawn button centres its lines as it centres its content.
+  it.each(["default", "destructive", "outline", "secondary"] as const)(
+    "centres the %s variant's words, plain or composed, enabled or disabled",
+    async (variant) => {
+      await renderWithTheme(
+        <>
+          <Button variant={variant}>Save</Button>
+          <Button variant={variant} accessibilityLabel="Retry">
+            <Icon as={X} />
+            <Text>Retry</Text>
+          </Button>
+          <Button variant={variant} disabled>
+            Wait
+          </Button>
+        </>,
+      );
+      for (const words of ["Save", "Retry", "Wait"]) {
+        expect(String(screen.getByText(words).props.className).split(" ")).toContain("text-center");
+      }
+    },
+  );
+
+  // A ghost button is a row or a link, and reads from the start.
+  it("leaves a ghost button's words where its row or link puts them", async () => {
+    await renderWithTheme(<Button variant="ghost">Back</Button>);
+    expect(screen.getByText("Back").props.className).not.toMatch(/\btext-(center|left)\b/);
+  });
+
+  // A drawn button laid out from the start, a row of a list, says so on its words.
+  it("lets a caller's words read from the start inside a drawn button", async () => {
+    await renderWithTheme(
+      <Button variant="outline" className="justify-start" accessibilityLabel="00100 Helsinki">
+        <Text className="flex-1 text-left">Helsinki</Text>
+      </Button>,
+    );
+    const words = String(screen.getByText("Helsinki").props.className).split(" ");
+    expect(words).toContain("text-left");
+    expect(words).not.toContain("text-center");
+  });
 });
 
 // Today's look is what a released app draws: no hard shadow, no press offset.

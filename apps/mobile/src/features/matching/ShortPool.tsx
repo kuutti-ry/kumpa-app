@@ -93,8 +93,8 @@ export function ShortPool({
                         then(onRelax({ field: offer.field, kind }));
                       }}
                     >
-                      <Text className="font-medium">{field(offer.field)}</Text>
-                      <Text className="font-normal">{more}</Text>
+                      <Text className="text-left font-medium">{field(offer.field)}</Text>
+                      <Text className="text-left font-normal">{more}</Text>
                     </Button>
                   );
                 })}
