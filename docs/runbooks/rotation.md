@@ -40,7 +40,7 @@ There is no rotation calendar. Rotate when a value may have been seen by someone
 | `EXPO_TOKEN` | GitHub environments `staging`, `prod`, `preview`, `preview-cleanup` | `deploy.yml`, `eas-build.yml`, `preview.yml`, `preview-cleanup.yml` | an Expo owner or Admin and a repository admin | 10 |
 | `SENTRY_AUTH_TOKEN`; the two DSNs | GitHub environments `staging`, `prod`; EAS environments `preview`, `production`; SSM `sentry-dsn` (String) | `deploy.yml`, EAS builds; the API and the app | the Sentry owner and a repository admin | 11 |
 | GitHub variables, AWS access from CI | repository and environment variables; OIDC roles | the workflows | an owner | 12 |
-| `FONTS_TOKEN`, read-only on `kuutti-ry/kuutti-app-fonts` alone | EAS environments `preview`, `production`, visibility secret. Never GitHub. The website's Amplify app holds a token of its own, rotated in `kuutti-app-site` (its decision 18) | EAS builds, `eas-build-pre-install` (`scripts/fonts.ts`, ADR-052) | the maintainer | 13 |
+| `FONTS_TOKEN`, read-only on `kuutti-ry/kumpa-app-fonts` alone | EAS environments `preview`, `production`, visibility secret. Never GitHub. The website's Amplify app holds a token of its own, rotated in `kumpa-app-site` (its decision 18) | EAS builds, `eas-build-pre-install` (`scripts/fonts.ts`, ADR-052) | the maintainer | 13 |
 | the Google Play service account's JSON key; Play's upload key, EAS's keystore of `fi.kuutti.app` | EAS's credentials of `fi.kuutti.app`, no other copy. Never GitHub | EAS Submit and EAS builds, for any holder of `EXPO_TOKEN`; the `staging` profile's `--auto-submit` (ADR-057) | the maintainer (Google Cloud, expo.dev, Play Console) | 14 |
 | the App Store Connect API key of the association's Apple team; its APNs key | EAS's credentials of the team and of `fi.kuutti.app`, no other copy. Never GitHub | EAS Submit, for any holder of `EXPO_TOKEN`, through the `staging` profile's `--auto-submit` (ADR-063); Expo's push service (ADR-055) | the maintainer, as the team's Account Holder (App Store Connect, the developer site, expo.dev) | 15 |
 
@@ -281,9 +281,9 @@ Personal Sentry tokens made for settings work are revoked when the work is done 
 
 ## 13. The fonts token
 
-`FONTS_TOKEN` lets a build read Saiga, Kuutti's typeface, from the association's private repository `kuutti-app-fonts` (ADR-052): a fine-grained token with Contents read on that repository alone, or a GitHub App's, the maintainer's choice. It lives in exactly these places, and in no GitHub secret, since no workflow ever has the typeface (`check-workflow-permissions.py` refuses one that names it):
+`FONTS_TOKEN` lets a build read Saiga, Kuutti's typeface, from the association's private repository `kumpa-app-fonts` (ADR-052): a fine-grained token with Contents read on that repository alone, or a GitHub App's, the maintainer's choice. It lives in exactly these places, and in no GitHub secret, since no workflow ever has the typeface (`check-workflow-permissions.py` refuses one that names it):
 
-1. GitHub, Settings, Developer settings, fine-grained tokens: a new one, resource owner `kuutti-ry`, repository `kuutti-app-fonts` only, Contents read-only; the organisation approves it.
+1. GitHub, Settings, Developer settings, fine-grained tokens: a new one, resource owner `kuutti-ry`, repository `kumpa-app-fonts` only, Contents read-only; the organisation approves it.
 2. The EAS environments `preview` and `production`, visibility secret: `eas env:create --name FONTS_TOKEN --environment preview --visibility secret` (and `production`), or `eas env:update` for a new value. A member's laptop needs none: `pnpm fonts` uses the member's own `gh` login.
 3. Revoke the old token on GitHub. The website's token is another one, in its Amplify app; this does not touch it.
 

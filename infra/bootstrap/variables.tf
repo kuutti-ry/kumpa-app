@@ -16,11 +16,11 @@ variable "region" {
   default     = "eu-central-1"
 }
 
-# kuutti-app was created after 15 July 2026, so GitHub issues immutable subject
-# claims: the sub is repo:kuutti-ry@<owner_id>/kuutti-app@<repo_id>:... rather
+# kumpa-app (kuutti-app until 2026-11-16, #702) was created after 15 July 2026, so GitHub issues immutable subject
+# claims: the sub is repo:kuutti-ry@<owner_id>/kumpa-app@<repo_id>:... rather
 # than the name-based form. Trust policies below key on these numeric IDs, which
 # are stable across renames. Get them with:
-#   gh api repos/kuutti-ry/kuutti-app --jq '{repo_id: .id, owner_id: .owner.id}'
+#   gh api repos/kuutti-ry/kumpa-app --jq '{repo_id: .id, owner_id: .owner.id}'
 
 variable "github_owner_id" {
   description = "Numeric ID of the kuutti-ry organisation."

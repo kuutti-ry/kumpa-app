@@ -23,7 +23,7 @@ Whoever runs Kuutti has had no way to tell everybody something they must know, s
 
 - ADR-032 §1 and §2 gain the kind `announcement` for the switches and for the notices, and the notice its `announcement_id`; ADR-055 §1 a third line and kind, and §7 an exception for the announcement's push; ADR-043 §1 the announcement as the second mail a confirmed address receives.
 - The app shows the notice's title and body and the switch, in the same change as the API, since it reads the notices and the switches through the shared contracts and would refuse a kind it does not know. The panel's screen comes after it, so nothing can be sent before the app can show it.
-- The privacy notice on kuutti.app gains a line on the announcement email and the switch: the maintainer's wording, in kuutti-ry/kuutti-app-site.
+- The privacy notice on kuutti.app gains a line on the announcement email and the switch: the maintainer's wording, in kuutti-ry/kumpa-app-site.
 - Production sends no push until it has its Expo token (ADR-055, Consequences); the notice and the email reach people there regardless.
 
 ## Left out on purpose

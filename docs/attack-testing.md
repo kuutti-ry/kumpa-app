@@ -1,6 +1,6 @@
 # Attack testing: completion of #380
 
-This is the coverage inventory and disposition record for [#380](https://github.com/kuutti-ry/kuutti-app/issues/380), following [ADR-021](adr/021-tests-at-every-level.md), [ADR-002](adr/002-gherkin-spec-vitest-runner.md) and [ADR-020](adr/020-end-to-end-flows-with-maestro.md).
+This is the coverage inventory and disposition record for [#380](https://github.com/kuutti-ry/kumpa-app/issues/380), following [ADR-021](adr/021-tests-at-every-level.md), [ADR-002](adr/002-gherkin-spec-vitest-runner.md) and [ADR-020](adr/020-end-to-end-flows-with-maestro.md).
 
 The maintainer asked on 13 November 2026 for one final completion PR, with findings fixed in that PR and no new tracking issues. This record replaces the original issue's separate-ticket step for this work. A retained limitation below is an explicit scope decision, not a promised future fix. New testing can still discover new bugs; completion does not claim exhaustive proof.
 
@@ -66,7 +66,7 @@ The IDs below preserve the order of the four original findings comments: tools (
 
 ### CLI and local tools
 
-[Original findings](https://github.com/kuutti-ry/kuutti-app/issues/380#issuecomment-6847576395).
+[Original findings](https://github.com/kuutti-ry/kumpa-app/issues/380#issuecomment-6847576395).
 
 | ID | Finding | Disposition and evidence |
 |---|---|---|
@@ -93,7 +93,7 @@ The IDs below preserve the order of the four original findings comments: tools (
 
 ### Checks and translation tooling
 
-[Original findings](https://github.com/kuutti-ry/kuutti-app/issues/380#issuecomment-6847576840).
+[Original findings](https://github.com/kuutti-ry/kumpa-app/issues/380#issuecomment-6847576840).
 
 | ID | Finding | Disposition and evidence |
 |---|---|---|
@@ -129,7 +129,7 @@ The IDs below preserve the order of the four original findings comments: tools (
 
 ### Moderation panel
 
-[Original findings](https://github.com/kuutti-ry/kuutti-app/issues/380#issuecomment-6847577285).
+[Original findings](https://github.com/kuutti-ry/kumpa-app/issues/380#issuecomment-6847577285).
 
 | ID | Finding | Disposition and evidence |
 |---|---|---|
@@ -153,7 +153,7 @@ The IDs below preserve the order of the four original findings comments: tools (
 
 ### Nightly jobs
 
-[Original findings](https://github.com/kuutti-ry/kuutti-app/issues/380#issuecomment-6847577715).
+[Original findings](https://github.com/kuutti-ry/kumpa-app/issues/380#issuecomment-6847577715).
 
 | ID | Finding | Disposition and evidence |
 |---|---|---|

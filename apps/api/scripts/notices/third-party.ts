@@ -142,7 +142,7 @@ const RULE = "=".repeat(80);
  * delete (#425, ADR-005). One release per sharp-libvips version, made by hand
  * as notices/README.md says.
  */
-const SOURCES = "https://github.com/kuutti-ry/kuutti-app/releases/tag/sources-sharp-libvips-";
+const SOURCES = "https://github.com/kuutti-ry/kumpa-app/releases/tag/sources-sharp-libvips-";
 
 /** A library built into libvips' shared library or into sharp's addon, with the releases and patches its build is made from. */
 type Library = {

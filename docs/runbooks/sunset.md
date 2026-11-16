@@ -64,7 +64,7 @@ Production, unless the row says otherwise.
 
 | channel | how | in the repository |
 |---|---|---|
-| the website `kuutti.app` | a page in the site's own repository, `kuutti-ry/kuutti-app-site` | the site is served by Amplify from that repository (`infra/README.md`, The website) |
+| the website `kuutti.app` | a page in the site's own repository, `kuutti-ry/kumpa-app-site` | the site is served by Amplify from that repository (`infra/README.md`, The website) |
 | the app | the notice of section 1, by EAS Update | needs building |
 | e-mail | only with #196 | needs building |
 | the store listings | the listing text says the service ends; the app stays on sale until T1 (section 3) | no: the store release is M5 |

@@ -2423,7 +2423,7 @@ async function standIn(
         version: "0.0.0-test",
         commit: "abc1234",
         builtAt: later,
-        source: "https://github.com/kuutti-ry/kuutti-app",
+        source: "https://github.com/kuutti-ry/kumpa-app",
         db: "ok",
         migrations: "current",
       });

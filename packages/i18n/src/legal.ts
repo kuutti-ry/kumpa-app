@@ -1,6 +1,6 @@
 /**
  * Where the full text of each legal wording is read (#208, ADR-010 §4): the
- * website (`kuutti-ry/kuutti-app-site`) holds it under the same version as
+ * website (`kuutti-ry/kumpa-app-site`) holds it under the same version as
  * the app's summary, at an anchor named by the kind and the version. The
  * site's build publishes the address of each in /legal/versions.json, and
  * the app's CI holds this address to it (`pnpm check:legal-versions`), so a

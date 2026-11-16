@@ -42,7 +42,7 @@ How long does it stay, and what removes it? A nightly job needs a test and a row
 
 ## 7. What people are told
 
-If the data is new to the person, the privacy notice on kuutti.app may need a change, and a consent may need a new version (`CONSENT_VERSIONS`, `pnpm check:legal-versions`; the site lives in `kuutti-ry/kuutti-app-site`). A sensitive answer needs its special-category consent. Legal wording is the maintainer's: name what changes and ask.
+If the data is new to the person, the privacy notice on kuutti.app may need a change, and a consent may need a new version (`CONSENT_VERSIONS`, `pnpm check:legal-versions`; the site lives in `kuutti-ry/kumpa-app-site`). A sensitive answer needs its special-category consent. Legal wording is the maintainer's: name what changes and ask.
 
 ## 8. Report
 

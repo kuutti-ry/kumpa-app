@@ -42,7 +42,7 @@ describe("consent versions", () => {
     }
   });
 
-  // The site's anchors (kuutti-app-site, #208): the research opt-in and the
+  // The site's anchors (kumpa-app-site, #208): the research opt-in and the
   // sensitive answers are read on the privacy page.
   it("links each kind to the site's page at the anchor of the version this app carries", () => {
     expect(
@@ -62,7 +62,7 @@ describe("consent versions", () => {
   });
 
   // The website's CI reads CONSENT_VERSIONS out of this module on main
-  // (appVersionsFrom in kuutti-app-site src/lib/consent.ts: this expression,
+  // (appVersionsFrom in kumpa-app-site src/lib/consent.ts: this expression,
   // then JSON of what the braces hold without its last comma). A change of
   // the generator's shape fails here first; change the site's reader with it
   // and merge that first, or the site's CI goes red on its next run (#208).

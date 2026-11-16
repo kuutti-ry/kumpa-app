@@ -325,7 +325,7 @@ Production is applied by `infra-prod.yml` on a `v*` tag, behind the `prod` envir
 flowchart TB
   accTitle: Deployment, part 6: the website
   accDescr: The website's own repository deploys to an Amplify Hosting app made in the console, which serves kuutti.app with a certificate and records Amplify wrote into the zone.
-  n61["kuutti-ry/kuutti-app-site: amplify.yml and customHttp.yml"]
+  n61["kuutti-ry/kumpa-app-site: amplify.yml and customHttp.yml"]
   n62["Amplify Hosting app kuutti-app-site, eu-central-1, made in the console"]
   n63["kuutti.app: certificate and records written by Amplify"]
   n61 -->|"a push to main deploys"| n62
@@ -334,7 +334,7 @@ flowchart TB
 
 ### Steps
 
-61. The website's own repository, `kuutti-ry/kuutti-app-site`: its `amplify.yml` is the build spec and its `customHttp.yml` the headers.
+61. The website's own repository, `kuutti-ry/kumpa-app-site`: its `amplify.yml` is the build spec and its `customHttp.yml` the headers.
 62. The Amplify Hosting app `kuutti-app-site` in eu-central-1, connected to that repository through the Amplify GitHub App: the console-made exception of ADR-001, since the connection is a browser consent no provider performs. A push to the site's `main` deploys it.
 63. `kuutti.app`: Amplify issued the certificate and wrote the validation and alias records into the zone itself, outside OpenTofu. The redirect from `www` and the cost tag are commands in `infra/README.md`, run after the console.
 
