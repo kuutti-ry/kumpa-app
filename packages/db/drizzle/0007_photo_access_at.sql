@@ -1,0 +1,1 @@
+CREATE INDEX "photo_access_at_idx" ON "photo_access" USING btree ("at");

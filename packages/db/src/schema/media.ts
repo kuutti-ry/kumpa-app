@@ -95,7 +95,8 @@ export const photo = pgTable(
  * "Signed URL issuance is logged per account"). This is the fetch log the
  * exposure budget of TD-6 counts from (#52), and what makes a leak
  * attributable: with bank-verified accounts, to a person. `photo_id` has no
- * foreign key on purpose: the log outlives the photo it names.
+ * foreign key on purpose: the log outlives the photo it names. A row is kept
+ * a year, then the night deletes it (#688, ADR-008 History 16/11/2026).
  */
 export const photoAccess = pgTable(
   "photo_access",
@@ -112,8 +113,13 @@ export const photoAccess = pgTable(
     // may be gone by the time a later fetch is counted.
     purpose: photoPurpose("purpose").notNull().default("profile"),
   },
-  // The budget is counted per account per day (#52); the same index serves it.
-  (table) => [index("photo_access_account_at_idx").on(table.accountId, table.at)],
+  (table) => [
+    // The budget is counted per account per day (#52); the same index serves it.
+    index("photo_access_account_at_idx").on(table.accountId, table.at),
+    // The night's prune past the kept year reads by time alone, every account's
+    // rows (#688): PostgreSQL 17 cannot skip the leading account of the index above.
+    index("photo_access_at_idx").on(table.at),
+  ],
 );
 
 /**
