@@ -127,16 +127,17 @@ import {
 
 # The public half of the key Google signs the Workspace's mail with, the
 # selector "google". A TXT string holds at most 255 characters, so the key is
-# two strings, split where the Workspace's Admin console split it. A new key
-# from Google replaces both.
+# two strings, the first of 255. A new key from Google replaces both: the
+# Admin console generated this one on 2026-11-16, replacing that of #450, and
+# signs with it once "Start authentication" is pressed after the apply.
 resource "aws_route53_record" "google_dkim" {
   zone_id = aws_route53_zone.main.zone_id
   name    = "google._domainkey.${var.domain}"
   type    = "TXT"
   ttl     = 300
   records = [join("\" \"", [
-    "v=DKIM1; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvqLTCdakQ5D+LJUEWLQE0nx4O3T8P0z9vu8NqKboujRg3MtHKSKe+okW7VLONmAiaMdfYGHJnpDJTr9s97W7A2kzoMy7APkKBJfW7fFNioqiN4CdMwADOPph5Yfkf9A97cGGbsZv8d",
-    "KNUwyJ/Q1SiHCPNrYXgJl6vSZlguoc+b+LzslM+z4SEk0d6iXmfr7DnECG51iCmpFz04jXtmcJwBj4lQXnLmMDG/Y56p6oexvSN7qCw/7eRTMVhcderPnzn8tjoGKNJFl682EcU7zV9RuivQwawDXG1mFHS1tCdIPJ75b/c1z62dSsDJyWzpx9W5ZMlLmDxQWFLUZ0y+9bAwIDAQAB",
+    "v=DKIM1; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqyEa1av/oao0++y1j9TRXz9A3ZqAEjb/A5fbhEWIIWg9R85/PWqKxQGmfL0WFcrPI6ENaectTwtoNO6tXvX3rTKCRYPIlf860qdazozP9s/Un2SvRiAlSoKie5aAqFAIi46JFYcH7slPnXZVB5u0dX8MamyDpPk21HJXoyimfbqhcKl2U20AtvUxFqnyX7c/z",
+    "rILrSpEBlpRvgQ3Dn40Y1G36QaxwjOlnudmVorF5p+6rG+FzjTwUGFgHQwrHDRDeItTVscEh2E9mNhjnf2JPjVxLpV7YK7Bg6Z7Zh0e8EFUTCs0Yl8exBp94+n4eSAt6jnf2qjK0KeXc04Kkx41KQIDAQAB",
   ])]
 }
 
@@ -152,4 +153,108 @@ resource "aws_route53_record" "github_org_verification" {
   type    = "TXT"
   ttl     = 300
   records = [var.github_domain_verification.code]
+}
+
+# ---------------------------------------------------------------------------
+# The second domain. kumpa.fi was registered through Route 53 in this account
+# in November 2026, the same click-ops as kuutti.app's, and its hosted zone is
+# adopted the same way. It serves the website beside kuutti.app, which stays
+# the home: Amplify Hosting wrote the apex alias, www and the certificate's
+# validation record, ADR-001's documented exception, so they are not declared
+# here.
+#
+# The domain is a secondary domain of the association's Google Workspace
+# (2026-11-16): the MX, Google's verification and the SPF were made with the
+# CLI that day for Gmail's activation and are adopted with import blocks, as
+# Google's key for kuutti.app was in #450. What the SPF and the MX mean is
+# kuutti.app's story above. Google's DKIM key for kumpa.fi came from the
+# Admin console the same day and is declared below, never clicked.
+#
+# The DMARC and the CAA are kuutti.app's, declared here first, on the
+# maintainer's word of 2026-11-16. A domain with a mailbox and no DMARC lets
+# anyone send as it with only a soft fail. Google's envelope carries the
+# sender's own address, so its mail aligns under aspf=s, and its signature
+# as d=kumpa.fi aligns under adkim=s, which carries a forwarded message that
+# breaks SPF. The CAA names Amazon's issuers alone:
+# Amplify's ACM certificate is the only one the domain has, and no box serves
+# it, so Let's Encrypt has no place here.
+# ---------------------------------------------------------------------------
+
+import {
+  to = aws_route53_zone.kumpa
+  id = "Z009772612PD4XK4EUJKZ"
+}
+
+resource "aws_route53_zone" "kumpa" {
+  name    = "kumpa.fi"
+  comment = "HostedZone created by Route53 Registrar"
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+import {
+  to = aws_route53_record.kumpa_mx
+  id = "Z009772612PD4XK4EUJKZ_kumpa.fi_MX"
+}
+
+resource "aws_route53_record" "kumpa_mx" {
+  zone_id = aws_route53_zone.kumpa.zone_id
+  name    = "kumpa.fi"
+  type    = "MX"
+  ttl     = 300
+  records = ["1 smtp.google.com."]
+}
+
+import {
+  to = aws_route53_record.kumpa_txt
+  id = "Z009772612PD4XK4EUJKZ_kumpa.fi_TXT"
+}
+
+resource "aws_route53_record" "kumpa_txt" {
+  zone_id = aws_route53_zone.kumpa.zone_id
+  name    = "kumpa.fi"
+  type    = "TXT"
+  ttl     = 300
+  records = [
+    "google-site-verification=B0InikoK6q0-A4gtwI4N2So6V7VKprw6_iq2C5J_8j8",
+    "v=spf1 include:_spf.google.com ~all",
+  ]
+}
+
+resource "aws_route53_record" "kumpa_dmarc" {
+  zone_id = aws_route53_zone.kumpa.zone_id
+  name    = "_dmarc.kumpa.fi"
+  type    = "TXT"
+  ttl     = 3600
+  records = ["v=DMARC1; p=reject; adkim=s; aspf=s"]
+}
+
+resource "aws_route53_record" "kumpa_caa" {
+  zone_id = aws_route53_zone.kumpa.zone_id
+  name    = "kumpa.fi"
+  type    = "CAA"
+  ttl     = 3600
+  records = [
+    "0 issue \"amazon.com\"",
+    "0 issue \"amazontrust.com\"",
+    "0 issue \"awstrust.com\"",
+    "0 issue \"amazonaws.com\"",
+    "0 iodef \"mailto:admin@${var.domain}\"",
+  ]
+}
+
+# Google's key for kumpa.fi, generated in the Admin console on 2026-11-16 with
+# kumpa.fi selected: a key of its own, not kuutti.app's. A TXT string holds at
+# most 255 characters, so the key is two strings, the first of exactly 255.
+resource "aws_route53_record" "kumpa_google_dkim" {
+  zone_id = aws_route53_zone.kumpa.zone_id
+  name    = "google._domainkey.kumpa.fi"
+  type    = "TXT"
+  ttl     = 300
+  records = [join("\" \"", [
+    "v=DKIM1; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArK2qppUBPBG5ruwgWoKlLCJblJnFGsi24Ln+be+Q2+VMo3gi4dvWYTCdAbVpmxz1AG6A+ck7+rf5bZ/yKT8PDYaSZTFTrDPpHgIe3u9Lnq9Ls5wUilBBbGy0fakmVNqCwQT3kx95IhIt7DpGMhG4tUvee/bUtBSpjRkSthiGU8DWGi/2fW7ikbu6kSnBAVv43",
+    "A0lgAB187vd52xIXhPlZBZc9gUHqgBBSqZjgZ9boep2KdvoOynp3hbcZPH8XmGAsdniOSHbrea1ol/T15pfufD+PX795KJbh7CaI1+0/rCAqn4g2B53Gf8ilo+sw64WtFHHsywlzmH04DEKQjNaewIDAQAB",
+  ])]
 }
