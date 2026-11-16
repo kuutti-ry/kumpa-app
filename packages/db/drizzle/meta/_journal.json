@@ -50,6 +50,13 @@
       "when": 1794744096311,
       "tag": "0006_no_ponds",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794814860558,
+      "tag": "0007_photo_access_at",
+      "breakpoints": true
     }
   ]
 }
