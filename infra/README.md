@@ -877,19 +877,21 @@ The script refuses to overwrite a key and `put-parameter` runs without `--overwr
 
 `kuutti.app` is served by Amplify Hosting from the site's own repository, `kuutti-ry/kumpa-app-site`: its `amplify.yml` is the build spec, its `customHttp.yml` the headers, and a push to its `main` deploys. The same site answers at `kumpa.fi`, a second custom domain of the app (2026-11-16), with `www.kumpa.fi` redirected to it; `kuutti.app` stays the home. The `kumpa.fi` zone was made by its registration and is adopted in `bootstrap/dns.tf` with Google Workspace's records, a reject DMARC and a CAA for Amazon's issuers; Amplify's records there are this section's exception too. The placeholder page this repository served from `site/` until 2026-09-28 is gone.
 
-The Amplify app (`kuutti-app-site`, eu-central-1) is the console-created exception of ADR-001: connecting Amplify to a repository is an installation of the Amplify GitHub App, a browser consent that no provider and no CLI call performs without a personal access token, which the ADR forbids. Creating it, once, in the Amplify console: *Create new app*, GitHub; on GitHub's page give the Amplify GitHub App access to `kumpa-app-site` (*Only select repositories*); repository `kuutti-ry/kumpa-app-site`, branch `main`, not a monorepo; the build settings are read from the repository's `amplify.yml`; *Save and deploy*. Then *Custom domains*, *Add domain*, `kuutti.app` from the Route 53 list: Amplify issues the certificate and writes the validation and alias records into the zone itself (10 to 30 minutes).
+The Amplify app (`kumpa-app-site`, eu-central-1) is the console-created exception of ADR-001: connecting Amplify to a repository is an installation of the Amplify GitHub App, a browser consent. The CLI connects an app only with a GitHub token (`create-app` or `update-app` with `--access-token`), and then adds a deploy key to the repository, which the organisation refuses: deploy keys are off in `kuutti-ry`, and a token kept in state is what the ADR forbids anyway. Creating it, once, in the Amplify console: *Create new app*, GitHub; on GitHub's page give the Amplify GitHub App access to `kumpa-app-site` (*Only select repositories*); repository `kuutti-ry/kumpa-app-site`, branch `main`, not a monorepo; the build settings are read from the repository's `amplify.yml`; under *Advanced settings* the environment variable `FONTS_TOKEN`, the site's own read-only token for Saiga (the site's decision 18; without it the site is built in Inter); *Save and deploy*. Then *Custom domains*, *Add domain*, `kuutti.app` and `kumpa.fi` from the Route 53 list, each with `www`: Amplify issues the certificate and writes the validation and alias records into the zone itself (10 to 30 minutes).
 
-The console leaves three things to put right, from the CLI after `pnpm aws:login`, no token involved: it adds a catch-all rewrite (`/<*>` to `/index.html`, 404-200) that would answer every missing address with the home page, and the site has real pages and a 404 of its own; the redirect from `www` and the cost allocation tag are not set.
+The console leaves three things to put right, from the CLI after `pnpm aws:login`, no token involved: it adds a catch-all rewrite (`/<*>` to `/index.html`, 404-200) that would answer every missing address with the home page, and the site has real pages and a 404 of its own; the redirects from `www` and the cost allocation tag are not set. `--custom-rules` replaces every rule the app has, so it names both redirects.
 
 ```bash
-APP=$(aws amplify list-apps --query "apps[?name=='kuutti-app-site'].appId" --output text)
-aws amplify update-app --app-id "$APP" --custom-rules source=https://www.kuutti.app,target=https://kuutti.app,status=301
+APP=$(aws amplify list-apps --query "apps[?name=='kumpa-app-site'].appId" --output text)
+aws amplify update-app --app-id "$APP" --custom-rules source=https://www.kuutti.app,target=https://kuutti.app,status=301 source=https://www.kumpa.fi,target=https://kumpa.fi,status=301
 aws amplify tag-resource --resource-arn "arn:aws:amplify:eu-central-1:$(aws sts get-caller-identity --query Account --output text):apps/$APP" --tags Project=kuutti,ManagedBy=console
 aws amplify get-domain-association --app-id "$APP" --domain-name kuutti.app --query 'domainAssociation.[domainStatus,statusReason]' --output text
 curl -sI https://kuutti.app/ | grep -i -E '^HTTP|content-security-policy'
 ```
 
 A domain is associated with one app at a time: moving it from another app means removing it there first, and some minutes without the site while the certificate is issued anew. To retire the app: `delete-app`, then the records it left in the zone.
+
+An app does not follow a rename of its repository: GitHub still delivers the pushes and Amplify answers them, but builds nothing. When the site's repository was renamed `kumpa-app-site` on 2026-11-16 (#702), the first app, `kuutti-app-site` from 2026-09-28, was replaced the same day by this one, made as above, with its domains moved over and the old app deleted. A rename of the repository again means the same: a new app, then the domains, then `delete-app` on the old one.
 
 ## What is not here
 
