@@ -6082,6 +6082,10 @@ admin.config.failed:
   en: "The change was not saved."
   description: "Admin panel, the change failed for another reason (#305)."
 
+admin.config.pastKeptYear:
+  en: "The queue keeps its records a year, so this key holds at most 365 days."
+  description: "Admin panel, the API refused a waiting period or a window counted back over the queue's log that is longer than the year the log is kept (ROUND_RETENTION_DAYS, #687); change the number with the constant."
+
 admin.nav.overview:
   en: "Overview"
   description: "Admin panel, the menu entry of the front page (#303)."

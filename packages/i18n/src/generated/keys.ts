@@ -223,6 +223,7 @@ export type MessageParams = {
   "admin.config.history": Record<never, never>;
   "admin.config.invalid": Record<never, never>;
   "admin.config.newValue": Record<never, never>;
+  "admin.config.pastKeptYear": Record<never, never>;
   "admin.config.reason": Record<never, never>;
   "admin.config.refresh": Record<never, never>;
   "admin.config.save": Record<never, never>;

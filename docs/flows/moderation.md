@@ -345,7 +345,7 @@ flowchart TB
   subgraph api["The API"]
     s82(["Marks it handled, by whom and when, with an audit row, once"])
     s84["Writes the look to the audit log, then answers the page"]
-    s90{"Same type and keys as now, and nobody changed it meanwhile?"}
+    s90{"Same type and keys as now, within the kept year for a clock of the queue, and nobody changed it meanwhile?"}
     s92(["Writes a new version with its reason and an audit row, used from the next request"])
   end
   subgraph moderator["A moderator"]
@@ -403,8 +403,8 @@ flowchart TB
 87. "Announcements", an admin's: one admin writes an announcement to everybody and another approves it, in [Announcements](announcements.md#part-1-one-admin-writes-it). The end.
 88. "Tunables", an admin's: every tunable by its key, with its value; opened, its versions, newest first, with the value, "From" when, "By" whom and "Why". The admin writes the "New value" and "Why the change", and chooses "Review the change". A value not of the key's type is caught in the form: "This is not a value of the key's type."
 89. The panel asks to "Change" the key, with "Now:" and "New:", and offers "Change it" and "Cancel".
-90. The API asks whether the value keeps the type its key declared, an object its keys, and whether nobody changed the key meanwhile. Yes: 92. No: 91.
-91. The panel says "This is not a value of the key's type." or "Another admin changed this key meanwhile. Refresh and look again."; anything else, "The change was not saved." Nothing is written. The end.
+90. The API asks whether the value keeps the type its key declared, an object its keys; for the two pass clocks, the liked clock, the like's expiry and the fish's window, which are counted back over the queue's log, whether it is at most the year the log is kept; and whether nobody changed the key meanwhile. Yes: 92. No: 91.
+91. The panel says "This is not a value of the key's type.", "The queue keeps its records a year, so this key holds at most 365 days." or "Another admin changed this key meanwhile. Refresh and look again."; anything else, "The change was not saved." Nothing is written. The end.
 92. The API writes a new version with the admin and the reason, keeps the earlier ones, and writes the change to the audit log. Every reader uses it from the next request, with no deploy: the automatic rules' thresholds of part 4 too. The panel says "Saved." with the key and its value. The end.
 93. "Audit log", an admin's: who did or saw what, newest first, a page at a time with "Newer" and "Older", never all at once, narrowed under "Filters" by who, what, the subject and the days, then "Show". What the automatic rules did shows as "The automatic rules". A read narrowed to one subject is itself an audit row about that subject. No row can be changed or deleted. The end.
 94. "Staff", an admin's: every member of staff by identity, their role, when and by whom it was granted, and their "Last sign-in" to the panel, or "Never". It only reads: a role is granted and taken away with the maintainer's own tool, which the screen does not say. The end.
@@ -458,3 +458,4 @@ flowchart TB
 - 2026-11-07 (#573, PR #646): an admin's menu gains Announcements, where one admin writes an announcement to everybody and another approves it.
 - 2026-11-13 (#657): a failed exchange request returns to Sign in with the existing failure message.
 - 2026-11-13 (#380): pending confirmations stay open; session checks precede staff screens, late page answers are ignored, and completed feedback receives focus without offering the action again.
+- 2026-11-16 (#687): a clock counted back over the queue's log is refused past the year the log is kept, in words of its own.

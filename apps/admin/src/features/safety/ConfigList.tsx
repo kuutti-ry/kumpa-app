@@ -141,7 +141,7 @@ export function ConfigList() {
 }
 
 type Step =
-  | { kind: "editing"; error?: "invalid" | "config_conflict" | "failed" }
+  | { kind: "editing"; error?: "invalid" | "config_conflict" | "config_past_kept_year" | "failed" }
   | { kind: "confirming"; value: ConfigValue }
   | { kind: "saving"; value: ConfigValue };
 
@@ -203,7 +203,12 @@ function Tunable({
       return setStep({
         kind: "editing",
         // The API's refusal of a shape says what the form's own check does: one text serves both.
-        error: code === "config_shape" ? "invalid" : code === "config_conflict" ? code : "failed",
+        error:
+          code === "config_shape"
+            ? "invalid"
+            : code === "config_conflict" || code === "config_past_kept_year"
+              ? code
+              : "failed",
       });
     }
     // The answer held to its contract, as the list is (rules/admin.md).
@@ -217,6 +222,7 @@ function Tunable({
   const errorText = {
     invalid: t("admin.config.invalid"),
     config_conflict: t("admin.config.conflict"),
+    config_past_kept_year: t("admin.config.pastKeptYear"),
     failed: t("admin.config.failed"),
   } as const;
 

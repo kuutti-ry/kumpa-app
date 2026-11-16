@@ -384,6 +384,27 @@ describe("POST /admin/config/{key}", () => {
     expect(api.logs().some((l) => l.msg === "config changed")).toBe(false);
   });
 
+  test("a clock past the queue's kept year is config_past_kept_year, logged with the key and the year, and nothing is written", async ({
+    ctx,
+    api,
+  }) => {
+    const staff = await admin(ctx);
+    const before = await footprint(ctx);
+    await refused(
+      await change(api, staff.headers, "like_expiry_days", { value: 366, reason: REASON }),
+      400,
+      "config_past_kept_year",
+    );
+    expect(
+      api
+        .logs()
+        .filter((l) => l.code === "config_past_kept_year")
+        .at(-1)?.detail,
+    ).toEqual({ key: "like_expiry_days", max: 365 });
+    expect(await footprint(ctx)).toEqual(before);
+    expect(api.logs().some((l) => l.msg === "config changed")).toBe(false);
+  });
+
   test("of two admins changing one key at once, one writes and the other is config_conflict", async ({
     ctx,
     api,

@@ -173,6 +173,27 @@ describe("features/safety/config.feature", () => {
     expect(await versionsOf(ctx, "photo_fetches_per_day")).toEqual(before);
     expect(await configAudit(ctx)).toEqual([]);
   });
+
+  test("A clock read back over the queue's log stops at the kept year", async ({ ctx, api }) => {
+    expect((await versionsOf(ctx, "pass_cooldown_days")).map((r) => r.value)).toEqual([30]);
+    const admin = await staffSession(ctx.client, "admin");
+    const past = await change(api, admin.headers, "pass_cooldown_days", {
+      value: 366,
+      reason: "A pass that holds longer",
+    });
+    expect(past.status).toBe(400);
+    expect(await errorCode(past)).toBe("config_past_kept_year");
+    expect((await versionsOf(ctx, "pass_cooldown_days")).map((r) => r.value)).toEqual([30]);
+    expect(await configAudit(ctx)).toEqual([]);
+
+    const year = await change(api, admin.headers, "pass_cooldown_days", {
+      value: 365,
+      reason: "A pass that holds the year",
+    });
+    expect(year.status).toBe(200);
+    expect(ConfigChange.parse(await year.json())).toMatchObject({ version: 2, value: 365 });
+    expect(await matchingConfigNumber(ctx.client, "pass_cooldown_days")).toBe(365);
+  });
 });
 
 describe("sameShape", () => {
@@ -411,6 +432,68 @@ describe("changeConfig", () => {
       });
       expect(await versionsOf(ctx, key)).toEqual(before);
       expect(await configAudit(ctx)).toEqual([]);
+    },
+  );
+
+  // The five read back over the queue's log (round-builder.ts, rounds.ts), whose
+  // prune keeps 365 days (#687): named here, not taken from KEPT_YEAR_KEYS, so a
+  // key missing from the set or misspelt in it turns this red.
+  describe.for([
+    "pass_cooldown_days",
+    "second_pass_cooldown_days",
+    "liked_cooldown_days",
+    "like_expiry_days",
+    "fish_window_days",
+  ])("%s, counted back over the queue's log", (key) => {
+    test.for([366, 2_147_483_647])(
+      "refuses %i with config_past_kept_year, naming the kept year, and writes nothing",
+      async (value, { ctx }) => {
+        const admin = await staffSession(ctx.client, "admin");
+        const before = await versionsOf(ctx, key);
+        await expect(
+          changeConfig(ctx.client, {
+            key,
+            value,
+            reason: "Longer",
+            actor: admin.identityId,
+            at: T,
+          }),
+        ).rejects.toMatchObject({
+          status: 400,
+          code: "config_past_kept_year",
+          detail: { key, max: 365 },
+        });
+        expect(await versionsOf(ctx, key)).toEqual(before);
+        expect(await configAudit(ctx)).toEqual([]);
+      },
+    );
+
+    test("takes the kept year itself", async ({ ctx }) => {
+      const admin = await staffSession(ctx.client, "admin");
+      const answer = await changeConfig(ctx.client, {
+        key,
+        value: 365,
+        reason: "The year",
+        actor: admin.identityId,
+        at: T,
+      });
+      expect(answer).toMatchObject({ key, value: 365 });
+      expect(await matchingConfigNumber(ctx.client, key)).toBe(365);
+    });
+  });
+
+  test.for(["ended_cooldown_days", "feedback_per_day"])(
+    "takes %s past the kept year: it reads nothing of the queue's log",
+    async (key, { ctx }) => {
+      const admin = await staffSession(ctx.client, "admin");
+      const answer = await changeConfig(ctx.client, {
+        key,
+        value: 366,
+        reason: "Longer",
+        actor: admin.identityId,
+        at: T,
+      });
+      expect(answer).toMatchObject({ key, value: 366 });
     },
   );
 

@@ -19,3 +19,9 @@ Feature: The tunables in the panel
     Given photo_fetches_per_day holds thumb, card and full
     When an admin sends a number, or the object without full
     Then each is refused with config_shape and nothing is written
+
+  Scenario: A clock read back over the queue's log stops at the kept year
+    Given pass_cooldown_days is 30 and the queue's log is kept 365 days
+    When an admin changes it to 366, and then to 365
+    Then 366 is refused with config_past_kept_year and nothing is written
+    And 365 is written as version 2

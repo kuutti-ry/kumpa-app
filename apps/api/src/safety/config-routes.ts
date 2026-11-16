@@ -32,7 +32,7 @@ const changeRoute = createRoute({
   responses: {
     200: { description: "The row this change wrote.", ...json(ConfigChange) },
     400: errorContent(
-      "Validation failed, or config_shape: the value changes the current one's type or keys.",
+      "Validation failed; config_shape: the value changes the current one's type or keys; config_past_kept_year: a clock read back over the queue's log is set past the year the log is kept.",
     ),
     ...staffErrors,
     404: errorContent("No such key."),
