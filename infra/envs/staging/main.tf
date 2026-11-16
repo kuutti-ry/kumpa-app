@@ -109,22 +109,6 @@ resource "aws_cloudfront_key_value_store" "origin_proof" {
   }
 }
 
-# The research copy (#194, ADR-029): the API's write-once rights on research/
-# of the media bucket, the research partner's read-only role there and the
-# trail that logs every object call under it. It lives in the media bucket,
-# so it comes and goes with media_enabled.
-module "research" {
-  count  = var.media_enabled ? 1 : 0
-  source = "../../modules/research"
-
-  environment              = local.environment
-  bucket                   = module.media[0].bucket
-  bucket_arn               = module.media[0].bucket_arn
-  prefix                   = module.media[0].research_prefix
-  instance_role_name       = module.compute.role_name
-  permissions_boundary_arn = local.permissions_boundary_arn
-}
-
 # The moderation panel's host (#313, ADR-025): a bucket and a distribution of
 # its own on admin.staging, the host admin-app-url and cors-allowed-origins
 # name (variables.tf). admin-deploy.yml syncs main's build to its root,

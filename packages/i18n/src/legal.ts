@@ -9,11 +9,10 @@
  */
 export const LEGAL_SITE = "https://kuutti.app";
 
-/** The page each kind is read on: the research opt-in and the sensitive answers are on the privacy page. */
+/** The page each kind is read on: the sensitive answers are on the privacy page. */
 const PAGE = {
   terms: "terms",
   privacy: "privacy",
-  research: "privacy",
   special_category: "privacy",
 } as const;
 
@@ -21,7 +20,7 @@ export type LegalTextKind = keyof typeof PAGE;
 
 export const isLegalTextKind = (kind: string): kind is LegalTextKind => Object.hasOwn(PAGE, kind);
 
-/** The full text of a kind at the anchor of a version: `https://kuutti.app/legal/privacy/#research-2026-09-draft-1`. */
+/** The full text of a kind at the anchor of a version: `https://kuutti.app/legal/privacy/#special_category-2026-11-1`. */
 export function legalPageUrl(kind: LegalTextKind, version: string): string {
   return `${LEGAL_SITE}/legal/${PAGE[kind]}/#${kind}-${version}`;
 }

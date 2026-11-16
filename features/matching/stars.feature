@@ -4,8 +4,8 @@ Feature: A star: somebody marked for later, without a like or a pass
   put a star on that person's card and come back to them later (#575, ADR-064;
   the maintainer, 03/11/2026). A star is one mark with no degrees. It is no
   decision: it spends nothing, moves no card, and only the person who put it ever
-  knows of it, so it feeds neither anybody's order, nor the inbox stop, nor any
-  event. A starred person is offered again only through the person's Starred list,
+  knows of it, so it feeds neither anybody's order nor the inbox stop. A
+  starred person is offered again only through the person's Starred list,
   except that somebody whose like waits keeps coming as a liked-you card. The list
   asks the filters, the account's state and the inbox stop on every read, leaves
   out whoever does not pass, never says why, and takes them back if they pass again.
@@ -18,10 +18,10 @@ Feature: A star: somebody marked for later, without a like or a pass
     When "A" stars "B"'s card and reads the queue
     Then the star stands, "B"'s card is undecided, no like was spent and "C" comes next
 
-  Scenario: Nobody is told of a star, and it is in no event
-    Given "A" and "B" fit each other, and "A" is in the study
+  Scenario: Nobody is told of a star
+    Given "A" and "B" fit each other
     When "A" stars "B"'s card
-    Then "B"'s queue reads the same as before, and no event was written
+    Then "B"'s queue reads the same as before
 
   Scenario: A star counts for nothing in the inbox stop
     Given "B" has one fewer likes waiting than the inbox stop, and "A" has "B" in today's queue

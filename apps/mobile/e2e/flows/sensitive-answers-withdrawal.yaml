@@ -3,8 +3,8 @@
 # person back to whom they seek, which waits for the consent again on the same
 # screen. The age window is no sensitive answer and stays, so the ages are not
 # asked again (ADR-010 §13, #219). Noa seeks everyone; she answers the same
-# again, which is no change (#147). Research is not offered (#545). The flow
-# ends where it began: consent given, everyone sought, the consent's row closed.
+# again, which is no change (#147). The flow ends where it began: consent
+# given, everyone sought, the consent's row closed.
 appId: fi.kuutti.app
 name: Withdrawing the sensitive-answers consent asks whom one seeks again with the consent, and keeps the age window
 ---

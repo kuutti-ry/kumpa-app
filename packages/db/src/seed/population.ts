@@ -88,12 +88,9 @@ const SEEKS: Readonly<Record<Gender, Readonly<Record<string, number>>>> = {
 };
 
 /**
- * Terms, privacy and the special-category consent that the seek answer
- * needs. No research consent: the product writes that consent and its
- * research_id mapping together, synthetic people emit no events, and events
- * of people who never were would muddy the first real numbers (#73, out of scope).
+ * The kinds the population consents to, in this order: terms, privacy and the
+ * special-category consent that the seek answer needs.
  */
-/** The kinds the population consents to, in this order: never research (above). */
 export const POPULATION_CONSENTS = ["terms", "privacy", "special_category"] as const;
 
 type SyntheticConsent = {

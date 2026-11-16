@@ -396,10 +396,6 @@ export async function lockConversation(
 
 export type SendState = {
   side: Side;
-  openedAt: Date;
-  lastMessageAt: Date | null;
-  /** The conversation's messages so far, either side's. */
-  messages: number;
   /** Hidden from the caller: they blocked the other. */
   hidden: boolean;
   /** Closed for writing: a close, a block either way, or the counterpart erased. */
@@ -413,8 +409,7 @@ export async function readSendState(
   conversationId: string,
 ): Promise<SendState | null> {
   const { rows } = await db.query<Row>(
-    `SELECT me.side, c.opened_at, c.last_message_at, c.next_seq - 1 AS messages,
-            NOT (${VISIBLE_TO_CALLER}) AS hidden,
+    `SELECT me.side, NOT (${VISIBLE_TO_CALLER}) AS hidden,
             (c.closed_at IS NOT NULL OR them.account_id IS NULL
               OR blocked_between(me.account_id, them.account_id)) AS closed
      ${FROM_CALLER}
@@ -425,9 +420,6 @@ export async function readSendState(
   if (!row) return null;
   return {
     side: row.side as Side,
-    openedAt: row.opened_at as Date,
-    lastMessageAt: (row.last_message_at as Date | null) ?? null,
-    messages: row.messages as number,
     hidden: row.hidden === true,
     closed: row.closed === true,
   };
@@ -503,12 +495,8 @@ export async function insertMessage(
 // that the blocker never sees it again: `closed_by` is the blocker's side,
 // the one who stays preferred where both blocked.
 
-export type Closed = {
+type Closed = {
   conversationId: string;
-  how: ConversationCloseKind;
-  messages: number;
-  /** The account on the other side from the one acted on, null once erased. */
-  counterpartId: string | null;
   /** It was open or archived until now; false where only a block rewrote an earlier close. */
   closedNow: boolean;
 };
@@ -537,7 +525,6 @@ export async function closeConversationsOf(
   const { rows } = await db.query<Row>(
     `WITH closing AS (
        SELECT c.id, c.closed_at IS NULL AS was_open, me.side AS my_side, them.side AS their_side,
-              them.account_id AS counterpart_id,
               (them.account_id IS NOT NULL AND ${blockedBy("them.account_id", "me.account_id")}) AS they_blocked,
               ${CALLER_BLOCKED} AS i_blocked
        ${FROM_CALLER}
@@ -554,7 +541,7 @@ export async function closeConversationsOf(
                           ELSE touched.my_side END
      FROM touched
      WHERE c.id = touched.id
-     RETURNING c.id, c.closed_how, c.next_seq - 1 AS messages, touched.counterpart_id, touched.was_open`,
+     RETURNING c.id, touched.was_open`,
     [
       input.accountIds,
       input.at,
@@ -565,9 +552,6 @@ export async function closeConversationsOf(
   );
   const closed = rows.map((r) => ({
     conversationId: r.id as string,
-    how: r.closed_how as ConversationCloseKind,
-    messages: r.messages as number,
-    counterpartId: (r.counterpart_id as string | null) ?? null,
     closedNow: r.was_open === true,
   }));
   // What either person shared there ends with the close (#103), in a
@@ -665,13 +649,6 @@ export async function deleteUnlinkedConversations(
   return result.rowCount ?? 0;
 }
 
-export type Archived = {
-  conversationId: string;
-  openedAt: Date;
-  messages: number;
-  accountIds: string[];
-};
-
 /**
  * Silent since $1, the window's start (TD-13): neither archived nor closed,
  * and its last message, or opening, and newest share of a contact (#103)
@@ -704,27 +681,19 @@ export async function lockSilent(db: Queryable, olderThan: Date): Promise<string
  * The night's archive (TD-13) of the conversations lockSilent locked that
  * are still silent: a statement of its own, so under READ COMMITTED it sees
  * a share that committed while lockSilent waited for it, and leaves that
- * conversation out.
+ * conversation out. The count archived.
  */
 export async function archiveSilent(
   db: Queryable,
   input: { ids: string[]; at: Date; olderThan: Date },
-): Promise<Archived[]> {
-  if (input.ids.length === 0) return [];
-  const { rows } = await db.query<Row>(
+): Promise<number> {
+  if (input.ids.length === 0) return 0;
+  const result = await db.query(
     `UPDATE conversation c SET archived_at = $2
-     WHERE c.id = ANY($3::uuid[]) AND ${SILENT}
-     RETURNING c.id, c.opened_at, c.next_seq - 1 AS messages,
-       ARRAY(SELECT p.account_id FROM conversation_participant p
-             WHERE p.conversation_id = c.id AND p.account_id IS NOT NULL ORDER BY p.side) AS account_ids`,
+     WHERE c.id = ANY($3::uuid[]) AND ${SILENT}`,
     [input.olderThan, input.at, input.ids],
   );
-  return rows.map((r) => ({
-    conversationId: r.id as string,
-    openedAt: r.opened_at as Date,
-    messages: r.messages as number,
-    accountIds: r.account_ids as string[],
-  }));
+  return result.rowCount ?? 0;
 }
 
 export type ExportedRow = {

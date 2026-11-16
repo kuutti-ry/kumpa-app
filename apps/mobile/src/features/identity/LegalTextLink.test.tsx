@@ -18,7 +18,6 @@ describe("LegalTextLink", () => {
   it.each([
     ["terms", "https://kuutti.app/legal/terms/#terms-"],
     ["privacy", "https://kuutti.app/legal/privacy/#privacy-"],
-    ["research", "https://kuutti.app/legal/privacy/#research-"],
     ["special_category", "https://kuutti.app/legal/privacy/#special_category-"],
   ] as const)(
     "opens the full text of %s at the anchor of the version it names",

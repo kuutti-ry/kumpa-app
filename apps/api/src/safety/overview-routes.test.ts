@@ -391,11 +391,4 @@ describe("the moderators' guard on GET /admin/overview", () => {
     }
     expect(await auditRows(ctx)).toEqual(before);
   });
-
-  test("a researcher is refused with 403 admin_forbidden", async ({ ctx, app }) => {
-    const researcher = await staffSession(ctx.client, "researcher");
-    const response = await overview(app, researcher.headers);
-    expect(response.status).toBe(403);
-    expect(await errorCode(response)).toBe("admin_forbidden");
-  });
 });

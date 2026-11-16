@@ -256,12 +256,10 @@ describe("staff session", () => {
     window.sessionStorage.setItem("kuutti.admin.session", JSON.stringify(session));
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () => json({ role: "researcher", expiresAt: "2030-01-01T09:00:00.000Z" })),
+      vi.fn(async () => json({ role: "admin", expiresAt: "2030-01-01T09:00:00.000Z" })),
     );
     show();
-    await waitFor(() =>
-      expect(screen.getByTestId("state")).toHaveTextContent("signed-in researcher"),
-    );
+    await waitFor(() => expect(screen.getByTestId("state")).toHaveTextContent("signed-in admin"));
   });
 
   it("leaves the stored session alone when the panel closes before the API answers", async () => {

@@ -1,6 +1,6 @@
 # ADR-064: A star: somebody marked for later, without a like or a pass
 
-- Status: accepted 2026-11-03 (#575, the maintainer's decisions of that day, built as written here; §10 marks what is the agent's; the points under "Open, the maintainer's" are his to confirm or change; amends ADR-007, ADR-041 and ADR-062), amended 2026-11-04 by #581 (§7 and §10: the star's line, no line on the list, and an opened card's end; see History)
+- Status: accepted 2026-11-03 (#575, the maintainer's decisions of that day, built as written here; §10 marks what is the agent's; the points under "Open, the maintainer's" are his to confirm or change; amends ADR-007, ADR-041 and ADR-062), amended 2026-11-04 by #581 (§7 and §10: the star's line, no line on the list, and an opened card's end; see History), amended 2026-11-16 by ADR-071 (§8 and §10: no research events, #208; see History)
 - Date: 2026-11-03
 - Follows: TD-7 (its erasure table names bookmarks, and what it meant by them is in the private log), CLAUDE.md rules 5, 6 and 7 and Product constraints, ADR-007 (erasure and export), ADR-008 §3 (a photo goes through `card_shown`), ADR-041 (velocity), ADR-061 §5 (a band is written with its entry), ADR-062 (one queue), #575
 
@@ -81,3 +81,4 @@ The maintainer's of 03/11/2026, each put to him with its alternatives: §2, the 
 ## History
 
 - 2026-11-04 (#581, the maintainer's yes to the table of that day, rows C25, C54, C55 and C57): §7 and §10, in place. The first star says "Only you can see your stars.": "Nobody is told." goes, since it said the same twice over, and §8's rule does not change. The line stays an agent's words, which the maintainer was told of and kept. The list's line, "Only you can see this list. A like or a pass takes the star off.", goes; the table's catch is that someone back after weeks is not reminded. The list with nobody on it says "Nobody here right now." and no more, so that, as §6 has it, it never says why. "Done with this card." goes: the card is gone and Back to Starred, with Undo in the header, is all that stands, so a screen reader is taken to that button. One button and a back arrow now do the same; going back to the list at once would be the fuller fix, but Undo would then need a place there.
+- 2026-11-16 (#208, ADR-071 §2): §8's and §10's research events lapsed with research. A card opened from the list writes no event, as no card does.

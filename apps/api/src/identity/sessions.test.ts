@@ -524,8 +524,8 @@ describe("sessions", () => {
       ["GET", "/onboarding"],
       ["PUT", "/account/gender", { gender: "woman" }],
       ["GET", "/consents"],
-      ["POST", "/consents", { kind: "research", version: "1", locale: "fi" }],
-      ["DELETE", "/consents/research"],
+      ["POST", "/consents", { kind: "special_category", version: "1", locale: "fi" }],
+      ["DELETE", "/consents/special_category"],
     ];
     const cases: Array<[string, Record<string, string>, string]> = [
       ["no token", {}, "unauthenticated"],

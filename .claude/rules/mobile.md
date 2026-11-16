@@ -13,7 +13,7 @@ Stack: Expo SDK 57, React Native 0.86, React 19, TypeScript, dev client (`expo s
 - Session and refresh tokens live in `expo-secure-store`, never AsyncStorage.
 - App Attest (ADR-069): `src/lib/app-attest.ts` reaches Expo's `@expo/app-integrity` by its module's name (`requireOptionalNativeModule("ExpoAppIntegrity")`), never by an import, so the code runs in a build without the module and moves no fingerprint; the dependency and the App Attest entitlement come with a native batch. On an iPhone whose build holds it, the exchange carries Apple's attestation of a new key over the one-time code, and each refresh that key's assertion over the refresh token; the key's identifier is kept with the session. At the exchange every failure means nothing is sent: the app never refuses a sign-in for it, the API does where it requires one. At a refresh a key that is gone is refreshed without and the API ends the session, while a key that failed this once keeps the session and is tried again for a minute (`ASSERT_PATIENCE_MS`), never signed out for a hiccup. Every native call is bounded in time.
 - API base URL comes from `Constants.expoConfig.hostUri` in dev and `EXPO_PUBLIC_API_URL` otherwise. `EXPO_PUBLIC_*` is public by definition; never put a secret there.
-- No analytics or tracking SDK in the app. Research events are emitted server-side only.
+- No analytics or tracking SDK in the app.
 - App Links and Universal Links files (`assetlinks.json`, `apple-app-site-association`) are served by the API, not bundled here.
 
 ## Images

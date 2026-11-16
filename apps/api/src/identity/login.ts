@@ -298,7 +298,10 @@ async function resolveAccount(
         await repo.updateBrokerReference(deps.db, decision.account.identityId, derived.reference);
         // A break ends with the login that follows it (#170, ADR-022); a second
         // device's login that got there first leaves this one a plain resume.
-        if (decision.account.state === "paused" && (await resumeAccount(deps, decision.account))) {
+        if (
+          decision.account.state === "paused" &&
+          (await resumeAccount(deps, decision.account.id))
+        ) {
           return { accountId: decision.account.id, outcome: "unpaused" };
         }
         return { accountId: decision.account.id, outcome: "resumed" };

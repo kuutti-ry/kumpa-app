@@ -1,6 +1,6 @@
 ---
 name: security-reviewer
-description: Reviews a diff against docs/security-checklist.md and the non-negotiable rules in CLAUDE.md. Use proactively before committing changes that touch identity, auth, OIDC, sessions, uploads, signed URLs, research events, migrations, or infrastructure.
+description: Reviews a diff against docs/security-checklist.md and the non-negotiable rules in CLAUDE.md. Use proactively before committing changes that touch identity, auth, OIDC, sessions, uploads, signed URLs, migrations, or infrastructure.
 tools: Read, Grep, Glob, Bash
 model: inherit
 ---

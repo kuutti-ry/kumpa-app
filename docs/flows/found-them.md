@@ -71,7 +71,7 @@ flowchart TB
 7. They choose "Tell Kumpa", which waits for a choice and then says "Sending…". Sent: 8. If it fails on the way: 11.
 8. Under the account's lock, the API checks whether the account answered meanwhile, from another device perhaps. Yes: nothing is counted, and the app thanks the person (4). No: 9.
 9. The API marks the account as having answered. That is all the account keeps, so each person counts once.
-10. In the same go it adds one to the day's count for that reason, by Finnish day and reason and nothing else. The count names nobody, so it stays when accounts are deleted, and the measure counts those who later left. Only for somebody who said yes to research before it stopped being asked does a research event carry the reason, and nothing else. Then the app thanks the person (4).
+10. In the same go it adds one to the day's count for that reason, by Finnish day and reason and nothing else. The count names nobody, so it stays when accounts are deleted, and the measure counts those who later left. Then the app thanks the person (4).
 11. The app says "That did not go through. Try again." The choice is kept, and the person can choose "Tell Kumpa" again (7).
 12. Nothing else changes, for the person or for anybody: no state, no session, no queue, no conversation. The other person meets the person in People and in their conversations as before, and is not told. Stepping away is [Taking a break](break.md) or [deleting the account](erasure-and-export.md#part-1-deleting-the-account), both under Your account.
 13. In the admin panel, a moderator or an admin sees on the overview "Told Kumpa they found someone": the counts by reason, "On Kumpa", "Elsewhere" and "Another reason", for a recent window of Finnish days and "In all", never a single day and never a person.
@@ -84,11 +84,12 @@ Deleting the account takes the account's answer with it, and the day's count sta
 - API: `GET` and `POST /account/found-them` in [account-routes.ts](../../apps/api/src/identity/account-routes.ts), the answer and the count in [found-them.ts](../../apps/api/src/identity/found-them.ts) (the [identity slice](../../apps/api/src/identity/README.md)); `GET /admin/overview` in [overview-routes.ts](../../apps/api/src/safety/overview-routes.ts) (the [safety slice](../../apps/api/src/safety/README.md))
 - Spec: [found-them.feature](../../features/identity/found-them.feature)
 - Maestro: [found-them.yaml](../../apps/mobile/e2e/flows/found-them.yaml)
-- ADRs: [ADR-040](../adr/040-found-them.md), [ADR-022](../adr/022-taking-a-break.md) (its History: this is not a break), [ADR-007](../adr/007-erasure-and-export.md) (the answer in erasure and export), [ADR-010](../adr/010-onboarding-and-consents.md) §19 (research not asked)
-- Rules: the register's [Break and erasure](../decisions.md#break-and-erasure) rows, and its [Research](../decisions.md#research) row on the event
+- ADRs: [ADR-040](../adr/040-found-them.md), [ADR-022](../adr/022-taking-a-break.md) (its History: this is not a break), [ADR-007](../adr/007-erasure-and-export.md) (the answer in erasure and export)
+- Rules: the register's [Break and erasure](../decisions.md#break-and-erasure) rows
 
 ## History
 
 - 2026-10-21 (#83, PR #392): "I found someone" on Your account: three reasons, once per account, counted by day and reason with nobody's name, a research event for those in the study, the counts on the panel's overview, and nothing else in the app changes.
 - 2026-10-30 (#511, PR #516): "I found someone" comes first under the "Your account" row of Settings' one list, before "Take a break" and "Delete my account".
 - 2026-11-16 (#700, PR #701): the reasons, the button and the panel's overview name the app Kumpa.
+- 2026-11-16 (#208): research leaves the app, so the answer writes no research event.

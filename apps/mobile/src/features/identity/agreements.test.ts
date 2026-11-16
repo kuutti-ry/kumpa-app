@@ -26,7 +26,6 @@ const { __store: store } = jest.requireMock("expo-secure-store") as {
 const AGREED = "kuutti.preference.agreedVersions";
 const TERMS = String(CONSENT_VERSIONS.terms);
 const PRIVACY = String(CONSENT_VERSIONS.privacy);
-const RESEARCH = String(CONSENT_VERSIONS.research);
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
@@ -39,7 +38,6 @@ const consents = () =>
     currentVersions: {
       terms: TERMS,
       privacy: PRIVACY,
-      research: RESEARCH,
       special_category: String(CONSENT_VERSIONS.special_category),
     },
   });
@@ -81,7 +79,7 @@ afterEach(() => {
 });
 
 describe("agreementsOf", () => {
-  it("names the versions this app carries of the terms and the privacy summary, and nothing of research", () => {
+  it("names the versions this app carries of the terms and the privacy summary", () => {
     expect(agreementsOf("en")).toEqual({ terms: TERMS, privacy: PRIVACY, locale: "en" });
   });
 
@@ -213,7 +211,7 @@ describe("agreedOnThisPhone", () => {
   });
 
   it("ignores what else the stored answer carries", async () => {
-    store.set(AGREED, JSON.stringify({ terms: TERMS, privacy: PRIVACY, research: "x" }));
+    store.set(AGREED, JSON.stringify({ terms: TERMS, privacy: PRIVACY, other: "x" }));
     expect(await agreedOnThisPhone()).toBe(true);
   });
 
@@ -242,7 +240,7 @@ describe("agreedOnThisPhone", () => {
 });
 
 describe("recordAgreements", () => {
-  it("posts the terms, then the privacy summary, in the language shown, and nothing about research", async () => {
+  it("posts the terms, then the privacy summary, in the language shown, and nothing else", async () => {
     const posted = serve();
     await recordAgreements(answers);
     expect(posted).toEqual([

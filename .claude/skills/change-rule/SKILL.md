@@ -1,6 +1,6 @@
 ---
 name: change-rule
-description: Walk a change to how Kuutti behaves toward people: matching, rounds, likes, the pond, rewards, notifications, profile presentation or research events. Use before touching any of them, and whenever a value or a rule would change. It refuses anything on the never-build list, and confirms parameters with the maintainer before building. A hook refuses edits on those paths until this skill has run in the session.
+description: Walk a change to how Kuutti behaves toward people: matching, rounds, likes, the pond, rewards, notifications or profile presentation. Use before touching any of them, and whenever a value or a rule would change. It refuses anything on the never-build list, and confirms parameters with the maintainer before building. A hook refuses edits on those paths until this skill has run in the session.
 argument-hint: [the rule or area]
 ---
 
@@ -35,7 +35,6 @@ A tunable is a row, never a constant in code. A new key is born in a `--custom` 
 
 - Hard filters are never violated, in either direction, for any reason (rule 7).
 - Nothing mentions a desirability signal to anybody, and no answer's time or shape reveals one.
-- Research events are keyed by `research_id` and carry no message text (rule 5).
 - Whom a push tells belongs to the notifications slice (ADR-055). A push is never real-time engagement.
 - New data goes through `personal-data` as well; new or changed tests through `write-tests`.
 

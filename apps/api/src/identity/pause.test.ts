@@ -9,8 +9,6 @@ import { pauseAccount, resumeAccount } from "./pause.ts";
 // in routes.test.ts, with the broker; here the resume is called as the login
 // calls it.
 
-const DAY_MS = 86_400_000;
-
 async function appWith(ctx: TestContext) {
   const { logger, lines } = await captureLogger();
   const app = createApp({ config: testConfig(), logger, db: ctx.client });
@@ -34,11 +32,10 @@ async function count(ctx: TestContext, sql: string, params: unknown[] = []): Pro
 }
 
 async function accountRow(ctx: TestContext, accountId: string) {
-  const { rows } = await ctx.client.query<{
-    state: string;
-    paused_from: string | null;
-    state_changed_at: Date | null;
-  }>("SELECT state, paused_from, state_changed_at FROM account WHERE id = $1", [accountId]);
+  const { rows } = await ctx.client.query<{ state: string; paused_from: string | null }>(
+    "SELECT state, paused_from FROM account WHERE id = $1",
+    [accountId],
+  );
   return rows[0];
 }
 
@@ -148,7 +145,7 @@ describe("taking a break", () => {
       paused_from: "shadow_banned",
     });
     const deps = { db: ctx.client, logger, now: () => new Date() };
-    expect(await resumeAccount(deps, { id: a.accountId, stateChangedAt: new Date() })).toBe(true);
+    expect(await resumeAccount(deps, a.accountId)).toBe(true);
     expect(await accountRow(ctx, a.accountId)).toMatchObject({
       state: "shadow_banned",
       paused_from: null,
@@ -189,38 +186,6 @@ describe("taking a break", () => {
     expect((await app.request("/auth/session", { headers: b.headers })).status).toBe(200);
   });
 
-  test("A break and its end are noted for research without a reason", async ({ ctx }) => {
-    const { app, logger } = await appWith(ctx);
-    const a = await signedInAccount(ctx.client, "a");
-    await ctx.client.query(
-      "INSERT INTO research_subject (account_id, consent_version) VALUES ($1, 'v1')",
-      [a.accountId],
-    );
-    expect((await pause(app, a.headers)).status).toBe(204);
-    const paused = await accountRow(ctx, a.accountId);
-    const since = paused?.state_changed_at as Date;
-    const back = new Date(since.getTime() + 3 * DAY_MS + 3_600_000);
-    expect(
-      await resumeAccount(
-        { db: ctx.client, logger, now: () => back },
-        { id: a.accountId, stateChangedAt: since },
-      ),
-    ).toBe(true);
-    const { rows } = await ctx.client.query<{ name: string; props: Record<string, unknown> }>(
-      `SELECT e.name, e.props FROM events e
-       JOIN research_subject s ON s.research_id = e.research_id
-       WHERE s.account_id = $1 ORDER BY e.at`,
-      [a.accountId],
-    );
-    expect(rows).toEqual([
-      { name: "account_paused", props: {} },
-      { name: "account_resumed", props: { afterDays: 3 } },
-    ]);
-    for (const row of rows) {
-      expect(Object.values(row.props).some((v) => typeof v === "string")).toBe(false);
-    }
-  });
-
   test("a second break of a paused account answers already_paused, an erased one not_found, and a resume of a live one does nothing", async ({
     ctx,
   }) => {
@@ -238,7 +203,7 @@ describe("taking a break", () => {
       code: "not_found",
     });
     const b = await signedInAccount(ctx.client, "b");
-    expect(await resumeAccount(deps, { id: b.accountId, stateChangedAt: null })).toBe(false);
+    expect(await resumeAccount(deps, b.accountId)).toBe(false);
     expect(await accountRow(ctx, b.accountId)).toMatchObject({ state: "active" });
   });
 });

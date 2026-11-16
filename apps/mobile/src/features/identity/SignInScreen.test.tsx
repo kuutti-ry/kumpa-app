@@ -69,7 +69,6 @@ const { __store: store } = jest.requireMock("expo-secure-store") as {
 const AGREED = "kuutti.preference.agreedVersions";
 const TERMS = String(CONSENT_VERSIONS.terms);
 const PRIVACY = String(CONSENT_VERSIONS.privacy);
-const RESEARCH = String(CONSENT_VERSIONS.research);
 /** This phone recorded the wordings it carries after an earlier bank login (#418): straight to the bank. */
 const remember = () => store.set(AGREED, JSON.stringify({ terms: TERMS, privacy: PRIVACY }));
 
@@ -708,7 +707,6 @@ describe("SignInScreen: the screens before the bank (#418, ADR-010 §15)", () =>
       currentVersions: {
         terms: TERMS,
         privacy: PRIVACY,
-        research: RESEARCH,
         special_category: String(CONSENT_VERSIONS.special_category),
       },
     });
@@ -791,27 +789,6 @@ describe("SignInScreen: the screens before the bank (#418, ADR-010 §15)", () =>
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("Nothing is asked about research before the bank", async () => {
-    const nothingOfResearch = () => {
-      for (const words of [
-        "Help us learn how matching works",
-        "Research",
-        "Yes, I take part",
-        "Not now",
-      ]) {
-        expect(screen.queryByText(words)).toBeNull();
-      }
-    };
-    await renderWithTheme(<SignInScreen />);
-    expect(await screen.findByRole("heading", { name: NORMS })).toBeTruthy();
-    nothingOfResearch();
-    // One press and the bank button is there: no step on the way.
-    await fireEvent.press(screen.getByRole("button", { name: "I'm in, and I accept both" }));
-    expect(await screen.findByRole("button", { name: "Sign in with your bank" })).toBeTruthy();
-    nothingOfResearch();
-    expect(heldAgreements()).not.toHaveProperty("research");
-  });
-
   it("shows no button while the phone is asked whether it agreed before, then the screens before the bank", async () => {
     const read = holdTheRead();
     try {
@@ -891,7 +868,6 @@ describe("SignInScreen: the screens before the bank (#418, ADR-010 §15)", () =>
     await throughTheBank(view);
     await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/"));
     // In order, all before the screen goes home: onboarding then finds them given.
-    // Nothing about research, so a research consent the account already has stays.
     expect(order).toEqual(["exchange", "consent terms", "consent privacy", "replace /"]);
     // Bound to the account the exchange made, in the language the texts were shown in.
     expect(posted(calls)).toEqual(

@@ -1,7 +1,6 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import type { Identity, Queryable } from "@kuutti/db";
-import { CONSENT_VERSIONS } from "@kuutti/i18n";
+import type { Identity } from "@kuutti/db";
 import { GateResponse } from "@kuutti/schema";
 import { describe, expect, it } from "vitest";
 import { attackFails } from "../../../../scripts/lib/attack.ts";
@@ -10,7 +9,6 @@ import { decideRegistration, eraseAccount } from "../identity/index.ts";
 import { inEachOthersPool, type PoolPerson } from "../matching/index.ts";
 import { memoryMediaStore, objectKey, sweepPendingPhotos } from "../media/index.ts";
 import { createPush } from "../notifications/index.ts";
-import { enrolResearchSubject, removeResearchSubject, track } from "../research/index.ts";
 import { openMatchingHere, signedInAccount, signInAs, withMatchingConfig } from "./account.ts";
 import { errorCode } from "./answers.ts";
 import { cardShown } from "./cards.ts";
@@ -434,43 +432,6 @@ describe("Push attacks cannot bypass the person's delivery restrictions", () => 
             await push.settled();
             expect(lines().filter((line) => Number(line.level) >= 40)).toEqual([]);
             return pusher.sent().some((message) => message.to === device.token);
-          }),
-      ]),
-    ),
-  );
-});
-
-async function enrolled(db: Queryable, accountId: string) {
-  const version = CONSENT_VERSIONS.research;
-  if (!version) throw new Error("research consent version missing");
-  expect(await enrolResearchSubject(db, accountId, version, AT)).toBe("enrolled");
-}
-
-describe("Research attacks cannot record without a live consent mapping", () => {
-  rules(
-    "research",
-    "Research attacks cannot record without a live consent mapping",
-    Object.fromEntries(
-      ["no_consent", "withdrawn", "erased"].map((kind) => [
-        kind,
-        (control: boolean) =>
-          rolledBack(async (db) => {
-            const [accountId] = await people(db, 1, { complete: true });
-            if (!accountId) throw new Error("research account not written");
-            const { logger } = await captureLogger();
-            if (control || kind !== "no_consent") await enrolled(db, accountId);
-            if (!control && kind === "withdrawn")
-              expect(await removeResearchSubject(db, accountId)).toBe(1);
-            if (!control && kind === "erased")
-              await eraseAccount({ db, logger, now: () => AT }, accountId);
-            const before = await db.query<{ n: string }>("SELECT count(*) AS n FROM events");
-            const result = await track({ db, logger, now: () => AT }, accountId, "profile_saved", {
-              complete: true,
-              approvedPhotos: 3,
-            });
-            if (!result.recorded) expect(result.reason).toBe("no_consent");
-            const after = await db.query<{ n: string }>("SELECT count(*) AS n FROM events");
-            return Number(after.rows[0]?.n) > Number(before.rows[0]?.n);
           }),
       ]),
     ),

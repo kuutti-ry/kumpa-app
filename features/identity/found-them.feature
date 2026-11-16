@@ -6,8 +6,7 @@ Feature: "Löysin hänet": telling Kuutti you found someone
   changes. It feeds the association's one measure of success, an anonymous
   count by Finnish day and reason that names nobody, so it outlives every
   erasure. The account keeps only that it answered, so each counts once,
-  and never which reason. A research event carries the reason alone, for
-  those who said yes to research.
+  and never which reason.
 
   Scenario: Telling Kuutti you found someone counts once, by reason, with no name in the count
     Given "A" is signed in
@@ -39,8 +38,3 @@ Feature: "Löysin hänet": telling Kuutti you found someone
     Given "A" told Kuutti they found someone on Kuutti
     When "A" erases their account
     Then the day's count for "on Kuutti" is still one, and the account's tombstone keeps no answer
-
-  Scenario: The research event carries the reason alone
-    Given "A" is in the study
-    When "A" tells Kuutti they found someone elsewhere
-    Then one found_them event says elsewhere, and nothing else

@@ -23,10 +23,9 @@ import { REPORTS_PER_DAY_KEY, recordConversationReport, recordReport } from "./r
 // tells the caller anything about the other person, and from a card both
 // answer the same 404 for a card never shown, oneself and nobody.
 // What a request names (the other account, the reason, the note, the photo
-// or line it points at, #476) reaches no log line, no error detail and no
-// research event (rule 5): the request line
-// says that the caller did it, a refusal its code, and the cap's refusal how
-// many and until when.
+// or line it points at, #476) reaches no log line and no error detail: the
+// request line says that the caller did it, a refusal its code, and the cap's
+// refusal how many and until when.
 
 const notShown = errorContent(
   "not_found: no card of that account was shown to the caller and no block stands between the two accounts (never shown, oneself, nobody, a later account of somebody blocked), or the caller was erased meanwhile; nothing is written.",

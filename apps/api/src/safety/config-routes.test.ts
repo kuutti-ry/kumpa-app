@@ -553,19 +553,16 @@ describe("the admin guard on both routes", () => {
     );
   });
 
-  test("a moderator and a researcher are refused both routes with admin_forbidden, and nothing is written", async ({
+  test("a moderator is refused both routes with admin_forbidden, and nothing is written", async ({
     ctx,
     api,
   }) => {
     const moderator = await staffSession(ctx.client, "moderator");
-    const researcher = await staffSession(ctx.client, "researcher");
     const before = await footprint(ctx);
-    for (const staff of [moderator, researcher]) {
-      for (const [route, call] of routes) {
-        const response = await call(api, staff.headers);
-        expect(response.status, `${staff.role}: ${route}`).toBe(403);
-        expect(await errorCode(response), `${staff.role}: ${route}`).toBe("admin_forbidden");
-      }
+    for (const [route, call] of routes) {
+      const response = await call(api, moderator.headers);
+      expect(response.status, route).toBe(403);
+      expect(await errorCode(response), route).toBe("admin_forbidden");
     }
     expect(await footprint(ctx)).toEqual(before);
     expect(api.logs().some((l) => l.msg === "config changed")).toBe(false);

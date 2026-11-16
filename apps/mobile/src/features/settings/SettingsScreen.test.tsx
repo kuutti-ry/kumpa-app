@@ -68,21 +68,12 @@ const press = (element: ReturnType<typeof screen.getByRole>) =>
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
-/** A research yes from before #545, which no row says; the sensitive answers' wording newer than the app's. */
+/** No consent given, and the sensitive answers' wording newer than the app's. */
 const consentsAnswer = {
-  consents: [
-    {
-      kind: "research",
-      version: CONSENT_VERSIONS.research,
-      locale: "en",
-      givenAt: "2026-09-26T10:00:00.000Z",
-      withdrawnAt: null,
-    },
-  ],
+  consents: [],
   currentVersions: {
     terms: CONSENT_VERSIONS.terms,
     privacy: CONSENT_VERSIONS.privacy,
-    research: CONSENT_VERSIONS.research,
     special_category: "2099-01-newer-than-this-app",
   },
 };
@@ -587,35 +578,6 @@ describe("the settings screen", () => {
     expect(
       screen.getByRole("switch", { name: "Store my sensitive answers" }).props.accessibilityState,
     ).toMatchObject({ checked: false });
-  });
-
-  it("Settings has no research switch, whatever the account said before", async () => {
-    const nothingOfResearch = () => {
-      expect(JSON.stringify(screen.toJSON())).not.toMatch(/research/i);
-    };
-    await saveSession(tokens);
-    // The list's rows closed, then the one that holds a consent open: the account said yes
-    // before #545 in this answer, and in the next it never answered.
-    for (const consents of [consentsAnswer.consents, []]) {
-      const written: string[] = [];
-      globalThis.fetch = jest.fn(async (input: Request | string) => {
-        const request = input instanceof Request ? input : new Request(input);
-        const url = new URL(request.url);
-        if (request.method !== "GET") written.push(`${request.method} ${url.pathname}`);
-        if (url.pathname === "/consents") return json({ ...consentsAnswer, consents });
-        return json({ error: { code: "not_found", message: "no", requestId: "r" } }, 404);
-      }) as unknown as typeof fetch;
-      rememberOpenRow(null, null);
-      const view = await renderWithTheme(<SettingsScreen />);
-      await screen.findByRole("button", { name: "Your account" });
-      nothingOfResearch();
-      await press(row("Sensitive answers"));
-      await screen.findByRole("switch", { name: "Store my sensitive answers" });
-      nothingOfResearch();
-      // Reading the list gives nothing and withdraws nothing.
-      expect(written).toEqual([]);
-      await view.unmount();
-    }
   });
 
   it("says what the e-mail, the contacts, the notifications and the invitations hold, as their rows' values (#511)", async () => {

@@ -43,9 +43,9 @@ const AT_DIR = "(?:^|/)";
 const NOT_A_TEST = String.raw`(?!.*\.test\.tsx?$)`;
 const SCHEMA = new RegExp(`${AT_DIR}packages/db/(?:src/schema|drizzle)/`);
 const RULES = new RegExp(
-  `${AT_DIR}(?:(?:apps/api/src|apps/mobile/src/features|apps/admin/src/features|features)/(?:matching|pond|rewards|notifications|research)/${NOT_A_TEST}` +
+  `${AT_DIR}(?:(?:apps/api/src|apps/mobile/src/features|apps/admin/src/features|features)/(?:matching|pond|rewards|notifications)/${NOT_A_TEST}` +
     `|apps/api/src/jobs/${NOT_A_TEST}` +
-    `|apps/mobile/src/features/profile/${NOT_A_TEST}|packages/schema/src/research\\.ts$|docs/decisions\\.md$)`,
+    `|apps/mobile/src/features/profile/${NOT_A_TEST}|docs/decisions\\.md$)`,
 );
 const CODE = new RegExp(
   String.raw`${AT_DIR}(?:apps|packages|services|scripts|\.claude/hooks)/.+\.tsx?$|${AT_DIR}features/`,
@@ -561,13 +561,11 @@ function selfTest(): void {
     ["apps/api/src/pond/routes.ts", "change-rule"],
     ["apps/api/src/rewards/repo.ts", "change-rule"],
     ["apps/api/src/notifications/push.ts", "change-rule"],
-    ["apps/api/src/research/track.ts", "change-rule"],
     ["apps/api/src/jobs/round-builder.ts", "change-rule"],
     ["apps/api/src/jobs/round-builder.test.ts", null],
     ["apps/mobile/src/features/matching/Round.tsx", "change-rule"],
     ["apps/mobile/src/features/profile/Card.tsx", "change-rule"],
     ["features/matching/rounds.feature", "change-rule"],
-    ["packages/schema/src/research.ts", "change-rule"],
     ["docs/decisions.md", "change-rule"],
     ["/Users/x/.claude/worktrees/a/apps/api/src/matching/rounds.ts", "change-rule"],
     ["apps/api/src/matching/rounds.test.ts", null],

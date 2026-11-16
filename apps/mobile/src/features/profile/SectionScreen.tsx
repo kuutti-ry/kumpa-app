@@ -102,10 +102,9 @@ function ItemEditor({
 /**
  * One section of the profile (#227): its editors only, and no Save button: it
  * saves on leaving (`useSaveOnLeave`), and a refusal brings it back with the
- * draft and the reason. Not a save per tap: each save is a `profile_saved`
- * research event (ADR-011), and a refused bio is best said on the screen that
- * holds it. Each section saves only its own changes onto the document as
- * stored (useProfile). What one is here for says beside its answer what the
+ * draft and the reason. Not a save per tap: a refused bio is best said on the
+ * screen that holds it. Each section saves only its own changes onto the
+ * document as stored (useProfile). What one is here for says beside its answer what the
  * answer does, and goes back to What you seek (#542). Opened for one answer
  * (`once`, from a deal-breaker's row or its "Answer it"), the arrow says it
  * goes back there.

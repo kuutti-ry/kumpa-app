@@ -11,7 +11,7 @@ import { describe, expect } from "vitest";
 import { createApp } from "../app.ts";
 import { eraseAccount } from "../identity/index.ts";
 import { applySanction } from "../safety/index.ts";
-import { joinStudy, signInAs, staffSession, withMatchingConfig } from "../test/account.ts";
+import { signInAs, staffSession, withMatchingConfig } from "../test/account.ts";
 import { errorCode } from "../test/answers.ts";
 import { block, conversationBetween, interleaved, send } from "../test/chat.ts";
 import { captureLogger, jsonHeaders, type TestContext, test, testConfig } from "../test/harness.ts";
@@ -26,7 +26,7 @@ import { readConversation } from "./conversations.ts";
 // piece removed or changed, or the conversation closed; every refusal; what
 // a block, a close and a shadow ban withhold; the contacts read alone; the
 // races with a close, a removal and an erasure; the minute's budget; the
-// night's archive; the events. The socket's frames are live.test.ts's, the
+// night's archive. The socket's frames are live.test.ts's, the
 // logs' pii-in-logs.test.ts's, erasure and the export erasure.test.ts's, a
 // removal and an erasure, and a share and the night's archive, on two
 // connections races.test.ts's.
@@ -102,13 +102,6 @@ const storedOf = async (ctx: TestContext, who: Person) =>
     await ctx.client.query<{ kind: string; value: string }>(
       "SELECT kind, value FROM contact WHERE account_id = $1 ORDER BY kind",
       [who.accountId],
-    )
-  ).rows;
-const eventsNamed = async (ctx: TestContext, names: string[]) =>
-  (
-    await ctx.client.query<{ name: string; props: unknown }>(
-      "SELECT name, props FROM events WHERE name = ANY($1) ORDER BY name",
-      [names],
     )
   ).rows;
 const silent = () => captureLogger().then(({ logger }) => logger);
@@ -300,14 +293,12 @@ describe("a share in a conversation", () => {
   test("Sharing again writes nothing", async ({ ctx }) => {
     const a = await person(ctx);
     const b = await person(ctx);
-    await joinStudy(ctx.app, a.headers);
     const id = await conversationBetween(ctx.client, a.accountId, b.accountId);
     await kept(ctx.app, a, "phone", "040 123 4567");
     const first = await shared(ctx.app, a, id, "phone");
     const again = await shared(ctx.app, a, id, "phone");
     expect(again).toEqual(first);
     expect(await sharesIn(ctx, id)).toEqual([{ side: "a", kind: "phone", ended_how: null }]);
-    expect(await eventsNamed(ctx, ["contact_shared"])).toHaveLength(1);
   });
 
   test("Stopping, changing or removing a shared contact shows at once on the other side", async ({
@@ -824,57 +815,6 @@ describe("who may share, and how often", () => {
       }
     }
   });
-
-  test("Each share that begins and each the owner takes back is a research event with no kind or value", async ({
-    ctx,
-  }) => {
-    const a = await person(ctx);
-    const b = await person(ctx);
-    await joinStudy(ctx.app, a.headers);
-    const id = await conversationBetween(ctx.client, a.accountId, b.accountId, {
-      openedAt: new Date(Date.now() - 2 * DAY),
-      messages: [
-        { from: "a", body: "Hei" },
-        { from: "b", body: "Moi" },
-      ],
-    });
-    await kept(ctx.app, a, "phone", "040 123 4567");
-    await kept(ctx.app, a, "telegram", "aino_k");
-    await kept(ctx.app, a, "instagram", "aino.k");
-    await shared(ctx.app, a, id, "phone");
-    await shared(ctx.app, a, id, "phone");
-    await stopped(ctx.app, a, id, "phone");
-    await shared(ctx.app, a, id, "telegram");
-    expect((await remove(ctx.app, a, "telegram")).status).toBe(204);
-    await shared(ctx.app, a, id, "instagram");
-    // B's erasure closes the conversation, which ends the third: the close's event, not A's taking back.
-    await eraseAccount(
-      { db: ctx.client, logger: await silent(), now: () => new Date() },
-      b.accountId,
-    );
-    expect(await sharesIn(ctx, id)).toEqual([
-      { side: "a", kind: "phone", ended_how: "stopped" },
-      { side: "a", kind: "telegram", ended_how: "removed" },
-      { side: "a", kind: "instagram", ended_how: "closed" },
-    ]);
-    const events = await eventsNamed(ctx, ["contact_shared", "contact_unshared"]);
-    const shares = { sinceOpened: "1d_7d", messages: "1-5" };
-    expect(events.map((e) => [e.name, e.props]).sort()).toEqual(
-      [
-        ["contact_shared", shares],
-        ["contact_shared", shares],
-        ["contact_shared", shares],
-        ["contact_unshared", {}],
-        ["contact_unshared", {}],
-      ].sort(),
-    );
-    const raw = JSON.stringify(
-      (await ctx.client.query("SELECT props FROM events WHERE name LIKE 'contact_%'")).rows,
-    );
-    for (const told of ["phone", "telegram", "instagram", "358401234567", "aino"]) {
-      expect(raw).not.toContain(told);
-    }
-  });
 });
 
 describe("the night's archive", () => {
@@ -883,7 +823,6 @@ describe("the night's archive", () => {
     const a = await person(ctx);
     const b = await person(ctx);
     const c = await person(ctx);
-    await joinStudy(ctx.app, a.headers);
     const night = async () =>
       archiveSilentConversations({ db: ctx.client, logger: await silent(), now: () => now });
     const archivedOf = async (id: string) =>
@@ -893,7 +832,6 @@ describe("the night's archive", () => {
           [id],
         )
       ).rows[0]?.archived;
-    const archives = async () => (await eventsNamed(ctx, ["conversation_archived"])).length;
     // Silent for twenty days, nothing shared in it.
     const broughtBack = await conversationBetween(ctx.client, a.accountId, b.accountId, {
       openedAt: new Date(now.getTime() - 20 * DAY),
@@ -910,11 +848,10 @@ describe("the night's archive", () => {
     });
     await kept(then, a, "phone", "040 123 4567");
     await shared(then, a, sharedLongAgo, "phone");
-    // A share as old as the window is no activity: both are archived, each an event of A's.
+    // A share as old as the window is no activity: both are archived.
     expect(await night()).toBe(2);
     expect(await archivedOf(broughtBack)).toBe(true);
     expect(await archivedOf(sharedLongAgo)).toBe(true);
-    expect(await archives()).toBe(2);
     // A share brings the first back, and the next night leaves it open.
     const app = createApp({
       config: testConfig(),
@@ -926,6 +863,5 @@ describe("the night's archive", () => {
     expect(await archivedOf(broughtBack)).toBe(false);
     expect(await night()).toBe(0);
     expect(await archivedOf(broughtBack)).toBe(false);
-    expect(await archives()).toBe(2);
   });
 });

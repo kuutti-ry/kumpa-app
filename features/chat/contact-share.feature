@@ -9,8 +9,8 @@ Feature: Contacts shared in a conversation
   conversation closes. No agreement step, no obligation to share back. A
   share is withheld as a message is: across a block, a close, or a shadow
   ban still open when it began or when its piece last changed (ADR-024 §6,
-  ADR-030). A value reaches no log line, error detail, event or socket
-  frame, and a share's record holds none. The other person opens a shared
+  ADR-030). A value reaches no log line, error detail or socket frame, and
+  a share's record holds none. The other person opens a shared
   piece at its service or copies it with one press, and nobody hears of
   either (#473, the maintainer's word of 30/10/2026).
 
@@ -41,7 +41,7 @@ Feature: Contacts shared in a conversation
   Scenario: Sharing again writes nothing
     Given "A" shares a phone number with "B"
     When "A" shares it again
-    Then the answer is the same, one share stands, and one event was written
+    Then the answer is the same and one share stands
 
   Scenario: Stopping, changing or removing a shared contact shows at once on the other side
     Given "A" shares a phone number and a Telegram username with "B"
@@ -70,7 +70,7 @@ Feature: Contacts shared in a conversation
     Given silent_match_archive_days is seven, "A" shared a contact ten days ago in a conversation opened a month ago
     And another conversation of A's has been silent for twenty days
     When the night runs, "A" shares a contact in the second, and the night runs again
-    Then the first night archives both, the share brings the second back, and the second night archives nothing and writes no event
+    Then the first night archives both, the share brings the second back, and the second night archives nothing
 
   Scenario: A close ends every share, and a closed conversation shows none either way
     Given "A" and "B" share contacts with each other
@@ -138,11 +138,6 @@ Feature: Contacts shared in a conversation
   Scenario: The contact routes refuse without a session
     When nobody, a token nobody issued, or a staff token calls each contact route
     Then the answer is 401
-
-  Scenario: Each share that begins and each the owner takes back is a research event with no kind or value
-    Given "A" gave the research consent
-    When "A" shares, shares again, stops, shares another, removes it, and a close ends a third
-    Then three contact_shared carry the bands of time and messages, two contact_unshared carry nothing, and no kind or value is in any
 
   Scenario: A change of what is shared reaches both phones as a contacts frame with no value
     Given "A" and "B" are on the socket in their conversation

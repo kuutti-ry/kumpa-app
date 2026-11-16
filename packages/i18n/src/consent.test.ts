@@ -17,7 +17,6 @@ import { isLegalTextKind, legalPageUrl } from "./legal.ts";
  */
 const GOLDEN: Record<string, { version: string; hash: string }> = {
   privacy: { version: "2026-11-1", hash: "884bedba27b248eb" },
-  research: { version: "2026-09-draft-1", hash: "87ad43851bc72585" },
   special_category: { version: "2026-11-1", hash: "2dec874099c7169d" },
   terms: { version: "2026-11-1", hash: "5d729e8dacab1f1e" },
 };
@@ -28,7 +27,7 @@ describe("consent versions", () => {
   // the English itself. A wording in a third language is a translation too,
   // and those screens have to say so of it before it lands here.
   it("names every kind the API requires, in English and Finnish and in no other language", () => {
-    for (const kind of ["terms", "privacy", "research", "special_category"]) {
+    for (const kind of ["terms", "privacy", "special_category"]) {
       expect(CONSENT_VERSIONS[kind], kind).toBeTruthy();
       expect(CONSENT_TEXT_LOCALES[kind], kind).toEqual(["en", "fi"]);
     }
@@ -42,8 +41,8 @@ describe("consent versions", () => {
     }
   });
 
-  // The site's anchors (kumpa-app-site, #208): the research opt-in and the
-  // sensitive answers are read on the privacy page.
+  // The site's anchors (kumpa-app-site, #208): the sensitive answers are read
+  // on the privacy page.
   it("links each kind to the site's page at the anchor of the version this app carries", () => {
     expect(
       Object.fromEntries(
@@ -54,7 +53,6 @@ describe("consent versions", () => {
       ),
     ).toEqual({
       privacy: `https://kuutti.app/legal/privacy/#privacy-${CONSENT_VERSIONS.privacy}`,
-      research: `https://kuutti.app/legal/privacy/#research-${CONSENT_VERSIONS.research}`,
       special_category: `https://kuutti.app/legal/privacy/#special_category-${CONSENT_VERSIONS.special_category}`,
       terms: `https://kuutti.app/legal/terms/#terms-${CONSENT_VERSIONS.terms}`,
     });

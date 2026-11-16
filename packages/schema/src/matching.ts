@@ -257,22 +257,6 @@ export const ExportedStars = exportPart(
 ).meta({ id: "ExportedStars" });
 export type ExportedStars = z.infer<typeof ExportedStars>;
 
-/** The research events' coarse time from a card seen to its decision (ADR-011 §1), never the time itself. */
-export const SinceSeenBand = z
-  .enum(["under_3s", "3s_10s", "10s_30s", "30s_2m", "2m_10m", "10m_plus"])
-  .meta({ id: "SinceSeenBand" });
-export type SinceSeenBand = z.infer<typeof SinceSeenBand>;
-
-/** Total over every number: a clock that stepped back reads as the shortest band. */
-export function sinceSeenBand(ms: number): SinceSeenBand {
-  if (ms < 3_000) return "under_3s";
-  if (ms < 10_000) return "3s_10s";
-  if (ms < 30_000) return "10s_30s";
-  if (ms < 120_000) return "30s_2m";
-  if (ms < 600_000) return "2m_10m";
-  return "10m_plus";
-}
-
 /** One card of a round in the person's own export (ADR-007 §4): never whom, in keys and in words. */
 export const ExportedRoundEntry = z
   .object({

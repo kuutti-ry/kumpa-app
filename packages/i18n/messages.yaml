@@ -3186,13 +3186,12 @@ profile.card.back:
 # --- Legal texts (#46, #208, ADR-010): versioned, never filled by the translator. ---
 # The English binds (the maintainer, 08/11/2026 on #208); the Finnish stands
 # beside it. The terms and the privacy policy here are the summaries a person
-# accepts, and their full texts are the website's. The sensitive answers and
-# the research opt-in are the consents themselves, which the website carries
-# word for word (`pnpm check:legal-versions`). A new wording is a new
-# consent_version, the website's first, and everyone is asked again.
-# Kuutti ry is the association and Kumpa is the app (the maintainer,
-# 16/11/2026). The research opt-in is still the draft it was: the app does not
-# ask for it, and a release refuses a draft.
+# accepts, and their full texts are the website's. The sensitive answers are
+# the consent itself, which the website carries word for word
+# (`pnpm check:legal-versions`). A new wording is a new consent_version, the
+# website's first, and everyone is asked again. Kuutti ry is the association
+# and Kumpa is the app (the maintainer, 16/11/2026). The research opt-in went
+# with research (ADR-071).
 
 legal.terms.title:
   en: "Terms of use"
@@ -3217,18 +3216,6 @@ legal.privacy.summary:
   description: "The summary of the privacy policy a person accepts by version (#46, #208). The full policy is the website's page, in English, and it is the one that binds."
   fi: "Kuutti ry on Kumpa-sovelluksessa käsiteltävien henkilötietojen rekisterinpitäjä. Se tallentaa henkilötunnuksestasi lasketun tunnisteen, syntymävuotesi ja -kuukautesi, viimeisimmän tunnistautumisesi tiedot, sukupuolesi, asuinpaikkasi, sen, kenen seuraa etsit, profiilisi, kuvasi, viestisi sekä istuntosi ja laitteesi. Se ei tallenna henkilötunnustasi, nimeäsi eikä syntymäaikaasi. Voit saada jäljennöksen tiedoistasi ja poistaa tilisi sovelluksessa milloin tahansa. Poiston jälkeen tietosuojaselosteen säilytystaulukossa mainitut tiedot säilytetään siinä ilmoitetun ajan; niihin kuuluvat henkilötunnuksestasi laskettu tunniste ja viestit, jotka olet lähettänyt käyttäjille, joiden tili on yhä olemassa."
   consent_version: "2026-11-1"
-
-legal.research.title:
-  en: "Research"
-  description: "Heading of the research opt-in (#46, #50). Legal text, still a draft: the app does not ask for this consent."
-  fi: "Tutkimus"
-  consent_version: "2026-09-draft-1"
-
-legal.research.summary:
-  en: "DRAFT: If you say yes, anonymised events about how you use Kuutti (for example that a round was shown or a like was sent; never message text, never who you are) are kept under a separate research identifier for up to 90 days and used by the association's research partner to study how the matching works. You can withdraw at any time; withdrawing removes the link between you and the events."
-  description: "The research opt-in the person accepts by version and can withdraw (#46, #50). DRAFT wording."
-  fi: "LUONNOS: Jos sanot kyllä, anonymisoituja tapahtumia Kuutin käytöstäsi (esimerkiksi että kierros näytettiin tai tykkäys lähetettiin; ei koskaan viestien tekstiä eikä sitä, kuka olet) säilytetään erillisellä tutkimustunnisteella enintään 90 päivää, ja yhdistyksen tutkimuskumppani käyttää niitä yhdistämisen toiminnan tutkimiseen. Voit perua milloin tahansa; peruminen poistaa yhteyden sinun ja tapahtumien välillä."
-  consent_version: "2026-09-draft-1"
 
 legal.special_category.title:
   en: "Sensitive answers"
@@ -3721,7 +3708,7 @@ errors.agreement_outdated:
 
 errors.too_many_changes:
   en: "You have changed this many times today. Try again tomorrow."
-  description: "Consent route (429), the research opt-in was given and withdrawn more than the day allows (#46); the rows are proof of consent and are kept, so churn is capped."
+  description: "Consent route (429), the sensitive-answers consent was given and withdrawn more than the day allows (#46); the rows are proof of consent and are kept, so churn is capped."
   fi: "Olet muuttanut tätä tänään monta kertaa. Yritä uudelleen huomenna."
   sv: "Du har ändrat det här många gånger i dag. Försök igen i morgon."
   machine: { fi: true, sv: true }
@@ -3756,7 +3743,7 @@ errors.admin_not_allowed:
 
 errors.admin_forbidden:
   en: Your role does not allow this.
-  description: Admin routes (403), the session's role is not one the route admits (a researcher on the photo queue, for example).
+  description: Admin routes (403), the session's role is not one the route admits (a moderator on the tunables, for example).
   fi: Roolisi ei salli tätä.
   sv: Din roll tillåter inte det här.
   machine: { fi: true, sv: true }
@@ -3829,13 +3816,6 @@ signIn.paused.title:
   description: "Sign-in screen, card shown right after the person paused the account on this device (#170)."
   fi: "Tilisi on tauolla"
   sv: "Ditt konto är på paus"
-  machine: { fi: true, sv: true }
-
-signIn.agreements.research:
-  en: "Either answer takes you on to the sign-in with your bank."
-  description: "Not shown until there is a researcher (#545, ADR-010 §19). Before the bank login, under the research question (#418): a yes and a no both lead on to the sign-in, and a no costs nothing (GDPR art. 7(4))."
-  fi: "Kumpi tahansa vastaus vie sinut eteenpäin kirjautumaan pankkitunnuksilla."
-  sv: "Vilket svar du än ger går du vidare till inloggningen med din bank."
   machine: { fi: true, sv: true }
 
 signIn.lock.title:
@@ -4418,7 +4398,7 @@ onboarding.consents.binding:
 
 onboarding.consents.fullText:
   en: "Read the full text on kuutti.app (version {version})"
-  description: "A link under each legal summary (the terms, the privacy summary, the research opt-in, the sensitive answers; onboarding and Settings) to the full text on the website, at the anchor of {version}, the consent_version this app carries (#208, ADR-010 §4). Opens the browser."
+  description: "A link under each legal summary (the terms, the privacy summary, the sensitive answers; onboarding and Settings) to the full text on the website, at the anchor of {version}, the consent_version this app carries (#208, ADR-010 §4). Opens the browser."
   fi: "Lue koko teksti osoitteessa kuutti.app (versio {version})"
   sv: "Läs hela texten på kuutti.app (version {version})"
   machine: { fi: true, sv: true }
@@ -4428,34 +4408,6 @@ onboarding.consents.outdatedApp:
   description: "Shown on the consents step when the API's current consent_version differs from the version of the text bundled in the app (#46, ADR-010 §4): the person may only accept the exact wording they read."
   fi: "Tästä tekstistä on uudempi versio kuin sovellukseen sisältyvä. Päivitä sovellus jatkaaksesi."
   sv: "Den här texten har en nyare version än den som är inbyggd i appen. Uppdatera appen för att fortsätta."
-  machine: { fi: true, sv: true }
-
-onboarding.research.title:
-  en: "Help us learn how matching works"
-  description: "Not shown until there is a researcher (#545, ADR-010 §19). Research opt-in heading, on the screen before the bank login (#418, ADR-010 §15); Settings keeps the switch."
-  fi: "Auta meitä oppimaan, miten yhdistäminen toimii"
-  sv: "Hjälp oss lära hur matchningen fungerar"
-  machine: { fi: true, sv: true }
-
-onboarding.research.yes:
-  en: "Yes, I take part"
-  description: "Not shown until there is a researcher (#545, ADR-010 §19). Before the bank login (#418): the research yes, recorded right after the sign-in; then on to the bank."
-  fi: "Kyllä, osallistun"
-  sv: "Ja, jag deltar"
-  machine: { fi: true, sv: true }
-
-onboarding.research.no:
-  en: "Not now"
-  description: "Not shown until there is a researcher (#545, ADR-010 §19). Before the bank login (#418): the research no, which records nothing and withdraws nothing; then on to the bank."
-  fi: "Ei nyt"
-  sv: "Inte nu"
-  machine: { fi: true, sv: true }
-
-onboarding.research.later:
-  en: "You can change this later, at any time."
-  description: "Not shown until there is a researcher (#545, ADR-010 §19). Under the research choice."
-  fi: "Voit muuttaa tätä myöhemmin, milloin tahansa."
-  sv: "Du kan ändra det här senare, när som helst."
   machine: { fi: true, sv: true }
 
 onboarding.welcome.title:
@@ -5856,7 +5808,7 @@ admin.signIn.error.session_ended:
 
 admin.session.role:
   en: "Signed in as {role}"
-  description: Admin panel header. {role} is the role word from the API (moderator, admin, researcher), not translated.
+  description: Admin panel header. {role} is the role word from the API (moderator or admin), not translated.
 
 admin.signOut:
   en: Sign out
@@ -6009,10 +5961,6 @@ admin.queue.decided:
 admin.queue.decisionFailed:
   en: The decision was not saved. Refresh and try again.
   description: Admin panel, a decision request failed.
-
-admin.forbidden:
-  en: Your role does not open any screen of this panel.
-  description: "Admin panel, a researcher signed in: no screen is theirs yet (#194 decides what they read), so the panel shows this instead of a menu (#302)."
 
 admin.nav.config:
   en: "Tunables"
@@ -7717,7 +7665,7 @@ account.foundThem.title:
 
 account.foundThem.intro:
   en: "Your answer is shown to nobody, and it is counted without your name."
-  description: "\"Löysin hänet\" (#83), above the three choices (#581): that the answer is counted anonymously (a count by day and reason, ADR-040); no person is shown it, the moderators see totals only. For those in the study the research consent already covers the event. Fits every reason, \"another reason\" too."
+  description: "\"Löysin hänet\" (#83), above the three choices (#581): that the answer is counted anonymously (a count by day and reason, ADR-040); no person is shown it, the moderators see totals only. Fits every reason, \"another reason\" too."
   fi: "Vastaustasi ei näytetä kenellekään, ja se lasketaan ilman nimeäsi."
   sv: "Ditt svar visas inte för någon, och det räknas utan ditt namn."
   machine: { fi: true, sv: true }
@@ -7778,28 +7726,7 @@ account.foundThem.thanks:
   sv: "Tack för att du berättade för oss."
   machine: { fi: true, sv: true }
 
-# --- Research opt-in on the account card, and the home screen's onboarding gate (#46) ---
-
-account.research.label:
-  en: "Take part in research"
-  description: "Not shown until there is a researcher (#545, ADR-010 §19). Label of the research opt-in switch on its screen in Settings (#46, #287): on when the active research consent names the current wording."
-  fi: "Osallistu tutkimukseen"
-  sv: "Delta i forskningen"
-  machine: { fi: true, sv: true }
-
-account.research.explain:
-  en: "Anonymised events about how you use Kumpa, under a separate research identifier. You can change this at any time."
-  description: "Not shown until there is a researcher (#545, ADR-010 §19). Line under the research switch."
-  fi: "Anonymisoituja tapahtumia siitä, miten käytät Kumpa-sovellusta, erillisellä tutkimustunnisteella. Voit muuttaa tätä milloin tahansa."
-  sv: "Anonymiserade händelser om hur du använder Kumpa, under ett separat forskningsid. Du kan ändra det här när som helst."
-  machine: { fi: true, sv: true }
-
-account.research.failed:
-  en: "The research choice could not be saved. Try again."
-  description: "Not shown until there is a researcher (#545, ADR-010 §19). Notice when giving or withdrawing the research consent failed."
-  fi: "Tutkimusvalintaa ei voitu tallentaa. Yritä uudelleen."
-  sv: "Forskningsvalet kunde inte sparas. Försök igen."
-  machine: { fi: true, sv: true }
+# --- The sensitive-answers consent on the account card, and the home screen's onboarding gate (#46) ---
 
 account.specialCategory.label:
   en: "Store my sensitive answers"
@@ -10236,13 +10163,6 @@ safety.report.done:
   description: "The block-or-report dialog (#84), after the report went through (and its block); closing the dialog takes the card away. Also what the list of conversations says after a report from a conversation (#351), and said when a report of the same person was already waiting, which the API answers alike. The step before it said that they will not see each other here again."
   fi: "Kiitos. Moderaattori katsoo ilmoituksen."
   sv: "Tack. En moderator tittar på anmälan."
-  machine: { fi: true, sv: true }
-
-settings.research.title:
-  en: "Research"
-  description: "Not shown until there is a researcher (#545, ADR-010 §19). Settings, title of the research consent's row and of the screen with its switch (#287)."
-  fi: "Tutkimus"
-  sv: "Forskning"
   machine: { fi: true, sv: true }
 
 settings.sensitive.title:

@@ -1,17 +1,14 @@
 import { type Queryable, transaction } from "@kuutti/db";
 import {
   type ChatMessage,
-  elapsedBand,
   type MessagePage,
   type MessagesQuery,
   messageLength,
-  messageLengthBand,
 } from "@kuutti/schema";
 import { AppError } from "../lib/errors.ts";
 import { matchingConfigNumber } from "../lib/matching-config.ts";
 import { issueMessagePhotoUrls } from "../media/index.ts";
 import { contactDetailsIn } from "../profile/index.ts";
-import { track } from "../research/index.ts";
 import {
   type ChatDeps,
   contactDetailsRefused,
@@ -27,8 +24,8 @@ import * as repo from "./repo.ts";
 
 // Text messages (#348, ADR-031 §3): the send with every refusal, the pages of
 // the history and of what is new, the read mark. The text reaches no log
-// line, error detail or event (rule 5): the request line says the route and
-// the status, a refusal its code, the event the length's band.
+// line or error detail: the request line says the route and the status, a
+// refusal its code.
 
 export const MESSAGES_PER_MINUTE_KEY = "messages_per_minute";
 
@@ -95,12 +92,7 @@ type Outcome =
   | { kind: "closed" }
   | { kind: "too_long"; maxLength: number }
   | { kind: "contact_details"; contact: string }
-  | {
-      kind: "created";
-      message: ChatMessage;
-      openedAt: Date;
-      previousAt: Date | null;
-    };
+  | { kind: "created"; message: ChatMessage };
 
 /**
  * One send, in one transaction (ADR-031 §3): the caller's account held, the
@@ -139,12 +131,7 @@ export async function sendMessage(
       body: input.body,
       at,
     });
-    return {
-      kind: "created",
-      message: toMessage(row, state.side),
-      openedAt: state.openedAt,
-      previousAt: state.lastMessageAt,
-    };
+    return { kind: "created", message: toMessage(row, state.side) };
   });
   switch (outcome.kind) {
     case "not_found":
@@ -163,25 +150,8 @@ export async function sendMessage(
       throw contactDetailsRefused(outcome.contact);
     case "stored":
       return { message: outcome.message, created: false };
-    case "created": {
-      const { message } = outcome;
-      await track(
-        { db: deps.db, logger: deps.logger, now: () => at },
-        input.accountId,
-        "message_sent",
-        {
-          kind: message.kind,
-          length: messageLengthBand(messageLength(input.body)),
-          firstInConversation: message.seq === 1,
-          sinceOpened: elapsedBand(at.getTime() - outcome.openedAt.getTime()),
-          sincePrevious:
-            outcome.previousAt === null
-              ? null
-              : elapsedBand(at.getTime() - outcome.previousAt.getTime()),
-        },
-      );
-      return { message, created: true };
-    }
+    case "created":
+      return { message: outcome.message, created: true };
   }
 }
 

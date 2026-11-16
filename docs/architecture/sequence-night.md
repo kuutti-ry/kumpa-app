@@ -6,32 +6,29 @@ apps/api/src/boot.ts
 infra/modules/observability/
 -->
 
-What the API does at night, from the system's side: the timer that runs inside the API's own process at 04:00 in Helsinki, the sixteen jobs it runs one after another, what each reads and writes, and how a failed job reaches the maintainer's mailbox through the log and an alarm. It is written for a contributor who adds or changes a job, and for whoever answers the alarm. There is no cron and no second process: the jobs are listed in the API's boot and run by a timer in the same process as HTTP and the socket. This view draws ADR-006 §2, ADR-008 (the fetch log's year), ADR-011 §6 and §9, ADR-013, ADR-015, ADR-024 §5, ADR-029, ADR-030 §8, ADR-031 §8, ADR-044 §7 and ADR-062 §1 and §13. Nothing of the queue is built at night: the first read of a Finnish day opens a person's log, and what the night does for rounds is delete those past their year.
+What the API does at night, from the system's side: the timer that runs inside the API's own process at 04:00 in Helsinki, the thirteen jobs it runs one after another, what each reads and writes, and how a failed job reaches the maintainer's mailbox through the log and an alarm. It is written for a contributor who adds or changes a job, and for whoever answers the alarm. There is no cron and no second process: the jobs are listed in the API's boot and run by a timer in the same process as HTTP and the socket. This view draws ADR-006 §2, ADR-008 (the fetch log's year), ADR-013, ADR-015, ADR-024 §5, ADR-030 §8, ADR-031 §8, ADR-044 §7 and ADR-062 §1 and §13. Nothing of the queue is built at night: the first read of a Finnish day opens a person's log, and what the night does for rounds is delete those past their year.
 
 In these diagrams every arrow is built. Mermaid's sequence diagrams take a message's words as they are, so the labels are not in quotes, and they name an environment as `{env}`, staging or prod.
 
 ## The jobs, in order
 
-"Everywhere" is every process the API runs in: staging, a developer's machine, and each pull request's preview against its own database. Production runs the same list but the one job it holds back.
+"Everywhere" is every process the API runs in: staging, a developer's machine, and each pull request's preview against its own database. Production runs the same list.
 
 | # | Job, as the log names it | Where the work lives | Reads | Writes | Runs |
 |---|---|---|---|---|---|
 | 1 | `sweep-sessions` | identity | sessions, sign-in attempts | deletes ended, expired and erased sessions, and expired sign-in attempts | everywhere |
 | 2 | `sweep-admin-sessions` | identity | staff sessions | deletes expired or revoked staff sessions, each member's newest kept | everywhere |
-| 3 | `research-export` | research | the events table, the copy's files | one Parquet file per closed UTC day under `research/` in the media bucket | where media has a bucket, not in production: staging and a developer's S3 stand-in, never a preview |
-| 4 | `research-events-partitions` | research | the events table's partitions; the copy, where there is one | this month's and next month's partitions; drops each month whose first day reaches 90 days before the next scheduled run | everywhere |
-| 5 | `research-anonymity` | research | the events table | nothing; a warning when a cell is under k | everywhere |
-| 6 | `end-suspensions` | safety | sanctions | lifts each suspension past its day, settles the account | everywhere |
-| 7 | `pond-counter` | jobs | accounts, profiles, photos, preferences | the day's figures, one row | everywhere |
-| 8 | `invitation-count` | rewards | invitations, accounts, consents, profiles, photos, preferences | invitations counted, both people's reward units, the notices | everywhere |
-| 9 | `prune-rounds` | matching | rounds | deletes the rounds of days over 365 days back, their entries and relaxations with them | everywhere |
-| 10 | `reject-unreviewed-photos` | media | profile photos in the human queue | rejects those waiting past `photo_queue_reject_days` as not reviewed | everywhere |
-| 11 | `prune-photo-check-notes` | safety | the photo check's notes | deletes notes older than twelve calendar months | everywhere |
-| 12 | `prune-photo-access` | media | the fetch log of signed photo URLs | deletes rows older than 365 days, every account's | everywhere |
-| 13 | `prune-reports` | safety | reports, their frozen copies, erased senders' sent photos | deletes reports older than 365 days, then the photos no copy holds, then their objects | everywhere; the objects where media is configured |
-| 14 | `archive-silent-conversations` | chat | conversations | archives the silent ones; a research event per person | everywhere |
-| 15 | `moderate-pending-photos` | media | photos pending with no recorded check, their stored card variant | the check's outcome | where media is configured |
-| 16 | `sweep-orphaned-objects` | media | every object under `media/`, the photo rows | deletes the objects a day old or more whose content key no photo row names | where media is configured |
+| 3 | `end-suspensions` | safety | sanctions | lifts each suspension past its day, settles the account | everywhere |
+| 4 | `pond-counter` | jobs | accounts, profiles, photos, preferences | the day's figures, one row | everywhere |
+| 5 | `invitation-count` | rewards | invitations, accounts, consents, profiles, photos, preferences | invitations counted, both people's reward units, the notices | everywhere |
+| 6 | `prune-rounds` | matching | rounds | deletes the rounds of days over 365 days back, their entries and relaxations with them | everywhere |
+| 7 | `reject-unreviewed-photos` | media | profile photos in the human queue | rejects those waiting past `photo_queue_reject_days` as not reviewed | everywhere |
+| 8 | `prune-photo-check-notes` | safety | the photo check's notes | deletes notes older than twelve calendar months | everywhere |
+| 9 | `prune-photo-access` | media | the fetch log of signed photo URLs | deletes rows older than 365 days, every account's | everywhere |
+| 10 | `prune-reports` | safety | reports, their frozen copies, erased senders' sent photos | deletes reports older than 365 days, then the photos no copy holds, then their objects | everywhere; the objects where media is configured |
+| 11 | `archive-silent-conversations` | chat | conversations | archives the silent ones | everywhere |
+| 12 | `moderate-pending-photos` | media | photos pending with no recorded check, their stored card variant | the check's outcome | where media is configured |
+| 13 | `sweep-orphaned-objects` | media | every object under `media/`, the photo rows | deletes the objects a day old or more whose content key no photo row names | where media is configured |
 
 ## Part 1: the run, and a failure
 
@@ -53,60 +50,39 @@ sequenceDiagram
     api->>logs: nightly job done, with the job's name and counts, or nightly job failed, with its name and the error
   end
   api->>api: Arm again for the next 04:00
-  logs->>alarm: The metric filter counts each nightly job failed, and each research events dropped without their copy
+  logs->>alarm: The metric filter counts each nightly job failed
   alarm->>topic: ALARM on a day that counts one or more, OK again on a day that counts none
   topic->>mail: An e-mail, where ALERT_EMAIL is set and the subscription confirmed
 ```
 
 ### Steps
 
-1. Each API process arms one timer at its start, for the next 04:00 in Helsinki (`NIGHTLY_HOUR`). The timer does not keep the process alive by itself. Two containers that overlap during a deploy each arm one; the jobs that must not run twice at once take an advisory lock in the database (steps 11, 15, 17, 20 and 21).
+1. Each API process arms one timer at its start, for the next 04:00 in Helsinki (`NIGHTLY_HOUR`). The timer does not keep the process alive by itself. Two containers that overlap during a deploy each arm one; the jobs that must not run twice at once take an advisory lock in the database (steps 12 and 13).
 2. The jobs run one at a time, in the order of the table: each waits for the one before it. A rejected operation is caught and the chain continues; a never-settling operation still holds the chain. There is no uncancellable timeout that lets its writes overlap the following job.
 3. A job answers with counts, never with who: how many sessions, days, photos; the counter's with the day and whether its figures moved. A job that throws answers with its error.
 4. One line per job: `nightly job done` with the job's name and its counts, or `nightly job failed` with its name and the error, which the logger redacts as everywhere. A failure is logged, never thrown, so one broken job stops neither the next job nor the server. On a deployed box Docker's `awslogs` driver sends every container's lines to the log group `/kuutti/{env}/api`, one stream per container, kept 30 days; a preview's container writes to the same group under its own stream. On a developer's machine the lines go to the terminal.
 5. After the last job the timer is armed again for the next 04:00.
-6. A metric filter on the log group counts each `nightly job failed` line and each `research events dropped without their copy` line (step 16) as `NightlyFailures`.
+6. A metric filter on the log group counts each `nightly job failed` line as `NightlyFailures`.
 7. The alarm `kuutti-{env}-nightly-job-failed` sums a day: one or more is ALARM, and a day with none is OK again. Both go to the environment's topic.
 8. The topic mails the address in the repository variable `ALERT_EMAIL`, once its subscription is confirmed from that mailbox; without the variable the topic has no subscriber. `docs/runbooks/alerts.md` has the first steps.
 
-## Part 2: sessions and research
+## Part 2: sessions
 
 ```mermaid
 sequenceDiagram
-  accTitle: The night's jobs, part 2: sessions and research
-  accDescr: The first two jobs delete ended sessions and expired sign-in attempts. Where the research copy is written, the export writes each closed day missing from it as one Parquet file. The partitions job makes the coming month's partition and drops each month past ninety days, checking the copy first where there is one. The anonymity census warns of cells under k.
+  accTitle: The night's jobs, part 2: sessions
+  accDescr: The first two jobs delete ended sessions and expired sign-in attempts, and staff sessions expired or revoked.
   autonumber 9
   participant api as The API's nightly run
   participant db as PostgreSQL
-  participant bucket as The media bucket, under research/
   api->>db: sweep-sessions. Delete sessions ended over 30 days ago, expired, or of erased accounts, and sign-in attempts past their time
   api->>db: sweep-admin-sessions. Delete staff sessions expired or revoked, keeping each member's newest
-  opt where media has a bucket and the environment is not production
-    api->>db: research-export. Take its lock, and find the first day the events table holds
-    api->>bucket: Which days the copy holds, and the earlier files each missing day's census reads
-    api->>db: The events of each closed UTC day the copy lacks
-    api->>bucket: One Parquet file per day, written once, never over a file that exists
-  end
-  api->>db: research-events-partitions. Make this month's and next month's partitions
-  opt where the copy is written and a month is due to go
-    api->>bucket: Write the copy once more, then list the days of the months to drop
-  end
-  api->>db: Drop each month that reaches its ninety-day bound before the next run
-  api->>db: research-anonymity. Count the cells under k of pond, age band and snapshot
 ```
 
 ### Steps
 
-9. `sweep-sessions` (identity, #35): deletes the sessions revoked more than 30 days ago, those past their expiry, and those of erased accounts; and the sign-in attempts past their time. A deleted session also closes any socket it still had (see Chat, step 43).
+9. `sweep-sessions` (identity, #35): deletes the sessions revoked more than 30 days ago, those past their expiry, and those of erased accounts; and the sign-in attempts past their time. A deleted session also closes any socket it still had (see Chat, step 42).
 10. `sweep-admin-sessions` (identity, #49): deletes staff sessions that expired or were revoked, keeping each member of staff's newest.
-11. `research-export` (research, #194, ADR-029), only where media has a bucket and the environment is not production: on staging and beside a developer's S3 stand-in, never in a preview, whose media is off. Production holds it until the maintainer has answered ADR-029's ninety days (a `shortcut:` in `boot.ts`). In one transaction it tries a lock of its own; a second container that finds it held writes nothing. Then it finds the first day the events table holds.
-12. It asks the bucket which days the copy holds, and reads the files of the ninety days before each missing day, which are the census's prior. A file of a day not yet closed stops the run before anything is released.
-13. It reads the events of each closed UTC day the table still holds and the copy lacks, oldest first. A day is closed an hour after it ends; 04:00 in Helsinki is one or two hours after midnight UTC.
-14. It writes one Parquet file per day to `research/YYYY/MM/YYYY-MM-DD.parquet`, releasing a value only where k people with a live research consent share it (ADR-029 §4), and never the account, the event's id, the stored snapshot or text. The write is conditional: a file that exists is never written over. A night that fails writes what it finished, and the next night catches up while the table holds the days.
-15. `research-events-partitions` (research, #50, ADR-011): under a lock, this month's and next month's partitions of the events table exist after every run, as after every boot.
-16. Where the copy is written and a month is due to be dropped, the copy runs once more and then lists the days of those months (ADR-029 §6). Every day without its file is counted in one line, `research events dropped without their copy`, which the alarm counts (step 6).
-17. Under the partitions' lock again, each month whose first day reaches 90 days before the next scheduled run is dropped whole: the only deletion the events table allows, so, while the night runs, no event passes the ninety-day upper bound between two runs (ADR-011 §6). The drop goes ahead whether or not the copy has the days.
-18. `research-anonymity` (research, ADR-011 §9): counts the distinct people in each cell of pond, age band and snapshot, over the table. A cell under k is a warning line with counts only, `research events: cells under k`; it is not a failure, and the alarm does not count it.
 
 ## Part 3: the pond, and the rounds past their year
 
@@ -114,7 +90,7 @@ sequenceDiagram
 sequenceDiagram
   accTitle: The night's jobs, part 3: the pond, and the rounds past their year
   accDescr: Suspensions past their day end first, so a person let back in is counted the same night. Then the counter's figures, the invitations whose redeemer is complete, and the rounds past the year they are kept, their entries and relaxations with them.
-  autonumber 19
+  autonumber 11
   participant api as The API's nightly run
   participant db as PostgreSQL
   api->>db: end-suspensions. Lift each suspension past its day and settle its account, one account per transaction
@@ -125,10 +101,10 @@ sequenceDiagram
 
 ### Steps
 
-19. `end-suspensions` (safety, #307, ADR-024 §5): every suspension still open past its day is lifted by nobody, and its account's state settled from the sanctions still open, one account per transaction. A failure is collected while the remaining accounts are still attempted, then reported through the runner. It runs before the counts so that a person let back in is counted the same night. A login on the end day before 04:00 is still refused: a `shortcut:` in `safety/sanctions.ts`.
-20. `pond-counter` (`jobs/`, #54, ADR-013): under its own advisory lock, counts the finished profiles: live, bank-verified accounts with a home that stand as active and have a complete profile, reading nobody's gender (#581). The number moves only when at least k people have come or gone since it was taken, and the bands of whom the finished profiles seek on their own (#507). One row holds what stands (#607). The counter's route serves the number all day, and to the session of somebody with a home the bands, as shares. A database with no figures gets its first ones at boot.
-21. `invitation-count` (rewards, #107, ADR-044 §7, ADR-060 §7): in one transaction, each invitation not counted yet whose redeemer's profile and onboarding are complete now is counted once; its inviter and the friend who used it get the units `matching_config invitation_reward` says tonight, with both people locked first. The inviter gets one notice in the app even of nothing, and the friend one only of a fish (ADR-032). Its line says how many and of what, never who.
-22. `prune-rounds` (matching, #502, ADR-062 §13): the rounds of Finnish days more than 365 days back are deleted, and their entries and relaxations go with them by the cascade. The year covers the longest clock of the queue's ladder, a second pass. Nothing else is done for the round at night: `GET /rounds/today` opens a person's log at their first read of the day and adds the next people as they read (ADR-062 §1), and no push tells of it (ADR-062 §12).
+11. `end-suspensions` (safety, #307, ADR-024 §5): every suspension still open past its day is lifted by nobody, and its account's state settled from the sanctions still open, one account per transaction. A failure is collected while the remaining accounts are still attempted, then reported through the runner. It runs before the counts so that a person let back in is counted the same night. A login on the end day before 04:00 is still refused: a `shortcut:` in `safety/sanctions.ts`.
+12. `pond-counter` (`jobs/`, #54, ADR-013): under its own advisory lock, counts the finished profiles: live, bank-verified accounts with a home that stand as active and have a complete profile, reading nobody's gender (#581). The number moves only when at least k people have come or gone since it was taken, and the bands of whom the finished profiles seek on their own (#507). One row holds what stands (#607). The counter's route serves the number all day, and to the session of somebody with a home the bands, as shares. A database with no figures gets its first ones at boot.
+13. `invitation-count` (rewards, #107, ADR-044 §7, ADR-060 §7): in one transaction, each invitation not counted yet whose redeemer's profile and onboarding are complete now is counted once; its inviter and the friend who used it get the units `matching_config invitation_reward` says tonight, with both people locked first. The inviter gets one notice in the app even of nothing, and the friend one only of a fish (ADR-032). Its line says how many and of what, never who.
+14. `prune-rounds` (matching, #502, ADR-062 §13): the rounds of Finnish days more than 365 days back are deleted, and their entries and relaxations go with them by the cascade. The year covers the longest clock of the queue's ladder, a second pass. Nothing else is done for the round at night: `GET /rounds/today` opens a person's log at their first read of the day and adds the next people as they read (ADR-062 §1), and no push tells of it (ADR-062 §12).
 
 ## Part 4: photos, reports and silent conversations
 
@@ -136,7 +112,7 @@ sequenceDiagram
 sequenceDiagram
   accTitle: The night's jobs, part 4: photos, reports and silent conversations
   accDescr: Profile photos nobody decided in time are rejected as not reviewed. Last, the sweep deletes the objects under media/ that are a day old or more and that no photo row names. The photo check's notes, the fetch log's rows past a year and the reports past twelve months are deleted, and with the reports the sent photos of erased people that no copy holds any more, objects included. Silent conversations are archived, and the chat tells the open sockets. Where media is configured, photos the automatic check missed get one more look.
-  autonumber 23
+  autonumber 15
   participant api as The API's nightly run
   participant db as PostgreSQL
   participant bucket as The media bucket
@@ -148,7 +124,7 @@ sequenceDiagram
   opt where media is configured
     api->>bucket: Delete those photos' objects after the commit, where no other row shares them
   end
-  api->>db: archive-silent-conversations. Archive each conversation silent for silent_match_archive_days, an event for each person in it
+  api->>db: archive-silent-conversations. Archive each conversation silent for silent_match_archive_days
   db->>api: On commit, a notification for each conversation archived, which the chat sends to live sockets
   opt where media is configured
     api->>db: moderate-pending-photos. Every eligible pending photo with no recorded check, in pages of fifty
@@ -165,36 +141,36 @@ sequenceDiagram
 
 ### Steps
 
-23. `reject-unreviewed-photos` (media, #376, ADR-006 §2): a profile photo in the human queue that nobody decided within `matching_config photo_queue_reject_days` is rejected as `not_reviewed`, a reason no moderator chooses. Nothing expires into visibility: the photo stays in its owner's list with the reason. The value 0 turns the job off.
-24. `prune-photo-check-notes` (safety, #253): the photo check's notes, which kind of photo the check did not show and when, are kept twelve months.
-25. `prune-photo-access` (media, #688, ADR-008 History 16/11/2026): the fetch log, one row per signed photo URL, is kept a year; rows older than 365 days go, every account's, found by their time alone through `photo_access_at_idx`. Today's rows, which the budget and the velocity rule count, are never near it.
-26. `prune-reports` (safety, #84, #351, ADR-030 §8 and §12): in one transaction, every report filed more than twelve months ago goes, open or decided, with its frozen copy of a conversation; its block stays. Then every photo an erased person sent in a conversation that no copy holds any more goes, through the media slice's own erasure.
-27. After the commit, where media is configured, those photos' objects are deleted from the media bucket where nothing else shares them.
-28. `archive-silent-conversations` (chat, #348, TD-13, ADR-031 §8): in one transaction, the conversations with no message and no contact shared for `matching_config silent_match_archive_days` are locked, read afresh and archived, so one that a share brought back while the lock waited stays out. A closed conversation stays as it is, and a break stops no clock (ADR-022 §4). Each person in an archived conversation gets the research event `conversation_archived`, in bands.
-29. On commit, the conversation trigger notifies `kuutti_chat`, and the chat tells each side's live sockets that the conversation is archived (see Chat, steps 41 and 42). The next message brings it back.
-30. `moderate-pending-photos` (media, #49, ADR-006), where media is configured: every photo still pending with no check recorded, pending for more than ten minutes (a crash or a failed call), gets one more look, in pages of fifty ordered by creation time and id.
-31. The job reads each one's stored card variant from the bucket; one with no card variant is logged and counted as failed.
-32. The check is Rekognition through the instance role where `MODERATION=rekognition`, and otherwise the human queue for everything (ADR-006 §4).
-33. Each outcome is written as the upload's would be. A photo the check cannot reach stays pending and does not keep later pages out: nothing expires into visibility.
-34. `sweep-orphaned-objects` (media, #636, ADR-007), where media is configured, last: lists every object under `media/` in the bucket, a thousand a page.
-35. Of those written a day or more ago and of the variant shape, `media/<content key>/<variant>.webp`, with `variant` one of `thumb`, `card`, `full`, it asks the `photo` table which content keys no row names. An object under `media/` of another shape is counted, left and said in a warning: not this job's to judge.
-36. Their objects are deleted in batches of a thousand, as erasure's are. The answer is counts, never a key: the objects seen, the aged ones, the orphaned keys, the objects deleted, the unexpected. A day's grace keeps an upload's objects until its row is in; what a failed delete, a failed upload cleanup or a crash between the two left behind goes the first night it is a day old: the same night for an object that aged long before its delete failed, the next for a fresh one.
+15. `reject-unreviewed-photos` (media, #376, ADR-006 §2): a profile photo in the human queue that nobody decided within `matching_config photo_queue_reject_days` is rejected as `not_reviewed`, a reason no moderator chooses. Nothing expires into visibility: the photo stays in its owner's list with the reason. The value 0 turns the job off.
+16. `prune-photo-check-notes` (safety, #253): the photo check's notes, which kind of photo the check did not show and when, are kept twelve months.
+17. `prune-photo-access` (media, #688, ADR-008 History 16/11/2026): the fetch log, one row per signed photo URL, is kept a year; rows older than 365 days go, every account's, found by their time alone through `photo_access_at_idx`. Today's rows, which the budget and the velocity rule count, are never near it.
+18. `prune-reports` (safety, #84, #351, ADR-030 §8 and §12): in one transaction, every report filed more than twelve months ago goes, open or decided, with its frozen copy of a conversation; its block stays. Then every photo an erased person sent in a conversation that no copy holds any more goes, through the media slice's own erasure.
+19. After the commit, where media is configured, those photos' objects are deleted from the media bucket where nothing else shares them.
+20. `archive-silent-conversations` (chat, #348, TD-13, ADR-031 §8): in one transaction, the conversations with no message and no contact shared for `matching_config silent_match_archive_days` are locked, read afresh and archived, so one that a share brought back while the lock waited stays out. A closed conversation stays as it is, and a break stops no clock (ADR-022 §4).
+21. On commit, the conversation trigger notifies `kuutti_chat`, and the chat tells each side's live sockets that the conversation is archived (see Chat, steps 40 and 41). The next message brings it back.
+22. `moderate-pending-photos` (media, #49, ADR-006), where media is configured: every photo still pending with no check recorded, pending for more than ten minutes (a crash or a failed call), gets one more look, in pages of fifty ordered by creation time and id.
+23. The job reads each one's stored card variant from the bucket; one with no card variant is logged and counted as failed.
+24. The check is Rekognition through the instance role where `MODERATION=rekognition`, and otherwise the human queue for everything (ADR-006 §4).
+25. Each outcome is written as the upload's would be. A photo the check cannot reach stays pending and does not keep later pages out: nothing expires into visibility.
+26. `sweep-orphaned-objects` (media, #636, ADR-007), where media is configured, last: lists every object under `media/` in the bucket, a thousand a page.
+27. Of those written a day or more ago and of the variant shape, `media/<content key>/<variant>.webp`, with `variant` one of `thumb`, `card`, `full`, it asks the `photo` table which content keys no row names. An object under `media/` of another shape is counted, left and said in a warning: not this job's to judge.
+28. Their objects are deleted in batches of a thousand, as erasure's are. The answer is counts, never a key: the objects seen, the aged ones, the orphaned keys, the objects deleted, the unexpected. A day's grace keeps an upload's objects until its row is in; what a failed delete, a failed upload cleanup or a crash between the two left behind goes the first night it is a day old: the same night for an object that aged long before its delete failed, the next for a fresh one.
 
 ## Where it lives
 
-- The timer and the list: `apps/api/src/jobs/nightly.ts` (`msUntilNightly` over `msUntilFinnishHour`, which a push's time to live uses too, `runNightly`, `scheduleNightly`), `apps/api/src/boot.ts` (the jobs, in order, and the one held back in production), `apps/api/src/index.ts` (`scheduleNightly` at start)
-- The jobs: `apps/api/src/identity/sessions.ts` and `admin-session.ts`; `apps/api/src/research/copy.ts`, `copy-store.ts`, `partitions.ts`, `anonymity.ts`; `apps/api/src/safety/sanctions.ts` (`endSuspensions`), `photo-check.ts`, `reports.ts` (`pruneReports`); `apps/api/src/jobs/pond-counter.ts`, `pool.ts`, `invitation-count.ts` with `apps/api/src/rewards/invitations.ts`; `apps/api/src/matching/rounds.ts` (`pruneRounds`); `apps/api/src/media/moderation.ts` (`rejectUnreviewedPhotos`, `sweepPendingPhotos`), `repo.ts` (`prunePhotoAccess`); `apps/api/src/chat/archive.ts`; `apps/api/src/media/erasure.ts` (`sweepOrphanedObjects`).
+- The timer and the list: `apps/api/src/jobs/nightly.ts` (`msUntilNightly` over `msUntilFinnishHour`, which a push's time to live uses too, `runNightly`, `scheduleNightly`), `apps/api/src/boot.ts` (the jobs, in order), `apps/api/src/index.ts` (`scheduleNightly` at start)
+- The jobs: `apps/api/src/identity/sessions.ts` and `admin-session.ts`; `apps/api/src/safety/sanctions.ts` (`endSuspensions`), `photo-check.ts`, `reports.ts` (`pruneReports`); `apps/api/src/jobs/pond-counter.ts`, `pool.ts`, `invitation-count.ts` with `apps/api/src/rewards/invitations.ts`; `apps/api/src/matching/rounds.ts` (`pruneRounds`); `apps/api/src/media/moderation.ts` (`rejectUnreviewedPhotos`, `sweepPendingPhotos`), `repo.ts` (`prunePhotoAccess`); `apps/api/src/chat/archive.ts`; `apps/api/src/media/erasure.ts` (`sweepOrphanedObjects`).
 - The alarm: `infra/modules/observability/main.tf` (the topic, the e-mail subscription, the metric filter `nightly-failures`, the alarm `nightly-job-failed`), `infra/modules/compute/main.tf` and `templates/user_data.sh.tpl` (the log group and the `awslogs` driver), `infra/envs/staging/main.tf` and `infra/envs/prod/main.tf` (each composes it), `docs/runbooks/alerts.md`
 - Specs: `features/identity/erasure.feature` (the sweep), `features/safety/sanctions.feature` (the night lifts a suspension), `features/pond/opening.feature`, `features/pond/counter.feature`, `features/matching/decisions.feature`, `features/media/moderation.feature`, `features/chat/conversations.feature`
-- ADRs: [ADR-007](../adr/007-erasure-and-export.md) (the sweep), [ADR-008](../adr/008-exposure-budget-and-client-address.md) History 16/11/2026 (the fetch log's year), [ADR-006](../adr/006-photo-moderation.md) §2 and §4, [ADR-011](../adr/011-research-events.md) §6 and §9, [ADR-013](../adr/013-waitlist-counter.md), [ADR-060](../adr/060-no-waiting-at-the-pond.md), [ADR-022](../adr/022-taking-a-break.md) §4, [ADR-024](../adr/024-sanctions.md) §5, [ADR-029](../adr/029-the-research-copy.md) §1 to §6 and §12, [ADR-030](../adr/030-reports-and-blocks.md) §8 and §12, [ADR-031](../adr/031-chat.md) §8, [ADR-032](../adr/032-notification-choices-and-notices.md), [ADR-034](../adr/034-the-round-record.md) §7, [ADR-044](../adr/044-invitations.md) §7, [ADR-062](../adr/062-one-queue.md) §1 and §13
-- Issues: #35, #49, #50, #54, #84, #107, #194, #253, #307, #348, #351, #376, #500, #502, #636, #688; the alarm #11 and #194
+- ADRs: [ADR-007](../adr/007-erasure-and-export.md) (the sweep), [ADR-008](../adr/008-exposure-budget-and-client-address.md) History 16/11/2026 (the fetch log's year), [ADR-006](../adr/006-photo-moderation.md) §2 and §4, [ADR-013](../adr/013-waitlist-counter.md), [ADR-060](../adr/060-no-waiting-at-the-pond.md), [ADR-022](../adr/022-taking-a-break.md) §4, [ADR-024](../adr/024-sanctions.md) §5, [ADR-030](../adr/030-reports-and-blocks.md) §8 and §12, [ADR-031](../adr/031-chat.md) §8, [ADR-032](../adr/032-notification-choices-and-notices.md), [ADR-034](../adr/034-the-round-record.md) §7, [ADR-044](../adr/044-invitations.md) §7, [ADR-062](../adr/062-one-queue.md) §1 and §13
+- Issues: #35, #49, #54, #84, #107, #253, #307, #348, #351, #376, #500, #502, #636, #688; the alarm #11
 
 ## Open
 
-- **One job held back in production, the maintainer's to lift.** `research-export` waits for ADR-029's ninety days, a `shortcut:` line in `boot.ts`.
-- **Whether staging's export succeeds tonight.** `infra/README.md` says staging's `research-export` fails every night with AccessDenied until `modules/research` is applied; whether it has been applied is not in the repository.
+- Nothing. Production runs every job since research left the night (#208, ADR-071).
 
 ## History
 
 - 2026-11-13 (#380): show all retry pages, failure isolation, calendar-month note retention and the next-run cutoff for the existing ninety-day research bound; clarify the awaited runner’s hang limitation.
 - 2026-11-16 (#688): `prune-photo-access` joins the night as job 12, after the photo check's notes: the fetch log is kept a year. Part 4's steps from 25 on move up by one.
+- 2026-11-16 (#208, ADR-071): the three research jobs leave the night, and the alarm's second line with them. Thirteen jobs; part 2 draws the sessions alone, and the steps from 11 on move up by eight.

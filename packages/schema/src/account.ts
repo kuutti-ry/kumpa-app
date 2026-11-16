@@ -18,7 +18,6 @@ import { ExportedNotifications, ExportedPush } from "./notifications.ts";
 import { ConsentRecord, Gender, PLACE_NAME_MAX, PreferencesResponse } from "./onboarding.ts";
 import { ProfileDocument } from "./profile.ts";
 import { ExportAbout, ExportedBlocks, ExportedReports } from "./report.ts";
-import { ResearchExport } from "./research.ts";
 import { ExportedInvitations } from "./rewards.ts";
 import { ExportedSanction } from "./sanction.ts";
 
@@ -205,8 +204,6 @@ export const AccountExport = z
     cardsShown: z.array(z.object({ photoId: z.uuid(), at: z.iso.datetime() })).max(1000),
     /** The photo check's notes and the closer look (#253). */
     photoCheck: ExportedPhotoCheck,
-    /** What research holds (#50, ADR-011 §7 and §10): the enrolment, never the events and never the research_id. */
-    research: ResearchExport,
     /** The person's own requests for a copy (#237), this one included, newest first, at most 1000; at most matching_config exports_per_day are answered per Finnish day. */
     exports: z.array(z.object({ at: z.iso.datetime() })).max(1000),
     /** What the person sent as feedback (#171), newest first, at most 1000, with whether a moderator has read it. */

@@ -92,9 +92,6 @@ export type MessageParams = {
   "account.foundThem.thanks": Record<never, never>;
   "account.foundThem.title": Record<never, never>;
   "account.foundThem.unchanged": Record<never, never>;
-  "account.research.explain": Record<never, never>;
-  "account.research.failed": Record<never, never>;
-  "account.research.label": Record<never, never>;
   "account.specialCategory.explain": Record<never, never>;
   "account.specialCategory.label": Record<never, never>;
   "account.title": Record<never, never>;
@@ -238,7 +235,6 @@ export type MessageParams = {
   "admin.feedback.meta": { "version": string; "platform": string; "locale": string; "time": string };
   "admin.feedback.refresh": Record<never, never>;
   "admin.feedback.title": Record<never, never>;
-  "admin.forbidden": Record<never, never>;
   "admin.late": { "hours": string };
   "admin.licenses.link": Record<never, never>;
   "admin.loadFailed": Record<never, never>;
@@ -640,8 +636,6 @@ export type MessageParams = {
   "invite.step.title": Record<never, never>;
   "legal.privacy.summary": Record<never, never>;
   "legal.privacy.title": Record<never, never>;
-  "legal.research.summary": Record<never, never>;
-  "legal.research.title": Record<never, never>;
   "legal.special_category.summary": Record<never, never>;
   "legal.special_category.title": Record<never, never>;
   "legal.terms.summary": Record<never, never>;
@@ -759,10 +753,6 @@ export type MessageParams = {
   "onboarding.prompts.explain": { "min": number };
   "onboarding.prompts.save": Record<never, never>;
   "onboarding.prompts.title": Record<never, never>;
-  "onboarding.research.later": Record<never, never>;
-  "onboarding.research.no": Record<never, never>;
-  "onboarding.research.title": Record<never, never>;
-  "onboarding.research.yes": Record<never, never>;
   "onboarding.seeks.allow": Record<never, never>;
   "onboarding.seeks.anyone": Record<never, never>;
   "onboarding.seeks.explain": Record<never, never>;
@@ -1542,7 +1532,6 @@ export type MessageParams = {
   "settings.photoDescriptions.tell.objects": Record<never, never>;
   "settings.photoDescriptions.tell.people": Record<never, never>;
   "settings.photoDescriptions.tell.title": Record<never, never>;
-  "settings.research.title": Record<never, never>;
   "settings.row.unsaved": Record<never, never>;
   "settings.section.appearance": Record<never, never>;
   "settings.section.community": Record<never, never>;
@@ -1563,7 +1552,6 @@ export type MessageParams = {
   "settings.theme.withContrast": { "theme": string };
   "settings.title": Record<never, never>;
   "settings.version.label": Record<never, never>;
-  "signIn.agreements.research": Record<never, never>;
   "signIn.button": Record<never, never>;
   "signIn.error.attestation_refused": Record<never, never>;
   "signIn.error.auth_banned": Record<never, never>;

@@ -630,22 +630,97 @@ describe("migrate", () => {
     });
   });
 
-  it("refuses a TRUNCATE of events while no partition stands to refuse it itself (ADR-011)", async () => {
-    // Each partition carries its own guard from the boot (ensureEventPartitions), and a
-    // TRUNCATE of the parent fires the partitions' too; before the first, only the parent's stands.
-    await withTemporaryDatabase(async (url) => {
-      const pool = createPool({ connectionString: url, max: 1 });
-      try {
-        await migrate(pool, MIGRATIONS);
-        const partitions = await pool.query(
-          "SELECT count(*) AS n FROM pg_inherits WHERE inhparent = 'events'::regclass",
-        );
-        expect(partitions.rows).toEqual([{ n: "0" }]);
-        await expect(pool.query("TRUNCATE events")).rejects.toMatchObject({ code: "42501" });
-      } finally {
-        await pool.end();
-      }
-    });
+  it("takes research out of a database that held it: the events with their partitions, the research consents, the researcher with their sessions and the mapping, and nothing else (#208, ADR-071)", async () => {
+    const withResearch = migrationsBefore("0008_no_research");
+    try {
+      await withTemporaryDatabase(async (url) => {
+        const pool = createPool({ connectionString: url, max: 2 });
+        try {
+          await migrate(pool, withResearch);
+          const account = await accountOf(pool, "5");
+          for (const kind of ["terms", "privacy", "research", "special_category"]) {
+            await pool.query(
+              "INSERT INTO consent (account_id, kind, version, locale_shown) VALUES ($1, $2, 'v-1', 'fi')",
+              [account, kind],
+            );
+          }
+          await pool.query(
+            "INSERT INTO research_subject (account_id, consent_version) VALUES ($1, 'v-1')",
+            [account],
+          );
+          await pool.query(
+            "CREATE TABLE events_2026_11 PARTITION OF events FOR VALUES FROM ('2026-11-01') TO ('2026-12-01')",
+          );
+          await pool.query(
+            `INSERT INTO events (at, name, research_id, consent_version, age_band, snapshot, props)
+             VALUES ('2026-11-16T10:00:00Z', 'like', gen_random_uuid(), 'v-1', '25-29', '{}', '{}')`,
+          );
+          const staff = async (n: string, role: string) => {
+            const { rows } = await pool.query<{ id: string }>(
+              "INSERT INTO identity (hetu_hmac) VALUES ($1) RETURNING id",
+              [n.repeat(64)],
+            );
+            const id = rows[0]?.id as string;
+            await pool.query(
+              "INSERT INTO moderator_roles (identity_id, role, granted_by) VALUES ($1, $2, 'M')",
+              [id, role],
+            );
+            await pool.query(
+              `INSERT INTO admin_session (identity_id, role, access_hash, expires_at)
+               VALUES ($1, $2, $3, now() + interval '8 hours')`,
+              [id, role, `hash-${n}`],
+            );
+            return id;
+          };
+          const admin = await staff("a", "admin");
+          await staff("b", "researcher");
+          // Signed in as an admin, then granted researcher in place: the session the
+          // grant left alone goes too, so a later grant of another role revives none.
+          const demoted = await staff("c", "admin");
+          await pool.query(
+            "UPDATE moderator_roles SET role = 'researcher' WHERE identity_id = $1",
+            [demoted],
+          );
+
+          await migrate(pool, MIGRATIONS);
+
+          const { rows: tables } = await pool.query(
+            `SELECT table_name FROM information_schema.tables
+             WHERE table_schema = 'public' AND table_name IN ('events', 'events_2026_11', 'research_subject')`,
+          );
+          expect(tables).toEqual([]);
+          const { rows: functions } = await pool.query(
+            "SELECT 1 FROM pg_proc WHERE proname = 'events_immutable'",
+          );
+          expect(functions).toEqual([]);
+          const { rows: consents } = await pool.query(
+            "SELECT kind::text FROM consent WHERE account_id = $1 ORDER BY kind",
+            [account],
+          );
+          expect(consents.map((row) => row.kind)).toEqual(["privacy", "special_category", "terms"]);
+          const { rows: roles } = await pool.query(
+            "SELECT identity_id, role::text FROM moderator_roles",
+          );
+          expect(roles).toEqual([{ identity_id: admin, role: "admin" }]);
+          const { rows: sessions } = await pool.query(
+            "SELECT identity_id, role::text FROM admin_session",
+          );
+          expect(sessions).toEqual([{ identity_id: admin, role: "admin" }]);
+          const { rows: kinds } = await pool.query(
+            "SELECT unnest(enum_range(NULL::consent_kind))::text AS kind",
+          );
+          expect(kinds.map((row) => row.kind)).toEqual(["terms", "privacy", "special_category"]);
+          const { rows: staffRoles } = await pool.query(
+            "SELECT unnest(enum_range(NULL::moderator_role))::text AS role",
+          );
+          expect(staffRoles.map((row) => row.role)).toEqual(["moderator", "admin"]);
+        } finally {
+          await pool.end();
+        }
+      });
+    } finally {
+      rmSync(withResearch, { recursive: true, force: true });
+    }
   });
 
   it("is a no-op the second time", async () => {
@@ -674,7 +749,6 @@ describe("migrate", () => {
           "conversation_participant",
           "email_code",
           "email_send",
-          "events",
           "feedback",
           "found_them_count",
           "identity",
@@ -694,7 +768,6 @@ describe("migrate", () => {
           "push_token",
           "report",
           "report_message",
-          "research_subject",
           "reward",
           "round_entries",
           "round_relaxation",

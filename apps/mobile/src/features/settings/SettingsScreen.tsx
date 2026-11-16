@@ -292,8 +292,7 @@ export function SettingsScreen() {
                     value: lockWords,
                   },
                 ]),
-                // The consent saying whether it is on; nothing signed out. Research has no row
-                // until there is a researcher (#545): the shortcut in ConsentSwitches.tsx.
+                // The consent saying whether it is on; nothing signed out.
                 ...only(signedIn, [
                   consentRow("special_category"),
                   {

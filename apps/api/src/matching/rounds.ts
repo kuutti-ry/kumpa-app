@@ -14,14 +14,12 @@ import {
   type RoundEntry,
   type RoundReason,
   type RoundResponse,
-  sinceSeenBand,
 } from "@kuutti/schema";
 import { AppError } from "../lib/errors.ts";
 import { addDays, DAY_MS, finnishDay } from "../lib/finnish-day.ts";
 import type { Logger } from "../lib/logger.ts";
 import { matchingConfigNumber } from "../lib/matching-config.ts";
 import { dayWindow, secondsUntil } from "../media/index.ts";
-import { track } from "../research/index.ts";
 import { earnedFishWaiting, entriesPaidBy, releaseEarned, spendEarned } from "../rewards/index.ts";
 
 // The queue and the day's log of it, the round (#96, #502, TD-11, TD-12,
@@ -526,30 +524,22 @@ export function todayOrRefuse(deps: RoundDeps, day: string): { at: Date; today: 
 
 /**
  * The phone's report that a card was on the screen: the first sets
- * `seen_at` and emits `profile_viewed`; a repeat writes nothing. A decision
- * never needs it and never writes it.
+ * `seen_at`; a repeat writes nothing. A decision never needs it and never
+ * writes it.
  */
 export async function markSeen(
   deps: RoundDeps,
   input: { accountId: string; day: string; position: number },
 ): Promise<void> {
   const { at, today } = todayOrRefuse(deps, input.day);
-  const marked = await deps.db.query<{ reason: RoundReason }>(
+  const marked = await deps.db.query(
     `UPDATE round_entries e SET seen_at = $4
        FROM rounds r
       WHERE r.id = e.round_id AND r.account_id = $1 AND r.day = $2 AND e.position = $3
-        AND e.seen_at IS NULL AND ${SERVABLE}
-      RETURNING e.reason`,
+        AND e.seen_at IS NULL AND ${SERVABLE}`,
     [input.accountId, today, input.position, at],
   );
-  const reason = marked.rows[0]?.reason;
-  if (reason) {
-    await track({ ...deps, now: () => at }, input.accountId, "profile_viewed", {
-      position: input.position,
-      reason,
-    });
-    return;
-  }
+  if ((marked.rowCount ?? 0) > 0) return;
   // Seen before, or not there at all: told apart only to answer 404.
   const { rows } = await deps.db.query(
     `SELECT 1 FROM round_entries e JOIN rounds r ON r.id = e.round_id
@@ -563,8 +553,7 @@ export async function markSeen(
  * A like, a pass or a skip on today's card, changeable until the day ends:
  * under the round row's lock, which serialises the person's day across devices
  * and which the day's likes are counted under. The same decision again writes
- * nothing; a changed like or pass emits its event with `revised`, and a skip
- * emits none. The round is complete once nothing that can still be shown is
+ * nothing. The round is complete once nothing that can still be shown is
  * undecided.
  *
  * A new like asks two things, in this order (ADR-062 §5, §8): the conversations
@@ -606,11 +595,10 @@ export async function decide(
       id: string;
       candidate_id: string;
       reason: RoundReason;
-      seen_at: Date | null;
       decision: RoundDecision | null;
       fish: boolean;
     }>(
-      `SELECT e.id, e.candidate_id, e.reason, e.seen_at, e.decision, e.fish
+      `SELECT e.id, e.candidate_id, e.reason, e.decision, e.fish
          FROM round_entries e JOIN rounds r ON r.id = e.round_id
         WHERE r.id = $1 AND r.account_id = $2 AND e.position = $3 AND ${SERVABLE}`,
       [roundId, input.accountId, input.position],
@@ -630,7 +618,7 @@ export async function decide(
       return {
         match: decision === "like" ? standing : null,
         ...(await budgetsOf(tx, matches, input.accountId, today)),
-        decided: null,
+        matchedWith: null,
       };
     }
     if (standing && entry.decision === "like") {
@@ -737,37 +725,11 @@ export async function decide(
       // After this decision's write, under the round's lock: the answer says
       // what it left, and is known before any push of the match starts (ADR-055 §5).
       ...(await budgetsOf(tx, matches, input.accountId, today)),
-      decided: {
-        reason: entry.reason,
-        seenAt: entry.seen_at,
-        revised: entry.decision !== null,
-        candidateId: entry.candidate_id,
-        opened,
-        fish,
-      },
+      matchedWith: opened ? entry.candidate_id : null,
     };
   });
-  const decided = written.decided;
-  if (decided) {
-    const now = () => at;
-    const props = {
-      position: input.position,
-      reason: decided.reason,
-      sinceSeen: decided.seenAt ? sinceSeenBand(at.getTime() - decided.seenAt.getTime()) : null,
-      revised: decided.revised,
-    };
-    if (decision === "like") {
-      await track({ ...deps, now }, input.accountId, "like", { ...props, fish: decided.fish });
-    } else if (decision === "pass") {
-      await track({ ...deps, now }, input.accountId, "pass", props);
-    }
-    if (decided.opened) {
-      await track({ ...deps, now }, input.accountId, "match", { completed: true });
-      await track({ ...deps, now }, decided.candidateId, "match", { completed: false });
-      // The one who just liked sees the match in the answer; the other is told (ADR-055 §5).
-      matches.made?.({ accountId: decided.candidateId });
-    }
-  }
+  // The one who just liked sees the match in the answer; the other is told (ADR-055 §5).
+  if (written.matchedWith) matches.made?.({ accountId: written.matchedWith });
   return {
     match: written.match,
     fishToSend: written.fishToSend,

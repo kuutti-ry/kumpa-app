@@ -8,7 +8,7 @@ Feature: Conversations and their text messages
   what was said, under "Deleted user" (TD-7). Every route reads through the
   caller's own participant row (rule 6). A block ends the conversation for
   both and the blocker never sees it again, the word "blocked" nowhere
-  (ADR-030). The text reaches no log line, error detail or event (rule 5).
+  (ADR-030). The text reaches no log line or error detail.
   Live arrival is #349; photos #350; report, block and unmatch from the
   conversation #351.
 
@@ -123,7 +123,7 @@ Feature: Conversations and their text messages
   Scenario: The night archives a silent conversation and leaves one with a recent message
     Given silent_match_archive_days is seven, one conversation silent for eight days, one opened eight days ago without a message, one with a message yesterday, and one closed long ago
     When the night runs
-    Then the two silent ones are archived, the recent one and the closed one are not, and each archive is an event
+    Then the two silent ones are archived, and the recent one and the closed one are not
 
   Scenario: A break stops no clock
     Given "A" is on a break and the conversation with "B" has been silent for eight days
@@ -135,8 +135,3 @@ Feature: Conversations and their text messages
     When "A" asks for the list, and again without thumbs
     Then the first carries the signed thumb of "B"'s main photo with a fetch-log row, no card is counted, and the second signs nothing
     And "B" paused, banned or blocked has no thumb, nor an ended conversation once a ban is lifted
-
-  Scenario: Each send, archive and close is a research event with no text
-    Given "A" and "B" gave the research consent
-    When "A" sends, the night archives, and "B" deletes the account
-    Then the events carry the kind, the bands of length, wait, count and age, and how it closed, and no text

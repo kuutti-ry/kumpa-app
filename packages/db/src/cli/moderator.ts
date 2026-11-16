@@ -17,7 +17,7 @@
 import { createPool, transaction } from "../pool.ts";
 import { argumentsOf } from "./arguments.ts";
 
-const ROLES = new Set(["moderator", "admin", "researcher"]);
+const ROLES = new Set(["moderator", "admin"]);
 /** As long as the staff list may show the name of who granted a role (StaffMember.grantedBy). */
 const GRANTOR_MAX = 200;
 
@@ -109,9 +109,7 @@ async function main(): Promise<number> {
     if (command === "grant") {
       const by = arg("--by");
       if (!role || !ROLES.has(role) || !by) {
-        console.error(
-          "usage: moderator grant <hetu_hmac> <moderator|admin|researcher> --by <name>",
-        );
+        console.error("usage: moderator grant <hetu_hmac> <moderator|admin> --by <name>");
         return 2;
       }
       // The staff list's contract holds the name to 200 characters (#310).

@@ -31,12 +31,10 @@ const status = (missing: string[]) => ({
     terms: VERSION,
     privacy: VERSION,
     specialCategory: missing.includes("seeks") ? null : "2026-10-draft-2",
-    research: null,
   },
   currentVersions: {
     terms: VERSION,
     privacy: VERSION,
-    research: VERSION,
     special_category: "2026-10-draft-2",
   },
   nextChange: { gender: null },

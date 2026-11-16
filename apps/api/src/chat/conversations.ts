@@ -11,7 +11,6 @@ import {
   type ExportedConversation,
   type ExportedSentPhoto,
   MESSAGE_PREVIEW_LENGTH,
-  messageCountBand,
 } from "@kuutti/schema";
 import { AppError } from "../lib/errors.ts";
 import { DAY_MS } from "../lib/finnish-day.ts";
@@ -19,7 +18,6 @@ import type { Logger } from "../lib/logger.ts";
 import { matchingConfigNumber, matchingConfigNumbers } from "../lib/matching-config.ts";
 import { issueConversationThumb, type MediaDeps } from "../media/index.ts";
 import { ageInYears } from "../profile/index.ts";
-import { track } from "../research/index.ts";
 import * as repo from "./repo.ts";
 
 // The conversations a person is in (#348, ADR-031): the list with the
@@ -238,33 +236,10 @@ export async function requireConversation(
 }
 
 /**
- * The research event of a close, for the person on the other side from the
- * one acted on, while linked: an erasure or, with #351, an unmatch. Never for
- * the erased person, whose mapping goes in the same transaction; never for a
- * block or a sanction, which would be a block's or a sanction's event under
- * another name (ADR-030 §9, ADR-024); never for a conversation that had
- * closed before. track() checks the consent; nothing of the text.
- */
-async function trackClosed(
-  deps: { db: Queryable; logger: Logger; now: () => Date },
-  closed: repo.Closed[],
-): Promise<void> {
-  for (const close of closed) {
-    if (close.counterpartId === null || !close.closedNow) continue;
-    if (close.how !== "erasure" && close.how !== "unmatch") continue;
-    await track(deps, close.counterpartId, "conversation_closed", {
-      how: close.how,
-      messages: messageCountBand(close.messages),
-    });
-  }
-}
-
-/**
  * A ban closes the person's conversations (ADR-024, ADR-031 §2), called in
  * the ban's transaction for every live account of the identity, and ends
  * what either person shared in them (#103). A suspension closes nothing: its
- * sessions are ended, and the conversations wait. No research event
- * (ADR-024).
+ * sessions are ended, and the conversations wait.
  */
 export async function closeConversationsOf(
   db: Queryable,
@@ -283,7 +258,7 @@ export async function closeConversationsOf(
  * or hidden from them as its blocker: 404.
  */
 export async function unmatchConversation(
-  deps: { db: Queryable; logger: Logger; now: () => Date },
+  deps: { db: Queryable; now: () => Date },
   accountId: string,
   conversationId: string,
 ): Promise<void> {
@@ -292,13 +267,12 @@ export async function unmatchConversation(
     // conversation locked through the caller's row, then what it decides on.
     const state = await lockForSend(tx, accountId, conversationId);
     if (!state) throw notFound();
-    const closed = await repo.closeConversationsOf(tx, {
+    await repo.closeConversationsOf(tx, {
       accountIds: [accountId],
       how: "unmatch",
       at: deps.now(),
       conversationId,
     });
-    await trackClosed({ ...deps, db: tx }, closed);
   });
 }
 
@@ -307,8 +281,8 @@ export async function unmatchConversation(
  * accounts closes as the block's, written by the safety slice in the block's
  * transaction, so the row's lock puts it in one order with a send in flight,
  * and its blocker never sees them again, even after the other's erasure. One
- * closed before for another reason is written as the block's too. No research
- * event (ADR-030 §9). The number closed now.
+ * closed before for another reason is written as the block's too. The number
+ * closed now.
  */
 export async function closeConversationsBetween(
   db: Queryable,
@@ -457,7 +431,7 @@ export type ConversationErasure = {
  * erased before keeps them for nobody, and goes, its shares with it.
  */
 export async function eraseConversationsOf(
-  deps: { db: Queryable; logger: Logger; now: () => Date },
+  deps: { db: Queryable; now: () => Date },
   accountId: string,
 ): Promise<ConversationErasure> {
   const withheld = await repo.deleteWithheldMessagesOf(deps.db, accountId);
@@ -465,7 +439,7 @@ export async function eraseConversationsOf(
   // A photo a report's copy holds outlives the erasure (#351), but not in the
   // conversation: it reads "Photo removed" there, as any of the person's photos.
   await repo.detachPhotosOf(deps.db, accountId);
-  const closed = await repo.closeConversationsOf(deps.db, {
+  await repo.closeConversationsOf(deps.db, {
     accountIds: [accountId],
     how: "erasure",
     at: deps.now(),
@@ -473,7 +447,6 @@ export async function eraseConversationsOf(
   const contacts = await repo.deleteContactsOf(deps.db, accountId);
   const unlinked = await repo.unlinkParticipant(deps.db, accountId);
   const emptied = await repo.deleteUnlinkedConversations(deps.db, unlinked);
-  await trackClosed(deps, closed);
   return { conversations: unlinked.length, withheld, emptied, contacts };
 }
 

@@ -21,7 +21,7 @@ const audit = (app: App, headers: Headers) => app.request("/admin/audit", { head
 async function memberIn(
   ctx: TestContext,
   label: string,
-  role: "moderator" | "admin" | "researcher",
+  role: "moderator" | "admin",
   grantedAt: string,
   grantedBy: string,
 ): Promise<string> {
@@ -96,10 +96,10 @@ describe("GET /admin/staff", () => {
     );
     // Written out of grant order.
     const moderator = await memberIn(ctx, "m", "moderator", "2026-03-01T08:00:00.000Z", "nikolai");
-    const researcher = await memberIn(
+    const first = await memberIn(
       ctx,
-      "r",
-      "researcher",
+      "f",
+      "moderator",
       "2026-01-15T12:30:00.250Z",
       "nikolai (cli)",
     );
@@ -115,8 +115,8 @@ describe("GET /admin/staff", () => {
     expect(list.items).toEqual(await table(ctx));
     expect(list.items).toEqual([
       {
-        identityId: researcher,
-        role: "researcher",
+        identityId: first,
+        role: "moderator",
         grantedAt: "2026-01-15T12:30:00.250Z",
         grantedBy: "nikolai (cli)",
         lastSignInAt: null,
@@ -150,7 +150,7 @@ describe("GET /admin/staff", () => {
   }) => {
     const admin = await staffSession(ctx.client, "admin");
     const twice = await memberIn(ctx, "twice", "moderator", "2026-02-01T00:00:00.000Z", "nikolai");
-    const never = await memberIn(ctx, "never", "researcher", "2026-02-02T00:00:00.000Z", "nikolai");
+    const never = await memberIn(ctx, "never", "moderator", "2026-02-02T00:00:00.000Z", "nikolai");
     const once = await memberIn(ctx, "once", "moderator", "2026-02-03T00:00:00.000Z", "nikolai");
     // The later one first, so the answer is not the row written last.
     await signInAt(ctx, twice, "moderator", "2026-10-14T07:30:00.000Z");
@@ -206,7 +206,7 @@ describe("GET /admin/staff", () => {
     const same = "2026-05-05T05:05:05.000Z";
     const members = [
       await memberIn(ctx, "x", "moderator", same, "nikolai"),
-      await memberIn(ctx, "y", "researcher", same, "nikolai"),
+      await memberIn(ctx, "y", "admin", same, "nikolai"),
       await memberIn(ctx, "z", "admin", same, "nikolai"),
     ];
     const listed = (await staff(ctx.app, admin.headers)).items
@@ -269,14 +269,10 @@ describe.for([
     expect(await auditRows(ctx)).toEqual(before);
   });
 
-  test("a moderator and a researcher are refused with 403 admin_forbidden; an admin is answered", async ({
-    ctx,
-  }) => {
-    for (const role of ["moderator", "researcher"] as const) {
-      const refused = await call(ctx.app, (await staffSession(ctx.client, role)).headers);
-      expect(refused.status, role).toBe(403);
-      expect(await errorCode(refused), role).toBe("admin_forbidden");
-    }
+  test("a moderator is refused with 403 admin_forbidden; an admin is answered", async ({ ctx }) => {
+    const refused = await call(ctx.app, (await staffSession(ctx.client, "moderator")).headers);
+    expect(refused.status).toBe(403);
+    expect(await errorCode(refused)).toBe("admin_forbidden");
     const admin = await staffSession(ctx.client, "admin");
     expect((await call(ctx.app, admin.headers)).status).toBe(200);
   });

@@ -309,12 +309,16 @@ describe("pnpm --filter @kuutti/db moderator", () => {
     ["no role", ["grant", "HMAC", "--by", "Maintainer"]],
     ["a role that does not exist", ["grant", "HMAC", "owner", "--by", "Maintainer"]],
     ["no name of who grants it", ["grant", "HMAC", "moderator"]],
+    [
+      "the researcher's role, gone with research (ADR-071)",
+      ["grant", "HMAC", "researcher", "--by", "Maintainer"],
+    ],
   ])("refuses a grant with %s", async (_, args) => {
     await identity(1);
     const result = await moderator(args.map((arg) => (arg === "HMAC" ? hmac(1) : arg)));
     expect(result).toMatchObject({
       code: 2,
-      err: ["usage: moderator grant <hetu_hmac> <moderator|admin|researcher> --by <name>"],
+      err: ["usage: moderator grant <hetu_hmac> <moderator|admin> --by <name>"],
     });
     expect((await pool.query("SELECT 1 FROM moderator_roles")).rowCount).toBe(0);
   });
@@ -360,8 +364,8 @@ describe("pnpm --filter @kuutti/db moderator", () => {
 
   it("takes an upper-case hetu_hmac as given", async () => {
     await pool.query("INSERT INTO identity (hetu_hmac) VALUES ($1)", ["F".repeat(64)]);
-    expect((await moderator(["grant", "F".repeat(64), "researcher", "--by", "M"])).out).toEqual([
-      "granted researcher",
+    expect((await moderator(["grant", "F".repeat(64), "admin", "--by", "M"])).out).toEqual([
+      "granted admin",
     ]);
   });
 

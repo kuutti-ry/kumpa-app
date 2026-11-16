@@ -76,10 +76,9 @@ async function answerUpToTheHome(app: App, headers: Headers) {
 }
 
 /** Every answer activation needs, the home last: its write sets the one pond (ADR-061 §8). */
-async function onboard(app: App, headers: Headers, options: { research?: boolean } = {}) {
+async function onboard(app: App, headers: Headers) {
   await answerUpToTheHome(app, headers);
   expect((await putHome(app, headers, "00530")).status).toBe(200);
-  if (options.research) await consent(app, headers, "research", CURRENT_CONSENT_VERSIONS.research);
 }
 
 const PROFILE = {
@@ -148,33 +147,33 @@ describe("onboarding and consents", () => {
     expect(logs().filter((l) => l.msg === "consent given")).toHaveLength(1);
   });
 
-  test("The research opt-in can be withdrawn and given again", async ({ ctx }) => {
+  test("The special-category consent can be withdrawn and given again", async ({ ctx }) => {
     const { app } = await appWith(ctx);
     const a = await signedInAccount(ctx.client);
-    await consent(app, a.headers, "research", CURRENT_CONSENT_VERSIONS.research);
-    const withdrawn = await app.request("/consents/research", {
+    const version = CURRENT_CONSENT_VERSIONS.special_category;
+    await consent(app, a.headers, "special_category", version);
+    const withdrawn = await app.request("/consents/special_category", {
       method: "DELETE",
       headers: a.headers,
     });
     expect(withdrawn.status).toBe(200);
     expect(ConsentsResponse.parse(await withdrawn.json()).consents[0]?.withdrawnAt).not.toBeNull();
-    expect((await status(app, a.headers)).consents.research).toBeNull();
-    await consent(app, a.headers, "research", CURRENT_CONSENT_VERSIONS.research);
+    expect((await status(app, a.headers)).consents.specialCategory).toBeNull();
+    await consent(app, a.headers, "special_category", version);
     const { rows } = await ctx.client.query<{ withdrawn_at: Date | null }>(
-      "SELECT withdrawn_at FROM consent WHERE account_id = $1 AND kind = 'research' ORDER BY given_at",
+      "SELECT withdrawn_at FROM consent WHERE account_id = $1 AND kind = 'special_category' ORDER BY given_at",
       [a.accountId],
     );
     expect(rows.map((r) => r.withdrawn_at !== null)).toEqual([true, false]);
-    expect((await status(app, a.headers)).consents.research?.version).toBe(
-      CURRENT_CONSENT_VERSIONS.research,
-    );
+    expect((await status(app, a.headers)).consents.specialCategory).toBe(version);
   });
 
   test("Terms and privacy have no withdrawal route", async ({ ctx }) => {
     const { app } = await appWith(ctx);
     const a = await signedInAccount(ctx.client);
     await consent(app, a.headers, "terms", CURRENT_CONSENT_VERSIONS.terms);
-    for (const kind of ["terms", "privacy", "anything"]) {
+    // research: a kind taken out with research (#208, ADR-071), withdrawn no more.
+    for (const kind of ["terms", "privacy", "research", "anything"]) {
       expect(
         (await app.request(`/consents/${kind}`, { method: "DELETE", headers: a.headers })).status,
       ).toBe(400);
@@ -245,22 +244,13 @@ describe("onboarding and consents", () => {
     expect(after.missing).toEqual(["photos"]);
   });
 
-  test("Research is never required for activation", async ({ ctx }) => {
-    const { app } = await appWith(ctx);
-    const a = await signedInAccount(ctx.client, undefined, { state: "registered" });
-    await onboard(app, a.headers);
-    const done = await status(app, a.headers);
-    expect(done.state).toBe("active");
-    expect(done.consents.research).toBeNull();
-  });
-
   test("Erasure removes the preferences and the consents and blanks the gender", async ({
     ctx,
   }) => {
     const { app } = await appWith(ctx);
     const a = await signedInAccount(ctx.client, undefined, { state: "registered" });
-    await onboard(app, a.headers, { research: true });
-    expect(await consentRows(ctx, a.accountId)).toBe(4);
+    await onboard(app, a.headers);
+    expect(await consentRows(ctx, a.accountId)).toBe(3);
     const deleted = await app.request("/account/delete", {
       method: "POST",
       headers: jsonHeaders(a.headers),
@@ -284,8 +274,15 @@ describe("onboarding and consents", () => {
   test("The export lists gender, preferences and every consent", async ({ ctx }) => {
     const { app } = await appWith(ctx);
     const a = await signedInAccount(ctx.client, undefined, { state: "registered" });
-    await onboard(app, a.headers, { research: true });
-    await app.request("/consents/research", { method: "DELETE", headers: a.headers });
+    await onboard(app, a.headers);
+    // Withdrawn and given again: the seek answer goes with the withdrawal and is given anew.
+    await app.request("/consents/special_category", { method: "DELETE", headers: a.headers });
+    await consent(app, a.headers, "special_category", CURRENT_CONSENT_VERSIONS.special_category);
+    await app.request("/preferences", {
+      method: "PUT",
+      headers: jsonHeaders(a.headers),
+      body: JSON.stringify({ seeks: ["man", "non_binary"], ageWindow: { min: 25, max: 35 } }),
+    });
     const exported = await exportOf(app, a.headers);
     expect(exported.account.gender).toBe("woman");
     expect(exported.preferences).toEqual({
@@ -295,8 +292,8 @@ describe("onboarding and consents", () => {
     expect(exported.consents.map((c) => [c.kind, c.withdrawnAt !== null])).toEqual([
       ["terms", false],
       ["privacy", false],
+      ["special_category", true],
       ["special_category", false],
-      ["research", true],
     ]);
   });
 
@@ -414,7 +411,6 @@ describe("onboarding and consents", () => {
       ["PUT", "/account/gender"],
       ["GET", "/consents"],
       ["POST", "/consents"],
-      ["DELETE", "/consents/research"],
       ["DELETE", "/consents/special_category"],
       ["PUT", "/account/home"],
       ["GET", "/preferences"],
@@ -432,9 +428,10 @@ describe("onboarding and consents", () => {
     const b = await signedInAccount(ctx.client, "b");
     // A answers; B's status, list and rows show none of it (rule 6).
     expect((await consent(app, a.headers, "terms", CURRENT_CONSENT_VERSIONS.terms)).ok).toBe(true);
-    expect((await consent(app, a.headers, "research", CURRENT_CONSENT_VERSIONS.research)).ok).toBe(
-      true,
-    );
+    expect(
+      (await consent(app, a.headers, "special_category", CURRENT_CONSENT_VERSIONS.special_category))
+        .ok,
+    ).toBe(true);
     await app.request("/account/gender", {
       method: "PUT",
       headers: jsonHeaders(a.headers),
@@ -442,7 +439,7 @@ describe("onboarding and consents", () => {
     });
     const theirs = await status(app, b.headers);
     expect(theirs.consents.terms).toBeNull();
-    expect(theirs.consents.research).toBeNull();
+    expect(theirs.consents.specialCategory).toBeNull();
     expect(theirs.missing).toContain("gender");
     const listed = ConsentsResponse.parse(
       await (await app.request("/consents", { headers: b.headers })).json(),
@@ -455,11 +452,13 @@ describe("onboarding and consents", () => {
       headers: jsonHeaders(b.headers),
       body: JSON.stringify({ gender: "man" }),
     });
-    expect((await consent(app, b.headers, "research", CURRENT_CONSENT_VERSIONS.research)).ok).toBe(
-      true,
-    );
     expect(
-      (await app.request("/consents/research", { method: "DELETE", headers: b.headers })).ok,
+      (await consent(app, b.headers, "special_category", CURRENT_CONSENT_VERSIONS.special_category))
+        .ok,
+    ).toBe(true);
+    expect(
+      (await app.request("/consents/special_category", { method: "DELETE", headers: b.headers }))
+        .ok,
     ).toBe(true);
     const { rows } = await ctx.client.query<{ id: string; gender: string | null }>(
       "SELECT id, gender FROM account WHERE id = ANY($1::uuid[]) ORDER BY id = $2 DESC",
@@ -467,7 +466,7 @@ describe("onboarding and consents", () => {
     );
     expect(rows.map((r) => r.gender)).toEqual(["woman", "man"]);
     const hers = await status(app, a.headers);
-    expect(hers.consents.research).not.toBeNull();
+    expect(hers.consents.specialCategory).not.toBeNull();
     expect(hers.consents.terms).not.toBeNull();
     expect(await consentRows(ctx, a.accountId)).toBe(2);
   });
@@ -481,6 +480,8 @@ describe("onboarding and consents", () => {
       ["/account/gender", "PUT", { gender: "female" }],
       ["/account/gender", "PUT", { gender: "woman", extra: 1 }],
       ["/consents", "POST", { kind: "cookies", version: "1", locale: "fi" }],
+      // The research opt-in's kind, taken out with research (#208, ADR-071).
+      ["/consents", "POST", { kind: "research", version: "2026-09-draft-1", locale: "fi" }],
       [
         "/consents",
         "POST",
@@ -513,21 +514,20 @@ describe("onboarding and consents", () => {
     expect(shownLocale("terms", "sv")).toBe("en");
   });
 
-  test("The research opt-in cannot be toggled without bound", async ({ ctx }) => {
+  test("The special-category consent cannot be toggled without bound", async ({ ctx }) => {
     const { app } = await appWith(ctx);
     const a = await signedInAccount(ctx.client);
+    const version = CURRENT_CONSENT_VERSIONS.special_category;
     for (let i = 0; i < CONSENT_CHURN_PER_DAY; i += 1) {
-      expect(
-        (await consent(app, a.headers, "research", CURRENT_CONSENT_VERSIONS.research)).status,
-      ).toBe(200);
-      await app.request("/consents/research", { method: "DELETE", headers: a.headers });
+      expect((await consent(app, a.headers, "special_category", version)).status).toBe(200);
+      await app.request("/consents/special_category", { method: "DELETE", headers: a.headers });
     }
-    const refused = await consent(app, a.headers, "research", CURRENT_CONSENT_VERSIONS.research);
+    const refused = await consent(app, a.headers, "special_category", version);
     expect(refused.status).toBe(429);
     expect(((await refused.json()) as { error: { code: string } }).error.code).toBe(
       "too_many_changes",
     );
-    expect(await consentRows(ctx, a.accountId, "research")).toBe(CONSENT_CHURN_PER_DAY);
+    expect(await consentRows(ctx, a.accountId, "special_category")).toBe(CONSENT_CHURN_PER_DAY);
     // The list stays within the cap of the contract however many rows exist.
     const listed = ConsentsResponse.parse(
       await (await app.request("/consents", { headers: a.headers })).json(),
@@ -535,7 +535,7 @@ describe("onboarding and consents", () => {
     expect(listed.consents.length).toBeLessThanOrEqual(100);
   });
 
-  test("A long research history hides neither the required consents nor any proof row", async ({
+  test("A long consent history hides neither the required consents nor any proof row", async ({
     ctx,
   }) => {
     const { app } = await appWith(ctx);
@@ -545,9 +545,9 @@ describe("onboarding and consents", () => {
     // More rows than GET /consents lists, written straight in: the churn cap keeps a day to ten.
     await ctx.client.query(
       `INSERT INTO consent (account_id, kind, version, locale_shown, given_at, withdrawn_at)
-       SELECT $1, 'research', $2, 'fi', now() + (g || ' seconds')::interval, now() + (g || ' seconds')::interval
+       SELECT $1, 'special_category', $2, 'fi', now() + (g || ' seconds')::interval, now() + (g || ' seconds')::interval
        FROM generate_series(1, 120) AS g`,
-      [a.accountId, CURRENT_CONSENT_VERSIONS.research],
+      [a.accountId, CURRENT_CONSENT_VERSIONS.special_category],
     );
     const shown = await status(app, a.headers);
     expect(shown.consents.terms).toBe(CURRENT_CONSENT_VERSIONS.terms);
@@ -564,9 +564,9 @@ describe("onboarding and consents", () => {
   test("Withdrawing on an erased account writes nothing", async ({ ctx }) => {
     const { app } = await appWith(ctx);
     const a = await signedInAccount(ctx.client);
-    await consent(app, a.headers, "research", CURRENT_CONSENT_VERSIONS.research);
+    await consent(app, a.headers, "special_category", CURRENT_CONSENT_VERSIONS.special_category);
     await ctx.client.query("UPDATE account SET state = 'deleted' WHERE id = $1", [a.accountId]);
-    const refused = await app.request("/consents/research", {
+    const refused = await app.request("/consents/special_category", {
       method: "DELETE",
       headers: a.headers,
     });
@@ -583,7 +583,7 @@ describe("onboarding and consents", () => {
     expect([...GENDERS]).toEqual([...gender.enumValues]);
   });
 
-  it("missingSteps names the open steps in the sheet's order, never research, and activation waits for six of them", () => {
+  it("missingSteps names the open steps in the sheet's order, and activation waits for six of them", () => {
     const none = missingSteps({
       gender: null,
       preferences: { seeks: null, ageWindow: null },

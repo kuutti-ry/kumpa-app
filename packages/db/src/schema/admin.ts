@@ -8,7 +8,7 @@ import { identity } from "./identity.ts";
  * Rows are written by the maintainer (packages/db moderator CLI), never by a
  * route.
  */
-export const moderatorRole = pgEnum("moderator_role", ["moderator", "admin", "researcher"]);
+export const moderatorRole = pgEnum("moderator_role", ["moderator", "admin"]);
 
 export const moderatorRoles = pgTable("moderator_roles", {
   identityId: uuid("identity_id")

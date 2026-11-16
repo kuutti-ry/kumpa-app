@@ -9,8 +9,7 @@ Feature: The queue's cards, seen and decided
   longer be shown, by a block either way or a sanction, is left out and cannot be
   decided; one that no longer fits is filters.feature's. Erasure removes the
   person's rounds and every entry in which they are somebody's card, and the
-  night removes what is past a year. The research events carry places, reasons
-  and coarse times, never whom (rule 5).
+  night removes what is past a year.
 
   Scenario: A read shows the undecided cards in order, each with its reason, at most ten
     Given "A"'s round today holds "B", "C" and "D", and twelve more
@@ -28,20 +27,20 @@ Feature: The queue's cards, seen and decided
     When "A" reads the queue, reports both seen and likes both
     Then neither card is shown, and every write answers not_found with nothing written
 
-  Scenario: A card seen is recorded once, as profile_viewed
-    Given "A"'s round today holds "B", and "A" is in the study
+  Scenario: A card seen is recorded once
+    Given "A"'s round today holds "B"
     When "A" reports the card seen twice
-    Then its seen time is the first report's, and one profile_viewed names its place and reason
+    Then its seen time is the first report's
 
   Scenario: A like is recorded, and the same decision again writes nothing
-    Given "A"'s round today holds "B", and "A" is in the study
+    Given "A"'s round today holds "B"
     When "A" likes the card twice
-    Then the card is liked at the first time, and one like event says it was not revised
+    Then the card is liked at the first time
 
-  Scenario: A decision may change until the day ends, and the change says it was revised
-    Given "A"'s round today holds "B", and "A" is in the study
+  Scenario: A decision may change until the day ends
+    Given "A"'s round today holds "B"
     When "A" likes the card, then passes it, then likes it again
-    Then the card is liked at the last time, and the events are like, pass and like, the last two revised
+    Then the card is liked, at the last time, and each decision had a time of its own
 
   Scenario: A card of a day that has ended cannot be seen or decided
     Given "A"'s round of yesterday holds "B"
@@ -88,10 +87,10 @@ Feature: The queue's cards, seen and decided
   # another day, in the order of short-pool.feature. Like and pass stay as they
   # were.
 
-  Scenario: A skip moves on, spends nothing, and is no event
-    Given like_budget_balanced is 1, "A" is in the study, and "A"'s round today holds "B" and "C"
+  Scenario: A skip moves on and spends nothing
+    Given like_budget_balanced is 1, and "A"'s round today holds "B" and "C"
     When "A" skips "B" and likes "C"
-    Then both are decided, "C" took the day's one like, and no event says "B" was skipped
+    Then both are decided, and "C" took the day's one like
 
   Scenario: A skip starts no clock, and the card returns another day
     Given "A" skipped "B" yesterday

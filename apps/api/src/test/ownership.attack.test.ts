@@ -132,22 +132,24 @@ describe("route ownership attacks against another person's photos", () => {
   }
 });
 
+// Every member of staff is a moderator or an admin, so only an admins' route
+// has a member of staff to keep out.
 const staffCases = [
-  { path: "/admin/photos/queue", role: "moderator" },
-  { path: "/admin/reports", role: "moderator" },
-  { path: "/admin/overview", role: "moderator" },
-  { path: "/admin/staff", role: "admin" },
+  { path: "/admin/photos/queue", role: "moderator", intruders: ["product"] },
+  { path: "/admin/reports", role: "moderator", intruders: ["product"] },
+  { path: "/admin/overview", role: "moderator", intruders: ["product"] },
+  { path: "/admin/staff", role: "admin", intruders: ["product", "moderator"] },
 ] as const;
 describe("route role attacks against staff-only reads", () => {
   for (const row of staffCases) {
-    for (const intruder of ["product", "researcher"] as const) {
+    for (const intruder of row.intruders) {
       const run = (authorized: boolean) =>
         rolledBack(async (db) => {
           const caller = authorized
             ? await staffSession(db, row.role)
             : intruder === "product"
               ? await signedInAccount(db)
-              : await staffSession(db, "researcher");
+              : await staffSession(db, "moderator");
           const { logger } = await captureLogger();
           const app = createApp({ db, logger, config: testConfig(), now: () => AT });
           const response = await app.request(row.path, { headers: caller.headers });

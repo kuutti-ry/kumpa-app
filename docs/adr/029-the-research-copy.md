@@ -1,6 +1,6 @@
 # ADR-029: The research copy: Parquet on S3, the copy's census, and the researcher's read-only role
 
-- Status: proposed (the app half, §1 to §7 and §12, is built as written here and writes staging's copy nightly, production's none; the infra half, §8 to §11, and the points under "Open, the maintainer's" wait for the meeting with the researchers, #194 closed as not planned on 2026-11-08 until then, and the status changes when they are answered)
+- Status: superseded by ADR-071, proposed (#208, the maintainer's word of 2026-11-16: research is taken out, the copy, its census, the researcher's role and the access trail with it, until a researcher asks; kept for its reasoning, and its open points with it)
 - Date: 2026-10-17
 - Follows: TD-5 (research use of events, never text), TD-4 (AWS in eu-central-1), CLAUDE.md rules 5 and 6, ADR-011 §6, §8 and §9 (the retention, nothing streams anywhere, what makes the block anonymous), ADR-005 (the media bucket), ADR-001 (Identity Center), ADR-004 §3 (what a preview is trusted with), ADR-018 (staging holds invented people), ADR-021 (tests at every level), `.claude/rules/api.md` (nightly jobs: events to Parquet, retention pruning), `.claude/rules/infra.md` (S3 lifecycle, access logging on the research prefix); issue #194
 
@@ -87,3 +87,4 @@ Three things in the code shaped the decision. The prune was already built (ADR-0
 - 2026-11-08 (#194, #203): #194 was closed as not planned on the maintainer's word of that day, until the meeting with the researchers; what they need decides what comes next. The infra half and the points under "Open, the maintainer's" wait for it, and the status line says so since #203's pass over the lines of 2026-11-08. Staging writes the copy nightly as built; production writes none.
 
 - 2026-11-13 (#380): clarify §6’s implementation of the existing ninety-day bound: the copy check and prune use the same next-run cutoff, as ADR-011’s correction records.
+- 2026-11-16 (#208, ADR-071 §3 and §4): superseded. The nightly copy and its census, the copy store, `infra/modules/research` and the role `researcher` are taken out with the events. The copy's files under `research/` in staging's media bucket and the permission set made by hand are the maintainer's (ADR-071, Consequences). The record is kept for its reasoning, and a rebuild starts from it and from the points it left open (ADR-071 §7).

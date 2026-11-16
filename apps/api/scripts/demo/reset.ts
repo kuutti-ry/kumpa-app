@@ -12,8 +12,8 @@ import { DemoError } from "./bank.ts";
  *
  * 1. every live account of a persona goes through the erasure path, the same
  *    function the app's "delete my account" calls, so a reset exercises it:
- *    sessions, photos with their objects, profile, preferences, the research
- *    mapping, and the account row left as a tombstone;
+ *    sessions, photos with their objects, profile, preferences, and the
+ *    account row left as a tombstone;
  * 2. then what erasure keeps is deleted too: the tombstones, the consent
  *    rows, the identity with its count of deletions and its waiting time.
  *    Right for a persona, which is nobody; never done for a person.

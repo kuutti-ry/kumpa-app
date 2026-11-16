@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Kuutti API",
-    "version": "0.121.8",
+    "version": "0.122.0",
     "description": "Free, non-commercial dating app for Finland. Every account is verified through a Finnish bank. Source: AGPL-3.0 with App Store exception."
   },
   "components": {
@@ -289,9 +289,6 @@
           "photoCheck": {
             "$ref": "#/components/schemas/ExportedPhotoCheck"
           },
-          "research": {
-            "$ref": "#/components/schemas/ResearchExport"
-          },
           "exports": {
             "type": "array",
             "items": {
@@ -369,7 +366,6 @@
           "photoAccessLog",
           "cardsShown",
           "photoCheck",
-          "research",
           "exports",
           "feedback",
           "sanctions",
@@ -518,7 +514,6 @@
         "enum": [
           "terms",
           "privacy",
-          "research",
           "special_category"
         ]
       },
@@ -1675,30 +1670,6 @@
           "violence",
           "disturbing",
           "hate"
-        ]
-      },
-      "ResearchExport": {
-        "type": "object",
-        "properties": {
-          "enrolled": {
-            "type": "boolean"
-          },
-          "since": {
-            "type": "string",
-            "nullable": true,
-            "format": "date-time"
-          },
-          "consentVersion": {
-            "type": "string",
-            "nullable": true,
-            "minLength": 1,
-            "maxLength": 80
-          }
-        },
-        "required": [
-          "enrolled",
-          "since",
-          "consentVersion"
         ]
       },
       "ExportedFeedback": {
@@ -2909,8 +2880,7 @@
         "type": "string",
         "enum": [
           "moderator",
-          "admin",
-          "researcher"
+          "admin"
         ]
       },
       "AdminAuthExchangeRequest": {
@@ -3939,31 +3909,12 @@
                 "type": "string",
                 "nullable": true,
                 "maxLength": 40
-              },
-              "research": {
-                "type": "object",
-                "nullable": true,
-                "properties": {
-                  "version": {
-                    "type": "string",
-                    "maxLength": 40
-                  },
-                  "givenAt": {
-                    "type": "string",
-                    "format": "date-time"
-                  }
-                },
-                "required": [
-                  "version",
-                  "givenAt"
-                ]
               }
             },
             "required": [
               "terms",
               "privacy",
-              "specialCategory",
-              "research"
+              "specialCategory"
             ]
           },
           "currentVersions": {
@@ -4017,10 +3968,6 @@
             "type": "string",
             "maxLength": 40
           },
-          "research": {
-            "type": "string",
-            "maxLength": 40
-          },
           "special_category": {
             "type": "string",
             "maxLength": 40
@@ -4029,7 +3976,6 @@
         "required": [
           "terms",
           "privacy",
-          "research",
           "special_category"
         ],
         "description": "The consent_version of the current wording per kind."
@@ -4110,7 +4056,6 @@
       "WithdrawableConsentKind": {
         "type": "string",
         "enum": [
-          "research",
           "special_category"
         ]
       },
@@ -8213,7 +8158,7 @@
       },
       "post": {
         "summary": "Tell Kuutti you found somebody",
-        "description": "\"Löysin hänet\" (#83, ADR-040): the reason, from a closed list, counted once per account in an anonymous daily count that names nobody, and a research event for those who said yes to research. An indication only: nothing else changes, no state, no session, no round, no conversation.",
+        "description": "\"Löysin hänet\" (#83, ADR-040): the reason, from a closed list, counted once per account in an anonymous daily count that names nobody. An indication only: nothing else changes, no state, no session, no round, no conversation.",
         "security": [
           {
             "session": []
@@ -9398,7 +9343,7 @@
       },
       "post": {
         "summary": "Record a consent for the current wording",
-        "description": "The kind (terms, privacy, research, or special_category for whom one seeks, politics and religion), the consent_version the person read and the language it was shown in. An old version is refused with agreement_outdated; the same consent twice is recorded once.",
+        "description": "The kind (terms, privacy, or special_category for whom one seeks, politics and religion), the consent_version the person read and the language it was shown in. An old version is refused with agreement_outdated; the same consent twice is recorded once.",
         "security": [
           {
             "session": []
@@ -9466,7 +9411,7 @@
             }
           },
           "429": {
-            "description": "too_many_changes: the research opt-in was given and withdrawn more than the day allows.",
+            "description": "too_many_changes: the special-category consent was given and withdrawn more than the day allows.",
             "content": {
               "application/json": {
                 "schema": {
@@ -9480,8 +9425,8 @@
     },
     "/consents/{kind}": {
       "delete": {
-        "summary": "Withdraw the research opt-in or the special-category consent",
-        "description": "The two consents a person withdraws; terms and privacy end with the account. Withdrawing special_category takes whom the person seeks and the politics and religion of the profile with it, and onboarding asks the seek question again. The rows stay as the record of what was agreed and when.",
+        "summary": "Withdraw the special-category consent",
+        "description": "The one consent a person withdraws; terms and privacy end with the account. Withdrawing special_category takes whom the person seeks and the politics and religion of the profile with it, and onboarding asks the seek question again. The rows stay as the record of what was agreed and when.",
         "security": [
           {
             "session": []
@@ -9544,7 +9489,7 @@
     "/feedback": {
       "post": {
         "summary": "Send feedback to the moderators",
-        "description": "A kind (bug, idea, complaint, praise) and a few lines, with the app's version, the platform and the language the app read. Stored for the moderators' panel; the text reaches no log line and no research event. At most matching_config feedback_per_day a day per account, the Finnish calendar day.",
+        "description": "A kind (bug, idea, complaint, praise) and a few lines, with the app's version, the platform and the language the app read. Stored for the moderators' panel; the text reaches no log line. At most matching_config feedback_per_day a day per account, the Finnish calendar day.",
         "security": [
           {
             "session": []
@@ -12761,7 +12706,7 @@
     "/admin/accounts/{id}": {
       "get": {
         "summary": "A person's page",
-        "description": "One account by its id: its raw state and the identity's standing, the profile as the card shows it, the photos (the pictures by GET /admin/photos/{id}/card), the feedback the person sent, and the audit rows about them. Never the hash, the broker's ids, the research id or the e-mail. An erased account answers its deletion date and nothing else. Every look is an audit row.",
+        "description": "One account by its id: its raw state and the identity's standing, the profile as the card shows it, the photos (the pictures by GET /admin/photos/{id}/card), the feedback the person sent, and the audit rows about them. Never the hash, the broker's ids or the e-mail. An erased account answers its deletion date and nothing else. Every look is an audit row.",
         "security": [
           {
             "session": []

@@ -8,10 +8,10 @@ import { ProfileFields } from "./profile-fields.ts";
  * The moderation panel's contracts (#49, TD-5, TD-8, rules/admin.md). Staff
  * sign in through the same bank login as everyone; what makes a moderator is
  * a moderator_roles row on their identity. Sessions are eight hours with no
- * refresh. Nothing here carries hetu_hmac or research_id.
+ * refresh. Nothing here carries hetu_hmac.
  */
 
-export const ModeratorRole = z.enum(["moderator", "admin", "researcher"]).meta({
+export const ModeratorRole = z.enum(["moderator", "admin"]).meta({
   id: "ModeratorRole",
 });
 export type ModeratorRole = z.infer<typeof ModeratorRole>;
@@ -191,8 +191,7 @@ export type AuditPage = z.infer<typeof AuditPage>;
  * What a moderator may see about one person (#306): the account's raw state
  * (a shadow ban shows to staff), the identity's standing, the profile as the
  * card shows it, the photos, the feedback they sent, and what staff did or
- * saw about them. Never the hash, the broker's ids, the research id or the
- * e-mail. An erased account answers its deletion and standing, nothing else.
+ * saw about them. Never the hash, the broker's ids or the e-mail. An erased account answers its deletion and standing, nothing else.
  */
 export const AdminAccount = z
   .object({
@@ -253,7 +252,7 @@ export type ModerationLabel = z.infer<typeof ModerationLabel>;
 export const PhotoReviewItem = z
   .object({
     photoId: PhotoId,
-    /** The owner's account id: pseudonymous to staff, never hetu_hmac or research_id. */
+    /** The owner's account id: pseudonymous to staff, never hetu_hmac. */
     accountId: z.uuid(),
     state: PhotoState,
     blurhash: z.string().min(6).max(200),

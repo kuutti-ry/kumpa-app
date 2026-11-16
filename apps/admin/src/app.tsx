@@ -166,8 +166,6 @@ export function App() {
     session.status === "signed-in"
       ? SCREENS.filter((screen) => screen.roles.includes(session.session.role))
       : [];
-  // A role with no screen (a researcher, until #194) gets the forbidden text and no menu.
-  const [front] = screens;
   return (
     <div className="flex min-h-dvh flex-col">
       {/* Out of sight above the page until a keyboard reaches it (#302). */}
@@ -196,10 +194,10 @@ export function App() {
       <div
         className={cn(
           "flex flex-1 flex-col",
-          front && "md:grid md:grid-cols-[15rem_minmax(0,1fr)]",
+          session.status === "signed-in" && "md:grid md:grid-cols-[15rem_minmax(0,1fr)]",
         )}
       >
-        {front && <Menu screens={screens} />}
+        {session.status === "signed-in" && <Menu screens={screens} />}
         <div className="flex min-w-0 flex-1 flex-col">
           <main
             id="main"
@@ -208,15 +206,12 @@ export function App() {
           >
             {session.status === "loading" && <Loading>{t("load.loading")}</Loading>}
             {session.status === "signed-out" && <SignIn />}
-            {session.status === "signed-in" &&
-              (front ? (
-                // The role reaches the screens, for an action only some roles see (#308).
-                <StaffRole.Provider value={session.session.role}>
-                  <Screens screens={screens} />
-                </StaffRole.Provider>
-              ) : (
-                <p className="text-muted-foreground">{t("admin.forbidden")}</p>
-              ))}
+            {session.status === "signed-in" && (
+              // The role reaches the screens, for an action only some roles see (#308).
+              <StaffRole.Provider value={session.session.role}>
+                <Screens screens={screens} />
+              </StaffRole.Provider>
+            )}
           </main>
           <SourceOffer />
         </div>

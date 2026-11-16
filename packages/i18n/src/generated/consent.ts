@@ -2,7 +2,6 @@
 /** The consent_version each legal.<kind>.* wording belongs to: what a consent row must name to count (#46). */
 export const CONSENT_VERSIONS: Readonly<Record<string, string>> = {
   "privacy": "2026-11-1",
-  "research": "2026-09-draft-1",
   "special_category": "2026-11-1",
   "terms": "2026-11-1",
 };
@@ -10,7 +9,6 @@ export const CONSENT_VERSIONS: Readonly<Record<string, string>> = {
 /** The languages each wording exists in; a consent names one of these as the language it was shown in. */
 export const CONSENT_TEXT_LOCALES: Readonly<Record<string, readonly string[]>> = {
   "privacy": ["en","fi"],
-  "research": ["en","fi"],
   "special_category": ["en","fi"],
   "terms": ["en","fi"],
 };
@@ -18,7 +16,6 @@ export const CONSENT_TEXT_LOCALES: Readonly<Record<string, readonly string[]>> =
 /** A fingerprint of the wording per kind, in every language it exists in: a golden test ties it to the version. */
 export const CONSENT_TEXT_HASHES: Readonly<Record<string, string>> = {
   "privacy": "884bedba27b248eb",
-  "research": "87ad43851bc72585",
   "special_category": "2dec874099c7169d",
   "terms": "5d729e8dacab1f1e",
 };

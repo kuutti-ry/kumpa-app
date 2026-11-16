@@ -502,22 +502,19 @@ describe("the panel's announcements", () => {
     },
   );
 
-  test.for([["moderator"], ["researcher"]] as const)(
-    "refuses a %s every route",
-    async ([role], { ctx }) => {
-      const staff = await staffSession(ctx.client, role);
-      const admin = await staffSession(ctx.client, "admin");
-      const { id } = await written(ctx.app, admin.headers);
-      const answers = [
-        await ctx.app.request("/admin/announcements", { headers: staff.headers }),
-        await write(ctx.app, staff.headers, DRAFT),
-        await approve(ctx.app, staff.headers, id),
-        await remove(ctx.app, staff.headers, id),
-      ];
-      expect(answers.map((answer) => answer.status)).toEqual([403, 403, 403, 403]);
-      expect(await noticeCount(ctx, id)).toBe(0);
-    },
-  );
+  test("refuses a moderator every route", async ({ ctx }) => {
+    const staff = await staffSession(ctx.client, "moderator");
+    const admin = await staffSession(ctx.client, "admin");
+    const { id } = await written(ctx.app, admin.headers);
+    const answers = [
+      await ctx.app.request("/admin/announcements", { headers: staff.headers }),
+      await write(ctx.app, staff.headers, DRAFT),
+      await approve(ctx.app, staff.headers, id),
+      await remove(ctx.app, staff.headers, id),
+    ];
+    expect(answers.map((answer) => answer.status)).toEqual([403, 403, 403, 403]);
+    expect(await noticeCount(ctx, id)).toBe(0);
+  });
 
   test("refuses every route without a staff session, a person's session among them", async ({
     ctx,

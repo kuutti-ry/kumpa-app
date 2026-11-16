@@ -1,6 +1,6 @@
 # ADR-022: Taking a break
 
-- Status: accepted, amended 2026-10-14 (§6 and the Consequences: Settings as four sections of rows, #287), 2026-10-16 (a sanction keeps a break, #307, ADR-024 §2 and §4) and 2026-10-21 (§1, §5 and the Alternatives: #83 is not a pause, ADR-040; see History); amended 2026-10-31 by ADR-060 (§2: there is no gate row to keep, #500)
+- Status: accepted, amended 2026-10-14 (§6 and the Consequences: Settings as four sections of rows, #287), 2026-10-16 (a sanction keeps a break, #307, ADR-024 §2 and §4) and 2026-10-21 (§1, §5 and the Alternatives: #83 is not a pause, ADR-040; see History); amended 2026-10-31 by ADR-060 (§2: there is no gate row to keep, #500); amended 2026-11-16 by ADR-071 (§2 and §7: no research event, #208; see History)
 - Date: 2026-10-13
 - Follows: TD-7 (erasure and re-registration), ADR-007 (erasure), ADR-010 §6 (activation), ADR-013 §2 and ADR-015 §3 (who counts), issue #170
 
@@ -39,3 +39,4 @@ The only way to disappear for a while was "Delete everything", which costs the p
 - 2026-10-20 (#95, ADR-035 §1): the round builder builds no round for a paused account, at night or on a read; §5's session left by a racing login can only decide a round built before the break (ADR-034 Open 9), and the `shortcut:` in `pause.ts` now names the round screen (#379) as when it matters.
 - 2026-10-21 (#83, ADR-040): "Löysin hänet" is not a pause. The maintainer decided that day that telling Kuutti one found someone is an indication and changes nothing in the app, so §1's "the same state with an exit reason", §5's "#83's pause keeps chats" and the Alternatives' expectations of #83 (the hidden-but-present shape, its column of reasons) are withdrawn. The break stays the one pause; §5's guard keeps `paused` live for the window it describes, and the break's revocation still leaves no session.
 - 2026-11-04 (#581, the maintainer's yes to the table of that day, rows S82, S89 and S92): the break's screen is §6's three lines, the switch and the button, with no line over them, and Take a break on Your account has no line under it. Signing in right after a break starts shows the card's title alone, over the bank's button, so that button is §6's "way back". "Everything is as you left it" goes, which §4's clocks made untrue.
+- 2026-11-16 (#208, ADR-071 §2): §2's research event and §7 lapsed with research. A break and its end write no `account_paused` or `account_resumed`, and §5's ninety days of an event no longer run.

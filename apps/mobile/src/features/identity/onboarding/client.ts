@@ -39,7 +39,7 @@ export async function fetchConsents(): Promise<ConsentsResponse> {
   return ConsentsResponse.parse(data);
 }
 
-/** Research, or the special-category consent, which takes the seek answer with it (ADR-019 §4). */
+/** The special-category consent, which takes the seek answer with it (ADR-019 §4). */
 export async function withdrawConsent(kind: WithdrawableConsentKind): Promise<ConsentsResponse> {
   const { data, error, response } = await api.DELETE("/consents/{kind}", {
     params: { path: { kind } },

@@ -124,10 +124,10 @@ Feature: Automatic shadow bans
     When a third person reports "B"
     Then one sanction.apply row about "B" has no actor and names the rule reports and its count, and nobody's message
 
-  Scenario: No word of a first message reaches a log line, an event or the rule's record
+  Scenario: No word of a first message reaches a log line or the rule's record
     Given four of "A"'s first messages today carry the message fixture
     When "A" opens a fifth with it and a moderator confirms the ban
-    Then no log line, error answer, event, sanction column or audit detail carries the fixture
+    Then no log line, error answer, sanction column or audit detail carries the fixture
 
   Scenario: A threshold changed in the panel holds from the next report, after its config.change row
     Given auto_shadow_ban_reports is 3 and "C" reported "B" this week
@@ -170,7 +170,7 @@ Feature: Automatic shadow bans
     When "M" reads the automatic shadow bans and the front page
     Then "B" and "C" are listed oldest first and counted, and neither "D" nor "M"
 
-  Scenario: The automatic shadow bans refuse without a session and refuse a researcher
+  Scenario: The automatic shadow bans refuse without a session
     Given a rule shadow-banned "B"
-    When the list is read with no session, an expired one, a revoked one, and as a researcher
-    Then the answers are 401 and 403, and nothing is written
+    When the list is read with no session, a product session's token, an expired one and a revoked one
+    Then every answer is 401, and nothing is written

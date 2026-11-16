@@ -24,7 +24,7 @@ body:
     id: proposal
     attributes:
       label: What you propose
-      description: The smallest change that solves it. Which slice (identity, profile, media, pond, matching, chat, safety, research, rewards, notifications) and which app it touches.
+      description: The smallest change that solves it. Which slice (identity, profile, media, pond, matching, chat, safety, rewards, notifications) and which app it touches.
     validations:
       required: true
   - type: textarea

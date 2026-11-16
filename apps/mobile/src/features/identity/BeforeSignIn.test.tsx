@@ -62,9 +62,8 @@ describe("BeforeSignIn: the terms and the privacy summary", () => {
       }),
     ).toHaveLength(TERMS === PRIVACY ? 2 : 1);
     expect(screen.getAllByRole("link")).toHaveLength(2);
-    // No bank button anywhere, and no third card (#545).
+    // No bank button anywhere: the one button accepts both.
     expect(screen.queryByRole("button", { name: "Sign in with your bank" })).toBeNull();
-    expect(screen.queryByText("Research")).toBeNull();
     expect(screen.getAllByRole("button")).toHaveLength(1);
     expect(screen.getByRole("button", { name: "I'm in, and I accept both" })).toBeTruthy();
     checkA11y();

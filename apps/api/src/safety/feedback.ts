@@ -11,11 +11,11 @@ import { advisoryLock } from "../lib/db.ts";
 /**
  * Feedback from inside the app (#171, ADR-023, features/safety/feedback.feature):
  * a kind, the person's words, and the build the app read. Stored for the
- * moderators' panel and nothing else: the text reaches no log line and no
- * research event. At most matching_config feedback_per_day rows per account
- * and Finnish day, counted in the statement that writes the row under an
- * advisory lock per account (the export's shape, identity/repo.ts). The rows
- * are the person's: in the export, gone with the account.
+ * moderators' panel and nothing else: the text reaches no log line. At most
+ * matching_config feedback_per_day rows per account and Finnish day, counted
+ * in the statement that writes the row under an advisory lock per account
+ * (the export's shape, identity/repo.ts). The rows are the person's: in the
+ * export, gone with the account.
  */
 
 export const FEEDBACK_PER_DAY_KEY = "feedback_per_day";

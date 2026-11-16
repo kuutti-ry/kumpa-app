@@ -83,7 +83,7 @@ flowchart TB
 5. They choose "Start the break". The app says "Starting your break…".
 6. The API checks that the account is active, a shadow-banned one alike, so that the ban shows to nobody: it becomes active once onboarding has the answers and the consents matching needs, and an account still at the start has nothing to hide yet. It checks too that no other device started a break a moment earlier. Yes: 8. No: 7.
 7. The app says "The break could not be started. Try again." Nothing has changed and the person stays signed in. A request that fails on the way ends here too.
-8. The API puts the account on a break and keeps aside the state it had, in one go with 9 and 10. A research event notes the break, without a reason, only for somebody who said yes to research before it stopped being asked.
+8. The API puts the account on a break and keeps aside the state it had, in one go with 9 and 10.
 9. It ends every session of the account, and with each session goes its phone's registration for notifications, so nothing is pushed to the person while they are away. The other devices are signed out at their next request to the API.
 10. Nothing is deleted: the profile, the photos, the answers, the consents, the e-mail, the likes the person gave, and the stars they put and those on them stay as they were. While the break lasts, the count on People on Kumpa leaves the person out ([People on Kumpa](people-on-kuutti.md#part-3-the-nights-count)), and their profile photos are refused to everybody else.
 11. The app signs this phone out to the sign-in screen, which says "Your account is on a break" over "Sign in with your bank". Opened again later, the app shows the plain sign-in screen.
@@ -93,7 +93,7 @@ flowchart TB
 15. The night moves a conversation silent for `silent_match_archive_days` to Archived, the person's as anybody's ([Chat](chat.md)). Writing in it brings it back.
 16. An announcement to everybody made meanwhile is e-mailed to the person's confirmed address while their Announcements switch is on, and its notice waits on home until they are back ([Announcements](announcements.md#part-3-everybody-is-told)).
 17. Whenever they want, the person signs in with their bank again, as in [Signing in](sign-in.md#part-1-signing-in). There is no waiting time: a break may end a minute after it began.
-18. The API sees the break and brings the account back to the state it had before it; for somebody who said yes to research before it stopped being asked, how many days the break lasted is noted there.
+18. The API sees the break and brings the account back to the state it had before it.
 19. The app goes home, which says once "Welcome back. Your profile is visible again."; someone who had not finished their profile lands on the step they left. The person's card is in People again from the next read, and People opens for them again, while matching is open for them ([People on Kumpa](people-on-kuutti.md#part-2-an-admin-opens-or-closes-matching)).
 
 ## Where it lives
@@ -122,3 +122,4 @@ flowchart TB
 - 2026-11-03 (#575, PR #582): a star put on the person waits through the break, and they leave the Starred list of whoever starred them until they are back.
 - 2026-11-07 (#573, PR #643): an announcement made during a break reaches a confirmed address by e-mail, and its notice waits on home for the return.
 - 2026-11-16 (#700, PR #701): the break's screen names the app Kumpa, and the home card is People on Kumpa.
+- 2026-11-16 (#208): research leaves the app, so a break and a return note nothing for it.

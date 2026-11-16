@@ -47,10 +47,11 @@ export async function starsShown(
  * would have this person now, a like waiting first; then, for somebody who fits
  * only through today's relaxations, as those bring them, so that a like on them
  * waives those deal-breakers and can arrive (ADR-042 §5, §7); and otherwise seen
- * before, the person having been shown them. Never a label of its own, which would
- * carry a star into the research events. A shadow-banned person's card never says
- * a like waits (ADR-037 §7). With the band as it stands now (ADR-061 §5). Null while
- * either is not complete, or matching is not open for the person.
+ * before, the person having been shown them. Never a label of its own: a star is
+ * read only by its owner's list and queue (ADR-064 §8). A shadow-banned person's
+ * card never says a like waits (ADR-037 §7). With the band as it stands now
+ * (ADR-061 §5). Null while either is not complete, or matching is not open for
+ * the person.
  */
 export async function starPlace(
   deps: BuilderDeps,

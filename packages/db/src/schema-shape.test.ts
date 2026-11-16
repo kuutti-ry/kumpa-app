@@ -43,7 +43,7 @@ const tables = exported
 const byName = new Map(tables.map((table) => [table.name, table]));
 
 describe("the tables", () => {
-  it("are every table the migrations create but events, whose partitions a custom migration writes", () => {
+  it("are every table the migrations create", () => {
     expect(tables.map((table) => table.name).sort()).toEqual([
       "account",
       "account_export",
@@ -84,7 +84,6 @@ describe("the tables", () => {
       "push_token",
       "report",
       "report_message",
-      "research_subject",
       "reward",
       // Today's round and its entries (#96, ADR-034), and a day's relaxations (#99, ADR-042).
       "round_entries",
@@ -257,7 +256,6 @@ describe("the foreign keys", () => {
       "push_token",
       "report",
       "report",
-      "research_subject",
       // The units the person earned (#107), deleted at erasure.
       "reward",
       // The entries in which the person is somebody's card, and the person's own rounds (#96).

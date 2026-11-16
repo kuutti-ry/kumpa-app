@@ -974,7 +974,7 @@ describe("applySanction", () => {
     ctx,
   }) => {
     const admin = await staffSession(ctx.client, "admin");
-    for (const role of ["moderator", "admin", "researcher"] as const) {
+    for (const role of ["moderator", "admin"] as const) {
       const target = await staffSession(ctx.client, role);
       const { rows } = await ctx.client.query<{ id: string }>(
         "INSERT INTO account (identity_id, state, birth_year, birth_month) VALUES ($1, 'active', 1990, 6) RETURNING id",

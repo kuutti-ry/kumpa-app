@@ -83,7 +83,7 @@ const SLANG_NAMESPACE = /^(round|home|profile|settings)\./;
 // failure), consent and a person's data, their way out of danger or of a
 // session, and the answers that say who somebody is.
 const NEVER_SLANG =
-  /failed|invalid|error|refused|contact|email|gender|consent|signout|research|sensitive|export|support|session|logout|lock|report|option/i;
+  /failed|invalid|error|refused|contact|email|gender|consent|signout|sensitive|export|support|session|logout|lock|report|option/i;
 
 /** True for keys a `slangi:` text may stand on: i18n:check refuses one anywhere else. */
 export const isSlangKey = (key: string): boolean =>

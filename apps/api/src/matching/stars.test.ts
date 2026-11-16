@@ -10,8 +10,7 @@ import { type App, createApp } from "../app.ts";
 import { eraseAccount, exportAccount } from "../identity/index.ts";
 import { starPlace } from "../jobs/stars.ts";
 import { finnishDay } from "../lib/finnish-day.ts";
-import { ensureEventPartitions } from "../research/index.ts";
-import { joinStudy, openMatchingHere, signInAs, withMatchingConfig } from "../test/account.ts";
+import { openMatchingHere, signInAs, withMatchingConfig } from "../test/account.ts";
 import { errorCode } from "../test/answers.ts";
 import { cardShown } from "../test/cards.ts";
 import {
@@ -211,23 +210,17 @@ describe("a star on a card", () => {
     expect((await readToday(app, a)).likesLeft).toBe(3);
   });
 
-  test("Nobody is told of a star, and it is in no event", async ({ ctx }) => {
-    await ensureEventPartitions(ctx.client, NOON);
+  test("Nobody is told of a star", async ({ ctx }) => {
     const { app, who } = await scene(ctx, 2);
     const [a, b] = [person(who, 0), person(who, 1)];
-    await joinStudy(app, a.headers);
     await queued(ctx.client, a, [b.accountId]);
     const before = await readToday(app, b);
-    const events = async () =>
-      (await ctx.client.query<{ n: number }>("SELECT count(*)::int AS n FROM events")).rows[0]?.n;
-    const eventsBefore = await events();
 
     await star(app, a, 1);
 
     const after = await readToday(app, b);
     expect(after).toEqual(before);
     expect(after.entries?.every((entry) => entry.star === null)).toBe(true);
-    expect(await events()).toBe(eventsBefore);
   });
 
   test("A star counts for nothing in the inbox stop", async ({ ctx }) => {
