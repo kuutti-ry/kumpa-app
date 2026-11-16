@@ -37,10 +37,13 @@ export {
   addPlaces,
   eraseRoundsOf,
   exportRounds,
+  // The panel holds the log's clocks to the kept year (#687).
+  KEPT_YEAR_KEYS,
   type Place,
   pruneRounds,
   type Queue,
   type RelaxedCandidate,
+  ROUND_RETENTION_DAYS,
   relaxationsOf,
 } from "./rounds.ts";
 export { preferencesRoutes } from "./routes.ts";

@@ -222,6 +222,7 @@ export const enXA: Readonly<Record<string, string>> = {
   "admin.config.history": "Versions, newest first",
   "admin.config.invalid": "This is not a value of the key's type.",
   "admin.config.newValue": "New value",
+  "admin.config.pastKeptYear": "The queue keeps its records a year, so this key holds at most 365 days.",
   "admin.config.reason": "Why the change",
   "admin.config.refresh": "Refresh",
   "admin.config.save": "Review the change",

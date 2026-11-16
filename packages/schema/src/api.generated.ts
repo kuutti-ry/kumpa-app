@@ -5288,7 +5288,7 @@ export interface paths {
                         "application/json": components["schemas"]["ConfigChange"];
                     };
                 };
-                /** @description Validation failed, or config_shape: the value changes the current one's type or keys. */
+                /** @description Validation failed; config_shape: the value changes the current one's type or keys; config_past_kept_year: a clock read back over the queue's log is set past the year the log is kept. */
                 400: {
                     headers: {
                         [name: string]: unknown;

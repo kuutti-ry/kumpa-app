@@ -1041,7 +1041,22 @@ export async function readAdded(
 }
 
 /** How long a round and its entries are kept (ADR-062 §13, the maintainer's of 01/11/2026): the longest clock of the ladder reads them this far back. */
-const ROUND_RETENTION_DAYS = 365;
+export const ROUND_RETENTION_DAYS = 365;
+
+/**
+ * The tunables counted back over the log: past the kept year each would end
+ * at it without a word, so the panel refuses them there, rather than the log
+ * being kept longer (#687, the maintainer's of 16/11/2026). An ended
+ * conversation's clock is not among them: it counts from the conversation's
+ * close, which the prune leaves alone.
+ */
+export const KEPT_YEAR_KEYS: ReadonlySet<string> = new Set([
+  "pass_cooldown_days",
+  "second_pass_cooldown_days",
+  "liked_cooldown_days",
+  LIKE_EXPIRY_KEY,
+  FISH_WINDOW_KEY,
+]);
 
 /** The night's prune: rounds past the kept year, their entries and relaxations with them. */
 export async function pruneRounds(db: Queryable, at: Date): Promise<number> {

@@ -603,6 +603,11 @@ describe("the tunables", () => {
         () => failure("config_conflict", 409),
         "Another admin changed this key meanwhile. Refresh and look again.",
       ],
+      [
+        "config_past_kept_year",
+        () => failure("config_past_kept_year", 400),
+        "The queue keeps its records a year, so this key holds at most 365 days.",
+      ],
       ["another 400", () => failure("validation_failed", 400), "The change was not saved."],
       ["a 404", () => failure("not_found", 404), "The change was not saved."],
       ["a 500", () => failure("internal_error", 500), "The change was not saved."],

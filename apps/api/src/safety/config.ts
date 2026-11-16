@@ -3,6 +3,7 @@ import { type Queryable, transaction } from "@kuutti/db";
 import { type ConfigChange, type ConfigKey, ConfigValue, InvitationReward } from "@kuutti/schema";
 import { AppError } from "../lib/errors.ts";
 import { MATCHING_OPEN_KEY } from "../lib/matching-config.ts";
+import { KEPT_YEAR_KEYS, ROUND_RETENTION_DAYS } from "../matching/index.ts";
 import { recordAudit } from "./audit.ts";
 
 // The tunables in the panel (#304, #305): every key of matching_config with
@@ -140,6 +141,20 @@ export async function changeConfig(
         key: input.key,
         expected: kindOf(declared),
       },
+    );
+  }
+  // The shape holds, so a number here is the key's own: a clock read back over the
+  // queue's log stops at the kept year, and a longer one would end there unsaid (#687).
+  if (
+    KEPT_YEAR_KEYS.has(input.key) &&
+    typeof input.value === "number" &&
+    input.value > ROUND_RETENTION_DAYS
+  ) {
+    throw new AppError(
+      400,
+      "config_past_kept_year",
+      "The queue's log is kept a year, so this key holds at most that many days",
+      { key: input.key, max: ROUND_RETENTION_DAYS },
     );
   }
   const id = randomUUID();
