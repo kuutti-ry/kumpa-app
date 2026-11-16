@@ -69,12 +69,12 @@ afterEach(async () => {
 describe("BreakScreen", () => {
   it("keeps the title and the way back pinned above what it says", async () => {
     await show(<BreakScreen />);
-    expectPinnedHeader("Take a break from Kuutti", "Back");
+    expectPinnedHeader("Take a break from Kumpa", "Back");
   });
 
   it("says the three things that happen, and the button waits for the tick", async () => {
     await show(<BreakScreen />);
-    expect(screen.getByRole("heading", { name: "Take a break from Kuutti" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Take a break from Kumpa" })).toBeTruthy();
     for (const line of [
       /leaves everybody's view/,
       /signed out on every device/,
@@ -88,7 +88,7 @@ describe("BreakScreen", () => {
     // Nothing over the three lines, nor between them and the switch.
     const drawn = screen.getAllByText(/./).map((node) => node.props.children);
     expect(drawn).toHaveLength(6);
-    expect(drawn[0]).toBe("Take a break from Kuutti");
+    expect(drawn[0]).toBe("Take a break from Kumpa");
     expect(drawn[1]).toMatch(/^Your profile leaves everybody's view/);
     expect(drawn.slice(-2)).toEqual([UNDERSTAND, START]);
     expect(disabled(START)).toBe(true);

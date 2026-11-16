@@ -5,10 +5,15 @@
 # The Finnish and Swedish product terms are a naming decision, not a lookup:
 # they are empty until the maintainers and a native speaker choose them.
 
-Kuutti:
-  definition: The name of the app and of the association. A proper noun; never translated and never inflected in a message (keep it in nominative positions).
-  fi: Kuutti
-  sv: Kuutti
+Kumpa:
+  definition: The name of the app (the maintainer, 16/11/2026). A proper noun; never translated and never inflected in a message. In Finnish it stands in the nominative, or as the first part of a compound whose last part takes the case (Kumpa-sovellus, Kumpa-sovelluksessa, Kumpa-palvelin); otherwise turn the sentence or leave the name out. A genitive that leaves the name whole is fine, as Kumpa's in English and Kumpas in Swedish. The messages' descriptions, like the code, still call the project Kuutti.
+  fi: Kumpa
+  sv: Kumpa
+
+Kuutti ry:
+  definition: The registered association that provides Kumpa and controls its data, to whom a consent is given and who signs a message. A registered name; never translated, and never shortened to Kuutti. In Finnish the case ending follows a colon (Kuutti ry:n, Kuutti ry:lle).
+  fi: Kuutti ry
+  sv: Kuutti ry
 
 home:
   definition: The one place a member says they live, given as a postal code and asked of everybody. The postal code is what they type; others see a name, a town or their area, never the digits. Not a word for the app's home screen, and not a word for a town or an area in general.

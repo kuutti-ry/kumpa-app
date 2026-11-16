@@ -168,7 +168,7 @@ flowchart TB
 30. A warning: the home screen shows it under Notices, "A warning from a moderator" and "Reason: {reason}. A warning by itself changes nothing in how you use the app.", until the person presses Got it ([Notifications](notifications.md)). Nothing else changes.
 31. A shadow ban: the person sees no change, and no screen tells them. Everyone else stops seeing them: their card leaves other people's People and Starred, their photos are no longer served to others, the messages and contacts they send reach nobody and push nobody, they never show as Online, their Read goes no further for the other side than where it stood when the ban began, and a like of theirs makes no match. Their conversations stay open. When it is lifted, what they wrote meanwhile appears, unless the conversation ended first.
 32. A suspension: every phone of theirs is signed out at once, and the bank login says "This account is suspended. You can sign in again from:" and the day. Meanwhile nobody is shown their card or photos. Their conversations stay open and wait. The night lifts the suspension on its day.
-33. A ban: every phone of theirs is signed out at once, and the bank login says "This person may not use Kuutti.", for this account and for any new one. Their conversations end, and the other people in them read "Conversation ended" (see [Chat](chat.md), part 4).
+33. A ban: every phone of theirs is signed out at once, and the bank login says "This person may not use Kumpa.", for this account and for any new one. Their conversations end, and the other people in them read "Conversation ended" (see [Chat](chat.md), part 4).
 34. Nobody is told of the decision. The reporter reads it only in the copy of their data, Settings, A copy of your data, Download my data, among the reports they filed: "Waiting for a moderator", "A moderator looked at it and took no action" or "A moderator acted on it", never which action and never whom. The reported person never learns from any route that anybody reported them, or who.
 
 ## Where it lives
@@ -200,3 +200,4 @@ flowchart TB
 - 2026-11-03 (#502, PR #578): Block or report sits on the card in People, the one queue that took the day's round's place.
 - 2026-11-03 (#575, PR #582): a starred person's card, opened from Starred, carries Block or report too.
 - 2026-11-05 (#581, PR #602): the dialog's first step only chooses, with nothing under its choices; a report says that they are not told who reported them; after a block or a report the dialog and the list say "Blocked." or "Thank you. A moderator will look at it." alone.
+- 2026-11-16 (#700, PR #701): a ban's refusal at the bank names the app Kumpa.

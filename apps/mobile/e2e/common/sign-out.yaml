@@ -12,7 +12,7 @@ appId: fi.kuutti.app
 - evalScript: ${output.locked = true}
 - runFlow:
     when:
-      notVisible: "Kuutti is locked|Kuutti on lukittu|Kuutti är låst"
+      notVisible: "Kumpa is locked|Kumpa on lukittu|Kumpa är låst"
     commands:
       - evalScript: ${output.locked = false}
 - runFlow:
@@ -21,7 +21,7 @@ appId: fi.kuutti.app
     commands:
       # The passcode's field takes the focus as the lock shows: a tap on the
       # title, which is no button, closes the keyboard over the way out (README).
-      - tapOn: "Kuutti is locked|Kuutti on lukittu|Kuutti är låst"
+      - tapOn: "Kumpa is locked|Kumpa on lukittu|Kumpa är låst"
       - scrollUntilVisible:
           element: "Sign in with the bank instead|Kirjaudu mieluummin pankkitunnuksilla|Logga in med banken i stället"
           direction: DOWN

@@ -31,7 +31,7 @@ const session = {
 const ZIP = new Uint8Array([
   0x50, 0x4b, 0x05, 0x06, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 ]);
-const ZIP_NAME = "kuutti-data-2026-10-13.zip";
+const ZIP_NAME = "kumpa-data-2026-10-13.zip";
 const zip = () =>
   new Response(ZIP, {
     status: 200,
@@ -147,7 +147,7 @@ describe("AccountActions", () => {
     await fireEvent.press(screen.getByRole("button", { name: "Download my data" }));
     await waitFor(() => expect(share).toHaveBeenCalled());
     expect(share.mock.calls[0]).toEqual([
-      { title: "Your Kuutti data", url: `file:///cache/${ZIP_NAME}` },
+      { title: "Your Kumpa data", url: `file:///cache/${ZIP_NAME}` },
     ]);
     // The file was there for the sheet, as the API sent it, and is gone once the sheet closed.
     expect(whileOpen).toEqual(Array.from(ZIP));
@@ -424,7 +424,7 @@ describe("shareExport on Android", () => {
     const os = jest.replaceProperty(Platform, "OS", "android");
     try {
       const share = jest.fn();
-      await expect(shareExport(exportFile(), "Your Kuutti data", share)).resolves.toBe("saved");
+      await expect(shareExport(exportFile(), "Your Kumpa data", share)).resolves.toBe("saved");
       expect(share).not.toHaveBeenCalled();
       expect(bytesOf(cache.get(`content://picked/${ZIP_NAME}`))).toEqual(Array.from(ZIP));
       expect(cache.has(`file:///cache/${ZIP_NAME}`)).toBe(false);
@@ -443,11 +443,11 @@ describe("shareExport on Android", () => {
         }),
       );
       const getFile = exportFile();
-      await expect(shareExport(getFile, "Your Kuutti data", jest.fn())).resolves.toBe("cancelled");
+      await expect(shareExport(getFile, "Your Kumpa data", jest.fn())).resolves.toBe("cancelled");
       expect(getFile).not.toHaveBeenCalled();
       expect(cache.size).toBe(0);
       pickDirectory.mockRejectedValueOnce(new Error("no storage"));
-      await expect(shareExport(getFile, "Your Kuutti data", jest.fn())).rejects.toThrow(
+      await expect(shareExport(getFile, "Your Kumpa data", jest.fn())).rejects.toThrow(
         "no storage",
       );
       expect(getFile).not.toHaveBeenCalled();
@@ -475,7 +475,7 @@ describe("shareExport on the web preview", () => {
     globals.URL.revokeObjectURL = revoked;
     try {
       const share = jest.fn();
-      await expect(shareExport(exportFile(), "Your Kuutti data", share)).resolves.toBe("saved");
+      await expect(shareExport(exportFile(), "Your Kumpa data", share)).resolves.toBe("saved");
       expect(share).not.toHaveBeenCalled();
       expect(anchor).toMatchObject({ href: "blob:kuutti/1", download: ZIP_NAME });
       expect(click).toHaveBeenCalledTimes(1);

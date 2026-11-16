@@ -53,7 +53,7 @@ flowchart TB
 
 1. An admin signs in to the moderation panel with their bank ([Moderation](moderation.md)) and opens Announcements in its menu. The menu shows it to admins alone; a moderator who opens its address finds only its heading and "Your role does not allow this.", and the API refuses every announcement route to anybody but an admin.
 2. "Announcements": first "Waiting for a second admin" ("Nothing is waiting." when nothing is), then "Write an announcement", then "Sent" ("Nothing has been sent yet." before the first), and Refresh. Each announcement shows when it was written or sent, and its title and text in each language, with "Not written: Swedish readers get the English." where it has no Swedish.
-3. The form has a part for each language, each with a Title and a Text: English, Finnish, and "Swedish, if you write it", under which "People who read Kuutti in Swedish get the English when there is no Swedish." Each field takes only so many characters. The admin writes and presses "Save for a second admin".
+3. The form has a part for each language, each with a Title and a Text: English, Finnish, and "Swedish, if you write it", under which "People who read Kumpa in Swedish get the English when there is no Swedish." Each field takes only so many characters. The admin writes and presses "Save for a second admin".
 4. The panel checks the draft before it sends anything: a title and a text in English and in Finnish, and in Swedish both or neither. Whole: 6. Not: 5.
 5. "Write a title and a text in English and in Finnish." or "Swedish needs a title and a text, or neither.", and nothing is sent. Back to 3.
 6. The API holds every title and text to the plain-text rule and to their lengths. Refused: 7. Taken: 8.
@@ -133,7 +133,7 @@ flowchart TB
     s23["E-mails every confirmed address whose switch is on, one at a time"]
     s25{"In the quiet hours?"}
     s26{{"Waits for the quiet hours to end"}}
-    s27["Pushes An announcement from Kuutti to everybody whose notice is unread and whose switch is on"]
+    s27["Pushes An announcement from Kumpa to everybody whose notice is unread and whose switch is on"]
   end
   s22 --> s23
   s23 --> s24
@@ -152,10 +152,10 @@ flowchart TB
 
 22. A second admin has approved the announcement, and its notice is written for every account (part 2). After the approval's answer, the API's own process sends the e-mails and the pushes.
 23. The API e-mails every person its notice reached whose address is confirmed ([E-mail and its confirmation](email.md)) and whose Announcements switch is on, each read again just before their e-mail, one at a time and spaced to stay within the mail service's pace. Each is worded in the language the person read the terms in: Finnish for Finnish and Stadi, Swedish where it was written in Swedish, English otherwise. A failed e-mail is not tried again, and the rest go on.
-24. The e-mail's subject is "Kuutti: " and the title; its body is the title, the text, "You get this because you confirmed this address in the Kuutti app. Announcements can be turned off in Settings, under Notifications." and "Kuutti ry". Plain text, with no link. An address not confirmed gets nothing.
+24. The e-mail's subject is "Kumpa: " and the title; its body is the title, the text, "You get this because you confirmed this address in the Kumpa app. Announcements can be turned off in Settings, under Notifications." and "Kuutti ry". Plain text, with no link. An address not confirmed gets nothing.
 25. In the quiet hours, from `push_quiet_from_hour` to `push_quiet_to_hour` in Helsinki: 26. Otherwise: 27.
 26. Unlike a message's or a match's, the push is not dropped: it waits until the quiet hours end, and then goes to those who have not read the notice meanwhile: 27.
-27. The API pushes everybody whose notice is still unread, whose Announcements switch is on, and who has a signed-in phone that lets Kuutti notify: "An announcement from Kuutti", in the phone's language, with its kind alone and never its words ([Notifications](notifications.md), part 3). Switched off, there is no push and no e-mail, but the notice stays.
+27. The API pushes everybody whose notice is still unread, whose Announcements switch is on, and who has a signed-in phone that lets Kuutti notify: "An announcement from Kumpa", in the phone's language, with its kind alone and never its words ([Notifications](notifications.md), part 3). Switched off, there is no push and no e-mail, but the notice stays.
 28. The person taps the push, which opens home, after the app lock if it is on; or, pushed or not, opens the app any time.
 29. Home shows the announcement under "Notices", first on the screen and newest first among the person's unread notices, with its title and its text as the admins wrote them, in the language the app asks in: Finnish for Finnish and Stadi, Swedish where it was written in Swedish, English otherwise. Got it under it. It stays until Got it; a person on a break or suspended when it went finds it when they come back, and one who signs up later never sees it.
 30. The person chooses Got it.
@@ -177,3 +177,4 @@ flowchart TB
 - 2026-11-07 (#573, PR #646): the panel's Announcements screen, admins only: one admin writes a draft in English and Finnish, and Swedish or not; another approves it through a step that says to how many it goes; either deletes a draft.
 
 - 2026-11-13 (#380): Send starts with focus on its question, pending sends and deletions cannot be dismissed, confirmed outcomes receive focus, and newer typed words survive saving or a failed refresh.
+- 2026-11-16 (#700, PR #701): the e-mail's subject and its last lines, and the push, name the app Kumpa.

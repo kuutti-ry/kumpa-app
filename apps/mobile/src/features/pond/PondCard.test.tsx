@@ -20,8 +20,8 @@ const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 
 const BAR = { men: 30, everyone: 20, women: 50 };
-const HEADING = "People on Kuutti";
-const SMALL = "Kuutti is just getting started.";
+const HEADING = "People on Kumpa";
+const SMALL = "Kumpa is just getting started.";
 
 function answering(answers: Array<() => Response>) {
   const calls: Request[] = [];

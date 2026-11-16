@@ -150,7 +150,7 @@ describe("App", () => {
 
   it("renders the heading from messages.yaml and, signed out, the bank login", async () => {
     renderApp(async () => json(health));
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Kuutti admin");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Kumpa admin");
     expect(
       await screen.findByRole("button", { name: "Sign in with your bank" }),
     ).toBeInTheDocument();
@@ -285,7 +285,7 @@ describe("App", () => {
     // Loading the panel is not the person's move: nothing takes the focus.
     expect(front).not.toHaveFocus();
     // The title is an effect's, after the heading is in the page: waited for, as below.
-    await waitFor(() => expect(document.title).toBe("Overview · Kuutti admin"));
+    await waitFor(() => expect(document.title).toBe("Overview · Kumpa admin"));
     expect(await frontPageLink("Photos")).toBeInTheDocument();
     expect(calls).toContain("GET /admin/overview");
     expect(calls).not.toContain("GET /admin/photos/queue");
@@ -354,7 +354,7 @@ describe("App", () => {
     for (const name of [...queues, "A person", "Overview"]) {
       fireEvent.click(within(menu).getByRole("link", { name }));
       expect(await screen.findByRole("heading", { level: 2, name })).toBeInTheDocument();
-      await waitFor(() => expect(document.title).toBe(`${name} · Kuutti admin`));
+      await waitFor(() => expect(document.title).toBe(`${name} · Kumpa admin`));
     }
   });
 
@@ -418,7 +418,7 @@ describe("App", () => {
     await waitFor(() => expect(heading).toHaveFocus());
     expect(link).toHaveAttribute("aria-current", "page");
     expect(await screen.findByText("Nothing waiting")).toBeInTheDocument();
-    expect(document.title).toBe("Automatic shadow bans · Kuutti admin");
+    expect(document.title).toBe("Automatic shadow bans · Kumpa admin");
     expect(calls.filter((call) => call === "GET /admin/sanctions/automatic")).toHaveLength(1);
   });
 
@@ -471,7 +471,7 @@ describe("App", () => {
     await waitFor(() => expect(calls).toContain("GET /admin/config"));
     await waitFor(() => expect(screen.queryByText("Loading…")).toBeNull());
     expect(screen.queryByRole("alert")).toBeNull();
-    expect(document.title).toBe("Tunables · Kuutti admin");
+    expect(document.title).toBe("Tunables · Kumpa admin");
   });
 
   it("opens the tunables from their own address for an admin (#304)", async () => {
@@ -510,7 +510,7 @@ describe("App", () => {
     ).toEqual(["Overview", "Reports", "Automatic shadow bans", "Photos", "Feedback", "A person"]);
     expect(within(menu).queryByRole("link", { name: "Tunables" })).toBeNull();
     expect(screen.queryByText("Loading…")).toBeNull();
-    await waitFor(() => expect(document.title).toBe("Tunables · Kuutti admin"));
+    await waitFor(() => expect(document.title).toBe("Tunables · Kumpa admin"));
     // The menu still works from here, and the panel never asked for the tunables.
     fireEvent.click(within(menu).getByRole("link", { name: "Feedback" }));
     expect(await screen.findByRole("heading", { level: 2, name: "Feedback" })).toBeInTheDocument();
@@ -547,7 +547,7 @@ describe("App", () => {
     expect(await screen.findByText("Nothing matches.")).toBeInTheDocument();
     expect(calls).toContain("GET /admin/audit");
     expect(calls).not.toContain("GET /admin/staff");
-    expect(document.title).toBe("Audit log · Kuutti admin");
+    expect(document.title).toBe("Audit log · Kumpa admin");
 
     fireEvent.click(within(menu).getByRole("link", { name: "Staff" }));
     const staffHeading = await screen.findByRole("heading", { level: 2, name: "Staff" });
@@ -562,7 +562,7 @@ describe("App", () => {
     );
     expect(await screen.findByRole("table", { name: "Staff" })).toBeInTheDocument();
     expect(calls).toContain("GET /admin/staff");
-    expect(document.title).toBe("Staff · Kuutti admin");
+    expect(document.title).toBe("Staff · Kumpa admin");
     expect(screen.queryByText("Your role does not allow this.")).toBeNull();
   });
 
@@ -595,7 +595,7 @@ describe("App", () => {
       expect(within(menu).queryByRole("link", { name: "Announcements" })).toBeNull();
       expect(screen.queryByRole("form", { name: "Filters" })).toBeNull();
       expect(screen.queryByRole("button", { name: "Refresh" })).toBeNull();
-      await waitFor(() => expect(document.title).toBe(`${title} · Kuutti admin`));
+      await waitFor(() => expect(document.title).toBe(`${title} · Kumpa admin`));
       // The menu still works from here, and the panel asked for neither screen.
       fireEvent.click(within(menu).getByRole("link", { name: "Feedback" }));
       expect(
@@ -620,7 +620,7 @@ describe("App", () => {
       "aria-current",
       "page",
     );
-    expect(document.title).toBe("A person · Kuutti admin");
+    expect(document.title).toBe("A person · Kumpa admin");
     expect(calls.filter((call) => call.includes("/admin/accounts"))).toEqual([]);
 
     fireEvent.change(screen.getByLabelText("Account id"), { target: { value: accountId } });
@@ -643,7 +643,7 @@ describe("App", () => {
     const heading = await screen.findByRole("heading", { level: 2, name: "Account 6f1c1c4e" });
     expect(heading).not.toHaveFocus();
     expect(await screen.findByText("No profile yet.")).toBeInTheDocument();
-    expect(document.title).toBe("Account 6f1c1c4e · Kuutti admin");
+    expect(document.title).toBe("Account 6f1c1c4e · Kumpa admin");
     const menu = screen.getByRole("navigation", { name: "Screens" });
     expect(
       within(menu)
@@ -699,7 +699,7 @@ describe("App", () => {
     const heading = await screen.findByRole("heading", { level: 2, name: "Report 0b1c1c4e" });
     expect(heading).not.toHaveFocus();
     expect(await screen.findByText("No note.")).toBeInTheDocument();
-    expect(document.title).toBe("Report 0b1c1c4e · Kuutti admin");
+    expect(document.title).toBe("Report 0b1c1c4e · Kumpa admin");
     const menu = screen.getByRole("navigation", { name: "Screens" });
     expect(
       within(menu)

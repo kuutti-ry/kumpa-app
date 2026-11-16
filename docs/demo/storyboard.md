@@ -20,10 +20,10 @@ The steps in the order the sheet asks them (ADR-010, #146), one screen each, "Co
 2. "Did a friend invite you?": a field for a friend's code, and "Skip". Skip it; the step does not count in the progress.
 3. Name: what the card will call her. Type "Aino".
 4. Gender: self-declared; the identity label is offered after a non-binary answer only. Choose a woman.
-5. Whom she seeks: one to three; under it the line "I consent to Kuutti storing whom I seek" (the article 9 consent, ADR-019 §4). Choose men.
+5. Whom she seeks: one to three; under it the line "I consent to Kuutti ry storing whom I seek" (the article 9 consent, ADR-019 §4). Choose men.
 6. Intent: long-term, casual, or open to either.
 7. Age window: buttons, not a number field, around her own age.
-8. "Where do you live?": "Your postal code tells Kuutti how far people are. Others see a town or your area by name, never the digits." Type five digits; the names under the field come from a list on the phone, so a half-typed home never reaches the server. Then "What should your card show?": the town or, where her area is large enough to keep, the area, which she may choose. Where none is, "On your card:" and the town stand in the question's place. Say what happened: what is kept is a place of at least three thousand people, and the home changes whenever she likes (ADR-061).
+8. "Where do you live?": "Your postal code tells Kumpa how far people are. Others see a town or your area by name, never the digits." Type five digits; the names under the field come from a list on the phone, so a half-typed home never reaches the server. Then "What should your card show?": the town or, where her area is large enough to keep, the area, which she may choose. Where none is, "On your card:" and the town stand in the question's place. Say what happened: what is kept is a place of at least three thousand people, and the home changes whenever she likes (ADR-061).
 9. "Two photos of you": the grid on the step itself, "Add a photo" at least twice, then "Continue". From the camera roll: two or more of Aino's five pictures (the runbook put them there). Each goes through the pipeline: resized, EXIF stripped, three variants, a blurhash, the check. Locally the check queues everything, so the grid shows them "In review"; on staging Rekognition approves a face within seconds.
 10. "A few words": two questions of twelve, or a bio of fifty characters.
 11. The home screen comes at once. Having a home is what puts her in the pond, of which there is one, the whole country; there is no pond step.
@@ -32,11 +32,11 @@ The account is active once the four matching answers and the two consents are th
 
 ## Scene 3: Home (1 min)
 
-The home screen: "Kuutti", what there is to do, and the counter's card last (#581).
+The home screen: "Kumpa", what there is to do, and the counter's card last (#581).
 
 - Where Aino stands, on a card with no word above its sentence. With her photos pending: "Matching opens for finished profiles. Yours still lacks something." Once her photos are approved: "Matching is open for you.", since the demo commands open the pond; once an admin has closed it, "Your profile is finished. Matching has not opened yet." (ADR-060).
 - Below: "Your profile". The profile list holds the rest (#239): "Photos" and the sections, each with a check mark once done or how far it is filled, then "What you seek", which holds whom she seeks, the ages, what she is here for and "Deal-breakers" (up to seven: distance, which everybody can set, and the others only on what she answered herself, #149, ADR-061 §7) and, while a question is unanswered, "Fill in the rest when you have a moment" (the optional fields, one per screen, "Ask me later" on each, #148). The eye at the top opens her card.
-- Last, "People on Kuutti": "n people have completed their profiles and are looking for:", a number that moves in tens, and right under it the bar in three colours with its percentages in words, which the population's fifty fill (population.md; ADR-013).
+- Last, "People on Kumpa": "n people have completed their profiles and are looking for:", a number that moves in tens, and right under it the bar in three colours with its percentages in words, which the population's fifty fill (population.md; ADR-013).
 
 In "Your profile", show "Fill in the rest when you have a moment" for one field and skip it; open "What you seek" and show the deal-breakers' rows: the field she has not answered says "Share yours first.", and pressing it opens that question.
 
@@ -75,13 +75,13 @@ Noa Salmi's story uploaded two faces and four more pictures for the check (#142)
 Two logins the product refuses, by the code that refuses anybody (TD-7).
 
 - Ilona Öhman (locally her button; on staging Aktia, prefilled): she deleted her account in her story. The sign-in says "You deleted your account recently. The earliest day for a new one: …" with the day thirty days after her story was written, as d.M.yyyy (#150).
-- Tapio Heikkinen (locally his button; on staging OP, prefilled): banned. "This person may not use Kuutti."
+- Tapio Heikkinen (locally his button; on staging OP, prefilled): banned. "This person may not use Kumpa."
 
 ## Scene 8: The person's data (1 min)
 
 As Aino again: Settings → the account card.
 
-- "Your Kuutti data": the export, everything held about her, as JSON (ADR-007): the account, her home in words, never a code, the profile, the preferences and deal-breakers, every consent ever given, the research mapping, the photos with short-lived links.
+- "Your Kumpa data": the export, everything held about her, as JSON (ADR-007): the account, her home in words, never a code, the profile, the preferences and deal-breakers, every consent ever given, the research mapping, the photos with short-lived links.
 - "Delete your account?" → "Delete everything": the erasure path. She is signed out; a sign-in within thirty days is refused with the date, as Ilona's was.
 
 Then `pnpm demo:reset` (locally) or the reset in the container (staging): everybody back to where they begin, the stories told anew.

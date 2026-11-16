@@ -111,7 +111,7 @@ describe("PlaceScreen", () => {
     await show();
     expect(screen.getByText(LEAD)).toBeTruthy();
     // Why Kuutti asks was said at onboarding: nobody moves home differently for it (#581).
-    expect(screen.queryByText(/tells Kuutti how far/)).toBeNull();
+    expect(screen.queryByText(/tells Kumpa how far/)).toBeNull();
     expect(screen.getByRole("heading", { name: QUESTION }).props["aria-level"]).toBe("3");
     expect(checked("Helsinki")).toBe(true);
     expect(checked("Kallio")).toBe(false);

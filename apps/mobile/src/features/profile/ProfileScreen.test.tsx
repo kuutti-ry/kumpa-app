@@ -662,7 +662,7 @@ describe("ProfileScreen", () => {
     await show(<ProfileScreen />);
     expect(screen.getByText(FAILED_TO_LOAD)).toBeTruthy();
     // Why, in words: the API answered 500.
-    expect(screen.getByText("Kuutti's server had a problem. Try again in a moment.")).toBeTruthy();
+    expect(screen.getByText("Kumpa's server had a problem. Try again in a moment.")).toBeTruthy();
     failing = false;
     await press(screen.getByRole("button", { name: "Try again" }));
     await waitFor(() => expect(screen.getByText("The basics")).toBeTruthy());
@@ -679,7 +679,7 @@ describe("ProfileScreen", () => {
     ) as unknown as typeof fetch;
     await show(<ProfileScreen />);
     expect(screen.getByText(FAILED_TO_LOAD)).toBeTruthy();
-    expect(screen.getByText(/older than Kuutti's server/)).toBeTruthy();
+    expect(screen.getByText(/older than Kumpa's server/)).toBeTruthy();
     expect(screen.getByRole("button", { name: "Update the app" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
   });

@@ -40,7 +40,7 @@ name: An invitation made in Settings shows its code once, is shared, and is with
 - extendedWaitUntil:
     visible: "[0-9A-HJKMNP-TV-Z]{5}-[0-9A-HJKMNP-TV-Z]{5}|(Invitation code|Kutsukoodi|Inbjudningskod): ([0-9A-HJKMNP-TV-Z] ){4}[0-9A-HJKMNP-TV-Z], ([0-9A-HJKMNP-TV-Z] ){4}[0-9A-HJKMNP-TV-Z]"
     timeout: 15000
-- assertVisible: "Kuutti shows this code only now\\. Share it with one friend\\.|Kuutti näyttää tämän koodin vain nyt\\. Jaa se yhdelle ystävälle\\.|Kuutti visar den här koden bara nu\\. Dela den med en vän\\."
+- assertVisible: "Kumpa shows this code only now\\. Share it with one friend\\.|Kumpa näyttää tämän koodin vain nyt\\. Jaa se yhdelle ystävälle\\.|Kumpa visar den här koden bara nu\\. Dela den med en vän\\."
 - assertNotVisible: "Your invitation is ready\\. Its code is below\\.|Kutsusi on valmis\\. Sen koodi on alla\\.|Din inbjudan är klar\\. Koden finns nedan\\."
 
 # The share sheet covers the app, and is closed again.

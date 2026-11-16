@@ -125,11 +125,11 @@ describe("confirming the optional e-mail", () => {
     expect(sent).toHaveLength(1);
     const message = sent[0];
     expect(message?.to).toBe(ADDRESS);
-    expect(message?.subject).toBe("Your code for Kuutti");
+    expect(message?.subject).toBe("Your code for Kumpa");
     const code = codeIn(message);
     expect(code).toMatch(/^\d{6}$/);
     expect(message?.text).toBe(
-      `Your code is ${code}. It works for 30 minutes.\n\nSomeone added this address in the Kuutti app as a way to stay in touch. If that was not you, you can ignore this message.\n\nKuutti ry`,
+      `Your code is ${code}. It works for 30 minutes.\n\nSomeone added this address in the Kumpa app as a way to stay in touch. If that was not you, you can ignore this message.\n\nKuutti ry`,
     );
     // Only the hash is stored, with the account's id in front.
     const stored = await ctx.client.query<{ code_hash: string }>(
@@ -405,7 +405,7 @@ describe("confirming the optional e-mail", () => {
       headers: { ...a.headers, "accept-language": "fi" },
     });
     expect(res.status).toBe(200);
-    expect(sent[0]?.subject).toBe("Koodisi Kuuttiin");
+    expect(sent[0]?.subject).toBe("Koodisi Kumpa-sovellukseen");
     expect(sent[0]?.text).toMatch(/^Koodisi on \d{6}\. Se on voimassa 30 minuutin ajan\./);
     expect(sent[0]?.text.endsWith("\n\nKuutti ry")).toBe(true);
   });

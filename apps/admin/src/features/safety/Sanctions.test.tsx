@@ -777,14 +777,14 @@ describe("the sanctions' history", () => {
     expect(lines(await rowOf(BY_KUUTTI.note))).toEqual([
       `Shadow ban · Scraping · ${when(APPLIED)}`,
       BY_KUUTTI.note,
-      "Applied by: Kuutti itself",
+      "Applied by: Kumpa itself",
     ]);
     // The night lifted the suspension: no person did.
     expect(lines(await rowOf(ENDED.note))).toEqual([
       `Suspension · Misrepresentation · ${when(APPLIED)} · until: ${when(UNTIL)}`,
       ENDED.note,
       "Applied by: a1b2c3d4, moderator",
-      `Lifted: ${when(UNTIL)}. Who: Kuutti itself`,
+      `Lifted: ${when(UNTIL)}. Who: Kumpa itself`,
     ]);
     expect(lines(await rowOf(KEPT.note))).toEqual([
       `Warning · Commercial use · ${when(APPLIED)}`,

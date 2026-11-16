@@ -1,5 +1,5 @@
 # "Löysin hänet" (#83, ADR-040): from Your account, the person tells Kuutti
-# they found someone and why, from three reasons in words; Tell Kuutti waits
+# they found someone and why, from three reasons in words; Tell Kumpa waits
 # for a choice, the answer is thanked, and the screen opened again thanks at
 # once and asks nothing. It is an indication only: nothing else in the app
 # changes, which the API's tests hold. Aino: each account answers once, so
@@ -27,13 +27,13 @@ name: I found someone tells Kuutti the reason once, thanks the person, and asks 
 - assertVisible: "Your answer is shown to nobody, and it is counted without your name\\.|Vastaustasi ei näytetä kenellekään, ja se lasketaan ilman nimeäsi\\.|Ditt svar visas inte för någon, och det räknas utan ditt namn\\."
 - assertVisible: "Nothing changes in the app\\.|Sovelluksessa mikään ei muutu\\.|Inget ändras i appen\\."
 - assertVisible:
-    text: "Tell Kuutti|Kerro Kuutille|Berätta för Kuutti"
+    text: "Tell Kumpa|Kerro meille|Berätta för Kumpa"
     enabled: false
 
 # The reason is a radio button whose label ticks it in words, never a colour alone.
-- tapOn: "I found someone on Kuutti|Löysin jonkun Kuutista|Jag hittade någon på Kuutti"
-- assertVisible: "✓ I found someone on Kuutti|✓ Löysin jonkun Kuutista|✓ Jag hittade någon på Kuutti"
-- tapOn: "Tell Kuutti|Kerro Kuutille|Berätta för Kuutti"
+- tapOn: "I found someone on Kumpa|Löysin jonkun täältä|Jag hittade någon på Kumpa"
+- assertVisible: "✓ I found someone on Kumpa|✓ Löysin jonkun täältä|✓ Jag hittade någon på Kumpa"
+- tapOn: "Tell Kumpa|Kerro meille|Berätta för Kumpa"
 - extendedWaitUntil:
     visible: "Thank you for telling us\\.|Kiitos, että kerroit meille\\.|Tack för att du berättade för oss\\."
     timeout: 15000

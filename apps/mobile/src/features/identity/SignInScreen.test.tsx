@@ -26,7 +26,7 @@ const READY = ["Sign in", "Sign in with your bank"];
 const REFUSED = "Sign-in did not complete";
 const BARE_REFUSAL = ["Sign in", REFUSED, "Try again"];
 const NOT_REQUESTED = "This sign-in link was not requested from this phone.";
-const UNDER_18 = "Kuutti is for adults. You are welcome once you are 18.";
+const UNDER_18 = "Kumpa is for adults. You are welcome once you are 18.";
 /** The heading of the screen before the bank. */
 const NORMS = "How we do things here";
 
@@ -370,14 +370,14 @@ describe("SignInScreen", () => {
 
     // The link comes back to the same screen with another refusal.
     await view.rerender(underProviders(<SignInScreen error="auth_banned" />));
-    expect(await screen.findByText("This person may not use Kuutti.")).toBeTruthy();
+    expect(await screen.findByText("This person may not use Kumpa.")).toBeTruthy();
 
     // And with the same one again, after one more try.
     await fireEvent.press(screen.getByRole("button", { name: "Sign in with your bank" }));
     await view.rerender(underProviders(<SignInScreen />));
     await waitFor(() => expect(drawn()).toEqual(READY));
     await view.rerender(underProviders(<SignInScreen error="auth_banned" />));
-    expect(await screen.findByText("This person may not use Kuutti.")).toBeTruthy();
+    expect(await screen.findByText("This person may not use Kumpa.")).toBeTruthy();
   });
 
   describe("the refusals with no fact of their own (#581)", () => {
@@ -588,7 +588,7 @@ describe("SignInScreen", () => {
 
   it("names no day for a ban, whatever day its link carries", async () => {
     await renderWithTheme(<SignInScreen error="auth_banned" until="2026-10-21T21:00:00.000Z" />);
-    expect(await screen.findByText("This person may not use Kuutti.")).toBeTruthy();
+    expect(await screen.findByText("This person may not use Kumpa.")).toBeTruthy();
     expect(screen.queryByText(/22\.10\.2026/)).toBeNull();
   });
 

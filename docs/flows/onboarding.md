@@ -39,7 +39,7 @@ flowchart TB
     s1(["Signed in, from Signing in, or home with a step still open"])
     s2["Home asks where onboarding stands"]
     s4{"Anything still open?"}
-    s5(["Home: see People on Kuutti"])
+    s5(["Home: see People on Kumpa"])
     s6["Opens onboarding at the first open step"]
     s7{"Terms or privacy summary open?"}
     s8{"Does this app carry their current wording?"}
@@ -83,7 +83,7 @@ flowchart TB
 2. Home asks the API where onboarding stands, every time it comes to the front. Until the answer is there it says "Loading…" and shows nothing that needs a finished account; an answer it cannot read keeps it closed, says why, and offers Try again.
 3. The API lists the steps still open, in the order the app asks them, and the person's age from the bank's year and month of birth.
 4. Nothing open: 5. Something open: 6. A new account always has something open.
-5. Home: see [People on Kuutti](people-on-kuutti.md).
+5. Home: see [People on Kumpa](people-on-kuutti.md).
 6. The app opens onboarding at the first open step, each step under its question as its one heading. After every answer it asks the API again and shows the next open step; a step already answered is passed over, so a walk left midway goes on where it stopped (step 57). A step the API does not take says why in its own words where it has them, else "Something did not load. Try again." Nothing asks about research until there is a researcher, and nothing under onboarding is a screen to go back to.
 7. The terms or the privacy summary missing for their current wording: 8. Otherwise: 13.
 8. Does this app carry the current version of both texts? No: 9. Yes: 10.
@@ -107,7 +107,7 @@ flowchart TB
   subgraph person["The person"]
     s20["Types the name for the card, chooses Continue"]
     s23["Chooses Woman, Man or Non-binary, then Continue"]
-    s28["Chooses whom, and turns on I consent to Kuutti storing whom I seek"]
+    s28["Chooses whom, and turns on I consent to Kuutti ry storing whom I seek"]
     s30["Chooses Continue, open only with both"]
     s35["Chooses Something long-term, Something casual, Open to either or A dance partner, then Continue"]
   end
@@ -161,7 +161,7 @@ flowchart TB
 24. The API stores the gender as the person declared it; nothing from the bank informs it. Onboarding asks it only while none is stored, so here it is always a first answer, and the wait of `change_cadence_days` between two changes of gender never applies here. A later change is the profile's: see [Profile](profile.md).
 25. Non-binary: 26. Otherwise: 27.
 26. "A word for it, if you like": "Shown on your card, never used for matching." A label chosen with a button and saved on the profile with "Continue", which opens once one is chosen, or "Skip", which saves nothing. Still step 2. Onboarding offers it only here, right after the gender: once skipped, or with the app closed before it, onboarding does not offer it again; the profile's gender screen does, while non-binary is chosen and no label is stored.
-27. "Whom are you looking for?": "Nobody outside your choice is ever shown to you, and you are never shown to anyone who did not pick you." Women, Men, Non-binary people, or Anyone. Below, the "Sensitive answers" card: its summary, which says that whom one seeks is used for matching and for statistics shown in the app in which no person can be identified, and is not shown to other users; its version as a link to the full text; in Finnish the line that the English text counts; and the switch "I consent to Kuutti storing whom I seek". "Step 3 of 8". When the app carries an older wording of the consent than the API, the card says "This text has a newer version than the one built into this app. Update the app to continue." in place of the switch, and the step cannot be passed. After a new wording, the choice starts from the answer stored before.
+27. "Whom are you looking for?": "Nobody outside your choice is ever shown to you, and you are never shown to anyone who did not pick you." Women, Men, Non-binary people, or Anyone. Below, the "Sensitive answers" card: its summary, which says that whom one seeks is used for matching and for statistics shown in the app in which no person can be identified, and is not shown to other users; its version as a link to the full text; in Finnish the line that the English text counts; and the switch "I consent to Kuutti ry storing whom I seek". "Step 3 of 8". When the app carries an older wording of the consent than the API, the card says "This text has a newer version than the one built into this app. Update the app to continue." in place of the switch, and the step cannot be passed. After a new wording, the choice starts from the answer stored before.
 28. The person chooses one or more, and turns the switch on.
 29. The API records the sensitive-answers consent as soon as the switch is turned on, and the switch stays on here. Withdrawing it is in Settings, "Store my sensitive answers": it takes whom the person seeks with it, so this step is asked again, while the age window stays.
 30. The person chooses "Continue", which opens only with a choice and the consent. Whom they seek is saved now, on leaving this screen.
@@ -194,7 +194,7 @@ flowchart TB
     s47["What the card will show of the home: the town or the area, or the one place there is"]
     s49["Two photos of you, step 7: the grid, Add a photo and Continue"]
     s52["A few words, step 8"]
-    s55(["Home: see People on Kuutti"])
+    s55(["Home: see People on Kumpa"])
     s57(["Opened again later: home asks where onboarding stands, part 1, step 2"])
   end
   subgraph api["The API"]
@@ -232,12 +232,12 @@ flowchart TB
 38. "What ages?", with the lowest and highest ages Kuutti allows. Two steppers, "Youngest" and "Oldest", one above the other, start a few years either side of the person's own age, inside those bounds. "Step 5 of 8". The step is asked only while no window is stored.
 39. The person moves either end with its buttons ("Youngest, one year older", "Oldest, one year younger" and their pairs): the youngest never passes the oldest and neither leaves the bounds. Then "Continue".
 40. The API stores the age window, a filter that holds both ways.
-41. "Where do you live?": "Your postal code tells Kuutti how far people are. Others see a town or your area by name, never the digits." A field, "Postal code", which never opens the keyboard by itself, and under it the areas whose codes start with the digits typed, each a button with its code and its name. "Step 6 of 8". The digits stay on the phone until an area is tapped.
+41. "Where do you live?": "Your postal code tells Kumpa how far people are. Others see a town or your area by name, never the digits." A field, "Postal code", which never opens the keyboard by itself, and under it the areas whose codes start with the digits typed, each a button with its code and its name. "Step 6 of 8". The digits stay on the phone until an area is tapped.
 42. The person types the postal code and taps their area. Digits that no code in the phone's own list starts with are said at once, "We can't find that code. Choose the nearest area from the list.", with the nearest areas to choose from.
 43. Does the API's list know the code? A phone with an older list can still offer one the API no longer has. No: 44. Yes: 45.
 44. "We can't find that code. Choose the nearest area from the list.", and nothing is kept: 42.
 45. The API keeps as the home a place of at least `home_min_inhabitants` people: the postal area if it has that many, else its municipality, else the nearest municipality that has them. The digits of an area too small to keep are looked up and gone, and the answer names places, never digits. The home can be changed later in the profile: see [Profile](profile.md).
-46. On the read after the home, the last of them, the API turns the account active: the gender, whom one seeks with its consent, the age window, the home, and the terms and the privacy summary in their current wording are all there. Nothing on the screen changes, and home still sends the person back while anything is open; matching opens for a person only once nothing is open, their photos are approved and an admin has opened it: see [People on Kuutti](people-on-kuutti.md).
+46. On the read after the home, the last of them, the API turns the account active: the gender, whom one seeks with its consent, the age window, the home, and the terms and the privacy summary in their current wording are all there. Nothing on the screen changes, and home still sends the person back while anything is open; matching opens for a person only once nothing is open, their photos are approved and an admin has opened it: see [People on Kumpa](people-on-kuutti.md).
 47. What the card will show of the home, still step 6. Where an area is kept, "What should your card show?" with the town and the area as two buttons, the town chosen; otherwise "On your card:" and the one place there is. The town is the kept place's own municipality when it has at least `home_town_min_inhabitants` people, else the nearest one that has.
 48. The person chooses the town or the area where there is a choice, which is saved at once, and "Continue".
 49. The photos step, "Step 7 of 8", is the photos screen itself: "Two photos of you", "Profiles with a face photo get seen.", the grid of photos, "Add a photo" and "Continue", its only way on.
@@ -246,7 +246,7 @@ flowchart TB
 52. "A few words": "Answer two questions, write a bio of at least {min, number} characters, or pick a ready line.", where min is the length the code holds for a bio. "Step 8 of 8".
 53. The person writes a bio, picks a ready line or answers prompts, and chooses "Save and continue", which opens only once the words count as the profile's completeness reads them. A save the API refuses is said in the profile's own words.
 54. The API saves the words on the profile. Nothing is open now.
-55. Home follows, with nothing between: see [People on Kuutti](people-on-kuutti.md). The optional questions and the rest of the profile wait there: see [Profile](profile.md).
+55. Home follows, with nothing between: see [People on Kumpa](people-on-kuutti.md). The optional questions and the rest of the profile wait there: see [Profile](profile.md).
 56. The person closes the app, or leaves it, midway.
 57. When they open it again, home asks where onboarding stands (step 2) and onboarding opens at the first open step; nothing answered is asked again. Each answer was stored with its Continue, the sensitive-answers consent with its switch, the home with its tap. What lived only on the screen is gone: a choice not yet continued, the steppers (they start around the person's age again), the label's offer after non-binary (not offered again here), the choice of what the card shows of the home (the town stays, and the profile still offers the area), and the friend's code (offered again only while the name is still open).
 
@@ -284,3 +284,4 @@ flowchart TB
 - 2026-11-01 (#542, PR #561): after a new wording of the consent, whom one seeks starts from the answer stored before and the step stays until Continue; whom one seeks, the ages and the gender can be changed later in the profile.
 - 2026-11-05 (#581, PR #597): each step's question is its one heading and "Welcome to Kuutti" goes; the intents are rows the width of the screen; the photos step is the photos screen itself, ended by its own Continue, where Add photos and Done went; "All set." goes and home follows.
 - 2026-11-16 (#208): the welcome step and the sensitive answers carry the texts in force, version 2026-11-1, and everybody is asked again; the line about the text that counts is shown in Finnish alone and says that the English text is the one.
+- 2026-11-16 (#700, PR #701): the home step names the app Kumpa, and the consent to store whom one seeks is given to Kuutti ry.

@@ -600,7 +600,7 @@ describe("SeekScreen", () => {
     await show(<SeekScreen />);
     await waitFor(() => expect(screen.getByText(FAILED_TO_LOAD)).toBeTruthy());
     // Why, in words: the API answered 500.
-    expect(screen.getByText("Kuutti's server had a problem. Try again in a moment.")).toBeTruthy();
+    expect(screen.getByText("Kumpa's server had a problem. Try again in a moment.")).toBeTruthy();
     expect(screen.queryByRole("button", { name: WHOM })).toBeNull();
     const found = pressables(screen.toJSON() as HostNode);
     expect(found.flatMap((node) => a11yProblems(node))).toEqual([]);

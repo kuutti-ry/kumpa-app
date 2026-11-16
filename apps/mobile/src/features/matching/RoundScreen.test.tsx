@@ -887,13 +887,13 @@ describe("the queue", () => {
   );
 
   it.each([
-    ["the API failed", () => refusal("internal", 500), "Kuutti's server had a problem."],
+    ["the API failed", () => refusal("internal", 500), "Kumpa's server had a problem."],
     [
       "the network",
       () => {
         throw new TypeError("Network request failed");
       },
-      "Kuutti could not be reached.",
+      "Kumpa could not be reached.",
     ],
   ])(
     "says why the queue did not load (%s), and reads it again on Try again",
@@ -1352,13 +1352,13 @@ describe("reading on past the last card (ADR-062 §1)", () => {
   });
 
   it.each([
-    ["the API failed", () => refusal("internal", 500), "Kuutti's server had a problem."],
+    ["the API failed", () => refusal("internal", 500), "Kumpa's server had a problem."],
     [
       "the network",
       () => {
         throw new TypeError("Network request failed");
       },
-      "Kuutti could not be reached.",
+      "Kumpa could not be reached.",
     ],
   ])(
     "says a read that failed (%s), asks again on Try again, and keeps Undo's card",
@@ -1399,7 +1399,7 @@ describe("reading on past the last card (ADR-062 §1)", () => {
   );
 
   it.each([
-    ["ios", ["Loading…"], ["Kuutti's server had a problem. Try again in a moment."]],
+    ["ios", ["Loading…"], ["Kumpa's server had a problem. Try again in a moment."]],
     ["android", [], []],
   ] as const)(
     "says a read that failed aloud on %s, where the button the focus was on has gone",

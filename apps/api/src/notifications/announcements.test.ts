@@ -297,7 +297,7 @@ describe("announcements", () => {
     expect(pusher.sent()).toEqual([
       expect.objectContaining({
         to: aPhone,
-        body: "Tiedote Kuutilta",
+        body: "Kumpa-tiedote",
         data: { kind: "announcement" },
       }),
     ]);
@@ -367,16 +367,16 @@ describe("announcements", () => {
     const toA = mine.find((message) => message.to === "a@example.test");
     expect(toA).toEqual({
       to: "a@example.test",
-      subject: `Kuutti: ${DRAFT.en.title}`,
+      subject: `Kumpa: ${DRAFT.en.title}`,
       text: [
         DRAFT.en.title,
         DRAFT.en.body,
-        "You get this because you confirmed this address in the Kuutti app. Announcements can be turned off in Settings, under Notifications.",
+        "You get this because you confirmed this address in the Kumpa app. Announcements can be turned off in Settings, under Notifications.",
         "Kuutti ry",
       ].join("\n\n"),
     });
     const toD = mine.find((message) => message.to === "d@example.test");
-    expect(toD?.subject).toBe(`Kuutti: ${DRAFT.fi.title}`);
+    expect(toD?.subject).toBe(`Kumpa: ${DRAFT.fi.title}`);
     expect(toD?.text.startsWith(`${DRAFT.fi.title}\n\n${DRAFT.fi.body}\n\nSaat tämän`)).toBe(true);
     for (const message of mine) expect(message.text).not.toMatch(/https?:|www\./);
     // No address and no words of it in a log line.
