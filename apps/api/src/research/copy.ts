@@ -170,9 +170,9 @@ export async function writeResearchCopy(deps: CopyDeps): Promise<CopyRun> {
 
     const have = new Set(await deps.store.days(addDays(first, -WINDOW_DAYS)));
     // No night of ours writes a day before it has closed, so such a file was
-    // put there by someone else (a preview shares staging's instance role,
-    // ADR-029 §12). Read as prior, its pseudonyms would open cells under k on
-    // the days after it: nothing is released until somebody has looked.
+    // put there by someone else (ADR-029 §12). Read as prior, its pseudonyms
+    // would open cells under k on the days after it: nothing is released
+    // until somebody has looked.
     const ahead = [...have].filter((day) => day > last).length;
     if (ahead > 0) throw new Error(`research copy: ${ahead} file(s) of a day not yet closed`);
     // Each prior day's release is read once per run; a day this run wrote is known already.

@@ -58,10 +58,7 @@ resource "aws_route53_zone" "main" {
 # the boxes). An issuer that refuses a request against it may report it to
 # the mailbox (iodef). No issuewild, so issue governs wildcards too (RFC
 # 8659): Amplify's ACM certificate for *.kuutti.app renews under the
-# amazon.com entries, and the previews' *.preview.api.staging has its own CAA
-# in envs/staging/dns.tf, which admits Let's Encrypt by DNS-01 only, and
-# ACM for the distribution's certificate (ADR-053, #198); an issuewild here
-# would have to admit ACM as well.
+# amazon.com entries; an issuewild here would have to admit ACM as well.
 # ---------------------------------------------------------------------------
 
 resource "aws_route53_record" "caa" {

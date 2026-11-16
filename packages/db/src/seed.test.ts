@@ -164,7 +164,7 @@ describe("seed", () => {
         // A reason is the panel's: neither the seed's rows nor the migrations' carry one.
         expect(await withReason()).toEqual([]);
 
-        // Two changes from the panel, then a preview's next boot seeds again.
+        // Two changes from the panel, then the seed runs again.
         await pool.query(
           `INSERT INTO matching_config (version, key, value, valid_from, created_by, reason) VALUES
              (2, 'deal_breakers_max', '5'::jsonb, '2026-10-16T09:00:00Z', 'admin', 'Fewer at first'),
@@ -209,7 +209,7 @@ describe("seed", () => {
         await seed(pool);
         expect(await versions()).toEqual([born, opened]);
 
-        // An admin closes it; a preview's next boot seeds again.
+        // An admin closes it; the seed runs again.
         const closed = { version: 3, value: false, created_by: "an admin" };
         await pool.query(
           `INSERT INTO matching_config (version, key, value, created_by)

@@ -20,7 +20,7 @@ Legal texts (terms, privacy, the consents) are not reviewed this way. The Englis
 
 ## Seeing a text where it appears
 
-Every pull request has a comment with a preview link to the app on the web. Open it, tap the settings button (the cog), and choose **Suomi**. Some screens need a sign-in; the preview uses a test bank login, and the developer can walk you to a screen. The column *where it shows* (or the description in the file) says where each text appears.
+The app on staging shows every language. Install it as the team does (TestFlight on an iPhone, Google Play's internal testing on Android; the developer invites you), tap the settings button (the cog), and choose **Suomi**. Some screens need a sign-in; staging uses the bank's test login, and the developer can walk you to a screen. Staging has the texts of what has merged: a text still in a pull request the developer shows you on their own machine or in a screenshot. The column *where it shows* (or the description in the file) says where each text appears.
 
 ## Way 1: suggestions on the pull request (new texts)
 
@@ -54,4 +54,4 @@ For the texts written before you joined, a sheet is quicker.
 
 ## Swedish
 
-Swedish is filled by machine and is not a released language until a native reviewer of Finland Swedish joins; the same two ways apply, with **Svenska** in the preview and a `sv` sheet.
+Swedish is filled by machine and is not a released language until a native reviewer of Finland Swedish joins; the same two ways apply, with **Svenska** in the app on staging and a `sv` sheet.

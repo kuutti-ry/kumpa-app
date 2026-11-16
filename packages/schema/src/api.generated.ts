@@ -77,7 +77,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Redirect to the broker; where none is configured (a pull-request preview, ADR-014 §1), to kuutti://auth?error=auth_unavailable; when this address has sent too many requests or started too many sign-ins, or too many are under way at once (ADR-026), to kuutti://auth?error=auth_rate_limited with Retry-After. */
+                /** @description Redirect to the broker; when this address has sent too many requests or started too many sign-ins, or too many are under way at once (ADR-026), to kuutti://auth?error=auth_rate_limited with Retry-After. */
                 302: {
                     headers: {
                         [name: string]: unknown;
@@ -93,7 +93,7 @@ export interface paths {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description No identification broker is configured (anywhere but a preview). */
+                /** @description No identification broker is configured. */
                 503: {
                     headers: {
                         [name: string]: unknown;

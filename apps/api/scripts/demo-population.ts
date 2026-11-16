@@ -14,7 +14,7 @@
  * day and moves in steps, which is right among people and would leave a demo
  * showing yesterday's people. What may be said of them is decided as ever.
  *
- * It goes ahead only in development, test and preview, and on staging from
+ * It goes ahead only in development and test, and on staging from
  * inside the API's container (`node dist/demo-population.js --env staging`,
  * ADR-018: the database is read from the environment's own parameter store,
  * never given); it understands every argument or refuses, and asks the

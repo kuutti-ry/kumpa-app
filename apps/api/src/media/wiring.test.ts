@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { type Config, parseConfig } from "../lib/config.ts";
 import { testConfig } from "../test/harness.ts";
 import { testSigningKeys } from "../test/media.ts";
 import { createMediaDeps } from "./wiring.ts";
@@ -78,26 +77,6 @@ describe("media wiring", () => {
     expect((thrown as Error).message).toMatch(/not a private key/);
     expect((thrown as Error).message).not.toContain("PUBLIC KEY");
   });
-
-  it("a pull-request preview has no media even though it reads staging's parameters", () => {
-    // What a preview sees after loadConfig merged /kuutti/staging/*: the
-    // bucket, the URL base and the signing key. It must not hold or use them.
-    const config = parseConfig({
-      APP_ENV: "preview",
-      PR_NUMBER: "48",
-      DB_HOST: "db.internal",
-      DB_NAME: "kuutti",
-      DB_PREVIEW_USER: "kuutti_preview",
-      DB_PREVIEW_PASSWORD: "preview-secret",
-      ...cloudfront,
-    });
-    expect(config.MEDIA_URL_BASE).toBeUndefined();
-    expect(config.CLOUDFRONT_KEY_PAIR_ID).toBeUndefined();
-    expect(config.CLOUDFRONT_SIGNING_KEY).toBeUndefined();
-    const { deps, setup } = createMediaDeps(config);
-    expect(deps).toBeUndefined();
-    expect(setup.mode).toBe("off");
-  });
 });
 
 describe("a message photo no check saw (#350)", () => {
@@ -112,12 +91,6 @@ describe("a message photo no check saw (#350)", () => {
         ADMIN_APP_URL: "https://admin.kuutti.app",
         ...cloudfront,
       }),
-    // parseConfig keeps a preview off CloudFront (the test above); should the
-    // values reach the wiring anyway, a preview is still no developer's machine.
-    preview: (): Config => ({
-      ...testConfig({ APP_ENV: "staging", NODE_ENV: "production", ...cloudfront }),
-      APP_ENV: "preview",
-    }),
   };
 
   it.each(Object.keys(deployed) as Array<keyof typeof deployed>)(

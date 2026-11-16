@@ -16,7 +16,7 @@ const flags = args.flatMap((arg, index) =>
   arg === "--env" ? [args[index + 1]] : arg.startsWith("--env=") ? [arg.slice(6)] : [],
 );
 if (flags.includes("production") || process.env.APP_ENV === "production") {
-  console.error("refusing to seed production: previews and local databases only (TD-19)");
+  console.error("refusing to seed production: local databases only");
   process.exit(2);
 }
 let flag: string | undefined;
@@ -37,8 +37,8 @@ if (!url) {
 }
 const pool = createPool({ connectionString: url, max: 1, applicationName: "kuutti-seed" });
 try {
-  // This CLI has no staging-container guard (ADR-018): only a preview may target RDS.
-  assertDemoTarget(await describeTarget(pool), env === "preview" ? "preview" : "development");
+  // This CLI has no staging-container guard (ADR-018): it never targets RDS.
+  assertDemoTarget(await describeTarget(pool), "development");
   const result = await seed(pool);
   console.log(JSON.stringify({ msg: "seed", env, ...result }));
 } catch (error) {

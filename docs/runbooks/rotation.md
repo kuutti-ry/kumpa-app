@@ -28,7 +28,6 @@ There is no rotation calendar. Rotate when a value may have been seen by someone
 | secret | where it lives | read by | who rotates | section |
 |---|---|---|---|---|
 | `/kuutti/<env>/db-app-password` | SSM SecureString | the API at boot; migrations | maintainer (AWS admin) | 1 |
-| `/kuutti/staging/db-preview-password` | SSM SecureString | preview APIs at boot; the `kuutti-staging-preview-database` Run Command document | maintainer | 2 |
 | RDS master password (`kuutti_admin`) | Secrets Manager, held by AWS | `db-app-role.sh`, `db-audit-owner.sh` when run | AWS | 3 |
 | `/kuutti/<env>/telia-signing-key`, `/kuutti/<env>/telia-encryption-key` | SSM SecureString; the offline medium; staging also `~/kuutti-staging-keys` on the laptop | the API at boot | maintainer, as Telia's technical contact | 4 |
 | Telia's own signing keys | Telia's JWKS | the API, from discovery | Telia | 5 |
@@ -36,8 +35,8 @@ There is no rotation calendar. Rotate when a value may have been seen by someone
 | `/kuutti/<env>/cloudfront-signing-key` | SSM SecureString; the offline medium; the public half in `infra/envs/<env>/` | the API at boot | maintainer | 7 |
 | `/kuutti/<env>/origin-secret`, and the key `origin-secret` of the store `kuutti-<env>-origin-proof` | SSM SecureString; a CloudFront key value store; the offline medium | the API at boot; the distribution's CloudFront Function on every request | maintainer | 17 |
 | session and admin-session tokens, sign-in codes | hashes in the database | the API | nothing to rotate | 8 |
-| `DOKPLOY_TOKEN` (two keys), the Dokploy admin login | GitHub environments; Dokploy | `deploy.yml`, `preview.yml`, `preview-cleanup.yml` | the Dokploy admin and a repository admin | 9 |
-| `EXPO_TOKEN` | GitHub environments `staging`, `prod`, `preview`, `preview-cleanup` | `deploy.yml`, `eas-build.yml`, `preview.yml`, `preview-cleanup.yml` | an Expo owner or Admin and a repository admin | 10 |
+| `DOKPLOY_TOKEN`, the Dokploy admin login | GitHub environments; Dokploy | `deploy.yml` | the Dokploy admin and a repository admin | 9 |
+| `EXPO_TOKEN` | GitHub environments `staging`, `prod`; `preview-cleanup` until the maintainer deletes it (ADR-070, Open, 5) | `deploy.yml`, `eas-build.yml` | an Expo owner or Admin and a repository admin | 10 |
 | `SENTRY_AUTH_TOKEN`; the two DSNs | GitHub environments `staging`, `prod`; EAS environments `preview`, `production`; SSM `sentry-dsn` (String) | `deploy.yml`, EAS builds; the API and the app | the Sentry owner and a repository admin | 11 |
 | GitHub variables, AWS access from CI | repository and environment variables; OIDC roles | the workflows | an owner | 12 |
 | `FONTS_TOKEN`, read-only on `kuutti-ry/kumpa-app-fonts` alone | EAS environments `preview`, `production`, visibility secret. Never GitHub. The website's Amplify app holds a token of its own, rotated in `kumpa-app-site` (its decision 18) | EAS builds, `eas-build-pre-install` (`scripts/fonts.ts`, ADR-052) | the maintainer | 13 |
@@ -85,7 +84,7 @@ Restart only after `role and parameter changed` is printed, then at once, and cl
 
 **Check.** `/health` answers `"db":"ok"` after the restart. From the box, the check of `infra/README.md` (After the first apply, step 4) connects as `kuutti_app` with the parameter's value and prints `1`.
 
-**What breaks meanwhile.** From the `ALTER ROLE` until the new process is up, the running API keeps the connections it has open but cannot open new ones. The pool sets no idle timeout (`packages/db/src/pool.ts`), so pg's default closes idle connections within seconds, and requests then fail with 5xx. `/health` turns `degraded`; after two minutes `kuutti-<env>-api-unreachable` fires and five 5xx in five minutes fire `kuutti-<env>-api-5xx` (`alerts.md`). Both clear after the restart. A process that boots between the two commands (a merge's deploy) fails its migrations and its `/health`. Previews are not affected: they connect as `kuutti_preview`. Anyone holding a tunnel `DATABASE_URL` with the old password (the moderator commands of `infra/README.md`, Photo moderation) reads the parameter again.
+**What breaks meanwhile.** From the `ALTER ROLE` until the new process is up, the running API keeps the connections it has open but cannot open new ones. The pool sets no idle timeout (`packages/db/src/pool.ts`), so pg's default closes idle connections within seconds, and requests then fail with 5xx. `/health` turns `degraded`; after two minutes `kuutti-<env>-api-unreachable` fires and five 5xx in five minutes fire `kuutti-<env>-api-5xx` (`alerts.md`). Both clear after the restart. A process that boots between the two commands (a merge's deploy) fails its migrations and its `/health`. Anyone holding a tunnel `DATABASE_URL` with the old password (the moderator commands of `infra/README.md`, Photo moderation) reads the parameter again.
 
 **If the `ALTER ROLE` succeeded and the `put-parameter` failed** (psql printed nothing, then an AWS error): the new value is lost with the `unset`. Run the block again from `new=` with a fresh value; nothing restarts in between.
 
@@ -102,13 +101,9 @@ unset old
 
 The `--query` of the first line prints the version numbers and dates only, never a value.
 
-## 2. Database preview password (staging)
+## 2. Database preview password: gone
 
-`kuutti_preview` owns every `kuutti_pr_<n>` and cannot connect to `kuutti` (#9). Same steps as section 1 on staging, with `ALTER ROLE kuutti_preview` and `/kuutti/staging/db-preview-password`.
-
-**Restart:** each open preview (`api-pr-<n>` in Dokploy's `previews` project) reads the password at boot; a new push to its pull request redeploys it, or redeploy it from Dokploy. The `kuutti-staging-preview-database` document reads the parameter on every run, so `preview-cleanup.yml` needs nothing.
-
-**What breaks meanwhile:** open previews lose their database until they restart. Staging itself does not notice.
+The previews went on 2026-11-16 (ADR-070), and with them the role `kuutti_preview` and `/kuutti/staging/db-preview-password`, which the maintainer drops and deletes (ADR-070, Open, 3). The number stays, so that the other sections keep theirs.
 
 ## 3. Database master password
 
@@ -145,7 +140,7 @@ Two RSA pairs per environment, `sig` and `enc` (`docs/vendors/telia.md`). The AP
 
 **Check.** The boot line `bank identification` lists `keys` with the two new kids, the same the script printed. Then one bank login end to end: on staging a Telia test person (`docs/vendors/telia.md`); on production a member of the team.
 
-**What breaks meanwhile.** Logins only. If Telia encrypts to the new `enc` key while the API still holds the old one, or the other way round, every login fails at the token exchange (`no applicable decryption key selected`, `docs/vendors/telia.md`). If Telia no longer accepts the old `sig` key, the request object is refused. People already signed in are not affected: sessions do not touch Telia. A malformed key fails the boot on staging and production (`apps/api/src/boot.ts`): the API stays down. Put the old file back with `--overwrite` and restart. Previews have no bank login and do not notice.
+**What breaks meanwhile.** Logins only. If Telia encrypts to the new `enc` key while the API still holds the old one, or the other way round, every login fails at the token exchange (`no applicable decryption key selected`, `docs/vendors/telia.md`). If Telia no longer accepts the old `sig` key, the request object is refused. People already signed in are not affected: sessions do not touch Telia. A malformed key fails the boot on staging and production (`apps/api/src/boot.ts`): the API stays down. Put the old file back with `--overwrite` and restart.
 
 ## 5. Telia's own keys
 
@@ -160,7 +155,7 @@ CLAUDE.md rule 2 and TD-1: the key is never rotated and never leaves SSM, except
 **If it leaks.** Do not rotate. Treat it as an incident (`incident.md`, #191) and work out what leaked with it.
 
 1. **What the key is worth.** Alone, nothing: it signs nobody in, and a login needs the bank. With the `hetu_hmac` column it is every member's identity code: the hetu has few possible values (a date of birth, a three-digit individual number and a check character), so whoever has both can try them all. The key is the lock that keeps the column from being a list of identity codes.
-2. **Where it could have come from.** SSM (`/kuutti/<env>/hetu-hmac-key`, readable by that environment's instance role and by AWS admins), the offline medium, production's sealed envelope, and on staging the laptop copy. On staging every preview runs pull-request code with the staging instance role, which can read every `/kuutti/staging/*` parameter (`infra/README.md`, Previews, Trust). `parseConfig` drops the key from a preview's memory, which does not stop code that asks SSM itself.
+2. **Where it could have come from.** SSM (`/kuutti/<env>/hetu-hmac-key`, readable by that environment's instance role and by AWS admins), the offline medium, production's sealed envelope, and on staging the laptop copy. Until 2026-11-16 a pull request's preview ran its code with the staging instance role, which can read every `/kuutti/staging/*` parameter (ADR-070).
 3. **Close that path.** A box that may be compromised is rebuilt (`infra/README.md`, Backups and rebuilding the box). Every other secret its role could read is rotated by the sections above.
 4. **Find out whether the database, a snapshot or a backup left too.** If it did not, the members' identity codes are still safe, and the database is now the only lock: keep it that way. If it did, the identity codes of every member are exposed. That is a personal data breach the association must handle; the notification duties are for the association's counsel (draft, not legal advice).
 5. A new key scheme would change rule 2 and TD-1. That is the maintainer's decision and an ADR, not a step of this page.
@@ -212,46 +207,41 @@ UPDATE admin_session SET revoked_at = now() WHERE revoked_at IS NULL;
 
 `logout_all` is the reason the app's own "log out everywhere" writes. Every device fails its next request and goes back to the bank login; staff sign in again on the panel. This is not a command anywhere else in the repository: run it only as part of an incident.
 
-## 9. Dokploy keys and the admin login
+## 9. Dokploy key and the admin login
 
-Two API keys, both `DOKPLOY_TOKEN`:
+One API key, `DOKPLOY_TOKEN`, the admin's, in the GitHub environments `staging` (and `prod`).
 
-| key | Dokploy user | GitHub environments |
-|---|---|---|
-| the deploy key | the admin | `staging` (and `prod`) |
-| the preview key | the member `ci-preview`, limited to the `previews` project | `preview`, `preview-cleanup` |
-
-**Steps.** In Dokploy (`https://dokploy.staging.kuutti.app`, prod `https://dokploy.kuutti.app`), signed in as that user, Settings, Profile: generate a new API key. Then, as a repository admin (`gh secret set` prompts for the value; never paste it into a command line):
+**Steps.** In Dokploy (`https://dokploy.staging.kuutti.app`, prod `https://dokploy.kuutti.app`), signed in as the admin, Settings, Profile: generate a new API key. Then, as a repository admin (`gh secret set` prompts for the value; never paste it into a command line):
 
 ```sh
 gh secret set DOKPLOY_TOKEN --env staging            # the admin's key
-gh secret set DOKPLOY_TOKEN --env preview            # ci-preview's key
-gh secret set DOKPLOY_TOKEN --env preview-cleanup    # the same ci-preview key
 ```
 
 Then delete the old key on the same Dokploy page.
 
-**Check.** The next deploy's step "Point the Dokploy application at the image and deploy" passes; the next pull request gets its preview; the next sweep of `preview-cleanup.yml` is green. For the preview key, repeat the check of `infra/README.md` (Previews, step 3): as the member, `application.one` on the staging application's id is refused.
+Until the maintainer deletes it (ADR-070, Open, 4), the member `ci-preview` has a key of its own, limited to the `previews` project, in the environment `preview-cleanup`. After a leak, delete that key too, on the member's Settings, Profile page; nothing on `main` uses it.
 
-**What breaks meanwhile:** if the old key is deleted before the new one is set, deploys and previews fail at that step. The sweep retries on its next run.
+**Check.** The next deploy's step "Point the Dokploy application at the image and deploy" passes.
+
+**What breaks meanwhile:** if the old key is deleted before the new one is set, deploys fail at that step.
 
 The Dokploy admin password and its two-factor authentication are changed in the same Settings, Profile page. Store them in `Kuutti / Dokploy <env>` (`custody.md`).
 
 ## 10. Expo robot token
 
-`EXPO_TOKEN` is the authority to publish updates to every channel, `production` included, because updates are not code-signed (ADR-004). It exists in the environments `staging`, `prod`, `preview` and `preview-cleanup`, never at repository level (security checklist).
+`EXPO_TOKEN` is the authority to publish updates to every channel, `production` included, because updates are not code-signed (ADR-004). It exists in the environments `staging` and `prod`, and in `preview-cleanup` until the maintainer deletes it (ADR-070, Open, 5), never at repository level (security checklist). Revoking the old token at Expo ends those copies too.
 
 **Steps.** On expo.dev, as the organisation's owner or Admin, create a new access token for the robot user (Developer role; `apps/mobile/README.md`, Setting up EAS). Then:
 
 ```sh
-for e in staging prod preview preview-cleanup; do gh secret set EXPO_TOKEN --env "$e"; done   # prompts four times
+for e in staging prod; do gh secret set EXPO_TOKEN --env "$e"; done   # prompts twice
 ```
 
 Then revoke the old token on expo.dev.
 
-**Check.** `gh secret list --env <env>` shows the new date in all four. The next merge's deploy publishes its update to `staging`; the next pull request's web preview deploys.
+**Check.** `gh secret list --env <env>` shows the new date in both. The next merge's deploy publishes its update to `staging`.
 
-**What breaks meanwhile:** the EAS steps of `deploy.yml` (after the API is already deployed), `eas-build.yml`, the preview lanes and the sweep's EAS removals fail until the new token is set. The sweep retries.
+**What breaks meanwhile:** the EAS steps of `deploy.yml` (after the API is already deployed) and `eas-build.yml` fail until the new token is set.
 
 **If it leaked:** revoke first, before setting the new one. Then look at what was published to the `staging` and `production` channels since the leak (the project's updates on expo.dev). Roll a bad one back as ADR-004 says: republish the previous commit, or `eas update:republish`. Channel edits stay the maintainer's. The token also reached Google Play through EAS, which uses the Play key for any holder and hands the upload key to every cloud build (ADR-057 §3): in Play Console, read each testing track's history; halt on a closed or open track what nobody started, and replace an internal release, which cannot be halted, with a staging build from a known-good `main`. Then replace the Play key and reset the upload key (section 14). It also reached App Store Connect through EAS (ADR-063 §3): read the app's TestFlight builds, expire any nobody started, and replace the App Store Connect key (section 15). Every cloud build is also handed the team's distribution certificate, so replace that too (section 16).
 
@@ -275,7 +265,7 @@ Personal Sentry tokens made for settings work are revoked when the work is done 
 ## 12. GitHub: secrets, variables, AWS access
 
 - **Environment secrets** are the three above: `DOKPLOY_TOKEN`, `EXPO_TOKEN`, `SENTRY_AUTH_TOKEN`. `FONTS_TOKEN` is EAS's alone (13). The workflows read no other secret and none at repository or organisation level. Setting one needs admin rights on the repository (the organisation's owners).
-- **Variables** are not secrets: role ARNs, the state bucket, URLs, ids and switches (`AWS_REGION`, `TF_STATE_BUCKET`, `AWS_PLAN_ROLE_ARN`, `AWS_APPLY_ROLE_ARN`, `AWS_PERMISSIONS_BOUNDARY_ARN`, `AWS_EXPORT_ROLE_ARN`, `ALERT_EMAIL`, `STAGING_ENABLED`, `PREVIEWS_ENABLED`, `EAS_ENABLED`, `EAS_PLATFORMS`, `EAS_BUILDS_ISSUE`, `DOKPLOY_URL`, `DOKPLOY_APPLICATION_ID`, `DOKPLOY_ENVIRONMENT_ID`, `API_URL`, `PREVIEW_API_DOMAIN`, `EAS_HOSTING_SUBDOMAIN`, `ADMIN_URL`, `ADMIN_BUCKET`, `ADMIN_DISTRIBUTION_ID`, `ADMIN_API_URL`). Nothing to rotate; a wrong one is set again with `gh variable set` from the commands in `infra/README.md`.
+- **Variables** are not secrets: role ARNs, the state bucket, URLs, ids and switches (`AWS_REGION`, `TF_STATE_BUCKET`, `AWS_PLAN_ROLE_ARN`, `AWS_APPLY_ROLE_ARN`, `AWS_PERMISSIONS_BOUNDARY_ARN`, `AWS_EXPORT_ROLE_ARN`, `ALERT_EMAIL`, `STAGING_ENABLED`, `EAS_ENABLED`, `EAS_PLATFORMS`, `EAS_BUILDS_ISSUE`, `DOKPLOY_URL`, `DOKPLOY_APPLICATION_ID`, `DOKPLOY_ENVIRONMENT_ID`, `API_URL`, `ADMIN_URL`, `ADMIN_BUCKET`, `ADMIN_DISTRIBUTION_ID`, `ADMIN_API_URL`). Nothing to rotate; a wrong one is set again with `gh variable set` from the commands in `infra/README.md`.
 - **AWS access from CI** is OIDC only: the roles trust this repository's numeric ids and an environment or branch, and no AWS key exists anywhere in GitHub (`infra/README.md`, After bootstrap). Nothing to rotate. `GITHUB_TOKEN` lives for one run.
 - **Owners' own tokens and second factors** follow `SECURITY.md`, Maintainer accounts.
 
@@ -348,14 +338,14 @@ The value Kuutti's distribution sends to the box as `x-kuutti-origin`, which the
 new=$(openssl rand -base64 32 | tr '+/' '-_' | tr -d '=\n')
 old=$(aws ssm get-parameter --name /kuutti/<env>/origin-secret --with-decryption --query Parameter.Value --output text | awk '{print $NF}')
 aws ssm put-parameter --name /kuutti/<env>/origin-secret --type SecureString --overwrite --value "$old $new"
-# Redeploy the API (step "Restart" above), and on staging every open preview, as section 2 does;
+# Redeploy the API (step "Restart" above);
 # /health still says "originProof":"valid" with the old value.
 arn=$(aws cloudfront describe-key-value-store --name kuutti-<env>-origin-proof --query KeyValueStore.ARN --output text)
 etag=$(aws cloudfront-keyvaluestore describe-key-value-store --kvs-arn "$arn" --query ETag --output text)
 aws cloudfront-keyvaluestore put-key --kvs-arn "$arn" --key origin-secret --value "$new" --if-match "$etag"
 # Within a minute or so every edge sends the new value. Then:
 aws ssm put-parameter --name /kuutti/<env>/origin-secret --type SecureString --overwrite --value "$new"
-# Redeploy the API again, and on staging the open previews again.
+# Redeploy the API again.
 unset new old
 ```
 
@@ -367,20 +357,19 @@ V=$(openssl rand -base64 32 | tr '+/' '-_' | tr -d '=\n') && aws ssm put-paramet
 
 Then redeploy. Should SSM take the value and the store refuse it, do not run it again (SSM refuses a second first write): put SSM's value into the store with the `put-key` above, its `--value` read by `aws ssm get-parameter --name /kuutti/<env>/origin-secret --with-decryption --query Parameter.Value --output text`.
 
-**Check.** `curl -s https://api.<env>.kuutti.app/health` (production `https://api.kuutti.app/health`) says `"originProof":"valid"` after each step. `wrong` means the store and SSM disagree. `missing` means the function sent nothing: the store has no key, the function is not attached, or its read failed. A preview answers for itself at its own address.
+**Check.** `curl -s https://api.<env>.kuutti.app/health` (production `https://api.kuutti.app/health`) says `"originProof":"valid"` after each step. `wrong` means the store and SSM disagree. `missing` means the function sent nothing: the store has no key, the function is not attached, or its read failed.
 
 **What breaks meanwhile:** nothing, if the steps keep their order. If the API is left in `cloudfront` mode with a value the store no longer sends, every request has no address, and they share one bucket until the two agree again.
 
-**If it leaked:** anyone holding it can forge a viewer address through a CloudFront distribution of their own. Rotate at once. In `traefik` mode the value proves nothing to the limiter, so a leak has no effect where that mode holds, production before its cutover among them. On staging the previews can read it (preview code holds the instance role), which is ADR-004 §3's trust.
+**If it leaked:** anyone holding it can forge a viewer address through a CloudFront distribution of their own. Rotate at once. In `traefik` mode the value proves nothing to the limiter, so a leak has no effect where that mode holds, production before its cutover among them.
 
 ## When someone with write access leaves
 
-Write access is staging-level trust: a pull request's preview runs its code on the staging box with the staging instance role and the `preview` environment's tokens (`infra/README.md`, Previews, Trust; ADR-004 §3). When a person with write leaves the team, after their access is removed:
+Write access lets a person start `main`'s workflows by hand, `eas-build.yml` among them, and so use what they hold; until 2026-11-16 it also let a pull request's preview run its code on the staging box with the staging instance role and the `preview` environment's tokens (ADR-004 §3, ADR-070). When a person with write leaves the team, after their access is removed:
 
-- `EXPO_TOKEN` in all four environments (section 10);
+- `EXPO_TOKEN` in both environments (section 10);
 - `FONTS_TOKEN` in the EAS environments `preview` and `production` (section 13): anyone with write access could start a build that holds it;
-- the `ci-preview` Dokploy key (section 9);
-- on staging, what the role could read: `db-app-password` (1), `db-preview-password` (2), the Telia keys (4), the CloudFront key (7), the origin secret (17). The staging HMAC key is section 6's staging paragraph.
+- if they had write before 2026-11-16, on staging what the role could read: `db-app-password` (1), the Telia keys (4), the CloudFront key (7), the origin secret (17). The staging HMAC key is section 6's staging paragraph.
 
 An organisation owner who leaves also had admin rights: add the deploy key (9) and the Sentry token (11).
 

@@ -336,53 +336,6 @@ resource "aws_iam_role_policy" "ci_plan_deny_data" {
   policy = data.aws_iam_policy_document.ci_plan_deny_data.json
 }
 
-# Pull-request previews (#9): preview-cleanup.yml drops kuutti_pr_<n> on the
-# staging box through the one Run Command document envs/staging declares
-# (modules/compute). The plan role, assumable from any pull request, may send
-# exactly that document to exactly that box and nothing else; the document
-# validates its one parameter, so the most a pull request can do is drop
-# another pull request's preview database. Both halves are needed: SendCommand
-# is authorised against the document and against the instance.
-data "aws_iam_policy_document" "ci_plan_preview_cleanup" {
-  statement {
-    sid       = "PreviewDatabaseDocument"
-    effect    = "Allow"
-    actions   = ["ssm:SendCommand"]
-    resources = ["arn:aws:ssm:${var.region}:${local.account_id}:document/${var.project}-staging-preview-database"]
-  }
-
-  statement {
-    sid       = "StagingBoxOnly"
-    effect    = "Allow"
-    actions   = ["ssm:SendCommand"]
-    resources = ["arn:aws:ec2:${var.region}:${local.account_id}:instance/*"]
-
-    condition {
-      test     = "StringEquals"
-      variable = "ssm:resourceTag/Name"
-      values   = ["${var.project}-staging"]
-    }
-  }
-}
-
-# The moderation panel's previews (#313, ADR-025 §6-§8): preview.yml writes a
-# pull request's build under pr-<n>/ of staging's panel bucket (modules/admin),
-# and preview-cleanup.yml removes it, both from jobs without an environment and
-# so as this role; the bucket's root is kuutti-ci-apply's, from the staging
-# environment. Listing comes with ReadOnlyAccess and reading objects stays
-# denied (ci_plan_deny_data), so the most a pull request can do is replace or
-# remove another pull request's panel preview, which runs on the staging
-# panel's origin just as its own preview does. The bucket is named by the
-# module's convention, as the document above is by compute's.
-data "aws_iam_policy_document" "ci_plan_admin_previews" {
-  statement {
-    sid       = "AdminPreviewObjects"
-    effect    = "Allow"
-    actions   = ["s3:PutObject", "s3:DeleteObject"]
-    resources = ["arn:aws:s3:::${var.project}-admin-staging-${local.account_id}/pr-*"]
-  }
-}
-
 # The weekly export of what exists only on GitHub (#16 D.2, export.yml) has a
 # role of its own. The plan role is assumable from any pull request, and a
 # pull request that could write under github-export/ could replace the bundle
@@ -448,26 +401,13 @@ resource "aws_iam_role_policy" "ci_export" {
   policy = data.aws_iam_policy_document.ci_export.json
 }
 
-resource "aws_iam_role_policy" "ci_plan_preview_cleanup" {
-  name   = "preview-cleanup"
-  role   = aws_iam_role.ci_plan.id
-  policy = data.aws_iam_policy_document.ci_plan_preview_cleanup.json
-}
-
-resource "aws_iam_role_policy" "ci_plan_admin_previews" {
-  name   = "admin-previews"
-  role   = aws_iam_role.ci_plan.id
-  policy = data.aws_iam_policy_document.ci_plan_admin_previews.json
-}
-
 # The demo's reset (#613, ADR-018 §8): demo-reset.yml returns staging's demo
 # personas to where they begin through the one Run Command document
-# envs/staging declares (modules/compute), as preview-cleanup.yml drops a
-# preview database. The plan role may send exactly that document to exactly
-# that box and nothing else; the document takes no parameter, so the most a
-# holder of the role can do is reset staging's personas, which is what the
-# workflow is for. Both halves again: SendCommand is authorised against the
-# document and against the instance, and this policy stands on its own.
+# envs/staging declares (modules/compute). The plan role may send exactly that
+# document to exactly that box and nothing else; the document takes no
+# parameter, so the most a holder of the role can do is reset staging's
+# personas, which is what the workflow is for. Both halves are needed:
+# SendCommand is authorised against the document and against the instance.
 data "aws_iam_policy_document" "ci_plan_demo_reset" {
   statement {
     sid       = "DemoResetDocument"

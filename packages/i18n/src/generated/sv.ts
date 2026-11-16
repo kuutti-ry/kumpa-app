@@ -1198,7 +1198,7 @@ export const sv: Readonly<Record<string, string>> = {
   "signIn.lock.title": "Låset loggade ut dig",
   "signIn.paused.title": "Ditt konto är på paus",
   "signIn.title": "Logga in",
-  "signIn.unavailable": "Här finns ingen bankinloggning: webbversionen och förhandsversionerna av pull requests har ingen. Prova ändringen lokalt med testbanken.",
+  "signIn.unavailable": "Webbversionen har ingen bankinloggning. Prova ändringen på en telefon eller i en simulator med testbanken.",
   "stars.back": "Tillbaka till start",
   "stars.card.back": "Tillbaka till stjärnmärkta",
   "stars.clear.label": "Ta bort stjärnan: {name}",

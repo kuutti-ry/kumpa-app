@@ -1579,7 +1579,7 @@ export const enXA: Readonly<Record<string, string>> = {
   "signIn.lock.title": "［Šíígñééd óóúút býý théé lóóçk］",
   "signIn.paused.title": "［ÝÝóóúúr ááççóóúúñt ííš óóñ áá brééáák］",
   "signIn.title": "［Šíígñ ííñ］",
-  "signIn.unavailable": "［Thééréé ííš ñóó bááñk šíígñ-ííñ hééréé: théé wééb vééršííóóñ ááñd púúll-rééqúúééšt préévííééwš háávéé ñóóñéé. Trýý théé çhááñgéé lóóçáállýý, wííth théé móóçk bááñk.］",
+  "signIn.unavailable": "［Thééréé ííš ñóó bááñk šíígñ-ííñ ííñ théé wééb vééršííóóñ. Trýý théé çhááñgéé óóñ áá phóóñéé óór áá šíímúúláátóór, wííth théé móóçk bááñk.］",
   "stars.back": "［Bááçk tóó hóóméé］",
   "stars.card.back": "［Bááçk tóó Štáárrééd］",
   "stars.clear.label": "［Táákéé théé štáár óóff: {name}］",

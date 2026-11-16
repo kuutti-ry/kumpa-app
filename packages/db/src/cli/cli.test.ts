@@ -58,12 +58,12 @@ describe("pnpm --filter @kuutti/db seed", () => {
     expect(await run("seed", args, { APP_ENV: appEnv })).toEqual({
       code: 2,
       out: [],
-      err: ["refusing to seed production: previews and local databases only (TD-19)"],
+      err: ["refusing to seed production: local databases only"],
     });
   });
 
   it("needs DATABASE_URL outside production", async () => {
-    expect(await run("seed", ["--env", "preview"], {})).toMatchObject({
+    expect(await run("seed", ["--env", "test"], {})).toMatchObject({
       code: 1,
       err: ["DATABASE_URL is not set"],
     });
@@ -77,7 +77,7 @@ describe("pnpm --filter @kuutti/db seed", () => {
         await pool.query("CREATE VIEW public.pg_roles AS SELECT 'rdsadmin'::name AS rolname");
         const managed = new URL(url);
         managed.searchParams.set("options", "-c search_path=public,pg_catalog");
-        for (const args of [[], ["--env", "preview"], ["--env", "staging"]]) {
+        for (const args of [[], ["--env", "test"], ["--env", "staging"]]) {
           const result = await run("seed", args, { DATABASE_URL: managed.toString() });
           expect(result.code).toBe(1);
           expect(result.out).toEqual([]);
@@ -99,7 +99,7 @@ describe("pnpm --filter @kuutti/db seed", () => {
         await pool.end();
       }
       for (const [args, appEnv, env] of [
-        [["--env", "preview"], undefined, "preview"],
+        [["--env", "development"], "test", "development"],
         [[], "test", "test"],
         [[], undefined, "development"],
       ] as const) {

@@ -24,6 +24,17 @@ describe("parseConfig", () => {
     }
   });
 
+  it("refuses APP_ENV=preview, an environment that went with the previews (ADR-070), and names the key", () => {
+    // A leftover api-pr-<n> container must stop at its start, not boot as something else.
+    try {
+      parseConfig({ DATABASE_URL: "postgres://x", APP_ENV: "preview", PR_NUMBER: "7" });
+      throw new Error("expected ConfigError");
+    } catch (error) {
+      expect(error).toBeInstanceOf(ConfigError);
+      expect((error as ConfigError).issues.join("\n")).toMatch(/^APP_ENV: /);
+    }
+  });
+
   it("composes DATABASE_URL from the SSM-shaped parts", () => {
     const config = parseConfig({
       DB_HOST: "rds.internal",
@@ -87,8 +98,8 @@ describe("parseConfig", () => {
 
   it("accepts an HMAC key with the trailing newline a file-loaded parameter carries", () => {
     // `openssl rand -hex 32 > file` and `put-parameter --value file://…` store
-    // 64 hex digits plus a newline; the staging preview of 2026-10-07 refused
-    // to boot on it. The key itself is the 64 digits.
+    // 64 hex digits plus a newline; an API on the staging box refused to boot
+    // on it on 2026-10-07. The key itself is the 64 digits.
     const staging = {
       APP_ENV: "staging",
       DB_HOST: "rds.internal",
@@ -146,14 +157,7 @@ describe("parseConfig for the sign-in doors (ADR-026 §5)", () => {
     NODE_ENV: "production",
     ADMIN_APP_URL: "https://admin.kuutti.app",
   };
-  const preview = {
-    APP_ENV: "preview",
-    PR_NUMBER: "1",
-    DB_HOST: "rds.internal",
-    DB_NAME: "kuutti",
-    DB_PREVIEW_USER: "kuutti_preview",
-    DB_PREVIEW_PASSWORD: "preview-secret",
-  };
+  const staging = { DATABASE_URL: "postgres://x", APP_ENV: "staging" };
 
   it("lets ten sign-ins a minute through one address in production, sixty everywhere else", () => {
     expect(parseConfig(production).SIGN_IN_RATE_LIMIT_PER_MINUTE).toBe(10);
@@ -163,9 +167,18 @@ describe("parseConfig for the sign-in doors (ADR-026 §5)", () => {
         String(APP_ENV),
       ).toBe(60);
     }
-    expect(parseConfig(preview).SIGN_IN_RATE_LIMIT_PER_MINUTE).toBe(60);
     // The doors' number is their own: the address's and the person's stays as it was.
     expect(parseConfig(production).RATE_LIMIT_PER_MINUTE).toBe(120);
+  });
+
+  it("lets 120 requests a minute through one address or person everywhere, unless told otherwise", () => {
+    for (const APP_ENV of [undefined, "development", "test", "staging"]) {
+      expect(
+        parseConfig({ DATABASE_URL: "postgres://x", APP_ENV }).RATE_LIMIT_PER_MINUTE,
+        String(APP_ENV),
+      ).toBe(120);
+    }
+    expect(parseConfig({ ...staging, RATE_LIMIT_PER_MINUTE: "5" }).RATE_LIMIT_PER_MINUTE).toBe(5);
   });
 
   it("takes the parameter store's number over the default, down to one", () => {
@@ -174,7 +187,7 @@ describe("parseConfig for the sign-in doors (ADR-026 §5)", () => {
         .SIGN_IN_RATE_LIMIT_PER_MINUTE,
     ).toBe(25);
     expect(
-      parseConfig({ ...preview, SIGN_IN_RATE_LIMIT_PER_MINUTE: "1" }).SIGN_IN_RATE_LIMIT_PER_MINUTE,
+      parseConfig({ ...staging, SIGN_IN_RATE_LIMIT_PER_MINUTE: "1" }).SIGN_IN_RATE_LIMIT_PER_MINUTE,
     ).toBe(1);
   });
 
@@ -206,7 +219,6 @@ describe("parseConfig for mail (#385, ADR-043 §4)", () => {
   const environments: Record<AppEnv, Record<string, string>> = {
     development: { DATABASE_URL: "postgres://x", APP_ENV: "development" },
     test: { DATABASE_URL: "postgres://x", APP_ENV: "test" },
-    preview: { DATABASE_URL: "postgres://x", APP_ENV: "preview", PR_NUMBER: "1" },
     staging: { DATABASE_URL: "postgres://x", APP_ENV: "staging" },
     production: {
       DATABASE_URL: "postgres://x",
@@ -268,7 +280,7 @@ describe("parseConfig for mail (#385, ADR-043 §4)", () => {
 
   it("is read from the parameters mail and mail-from", () => {
     expect(parameterNameToEnvKey("/kuutti/prod/mail", ssmPrefix("production"))).toBe("MAIL");
-    expect(parameterNameToEnvKey("/kuutti/staging/mail-from", ssmPrefix("preview"))).toBe(
+    expect(parameterNameToEnvKey("/kuutti/staging/mail-from", ssmPrefix("staging"))).toBe(
       "MAIL_FROM",
     );
   });
@@ -279,7 +291,6 @@ describe("parseConfig for push (#102, ADR-055 §8)", () => {
   const environments: Record<AppEnv, Record<string, string>> = {
     development: { DATABASE_URL: "postgres://x", APP_ENV: "development" },
     test: { DATABASE_URL: "postgres://x", APP_ENV: "test" },
-    preview: { DATABASE_URL: "postgres://x", APP_ENV: "preview", PR_NUMBER: "1" },
     staging: { DATABASE_URL: "postgres://x", APP_ENV: "staging" },
     production: {
       DATABASE_URL: "postgres://x",
@@ -337,7 +348,7 @@ describe("parseConfig for push (#102, ADR-055 §8)", () => {
       parseConfig({ ...environments.production, PUSH: "expo", EXPO_ACCESS_TOKEN: "robot-token" })
         .PUSH,
     ).toBe("expo");
-    // Off, or unset, needs none; staging and the previews may send without one.
+    // Off, or unset, needs none; staging may send without one.
     expect(parseConfig({ ...environments.production, PUSH: "off" }).PUSH).toBe("off");
     expect(parseConfig({ ...environments.staging, PUSH: "expo" }).PUSH).toBe("expo");
   });
@@ -374,84 +385,8 @@ describe("parseConfig for push (#102, ADR-055 §8)", () => {
 
   it("is read from the parameters push and expo-access-token", () => {
     expect(parameterNameToEnvKey("/kuutti/prod/push", ssmPrefix("production"))).toBe("PUSH");
-    expect(parameterNameToEnvKey("/kuutti/staging/expo-access-token", ssmPrefix("preview"))).toBe(
+    expect(parameterNameToEnvKey("/kuutti/staging/expo-access-token", ssmPrefix("staging"))).toBe(
       "EXPO_ACCESS_TOKEN",
-    );
-  });
-});
-
-describe("parseConfig for a pull-request preview", () => {
-  const staging = {
-    APP_ENV: "preview",
-    DB_HOST: "rds.internal",
-    DB_NAME: "kuutti",
-    DB_USER: "kuutti_app",
-    DB_APP_PASSWORD: "app-secret",
-    DB_PREVIEW_USER: "kuutti_preview",
-    DB_PREVIEW_PASSWORD: "preview-secret",
-  };
-
-  it("serves kuutti_pr_<n> as the preview role and creates it through the maintenance database", () => {
-    const config = parseConfig({ ...staging, PR_NUMBER: "42" });
-    expect(config.preview).toEqual({
-      prNumber: "42",
-      database: "kuutti_pr_42",
-      adminDatabaseUrl: config.preview?.adminDatabaseUrl,
-    });
-    const url = new URL(config.databaseUrl);
-    expect(url.pathname).toBe("/kuutti_pr_42");
-    expect(url.username).toBe("kuutti_preview");
-    expect(decodeURIComponent(url.password)).toBe("preview-secret");
-    expect(url.searchParams.get("sslmode")).toBe("require");
-    const admin = new URL(config.preview?.adminDatabaseUrl ?? "");
-    expect(admin.pathname).toBe("/postgres");
-    expect(admin.username).toBe("kuutti_preview");
-    expect(config.databaseUrl).not.toContain("app-secret");
-  });
-
-  it("never falls back to the application role", () => {
-    const { DB_PREVIEW_USER: _u, DB_PREVIEW_PASSWORD: _p, ...withoutPreviewRole } = staging;
-    expect(() => parseConfig({ ...withoutPreviewRole, PR_NUMBER: "42" })).toThrow(
-      /DB_PREVIEW_USER and DB_PREVIEW_PASSWORD/,
-    );
-  });
-
-  it("refuses a database URL that does not parse without echoing it", () => {
-    try {
-      parseConfig({ APP_ENV: "preview", PR_NUMBER: "1", DATABASE_URL: "not a url with s3cret" });
-      throw new Error("expected ConfigError");
-    } catch (error) {
-      expect(error).toBeInstanceOf(ConfigError);
-      expect(JSON.stringify(error)).not.toContain("s3cret");
-      expect(String(error)).not.toContain("s3cret");
-    }
-  });
-
-  it("throttles harder than staging unless told otherwise", () => {
-    expect(parseConfig({ ...staging, PR_NUMBER: "1" }).RATE_LIMIT_PER_MINUTE).toBe(30);
-    expect(
-      parseConfig({ DATABASE_URL: "postgres://x", APP_ENV: "staging" }).RATE_LIMIT_PER_MINUTE,
-    ).toBe(120);
-    expect(
-      parseConfig({ ...staging, PR_NUMBER: "1", RATE_LIMIT_PER_MINUTE: "5" }).RATE_LIMIT_PER_MINUTE,
-    ).toBe(5);
-  });
-
-  it("refuses a preview without a pull request number", () => {
-    expect(() => parseConfig(staging)).toThrow(/PR_NUMBER/);
-  });
-
-  it("refuses a pull request number outside APP_ENV=preview", () => {
-    for (const appEnv of ["staging", "production", "development"]) {
-      expect(() =>
-        parseConfig({ DATABASE_URL: "postgres://x", APP_ENV: appEnv, PR_NUMBER: "7" }),
-      ).toThrow(/only valid with APP_ENV=preview/);
-    }
-  });
-
-  it("refuses a pull request number that is not a number", () => {
-    expect(() => parseConfig({ ...staging, PR_NUMBER: "7; DROP DATABASE kuutti" })).toThrow(
-      ConfigError,
     );
   });
 });
@@ -484,10 +419,6 @@ describe("ssmPrefix", () => {
     expect(ssmPrefix("production")).toBe("/kuutti/prod/");
   });
 
-  it("points previews at the staging parameters", () => {
-    expect(ssmPrefix("preview")).toBe("/kuutti/staging/");
-  });
-
   it("verifies the RDS certificate and host name when the bundle path is set", () => {
     const config = parseConfig({
       APP_ENV: "staging",
@@ -500,53 +431,6 @@ describe("ssmPrefix", () => {
     const url = new URL(config.databaseUrl);
     expect(url.searchParams.get("sslmode")).toBe("verify-full");
     expect(url.searchParams.get("sslrootcert")).toBe("/app/certs/rds-eu-central-1-bundle.pem");
-  });
-
-  it("drops the environment's application password from a preview's config", () => {
-    const config = parseConfig({
-      APP_ENV: "preview",
-      PR_NUMBER: "42",
-      DB_HOST: "rds.internal",
-      DB_NAME: "kuutti",
-      DB_USER: "kuutti_app",
-      DB_APP_PASSWORD: "staging-secret",
-      DB_PREVIEW_USER: "kuutti_preview",
-      DB_PREVIEW_PASSWORD: "preview-secret",
-    });
-    expect(config.DB_APP_PASSWORD).toBeUndefined();
-    expect(JSON.stringify(config)).not.toContain("staging-secret");
-    expect(new URL(config.databaseUrl).username).toBe("kuutti_preview");
-  });
-
-  it("drops the Telia client, both private keys and the HMAC key from a preview's config (ADR-014 §1)", () => {
-    const config = parseConfig({
-      APP_ENV: "preview",
-      PR_NUMBER: "42",
-      DB_HOST: "rds.internal",
-      DB_NAME: "kuutti",
-      DB_USER: "kuutti_app",
-      DB_PREVIEW_USER: "kuutti_preview",
-      DB_PREVIEW_PASSWORD: "preview-secret",
-      OIDC_ISSUER: "https://tunnistus-pp.telia.fi/uas",
-      OIDC_CLIENT_ID: "0043b426-2e6d-466d-b82f-33bb7d3cb6ea",
-      OIDC_REDIRECT_URI: "https://api.staging.kuutti.app/auth/callback",
-      OIDC_ACR_VALUES: "http://ftn.ficora.fi/2017/loatest2",
-      // Stand-ins, not PEM: the lint job refuses anything shaped like a private key.
-      TELIA_SIGNING_KEY: "sig-material",
-      TELIA_ENCRYPTION_KEY: "enc-material",
-      HETU_HMAC_KEY: "a".repeat(64),
-    });
-    expect(config.OIDC_ISSUER).toBeUndefined();
-    expect(config.OIDC_CLIENT_ID).toBeUndefined();
-    expect(config.OIDC_REDIRECT_URI).toBeUndefined();
-    expect(config.OIDC_ACR_VALUES).toBeUndefined();
-    expect(config.TELIA_SIGNING_KEY).toBeUndefined();
-    expect(config.TELIA_ENCRYPTION_KEY).toBeUndefined();
-    expect(config.HETU_HMAC_KEY).toBeUndefined();
-    const serialised = JSON.stringify(config);
-    expect(serialised).not.toContain("sig-material");
-    expect(serialised).not.toContain("enc-material");
-    expect(serialised).not.toContain("a".repeat(64));
   });
 
   it("leaves the Telia configuration to staging and production", () => {
@@ -644,7 +528,6 @@ describe("parseConfig for App Attest (ADR-069 §5)", () => {
   const environments: Record<AppEnv, Record<string, string>> = {
     development: { DATABASE_URL: "postgres://x", APP_ENV: "development" },
     test: { DATABASE_URL: "postgres://x", APP_ENV: "test" },
-    preview: { DATABASE_URL: "postgres://x", APP_ENV: "preview", PR_NUMBER: "1" },
     staging: { DATABASE_URL: "postgres://x", APP_ENV: "staging" },
     production: {
       DATABASE_URL: "postgres://x",
@@ -707,19 +590,7 @@ describe("parseConfig for App Attest (ADR-069 §5)", () => {
     },
   );
 
-  it("in a preview, which reads staging's parameters, does not ask what staging asks, and starts", () => {
-    // /kuutti/staging/ios-attestation reaches a preview's process as it does staging's.
-    for (const inherited of ["required", "off", "optional"]) {
-      const config = parseConfig({ ...environments.preview, ...team, IOS_ATTESTATION: inherited });
-      expect(config.IOS_ATTESTATION, inherited).toBe("optional");
-    }
-    // Not even without the team id, which staging's own start would need.
-    expect(
-      parseConfig({ ...environments.preview, IOS_ATTESTATION: "required" }).IOS_ATTESTATION,
-    ).toBe("optional");
-  });
-
-  it.each(each.filter(([name]) => name !== "preview"))(
+  it.each(each)(
     "in %s, reads nothing of App Attest when switched off, with the team id or without",
     (_, raw) => {
       expect(parseConfig({ ...raw, ...team, IOS_ATTESTATION: "off" }).IOS_ATTESTATION).toBe("off");
@@ -747,8 +618,8 @@ describe("parseConfig for App Attest (ADR-069 §5)", () => {
 describe("developmentOrTest", () => {
   it("is a developer's machine or a test, and never a deployed environment", () => {
     const local: AppEnv[] = ["development", "test"];
-    const deployed: AppEnv[] = ["preview", "staging", "production"];
+    const deployed: AppEnv[] = ["staging", "production"];
     expect(local.map(developmentOrTest)).toEqual([true, true]);
-    expect(deployed.map(developmentOrTest)).toEqual([false, false, false]);
+    expect(deployed.map(developmentOrTest)).toEqual([false, false]);
   });
 });

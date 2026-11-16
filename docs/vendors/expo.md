@@ -36,7 +36,7 @@ Never a message's text, a name, an account's id or anything of a profile; `apps/
 3. **Enhanced push security** in EAS (project settings), after step 4: Expo then refuses a push without the project's access token, so a token that leaked cannot be sent to by anybody but the API.
 4. **The access token**, of an Expo robot made for this alone, never CI's (`EXPO_TOKEN`, which can publish updates), with the least role Expo lets send under push security, as the SecureString `/kuutti/<env>/expo-access-token` in each environment, made with the CLI and never a resource (ADR-001, `infra/README.md`); the API reads it as `EXPO_ACCESS_TOKEN` at boot and logs only whether it has one. Rotated by putting a new value and restarting the API.
 
-`push` is `expo` in staging's configuration (`infra/envs/staging/main.tf`), so staging and its previews send. Production has no `push` yet and sends nothing: it gets `expo` in the same change as its access token, with enhanced push security on, so that nobody holding a stored token can send to its people's phones. A development machine logs instead (`PUSH=log`), and `PUSH=expo` there sends for real to a dev client's token.
+`push` is `expo` in staging's configuration (`infra/envs/staging/main.tf`), so staging sends. Production has no `push` yet and sends nothing: it gets `expo` in the same change as its access token, with enhanced push security on, so that nobody holding a stored token can send to its people's phones. A development machine logs instead (`PUSH=log`), and `PUSH=expo` there sends for real to a dev client's token.
 
 ### When something goes wrong
 

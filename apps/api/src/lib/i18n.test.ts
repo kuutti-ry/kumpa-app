@@ -42,7 +42,6 @@ describe("localised responses", () => {
   }) => {
     expect(servedLocales("production")).toEqual(["en", "fi"]);
     expect(servedLocales("staging")).toEqual(["en", "fi", "sv", "fi-x-stadi"]);
-    expect(servedLocales("preview")).toEqual(["en", "fi", "sv", "fi-x-stadi"]);
     const production = new Hono<AppEnv>();
     production.use("*", requestLocale(servedLocales("production")));
     production.get("/x", (c) => c.text("ok"));
@@ -53,7 +52,7 @@ describe("localised responses", () => {
     expect(await language("sv")).toBe("en");
     expect(await language("sv-FI,fi;q=0.8")).toBe("fi");
     expect(await language("fi")).toBe("fi");
-    // Staging and previews keep all three, so a reviewer can read Swedish there.
+    // Staging keeps all three, so a reviewer can read Swedish there.
     const res = await ctx.app.request("/nope", { headers: { "accept-language": "sv" } });
     expect(res.headers.get("content-language")).toBe("sv");
   });
