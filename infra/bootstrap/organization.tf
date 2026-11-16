@@ -21,16 +21,24 @@ resource "aws_organizations_organization" "this" {
     # Trusted access belongs to the services that asked for it, Identity Center
     # first: a list here that missed one would switch it off.
     ignore_changes = [aws_service_access_principals]
+
+    # enabled_policy_types is the whole list, and a type missing from it is
+    # switched off: never adopt an organisation this account does not manage.
+    precondition {
+      condition     = data.aws_organizations_organization.current.master_account_id == data.aws_caller_identity.current.account_id
+      error_message = "organization.tf adopts only the organisation this account manages."
+    }
   }
 }
 
 # AWS may use what its AI services are sent to improve them unless the
 # organisation opts out (ADR-006 §1): Rekognition is sent every photo's card and
-# every photo of a conversation. One policy for every service, at the root, so
-# it holds for every account, this management account included (#691).
+# every photo of a conversation. One policy for every service it covers, now and
+# later, at the root, so it holds for every account, this management account
+# included (#691).
 resource "aws_organizations_policy" "ai_services_opt_out" {
   name        = "${var.project}-ai-services-opt-out"
-  description = "No AI service may use this organisation's content to improve itself (ADR-006, #691)"
+  description = "No AI service the opt-out covers may use this organisation's content to improve itself (ADR-006, #691)"
   type        = "AISERVICES_OPT_OUT_POLICY"
   # AWS's own example for every service at the root: no policy attached below
   # it may opt a service back in.
