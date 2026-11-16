@@ -1,6 +1,6 @@
 # ADR-070: No pull-request previews
 
-- Status: proposed (#705, on the maintainer's word of 2026-11-16 in chat; built as written here in the pull request for #705; emptying the box, switching `PREVIEWS_ENABLED` off, the applies and the deletions of #705's step 3 wait on the maintainer; accepting it is the maintainer's)
+- Status: proposed (#705, on the maintainer's word of 2026-11-16 in chat; built as written here in the pull request for #705; the box emptied, `PREVIEWS_ENABLED` switched off and the environment `preview` deleted by the maintainer on 2026-11-16, before the merge; the applies and the deletions of #705's step 3 wait on the maintainer; accepting it is the maintainer's)
 - Date: 2026-11-16
 - Follows: the maintainer's word of 2026-11-16 in chat (nobody has used a preview once; remove them completely and clean up after them); TD-2 (free tiers and three previews: departed from here, see Context), TD-19 (one staging box with the previews on it: departed from here, see Context), ADR-018 (staging is the demo, its data invented); supersedes ADR-012 and ADR-053; amends ADR-004 §2 and §3, ADR-014 §1 and ADR-025 §4 to §8; issues #705, #9, #313, #448
 
@@ -44,12 +44,12 @@ TD-2 counted three previews among the free tiers, and TD-19 put them on the one 
 
 ## Open, the maintainer's
 
-#705's step 1 must happen before the pull request merges, since the cleanup goes with it; step 3 follows the merge:
+Step 1 is #705's step 1, done before the pull request merged, since the cleanup went with it; the rest are #705's step 3 and follow the merge:
 
-1. Remove every preview still standing (`gh workflow run preview-cleanup.yml -f pr=<n>`), set `PREVIEWS_ENABLED` to `false`, and check that nothing is left in Dokploy, the RDS instance, the panel's bucket, EAS Update and EAS Hosting. Then delete the GitHub environment `preview` with its `DOKPLOY_TOKEN` and `EXPO_TOKEN`, and the `ci-preview` member's API key in Dokploy: `preview` admits every branch, so once nothing deploys a preview it is only a branch's way to the token that publishes updates and to the staging box (the security review of #705's pull request).
+1. Done on 2026-11-16. Every preview still standing was removed (`gh workflow run preview-cleanup.yml -f pr=<n>`, the last run green in every job), `PREVIEWS_ENABLED` set to `false`, and what was left looked for: the API and web hosts of #696, #701, #704, #706 and #707 answer 404, the panel's bucket has no `pr-` prefix, and EAS Update has the branch `staging` alone; Dokploy and the RDS instance were not read directly (steps 3 and 4). Then the maintainer deleted the GitHub environment `preview` with its `DOKPLOY_TOKEN` and `EXPO_TOKEN`, read back through the API (404): it admitted every branch, so once nothing deployed a preview it was only a branch's way to the token that publishes updates and to the staging box (the security review of #705's pull request).
 2. `tofu apply` in `infra/bootstrap` by hand, and on staging through `infra.yml` after the merge: the records, the CAA record, the certificate policy, the SSM document, the distribution's alias, the panel's Function and the plan role's two policies go. Production's panel loses its `pr-*` behaviour, Function and lifecycle rule at the next release tag (`infra-prod.yml`).
 3. On the staging RDS instance drop the role `kuutti_preview` once no `kuutti_pr_<n>` is left (a role that owns a database cannot be dropped, and step 2 removes the document that dropped them, so the master drops any leftover first), and delete the parameter `/kuutti/staging/db-preview-password`.
-4. In Dokploy on staging delete the `previews` project, the `ci-preview` member, and the wildcard certificate in Traefik.
+4. In Dokploy on staging delete the `previews` project, the `ci-preview` member with its API key (whose last copy is `preview-cleanup`'s `DOKPLOY_TOKEN`, step 5), and the wildcard certificate in Traefik.
 5. In GitHub delete the environment `preview-cleanup` with its `DOKPLOY_TOKEN` and `EXPO_TOKEN`, and the variable `PREVIEWS_ENABLED`; revoke the Expo robot token only if nothing else holds it; confirm that none of the fourteen required checks is a preview job.
 6. Delete the `kuutti-api` versions tagged `pr-*` in GHCR, and what is left on EAS Hosting.
 7. Amend TD-2 and TD-19 in the decisions log.
@@ -62,3 +62,4 @@ TD-2 counted three previews among the free tiers, and TD-19 put them on the one 
 ## History
 
 - 2026-11-16 (#705): written on the maintainer's word of that day, and built as written in the pull request for #705.
+- 2026-11-16 (#705): Open 1 done before the merge; the environment `preview` deleted by the maintainer and read back through the API.
