@@ -127,7 +127,7 @@ Two RSA pairs per environment, `sig` and `enc` (`docs/vendors/telia.md`). The AP
    ```
 
    Do not use `--put`: it runs `put-parameter` without `--overwrite`, which fails on a parameter that exists. The script prints the two new kids.
-2. Send `kuutti-<env>-telia-jwks.json` (public keys only) to Telia from the project mailbox, as the first registration was sent (`docs/vendors/telia.md`, The test-bed request). Agree with Telia on the moment it starts using the new keys. Whether Telia can hold the old and the new `enc` key at once, and which one it encrypts to while it does, is not in the repository: ask before the first production rotation.
+2. Send `kuutti-<env>-telia-jwks.json` (public keys only) to Telia from the project mailbox, as the first registration was sent (`docs/vendors/telia.md`, Registering a client). Agree with Telia on the moment it starts using the new keys. Whether Telia can hold the old and the new `enc` key at once, and which one it encrypts to while it does, is not in the repository: ask before the first production rotation.
 3. At the agreed moment, put both private halves by file reference and restart:
 
    ```sh
