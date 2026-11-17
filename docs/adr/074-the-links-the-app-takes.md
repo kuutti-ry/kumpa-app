@@ -53,7 +53,9 @@ Asked on 17/11/2026, the maintainer answered: the native name is **Kumpa** (#700
    - **`SYSTEM_ALERT_WINDOW` is out of the manifest** (`android.blockedPermissions`), which nothing used (ADR-057, Consequences).
    - **`expo-clipboard`** in place of React Native's deprecated Clipboard behind Copy in a conversation (`SharedContacts.tsx`). Its answer is awaited, so "copied" is said once the phone has taken the value, and a copy that failed says nothing and leaves no line of an earlier one.
 
-   The four packages are Expo's own, MIT, in the SDK's range, with no install script.
+   - **`expo-system-ui`** (the maintainer, 17/11/2026, after the pull request was open): `app.json`'s `userInterfaceStyle` is `automatic`, and on Android the setting is applied by this module, which reads it at the activity's start and tells the system's day and night switch to follow the phone (below Android 9, the battery saver). Prebuild already wrote the setting into both platforms' files; without the module nothing on Android read it. It is never imported and needs no line among `app.json`'s plugins: prebuild finds it by its presence. On iOS, with no `backgroundColor` in `app.json`, it sets the root view behind the screens to white or black by the phone's style at start, where every screen draws its own background over it. What a person sees should not change, and that is seen only on a build.
+
+   The five packages are Expo's own, MIT, in the SDK's range, with no install script.
 
 ## Consequences
 
@@ -74,16 +76,14 @@ Asked on 17/11/2026, the maintainer answered: the native name is **Kumpa** (#700
 - **A refusal on the verified link.** It would save nothing: a refusal carries no secret, and on the scheme it reaches every phone.
 - **Leading a signed-in person from the link to the code's field.** Somebody new meets the field in onboarding with the code in it. Somebody whose profile is complete cannot use a code, and for the few in between the field is in Settings, filled in. A route of its own would be due if testers lose the code on the way.
 - **A Maestro flow for the https links.** The flows run on a build that claims the links, which exists only after this merge; `sign-in-links.yaml` keeps holding the scheme's return, and the hook's wiring is held by `routes.test.tsx`.
-- **`expo-system-ui`**, which `userInterfaceStyle` asks for on Android and `knip.ts` leaves to the maintainer: not in #184's list and not asked on 17/11/2026 (Open 3).
 - **The native libraries' licences on the licences screen** (#419's Open 2), **`@expo/cli`** (#431) and **the phone's own nudity check** (#48): each a change of its own, none decided for this batch.
 
 ## Open, the maintainer's
 
 1. The parameters, per environment, and a restart of the API after each: `/kuutti/staging/android-cert-fingerprints` (EAS's and Play's fingerprints, `docs/vendors/google-play.md`) and `/kuutti/staging/ios-team-id`, then production's pair. Until then nothing is verified (`docs/runbooks/devices.md`, Verified links).
 2. The App ID's capabilities, Associated Domains and App Attest: they reach the provisioning profile only through an interactive `eas credentials` with his Apple sign-in, never from CI, so the first iOS build from the batch comes after that step.
-3. Whether `expo-system-ui` goes into a later native change.
-4. Whether `/auth/return` should refuse an address past its limit in the app's words, as the two starts do (ADR-026 §4).
-5. Accepting this record.
+3. Whether `/auth/return` should refuse an address past its limit in the app's words, as the two starts do (ADR-026 §4).
+4. Accepting this record.
 
 ## Alternatives considered
 
@@ -99,3 +99,4 @@ Asked on 17/11/2026, the maintainer answered: the native name is **Kumpa** (#700
 ## History
 
 - 2026-11-17: written with #184's native batch, on the maintainer's answers of that day in chat (the name Kumpa; all three of the lines other records left for a batch). ADR-027, ADR-044 and ADR-045 are amended the same day, and ADR-057, ADR-063 and ADR-069 note what was carried out.
+- 2026-11-17, later the same day, before the pull request merged: `expo-system-ui` joins §7 on the maintainer's word in chat ("Yes, add it", to whether it goes into this batch and not a later one), so that the batch stays the one native change. The point that left it out and its line among the open ones are gone.
