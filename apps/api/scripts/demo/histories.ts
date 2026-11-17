@@ -10,13 +10,13 @@ import {
   MOCK_BANK_AMR,
   OLDER_TERMS_VERSION,
   PERSONA_CONVERSATIONS,
-  PERSONA_ROUNDS,
+  PERSONA_QUEUE_DAYS,
   type PersonaHistory,
   personaOf,
-  type RoundsResult,
+  type QueueDaysResult,
   removeCastLeftovers,
   writeConversations,
-  writeRounds,
+  writeQueueDays,
   writeWaitingLikes,
 } from "@kuutti/db/demo";
 import type { AuthExchangeResponse } from "@kuutti/schema";
@@ -29,7 +29,7 @@ import {
   SessionResponse,
 } from "@kuutti/schema";
 import { sendPhoto } from "../../src/chat/index.ts";
-import { type BuilderDeps, fillQueue } from "../../src/jobs/round-builder.ts";
+import { type BuilderDeps, fillQueue } from "../../src/jobs/queue-builder.ts";
 import { finnishDay } from "../../src/lib/finnish-day.ts";
 import type { Logger } from "../../src/lib/logger.ts";
 import type { MediaDeps } from "../../src/media/index.ts";
@@ -331,28 +331,28 @@ function accountsOf(results: readonly HistoryResult[]): Map<string, string> {
 }
 
 /**
- * The round of the stories (#379), once the ponds are open: Henna's like of
- * the day before (rows, `writeRounds`), then Iida's day through the queue's
+ * The queue of the stories (#379), once the ponds are open: Henna's like of
+ * the day before (rows, `writeQueueDays`), then Iida's day through the queue's
  * builder (#502), as the day's first read would open it, Henna first as liked
  * you (ADR-037). A day already opened is left as it stands, since a fill beside
  * it would add the next people. `standing`: stories whose day stands now, opened
  * here or before.
  */
-export async function giveRounds(
+export async function giveQueueDays(
   deps: BuilderDeps,
   results: readonly HistoryResult[],
-): Promise<RoundsResult & { standing: number }> {
+): Promise<QueueDaysResult & { standing: number }> {
   const accounts = accountsOf(results);
-  const written = await writeRounds(deps.db, accounts, deps.now());
+  const written = await writeQueueDays(deps.db, accounts, deps.now());
   const day = finnishDay(deps.now());
   let standing = 0;
-  for (const story of PERSONA_ROUNDS) {
+  for (const story of PERSONA_QUEUE_DAYS) {
     const of = accounts.get(story.of);
     if (!of) continue;
-    const opened = await deps.db.query("SELECT 1 FROM rounds WHERE account_id = $1 AND day = $2", [
-      of,
-      day,
-    ]);
+    const opened = await deps.db.query(
+      "SELECT 1 FROM queue_day WHERE account_id = $1 AND day = $2",
+      [of, day],
+    );
     if (opened.rows.length > 0 || (await fillQueue(deps, of))) standing += 1;
   }
   return { ...written, standing };
@@ -371,7 +371,7 @@ export async function giveCastStories(
 ): Promise<{
   cast: number;
   leftovers?: number;
-  likes?: RoundsResult;
+  likes?: QueueDaysResult;
   conversations?: ConversationsResult;
 }> {
   const cast = await castAccounts(db);

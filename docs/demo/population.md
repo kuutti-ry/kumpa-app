@@ -107,7 +107,7 @@ Forty-eight more people, for the accounts a staging phone can sign in as to go t
 | younger men | 10 | 28 to 31 | anyone | 21 to 45 | open to either |
 | younger women | 10 | 24 to 31 | anyone | 21 to 45 | open to either |
 
-A card never shows whom its person seeks or their age window, so these are wide and one man fits three members. What sets the number is Sanna, who seeks only men. Wider windows on the members' side would not lower it: filters run both ways. A test holds all of it against the product's filters on every month to the end of 2028 (`apps/api/scripts/demo/demo-cast.test.ts`), and that nobody here fits Iida's window, so her round stays what her flow expects.
+A card never shows whom its person seeks or their age window, so these are wide and one man fits three members. What sets the number is Sanna, who seeks only men. Wider windows on the members' side would not lower it: filters run both ways. A test holds all of it against the product's filters on every month to the end of 2028 (`apps/api/scripts/demo/demo-cast.test.ts`), and that nobody here fits Iida's window, so her queue stays what her flow expects.
 
 | account | test bank | cards | waiting first | open chats |
 |---|---|---|---|---|

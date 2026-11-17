@@ -13,7 +13,7 @@ import { softMatches } from "./soft.ts";
  * the same one whenever it is read again that day. Pure; which people may be
  * candidates at all (visible, let in, not cooling down) is the builder's to say.
  */
-export type RoundCandidate = { id: string; person: PoolPerson };
+export type QueueCandidate = { id: string; person: PoolPerson };
 
 /**
  * ADR-019 §5: a person who hides from their own field never meets anybody
@@ -27,7 +27,7 @@ export function hiddenByField(a: ProfileFields, b: ProfileFields): boolean {
 }
 
 /** Whether the two may meet at all: two people, in each other's pool both ways, no hidden field between them. */
-export function mayMeet(owner: RoundCandidate, other: RoundCandidate): boolean {
+export function mayMeet(owner: QueueCandidate, other: QueueCandidate): boolean {
   return (
     other.id !== owner.id &&
     inEachOthersPool(owner.person, other.person) &&
@@ -42,9 +42,9 @@ export function mayMeet(owner: RoundCandidate, other: RoundCandidate): boolean {
  * fit nor distance.
  */
 export function likedYouPlaces(
-  owner: RoundCandidate,
-  waiting: readonly RoundCandidate[],
-): RoundCandidate[] {
+  owner: QueueCandidate,
+  waiting: readonly QueueCandidate[],
+): QueueCandidate[] {
   return waiting.filter((other) => mayMeet(owner, other));
 }
 
@@ -58,7 +58,7 @@ const RETURNS = ["skipped", "passed", "liked", "ended"] as const;
 export type Return = (typeof RETURNS)[number];
 
 /** Somebody seen before who may come back (#99, ADR-042 §1): when last shown, and what they come back from. */
-export type ComingBack = RoundCandidate & { lastShown: string; from: Return };
+export type ComingBack = QueueCandidate & { lastShown: string; from: Return };
 
 /**
  * The order in which people come back once nobody new is left (#99, ADR-042 §1,
@@ -69,13 +69,13 @@ export type ComingBack = RoundCandidate & { lastShown: string; from: Return };
  * builder's to say.
  */
 export function comingBackOrder(
-  owner: RoundCandidate,
+  owner: QueueCandidate,
   others: readonly ComingBack[],
-  round: { day: string; size: number },
+  page: { day: string; size: number },
 ): ComingBack[] {
   return others
     .filter((other) => mayMeet(owner, other))
-    .map((other) => ({ other, tie: tieOf(round.day, owner.id, other.id) }))
+    .map((other) => ({ other, tie: tieOf(page.day, owner.id, other.id) }))
     .sort(
       (a, b) =>
         RETURNS.indexOf(a.other.from) - RETURNS.indexOf(b.other.from) ||
@@ -86,15 +86,15 @@ export function comingBackOrder(
             : 0) ||
         (a.tie < b.tie ? -1 : 1),
     )
-    .slice(0, Math.max(0, round.size))
+    .slice(0, Math.max(0, page.size))
     .map(({ other }) => other);
 }
 
-export function roundOrder(
-  owner: RoundCandidate,
-  others: readonly RoundCandidate[],
-  round: { day: string; size: number },
-): RoundCandidate[] {
+export function queueOrder(
+  owner: QueueCandidate,
+  others: readonly QueueCandidate[],
+  page: { day: string; size: number },
+): QueueCandidate[] {
   return (
     others
       .filter((other) => mayMeet(owner, other))
@@ -102,11 +102,11 @@ export function roundOrder(
         other,
         band: DISTANCE_BANDS.indexOf(bandBetween(owner.person.home, other.person.home)),
         count: softMatches(owner.person.fields, other.person.fields),
-        tie: tieOf(round.day, owner.id, other.id),
+        tie: tieOf(page.day, owner.id, other.id),
       }))
       // Two candidates never share a hash: they are two ids.
       .sort((a, b) => a.band - b.band || b.count - a.count || (a.tie < b.tie ? -1 : 1))
-      .slice(0, Math.max(0, round.size))
+      .slice(0, Math.max(0, page.size))
       .map(({ other }) => other)
   );
 }

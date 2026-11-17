@@ -14,9 +14,9 @@ import * as repo from "./repo.ts";
 // (insertSession, ADR-024 §4) but admits `paused`, a live state for the guard
 // (ADR-022 §5), so a login that commits between the session guard and this
 // transaction still leaves one live session on a paused account until the
-// app's next start. The round builder (#95) builds nothing for a paused
-// account, so such a session can only decide a round built before the break
-// (ADR-034 Open 9); refusing `paused` there lifts it, when the round screen
+// app's next start. The queue's builder (#95) builds nothing for a paused
+// account, so such a session can only decide a queue built before the break
+// (ADR-034 Open 9); refusing `paused` there lifts it, when the queue screen
 // (#379) makes that matter.
 
 export type PauseDeps = { db: Queryable; logger: Logger; now: () => Date };

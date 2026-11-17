@@ -35,7 +35,7 @@ function Round({ size, children }: { size: number; children: ReactNode }) {
  * It says what `MatchHello` says, no more: no score, no fit, nothing the two
  * are said to share (CLAUDE.md, Product constraints). The reader is taken to
  * the greeting, the faces are one image named in words, and what to do next is
- * the buttons under it, which the round screen keeps.
+ * the buttons under it, which the queue screen keeps.
  */
 export function MatchPop({
   name,
@@ -119,7 +119,7 @@ export function MatchPop({
             size={Math.min(64, Math.floor(room * 0.17))}
             className={momentInk(backdrop)}
           >
-            {t("round.hello.title")}
+            {t("queue.hello.title")}
           </PopHeadline>
         </Animated.View>
         <Animated.View
@@ -132,7 +132,7 @@ export function MatchPop({
       <View
         accessible
         accessibilityRole="image"
-        accessibilityLabel={t("round.hello.photos", { name })}
+        accessibilityLabel={t("queue.hello.photos", { name })}
         className="self-center"
         style={{ width: room, height: face * 1.08 }}
       >
@@ -176,7 +176,7 @@ export function MatchPop({
           </Animated.View>
         </View>
       </View>
-      <Text className="text-center text-title">{t("round.hello.both")}</Text>
+      <Text className="text-center text-title">{t("queue.hello.both")}</Text>
     </View>
   );
 }

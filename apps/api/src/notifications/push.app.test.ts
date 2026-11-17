@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { Queryable } from "@kuutti/db";
-import { ChatMessage, RoundDecisionAnswer } from "@kuutti/schema";
+import { ChatMessage, QueueDecisionAnswer } from "@kuutti/schema";
 import type { QueryResultRow } from "pg";
 import { afterEach, describe, expect } from "vitest";
 import { type App, createApp } from "../app.ts";
@@ -569,7 +569,7 @@ describe("a message's push through the routes (ADR-055 §4)", () => {
 describe("a match's push through the routes (ADR-055 §5)", () => {
   const TODAY = finnishDay(T);
 
-  const roundOf = (ctx: TestContext, owner: Person, cards: Person[], days = 0) =>
+  const queueDayOf = (ctx: TestContext, owner: Person, cards: Person[], days = 0) =>
     queued(
       ctx.client,
       owner.accountId,
@@ -579,20 +579,20 @@ describe("a match's push through the routes (ADR-055 §5)", () => {
 
   /** A decision through the route, answered; the push it starts may still be running. */
   const decideBy = (app: App, who: Person, position: number, decision: string) =>
-    app.request(`/rounds/${TODAY}/entries/${position}/decision`, {
+    app.request(`/queue/${TODAY}/entries/${position}/decision`, {
       method: "PUT",
       headers: { ...who.headers, "content-type": "application/json" },
       body: JSON.stringify({ decision }),
     });
 
-  /** B liked A yesterday, and today A's round shows B. */
+  /** B liked A yesterday, and today A's queue shows B. */
   async function likedYesterday(ctx: TestContext, a: Person, b: Person) {
-    const yesterday = await roundOf(ctx, b, [a], 1);
+    const yesterday = await queueDayOf(ctx, b, [a], 1);
     await ctx.client.query(
-      "UPDATE round_entries SET decision = 'like', decided_at = $2 WHERE round_id = $1",
+      "UPDATE queue_entry SET decision = 'like', decided_at = $2 WHERE queue_day_id = $1",
       [yesterday, new Date(T.getTime() - DAY)],
     );
-    await roundOf(ctx, a, [b]);
+    await queueDayOf(ctx, a, [b]);
   }
 
   test("A match tells the one who liked first, in the app or not", async ({ ctx }) => {
@@ -601,13 +601,13 @@ describe("a match's push through the routes (ADR-055 §5)", () => {
     const b = await s.person("Väinämöinen");
     const toA = await s.register(a);
     const toB = await s.register(b, "fi");
-    // B liked A yesterday; today A's round shows B, and A likes back.
+    // B liked A yesterday; today A's queue shows B, and A likes back.
     await likedYesterday(ctx, a, b);
     // B is in the app: no frame tells of a match, so the push goes all the same.
     s.inTheApp(b);
     const answer = await decideBy(s.app, a, 1, "like");
     expect(answer.status).toBe(200);
-    const match = RoundDecisionAnswer.parse(await answer.json()).match;
+    const match = QueueDecisionAnswer.parse(await answer.json()).match;
     if (!match) throw new Error("no match");
     await s.settled();
     // That there is a match, and nothing of which or whose.
@@ -639,12 +639,12 @@ describe("a match's push through the routes (ADR-055 §5)", () => {
     const c = await s.person("Joukahainen");
     await s.register(b);
     await s.register(c);
-    const yesterday = await roundOf(ctx, c, [a], 1);
+    const yesterday = await queueDayOf(ctx, c, [a], 1);
     await ctx.client.query(
-      "UPDATE round_entries SET decision = 'like', decided_at = $2 WHERE round_id = $1",
+      "UPDATE queue_entry SET decision = 'like', decided_at = $2 WHERE queue_day_id = $1",
       [yesterday, new Date(T.getTime() - DAY)],
     );
-    await roundOf(ctx, a, [b, c]);
+    await queueDayOf(ctx, a, [b, c]);
     expect((await decideBy(s.app, a, 1, "like")).status).toBe(200);
     expect((await decideBy(s.app, a, 2, "pass")).status).toBe(200);
     await s.settled();
@@ -666,7 +666,7 @@ describe("a match's push through the routes (ADR-055 §5)", () => {
     // Expo holds the push: the answer comes back all the same, with the match.
     const answer = await decideBy(s.app, a, 1, "like");
     expect(answer.status).toBe(200);
-    expect(RoundDecisionAnswer.parse(await answer.json()).match).not.toBeNull();
+    expect(QueueDecisionAnswer.parse(await answer.json()).match).not.toBeNull();
     await reached.promise;
     expect(s.pusher.sent().map((m) => m.to)).toEqual([toB]);
     expect(s.schedule.tasks).toEqual([]);

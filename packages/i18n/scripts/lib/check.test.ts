@@ -114,17 +114,17 @@ describe("a slangi text", () => {
   const REFUSED = "slangi stands only where a joke is harmless (isSlangKey)";
 
   it("is never missing, by an error or a warning", () => {
-    expect(checkMessages({ "round.title": ok() }, { release: false })).toEqual({
+    expect(checkMessages({ "queue.title": ok() }, { release: false })).toEqual({
       errors: [],
       warnings: [],
     });
-    expect(checkMessages({ "round.title": ok() }, { release: true }).warnings).toEqual([]);
+    expect(checkMessages({ "queue.title": ok() }, { release: true }).warnings).toEqual([]);
   });
 
   it.each([
-    ["round.title"],
-    ["round.match.title"],
-    ["round.empty"],
+    ["queue.title"],
+    ["queue.match.title"],
+    ["queue.empty"],
     ["home.title"],
     ["profile.section.work"],
     ["settings.title"],
@@ -152,8 +152,8 @@ describe("a slangi text", () => {
     ["homework.title"],
     ["safety.home.title"],
     // Inside them: a failure.
-    ["round.failed"],
-    ["round.decision.failed"],
+    ["queue.failed"],
+    ["queue.decision.failed"],
     ["home.gate.failed"],
     ["profile.error.save"],
     ["settings.invite.loadFailed"],
@@ -164,8 +164,8 @@ describe("a slangi text", () => {
     ["settings.export.label"],
     // The way out of danger or of a session.
     ["settings.support.label"],
-    ["round.report.open"],
-    ["round.block.open"],
+    ["queue.report.open"],
+    ["queue.block.open"],
     ["settings.lock.label"],
     ["settings.session.label"],
     ["settings.logoutAll.confirm.title"],
@@ -176,22 +176,22 @@ describe("a slangi text", () => {
   });
 
   it("is held to the arguments, the tags, the room and the characters of any text", () => {
-    expect(errorsOf({ "round.title": slang({ slangi: "Moi {name}" }) })).toEqual([
-      "round.title: slangi does not use the same arguments as en",
+    expect(errorsOf({ "queue.title": slang({ slangi: "Moi {name}" }) })).toEqual([
+      "queue.title: slangi does not use the same arguments as en",
     ]);
     expect(
       errorsOf({
-        "round.title": slang({ en: "<b>Save</b>", fi: "<b>Tallenna</b>", sv: "<b>Spara</b>" }),
+        "queue.title": slang({ en: "<b>Save</b>", fi: "<b>Tallenna</b>", sv: "<b>Spara</b>" }),
       }),
-    ).toEqual(["round.title: slangi does not keep the tags of en"]);
-    expect(errorsOf({ "round.title": slang({ slangi: "{" }) })).toEqual([
-      expect.stringMatching(/^round\.title: slangi is not valid ICU \(/),
+    ).toEqual(["queue.title: slangi does not keep the tags of en"]);
+    expect(errorsOf({ "queue.title": slang({ slangi: "{" }) })).toEqual([
+      expect.stringMatching(/^queue\.title: slangi is not valid ICU \(/),
     ]);
-    expect(errorsOf({ "round.title": slang({ slangi: "Tallentsaa", max_length: 8 }) })).toEqual([
-      "round.title: slangi is over its max_length of 8",
+    expect(errorsOf({ "queue.title": slang({ slangi: "Tallentsaa", max_length: 8 }) })).toEqual([
+      "queue.title: slangi is over its max_length of 8",
     ]);
-    expect(errorsOf({ "round.title": slang({ slangi: "Sae‮" }) })).toEqual([
-      "round.title: slangi contains control, bidirectional or line-separator characters",
+    expect(errorsOf({ "queue.title": slang({ slangi: "Sae‮" }) })).toEqual([
+      "queue.title: slangi contains control, bidirectional or line-separator characters",
     ]);
   });
 
@@ -200,7 +200,7 @@ describe("a slangi text", () => {
     const fi = "{n, selectordinal, other {#.}}";
     expect(
       errorsOf({
-        "round.title": slang({
+        "queue.title": slang({
           en,
           fi,
           sv: "{n, selectordinal, one {#:a} other {#:e}}",
@@ -211,8 +211,8 @@ describe("a slangi text", () => {
   });
 
   it("carries a machine flag like any text nobody native has read", () => {
-    expect(errorsOf({ "round.title": slang({ machine: { fi: true, sv: true } }) })).toEqual([
-      expect.stringContaining("round.title: slangi carries neither machine: nor reviewed:"),
+    expect(errorsOf({ "queue.title": slang({ machine: { fi: true, sv: true } }) })).toEqual([
+      expect.stringContaining("queue.title: slangi carries neither machine: nor reviewed:"),
     ]);
   });
 
@@ -222,7 +222,7 @@ describe("a slangi text", () => {
       machine: { sv: true, slangi: true },
       reviewed: { fi: reviewHash("Save", "Tallenna") },
     });
-    expect(errorsOf({ "round.title": released }, true)).toEqual([]);
+    expect(errorsOf({ "queue.title": released }, true)).toEqual([]);
   });
 });
 

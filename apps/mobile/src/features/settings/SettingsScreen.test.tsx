@@ -356,12 +356,12 @@ describe("the settings screen", () => {
     await screen.findByRole("button", { name: "Your account" });
     await press(row("Give feedback"));
     await act(async () => {
-      fireEvent.changeText(screen.getByLabelText("Your feedback"), "The round loads slowly.");
+      fireEvent.changeText(screen.getByLabelText("Your feedback"), "The queue loads slowly.");
     });
     await press(row("Theme"));
     expect(screen.queryByLabelText("Your feedback")).toBeNull();
     await press(row("Give feedback"));
-    expect(screen.getByLabelText("Your feedback").props.value).toBe("The round loads slowly.");
+    expect(screen.getByLabelText("Your feedback").props.value).toBe("The queue loads slowly.");
   });
 
   it.each([

@@ -53,7 +53,7 @@ beforeEach(async () => {
 });
 
 describe("session storage", () => {
-  it("round-trips through the secure store and tells listeners", async () => {
+  it("queue-trips through the secure store and tells listeners", async () => {
     const seen: (SessionTokens | null)[] = [];
     const stop = onSessionChange((s) => seen.push(s));
     await saveSession(tokens(1));

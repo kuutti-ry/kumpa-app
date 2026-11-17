@@ -152,7 +152,7 @@ describe("ProfileCardView", () => {
     });
 
     it.each([
-      ["no band on a card from outside a round", undefined],
+      ["no band on a card from outside a queue", undefined],
       ["no band on an entry from before distance", null],
     ])("says %s", async (_what, distance) => {
       await renderWithTheme(<ProfileCardView card={{ ...bare, place }} distance={distance} />);

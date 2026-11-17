@@ -1,7 +1,7 @@
 import type { Queryable } from "@kuutti/db";
 import {
-  RoundDecisionAnswer,
-  RoundResponse,
+  QueueDecisionAnswer,
+  QueueResponse,
   STARS_CEILING,
   StarAnswer,
   StarList,
@@ -23,9 +23,8 @@ import {
   testConfig,
 } from "../test/harness.ts";
 import { people } from "../test/people.ts";
-import { FITTING } from "../test/queue.ts";
+import { block, FITTING, type LoggedCard, logged, shownAt } from "../test/queue.ts";
 import { pidOf, waitsFor, watched, withTwoConnections } from "../test/races.ts";
-import { block, type LoggedCard, logged, shownAt } from "../test/rounds.ts";
 
 // The stars (#575, ADR-064, features/matching/stars.feature): a star on a card, the
 // queue leaving a starred person out, the list and whoever it leaves out, a card
@@ -75,7 +74,7 @@ const person = (who: readonly Person[], index: number): Person => {
 };
 
 const putStar = (app: App, who: Person, day: string, position: number) =>
-  app.request(`/rounds/${day}/entries/${position}/star`, { method: "PUT", headers: who.headers });
+  app.request(`/queue/${day}/entries/${position}/star`, { method: "PUT", headers: who.headers });
 
 async function star(app: App, who: Person, position: number, day = TODAY): Promise<StarAnswer> {
   const answer = await putStar(app, who, day, position);
@@ -89,10 +88,10 @@ const clear = (app: App, who: Person, id: string) =>
 const open = (app: App, who: Person, id: string) =>
   app.request(`/stars/${id}/open`, { method: "POST", headers: who.headers });
 
-async function opened(app: App, who: Person, id: string): Promise<RoundResponse> {
+async function opened(app: App, who: Person, id: string): Promise<QueueResponse> {
   const answer = await open(app, who, id);
   expect(answer.status).toBe(200);
-  return RoundResponse.parse(await answer.json());
+  return QueueResponse.parse(await answer.json());
 }
 
 async function listOf(app: App, who: Person) {
@@ -101,21 +100,21 @@ async function listOf(app: App, who: Person) {
   return StarList.parse(await answer.json()).items;
 }
 
-async function readToday(app: App, who: Person): Promise<RoundResponse> {
-  const answer = await app.request("/rounds/today", { headers: who.headers });
+async function readToday(app: App, who: Person): Promise<QueueResponse> {
+  const answer = await app.request("/queue/today", { headers: who.headers });
   expect(answer.status).toBe(200);
-  return RoundResponse.parse(await answer.json());
+  return QueueResponse.parse(await answer.json());
 }
 
 const decide = (app: App, who: Person, day: string, position: number, decision: string) =>
-  app.request(`/rounds/${day}/entries/${position}/decision`, {
+  app.request(`/queue/${day}/entries/${position}/decision`, {
     method: "PUT",
     headers: { ...who.headers, "content-type": "application/json" },
     body: JSON.stringify({ decision }),
   });
 
 /** Whose cards `who` is shown, in order. */
-const cardsOf = (round: RoundResponse) => (round.entries ?? []).map((e) => e.card.accountId);
+const cardsOf = (read: QueueResponse) => (read.entries ?? []).map((e) => e.card.accountId);
 
 /** The stars `who` holds, by the ones they are on. */
 async function starsOf(db: Queryable, who: Person): Promise<string[]> {
@@ -201,7 +200,7 @@ describe("a star on a card", () => {
     expect(await starsOf(ctx.client, a)).toEqual([b.accountId]);
     expect(id).toEqual(expect.any(String));
     const { rows } = await ctx.client.query<{ decision: string | null }>(
-      "SELECT e.decision FROM round_entries e JOIN rounds r ON r.id = e.round_id WHERE r.account_id = $1 AND e.candidate_id = $2",
+      "SELECT e.decision FROM queue_entry e JOIN queue_day r ON r.id = e.queue_day_id WHERE r.account_id = $1 AND e.candidate_id = $2",
       [a.accountId, b.accountId],
     );
     expect(rows).toEqual([{ decision: null }]);
@@ -264,7 +263,7 @@ describe("a star on a card", () => {
     const answer = await putStar(app, a, YESTERDAY, 1);
 
     expect(answer.status).toBe(409);
-    expect(await errorCode(answer)).toBe("round_expired");
+    expect(await errorCode(answer)).toBe("day_ended");
     expect(await starsOf(ctx.client, a)).toEqual([]);
   });
 
@@ -333,13 +332,13 @@ describe("a star on a card", () => {
     const { app, who } = await scene(ctx, 1);
     const a = person(who, 0);
     for (const position of ["0", "-1", "32768", "x"]) {
-      const answer = await app.request(`/rounds/${TODAY}/entries/${position}/star`, {
+      const answer = await app.request(`/queue/${TODAY}/entries/${position}/star`, {
         method: "PUT",
         headers: a.headers,
       });
       expect(answer.status, position).toBe(400);
     }
-    const badDay = await app.request("/rounds/yesterday/entries/1/star", {
+    const badDay = await app.request("/queue/yesterday/entries/1/star", {
       method: "PUT",
       headers: a.headers,
     });
@@ -441,17 +440,17 @@ describe("the queue and a star", () => {
     const [a, b, c] = [person(who, 0), person(who, 1), person(who, 2)];
     await starredYesterday(ctx.client, a, b);
 
-    const round = await readToday(app, a);
+    const read = await readToday(app, a);
 
-    expect(cardsOf(round)).toEqual([c.accountId]);
-    expect((await decide(app, a, TODAY, round.entries?.[0]?.position ?? 0, "skip")).status).toBe(
+    expect(cardsOf(read)).toEqual([c.accountId]);
+    expect((await decide(app, a, TODAY, read.entries?.[0]?.position ?? 0, "skip")).status).toBe(
       200,
     );
     expect(cardsOf(await readToday(app, a))).toEqual([]);
     expect(await starsOf(ctx.client, a)).toEqual([b.accountId]);
     // Nor written into the day's log and hidden there: a page is not spent on them.
     const { rows } = await ctx.client.query<{ candidate_id: string }>(
-      `SELECT e.candidate_id FROM round_entries e JOIN rounds r ON r.id = e.round_id
+      `SELECT e.candidate_id FROM queue_entry e JOIN queue_day r ON r.id = e.queue_day_id
         WHERE r.account_id = $1 AND r.day = $2`,
       [a.accountId, TODAY],
     );
@@ -476,10 +475,10 @@ describe("the queue and a star", () => {
 
     expect((await clear(app, a, id)).status).toBe(204);
 
-    const round = await readToday(app, a);
-    expect(cardsOf(round)).toEqual([b.accountId]);
-    expect(round.entries?.[0]?.reason).toBe("seen_before");
-    expect(round.entries?.[0]?.star).toBeNull();
+    const read = await readToday(app, a);
+    expect(cardsOf(read)).toEqual([b.accountId]);
+    expect(read.entries?.[0]?.reason).toBe("seen_before");
+    expect(read.entries?.[0]?.star).toBeNull();
   });
 
   test("A star changes nothing for a like that waits", async ({ ctx }) => {
@@ -488,11 +487,11 @@ describe("the queue and a star", () => {
     const id = await starredYesterday(ctx.client, a, b);
     await likedYesterday(ctx.client, b, a);
 
-    const round = await readToday(app, a);
+    const read = await readToday(app, a);
 
-    expect(cardsOf(round)).toEqual([b.accountId]);
-    expect(round.entries?.[0]?.reason).toBe("liked_you");
-    expect(round.entries?.[0]?.star).toBe(id);
+    expect(cardsOf(read)).toEqual([b.accountId]);
+    expect(read.entries?.[0]?.reason).toBe("liked_you");
+    expect(read.entries?.[0]?.star).toBe(id);
   });
 
   test("A read says the star on a card that holds one, and null on another", async ({ ctx }) => {
@@ -501,9 +500,9 @@ describe("the queue and a star", () => {
     await queued(ctx.client, a, [{ candidateId: b.accountId, reason: "liked_you" }, c.accountId]);
     const { id } = await star(app, a, 1);
 
-    const round = await readToday(app, a);
+    const read = await readToday(app, a);
 
-    expect(round.entries?.map((entry) => entry.star)).toEqual([id, null]);
+    expect(read.entries?.map((entry) => entry.star)).toEqual([id, null]);
   });
 
   describe("A like or a pass takes the star off, and a skip does not", () => {
@@ -801,13 +800,12 @@ describe("a card opened from the list", () => {
       distance: "nearby",
     });
     expect(entry?.card.accountId).toBe(b.accountId);
-    const { rows } = await ctx.client.query<{ opened_at: Date | null; candidate_id: string }>(
-      `SELECT r.opened_at, e.candidate_id FROM rounds r JOIN round_entries e ON e.round_id = r.id
+    const { rows } = await ctx.client.query<{ candidate_id: string }>(
+      `SELECT e.candidate_id FROM queue_day r JOIN queue_entry e ON e.queue_day_id = r.id
         WHERE r.account_id = $1 AND r.day = $2`,
       [a.accountId, TODAY],
     );
     expect(rows.map((row) => row.candidate_id)).toEqual([b.accountId]);
-    expect(rows[0]?.opened_at).toBeInstanceOf(Date);
     // Served as a card is: the shown record, which a photo's URL stands on (ADR-008 §3).
     const shown = await ctx.client.query(
       `SELECT 1 FROM card_shown s JOIN photo p ON p.id = s.photo_id
@@ -816,7 +814,7 @@ describe("a card opened from the list", () => {
     );
     expect(shown.rowCount).toBeGreaterThan(0);
     // Addressed as any card is.
-    const seen = await app.request(`/rounds/${TODAY}/entries/${entry?.position}/seen`, {
+    const seen = await app.request(`/queue/${TODAY}/entries/${entry?.position}/seen`, {
       method: "POST",
       headers: a.headers,
     });
@@ -848,7 +846,7 @@ describe("a card opened from the list", () => {
 
     expect(twice.entries?.[0]?.position).toBe(once.entries?.[0]?.position);
     const { rows } = await ctx.client.query(
-      `SELECT 1 FROM rounds r JOIN round_entries e ON e.round_id = r.id
+      `SELECT 1 FROM queue_day r JOIN queue_entry e ON e.queue_day_id = r.id
         WHERE r.account_id = $1 AND r.day = $2 AND e.candidate_id = $3`,
       [a.accountId, TODAY, b.accountId],
     );
@@ -882,7 +880,7 @@ describe("a card opened from the list", () => {
     const answer = await decide(app, a, TODAY, entries?.[0]?.position ?? 0, "like");
 
     expect(answer.status).toBe(200);
-    expect(RoundDecisionAnswer.parse(await answer.json()).likesLeft).toBe(likesLeft - 1);
+    expect(QueueDecisionAnswer.parse(await answer.json()).likesLeft).toBe(likesLeft - 1);
     expect(await listOf(app, a)).toEqual([]);
     expect(await starsOf(ctx.client, a)).toEqual([]);
   });
@@ -898,7 +896,7 @@ describe("a card opened from the list", () => {
     expect(entries?.[0]?.reason).toBe("liked_you");
     const answer = await decide(app, a, TODAY, entries?.[0]?.position ?? 0, "like");
     expect(answer.status).toBe(200);
-    expect(RoundDecisionAnswer.parse(await answer.json()).match).not.toBeNull();
+    expect(QueueDecisionAnswer.parse(await answer.json()).match).not.toBeNull();
   });
 
   test("A fish waiting says so from the list too", async ({ ctx }) => {
@@ -998,10 +996,10 @@ describe("a card opened from the list", () => {
       [a.accountId],
     );
     expect(await listOf(app, a)).toEqual([]);
-    const round = await logged(ctx.client, a.accountId, TODAY, []);
+    const read = await logged(ctx.client, a.accountId, TODAY, []);
     await ctx.client.query(
-      "INSERT INTO round_relaxation (round_id, field, kind) VALUES ($1, 'smoking', 'aside')",
-      [round],
+      "INSERT INTO queue_relaxation (queue_day_id, field, kind) VALUES ($1, 'smoking', 'aside')",
+      [read],
     );
 
     const { entries } = await opened(app, a, id);
@@ -1054,7 +1052,9 @@ describe("whose star", () => {
     expect((await clear(app, c, id)).status).toBe(404);
 
     expect(await starsOf(ctx.client, a)).toEqual([b.accountId]);
-    const log = await ctx.client.query("SELECT 1 FROM rounds WHERE account_id = $1", [c.accountId]);
+    const log = await ctx.client.query("SELECT 1 FROM queue_day WHERE account_id = $1", [
+      c.accountId,
+    ]);
     expect(log.rowCount).toBe(0);
   });
 
@@ -1082,7 +1082,7 @@ describe("whose star", () => {
     const id = "00000000-0000-4000-8000-000000000000";
     const answers = await Promise.all([
       app.request("/stars"),
-      app.request(`/rounds/${TODAY}/entries/1/star`, { method: "PUT" }),
+      app.request(`/queue/${TODAY}/entries/1/star`, { method: "PUT" }),
       app.request(`/stars/${id}/open`, { method: "POST" }),
       app.request(`/stars/${id}`, { method: "DELETE" }),
     ]);

@@ -8,7 +8,7 @@ export { exportContacts } from "./contacts.ts";
 // a block's close, and what a report from a conversation reads, its copy
 // (#351, ADR-030 §12) and the photo line it may point at (#476).
 // The match's conversation (#100): whether two people have one, and the
-// opening that the second like writes; app.ts hands both to the round's
+// opening that the second like writes; app.ts hands both to the queue's
 // routes, since matching imports no slice that imports it.
 export {
   closeConversationsBetween,

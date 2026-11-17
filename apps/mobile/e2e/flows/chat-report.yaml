@@ -10,7 +10,7 @@
 # stories give the pair their conversation and Emmi's photo
 # (packages/db/src/seed/conversations.ts), which no other flow reads. A block
 # is final, so the flow runs once after each `pnpm demo:reset`. That Emmi's
-# card is out of Laura's reach is the API's tests until the round (#96) shows
+# card is out of Laura's reach is the API's tests until the queue (#96) shows
 # a card; that the moderators find the pointed photo first is the panel's flow
 # (apps/admin/e2e/report.spec.ts).
 appId: fi.kuutti.app

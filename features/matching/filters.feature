@@ -13,7 +13,7 @@ Feature: The filters, hard both ways, and the soft preferences that only order
   out. One on height (#508) accepts no list of answers: it is one relation of
   the other person's height to the holder's own, and everyone is having none.
   One on distance (#514, ADR-061 §7) has no field: it accepts the bands of the
-  pair's distance (rounds.feature) up to nearby, close or around, since far
+  pair's distance (queue.feature) up to nearby, close or around, since far
   accepted is no filter. Everybody has a home, so it is never paused and nobody
   is unknown to it. Without one the whole country is a person's pool.
   The soft preferences (education, drinking, the attitude to drugs) are a
@@ -98,7 +98,7 @@ Feature: The filters, hard both ways, and the soft preferences that only order
     When "A" hides their own smoking answer from their card
     Then the deal-breaker is not paused, "C" is in "A"'s queue and "B" is not
 
-  Scenario: The round leaves a pair a deal-breaker excludes out of each other's cards
+  Scenario: The queue leaves a pair a deal-breaker excludes out of each other's cards
     Given people of an open pond, each in every other's pool
     And one of them has a deal-breaker on smoking that another's answer does not pass
     When each of them reads the queue
@@ -187,22 +187,22 @@ Feature: The filters, hard both ways, and the soft preferences that only order
     Then they are out of each other's pool, asked from either side
     And the deal-breaker does not read as paused
 
-  Scenario: A distance deal-breaker keeps the two out of each other's rounds
+  Scenario: A distance deal-breaker keeps the two out of each other's queue days
     Given "A"'s deal-breaker on distance accepts nearby, "B" lives nearby and "C" close
     When each of them reads the queue
-    Then "A" and "B" are in each other's rounds, "C" is not in "A"'s, and "A" is not in "C"'s
+    Then "A" and "B" are in each other's queue days, "C" is not in "A"'s, and "A" is not in "C"'s
 
-  Scenario: A short round offers a distance deal-breaker set aside, never for those who did not answer
+  Scenario: A short queue offers a distance deal-breaker set aside, never for those who did not answer
     Given "A"'s deal-breaker on distance accepts nearby, and twelve people live further away
     When "A" reads today's relaxations
-    Then the round is short, and distance is offered set aside alone, 10 more
+    Then the queue is short, and distance is offered set aside alone, 10 more
     And relaxing it for those who did not answer is not found, with nothing written
 
   Scenario: A distance deal-breaker set aside lets in people beyond it, never against their own filters
     Given "A"'s deal-breaker on distance accepts nearby, and "B" and "C" live further away
     And "B"'s own deal-breaker on distance excludes "A"
     When "A" sets distance aside for today
-    Then "C" is added to "A"'s round, labelled relaxed with distance, and "B" is not
+    Then "C" is added to "A"'s queue, labelled relaxed with distance, and "B" is not
 
   Scenario: A card never says that its person did not answer a distance
     Given "A"'s deal-breaker on distance lets "B" through
@@ -235,7 +235,7 @@ Feature: The filters, hard both ways, and the soft preferences that only order
     When their soft answers change in any way
     Then whether they are in each other's pool does not change
 
-  Scenario: The soft count is read by the round's order alone
+  Scenario: The soft count is read by the queue's order alone
     Then no file of the apps reads the soft count but its own and the order of new people (#95)
 
   # Filters at once (ADR-062 §8, the maintainer, 01/11/2026): a card that does not

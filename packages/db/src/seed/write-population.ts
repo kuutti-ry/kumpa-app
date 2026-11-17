@@ -66,8 +66,8 @@ const ACCOUNT_TABLES = [
   "photo",
   "consent",
   "preferences",
-  // A story's or the builder's rounds (#96), their entries by the cascade.
-  "rounds",
+  // A story's or the builder's queue days (#96), their entries by the cascade.
+  "queue_day",
   "profile",
   "session",
   "auth_request",
@@ -195,8 +195,8 @@ export async function deleteIdentities(
     [accounts],
   );
   // The entries in which the accounts are somebody's card (#96); their own
-  // rounds go with ACCOUNT_TABLES, their entries by the cascade.
-  await tx.query("DELETE FROM round_entries WHERE candidate_id = ANY($1)", [accounts]);
+  // queue days go with ACCOUNT_TABLES, their entries by the cascade.
+  await tx.query("DELETE FROM queue_entry WHERE candidate_id = ANY($1)", [accounts]);
   // The stars the accounts put, and those put on them (#575).
   await tx.query("DELETE FROM star WHERE account_id = ANY($1) OR candidate_id = ANY($1)", [
     accounts,

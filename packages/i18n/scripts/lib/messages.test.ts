@@ -91,7 +91,7 @@ describe("i18n:check", () => {
 
   it("bans an inflected dynamic value: 'in {pond}' in English, a glued suffix anywhere", () => {
     const messages: Messages = {
-      "round.where": {
+      "queue.where": {
         en: "New people in {pond}",
         description: "d",
         fi: "Uusia ihmisiä: {pond}ssa",
@@ -101,8 +101,8 @@ describe("i18n:check", () => {
     };
     const { errors } = checkMessages(messages, { release: false });
     expect(errors).toHaveLength(2);
-    expect(errors[0]).toMatch(/round.where: en "in \{pond\}"/);
-    expect(errors[1]).toMatch(/round.where: fi \{pond\} has a suffix glued/);
+    expect(errors[0]).toMatch(/queue.where: en "in \{pond\}"/);
+    expect(errors[1]).toMatch(/queue.where: fi \{pond\} has a suffix glued/);
   });
 
   it("does not mistake a number for a noun", () => {

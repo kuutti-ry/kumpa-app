@@ -237,7 +237,7 @@ try {
   await pool.query("DELETE FROM pond_counter");
   const counted = await takeSnapshot({ db: pool, logger, now: () => new Date() });
   console.log(JSON.stringify({ msg: "demo population: counter recounted", ...counted }));
-  // And matching open, so that these people have rounds (ADR-060 Open 1): the
+  // And matching open, so that these people have queue days (ADR-060 Open 1): the
   // switch's next version by this command's name, where it stands closed.
   const opened = await openMatching(pool, "demo-population");
   console.log(JSON.stringify({ msg: "demo population: matching opened", opened }));

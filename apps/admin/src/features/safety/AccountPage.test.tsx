@@ -735,7 +735,7 @@ describe("taking a photo down on a person's page", () => {
     [1, true],
     [2, true],
     [3, false],
-  ])("with %i approved photos, says the person drops out of every round: %s", async (n, says) => {
+  ])("with %i approved photos, says the person drops out of every queue: %s", async (n, says) => {
     const photos = Array.from({ length: n }, (_, i) => photo(i + 1, "approved"));
     fetchMock([
       pageOf(page({ photos: [...photos, photo(9, "rejected", "other")] })),

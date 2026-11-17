@@ -32,7 +32,7 @@ import {
 // features/safety/blocks.feature (#84, ADR-030): a block, set by either;
 // features/matching/filters.feature (#87, #514): the deal-breakers, both ways,
 // the one on distance among them, and the soft answers, which no pool reads;
-// features/matching/rounds.feature: the band of two homes (ADR-061 §5).
+// features/matching/queue.feature: the band of two homes (ADR-061 §5).
 
 type Gender = PoolPerson["gender"];
 
@@ -247,7 +247,7 @@ describe("Two people are in each other's pool only when each passes what the oth
 
 describe("The sheet's examples of who is shown to whom, by gender and seek", () => {
   // The "3. Examples" table of the field sheet's gender model (#147, TD-14):
-  // A appears in B's round exactly when A's gender is among B's seeks and the other way round.
+  // A appears in B's queue exactly when A's gender is among B's seeks and the other way round.
   // Each example again with two dance partners, whom the same rule holds to (#175).
   it.each([
     ["man", "man", "man", "man", "open_to_either", "yes"],

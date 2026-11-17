@@ -58,7 +58,7 @@ describe("nightly jobs", () => {
   });
 });
 
-// The wait the round's push is armed with (#102, ADR-055 §6), and the night's.
+// The wait the queue's push is armed with (#102, ADR-055 §6), and the night's.
 describe("msUntilFinnishHour", () => {
   const SECOND = 1000;
   const DAY = 24 * 60 * 60 * SECOND;
@@ -87,11 +87,11 @@ describe("msUntilFinnishHour", () => {
 
   it.each([
     // Summer time ends on 25 October 2026 at 04:00 EEST (01:00 UTC): the night
-    // is 04:00 EET, 02:00 UTC, and the round's push 09:00 EET, 07:00 UTC.
+    // is 04:00 EET, 02:00 UTC, and the queue's push 09:00 EET, 07:00 UTC.
     [4, "2026-10-24T22:00:00Z", 4 * 60 * 60 * SECOND],
     [9, "2026-10-24T06:00:00Z", DAY + 60 * 60 * SECOND],
     // Summer time begins on 29 March 2026 at 03:00 EET (01:00 UTC): the night
-    // is 04:00 EEST, 01:00 UTC, and the round's push 09:00 EEST, 06:00 UTC.
+    // is 04:00 EEST, 01:00 UTC, and the queue's push 09:00 EEST, 06:00 UTC.
     [4, "2026-03-28T23:00:00Z", 2 * 60 * 60 * SECOND],
     [9, "2026-03-28T07:00:00Z", DAY - 60 * 60 * SECOND],
     // 03:00 does not happen that night: the count stands, and lands at 04:00.

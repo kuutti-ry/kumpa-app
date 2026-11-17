@@ -1,5 +1,5 @@
 import type { Queryable } from "@kuutti/db";
-import { RoundDecisionAnswer, RoundResponse } from "@kuutti/schema";
+import { QueueDecisionAnswer, QueueResponse } from "@kuutti/schema";
 import fc from "fast-check";
 import { type App, createApp } from "../app.ts";
 import { finnishDay } from "../lib/finnish-day.ts";
@@ -8,7 +8,6 @@ import { interleaved } from "../test/chat.ts";
 import { STOPPED_CLOCK as T } from "../test/global-setup.ts";
 import { captureLogger, describe, expect, test, testConfig } from "../test/harness.ts";
 import { earnedUnits, unitsOf } from "../test/invitations.ts";
-import { pidOf, waitsFor, watched, withTwoConnections } from "../test/races.ts";
 import {
   block,
   cast,
@@ -19,10 +18,11 @@ import {
   logged,
   MATCHES,
   peopleWhoFit,
-} from "../test/rounds.ts";
-import { decide } from "./rounds.ts";
+} from "../test/queue.ts";
+import { pidOf, waitsFor, watched, withTwoConnections } from "../test/races.ts";
+import { decide } from "./queue.ts";
 
-// Earned fish in today's round (#107, ADR-044 §8, #503,
+// Earned fish in today's queue (#107, ADR-044 §8, #503,
 // features/matching/earned.feature): a unit used by itself past the window's
 // budget, given back when its fish changes, left out of the count once it
 // paid; a fish that is a like spends none; a fish needs one of the day's likes
@@ -44,34 +44,39 @@ async function appAt(db: Queryable): Promise<App> {
   return createApp({ config: testConfig(), logger, db, now: () => T });
 }
 
-/** A round for `owner` `days` before today with these cards, matching every filter unless said; the entries' ids in order. */
-async function roundOf(db: Queryable, owner: Person, cards: Card[], days = 0): Promise<string[]> {
+/** A queue for `owner` `days` before today with these cards, matching every filter unless said; the entries' ids in order. */
+async function queueDayOf(
+  db: Queryable,
+  owner: Person,
+  cards: Card[],
+  days = 0,
+): Promise<string[]> {
   const written = cards.map(
     (card): LoggedCard =>
       "person" in card
         ? { candidateId: card.person.accountId, reason: card.reason }
         : card.accountId,
   );
-  const roundId = await logged(db, owner.accountId, finnishDay(daysBefore(days)), written);
+  const queueDayId = await logged(db, owner.accountId, finnishDay(daysBefore(days)), written);
   const { rows } = await db.query<{ id: string }>(
-    "SELECT id FROM round_entries WHERE round_id = $1 ORDER BY position",
-    [roundId],
+    "SELECT id FROM queue_entry WHERE queue_day_id = $1 ORDER BY position",
+    [queueDayId],
   );
   return rows.map((row) => row.id);
 }
 
-/** `sender` sent `to` a fish, or a like, on a round of `days` before today; the entry's id. */
+/** `sender` sent `to` a fish, or a like, on a queue of `days` before today; the entry's id. */
 async function sentBefore(db: Queryable, sender: Person, to: Person, days: number, fish: boolean) {
-  const [entry] = await roundOf(db, sender, [to], days);
+  const [entry] = await queueDayOf(db, sender, [to], days);
   await db.query(
-    "UPDATE round_entries SET decision = 'like', decided_at = $2, fish = $3 WHERE id = $1",
+    "UPDATE queue_entry SET decision = 'like', decided_at = $2, fish = $3 WHERE id = $1",
     [entry, daysBefore(days), fish],
   );
   return entry as string;
 }
 
 const choose = (app: App, who: Person, position: number, decision: string) =>
-  app.request(`/rounds/${TODAY}/entries/${position}/decision`, {
+  app.request(`/queue/${TODAY}/entries/${position}/decision`, {
     method: "PUT",
     headers: { ...who.headers, "content-type": "application/json" },
     body: JSON.stringify({ decision }),
@@ -93,7 +98,7 @@ async function likeBudget(db: Queryable, n: number) {
 
 async function decisionsOf(db: Queryable, entries: readonly string[]) {
   const { rows } = await db.query<{ id: string; decision: string | null; fish: boolean }>(
-    "SELECT id, decision, fish FROM round_entries WHERE id = ANY($1::uuid[])",
+    "SELECT id, decision, fish FROM queue_entry WHERE id = ANY($1::uuid[])",
     [entries],
   );
   return entries.map((id) => {
@@ -112,7 +117,7 @@ describe("earned fish", () => {
     if (!a || !b || !c || !x) throw new Error("cast not written");
     await sentBefore(ctx.client, a, x, 3, true);
     await earnedUnits(ctx.client, a.accountId, { fish: 1 });
-    const entries = await roundOf(ctx.client, a, [b, c]);
+    const entries = await queueDayOf(ctx.client, a, [b, c]);
     const app = await appAt(ctx.client);
 
     expect((await choose(app, a, 1, "fish")).status).toBe(200);
@@ -136,7 +141,7 @@ describe("earned fish", () => {
       [a.accountId, daysBefore(1), paid],
     );
     await earnedUnits(ctx.client, a.accountId, { fish: 1 }, daysBefore(2));
-    const entries = await roundOf(ctx.client, a, [b]);
+    const entries = await queueDayOf(ctx.client, a, [b]);
     const app = await appAt(ctx.client);
 
     expect((await choose(app, a, 1, "fish")).status).toBe(200);
@@ -154,7 +159,7 @@ describe("earned fish", () => {
     await sentBefore(ctx.client, a, x, 3, true);
     await earnedUnits(ctx.client, a.accountId, { fish: 1 }, daysBefore(2));
     await earnedUnits(ctx.client, a.accountId, { fish: 1 }, daysBefore(5));
-    const entries = await roundOf(ctx.client, a, [b, c, d]);
+    const entries = await queueDayOf(ctx.client, a, [b, c, d]);
     const app = await appAt(ctx.client);
 
     expect((await choose(app, a, 1, "fish")).status).toBe(200);
@@ -171,7 +176,7 @@ describe("earned fish", () => {
     if (!a || !b || !x) throw new Error("cast not written");
     await sentBefore(ctx.client, a, x, 3, true);
     await earnedUnits(ctx.client, a.accountId, { fish: 1 });
-    const entries = await roundOf(ctx.client, a, [b]);
+    const entries = await queueDayOf(ctx.client, a, [b]);
     const app = await appAt(ctx.client);
 
     expect((await choose(app, a, 1, "fish")).status).toBe(200);
@@ -189,7 +194,7 @@ describe("earned fish", () => {
     if (!a || !b || !x) throw new Error("cast not written");
     await sentBefore(ctx.client, a, x, 3, true);
     await earnedUnits(ctx.client, a.accountId, { fish: 1 });
-    const entries = await roundOf(ctx.client, a, [b]);
+    const entries = await queueDayOf(ctx.client, a, [b]);
     const app = await appAt(ctx.client);
 
     expect((await choose(app, a, 1, "fish")).status).toBe(200);
@@ -205,7 +210,7 @@ describe("earned fish", () => {
     await sentBefore(ctx.client, a, x, 3, true);
     await earnedUnits(ctx.client, a.accountId, { fish: 1 }, daysBefore(2));
     await earnedUnits(ctx.client, a.accountId, { fish: 1 }, daysBefore(1));
-    const entries = await roundOf(ctx.client, a, [b, c]);
+    const entries = await queueDayOf(ctx.client, a, [b, c]);
     const app = await appAt(ctx.client);
     expect((await choose(app, a, 1, "fish")).status).toBe(200);
     expect((await choose(app, a, 2, "fish")).status).toBe(200);
@@ -224,7 +229,7 @@ describe("earned fish", () => {
     await likeBudget(ctx.client, 1);
     await sentBefore(ctx.client, a, x, 3, true);
     await earnedUnits(ctx.client, a.accountId, { fish: 1 });
-    const entries = await roundOf(ctx.client, a, [b, c]);
+    const entries = await queueDayOf(ctx.client, a, [b, c]);
     const app = await appAt(ctx.client);
 
     expect((await choose(app, a, 1, "like")).status).toBe(200);
@@ -244,7 +249,7 @@ describe("earned fish", () => {
     await likeBudget(ctx.client, 2);
     await sentBefore(ctx.client, a, x, 3, true);
     await earnedUnits(ctx.client, a.accountId, { fish: 1 });
-    await roundOf(ctx.client, a, [b]);
+    await queueDayOf(ctx.client, a, [b]);
     const app = await appAt(ctx.client);
 
     expect(await likesLeftAfter(await choose(app, a, 1, "fish"))).toBe(1);
@@ -261,7 +266,7 @@ describe("earned fish", () => {
     await likeBudget(ctx.client, 1);
     await sentBefore(ctx.client, a, x, 3, true);
     await earnedUnits(ctx.client, a.accountId, { fish: 1 });
-    const entries = await roundOf(ctx.client, a, [b]);
+    const entries = await queueDayOf(ctx.client, a, [b]);
     const app = await appAt(ctx.client);
 
     expect(await likesLeftAfter(await choose(app, a, 1, "like"))).toBe(0);
@@ -281,7 +286,7 @@ describe("earned fish", () => {
     await likeBudget(ctx.client, 1);
     await sentBefore(ctx.client, a, x, 3, true);
     await earnedUnits(ctx.client, a.accountId, { fish: 1 });
-    const entries = await roundOf(ctx.client, a, [b]);
+    const entries = await queueDayOf(ctx.client, a, [b]);
     const app = await appAt(ctx.client);
     expect((await choose(app, a, 1, "fish")).status).toBe(200);
 
@@ -298,7 +303,7 @@ describe("earned fish", () => {
     await earnedUnits(ctx.client, a.accountId, { fish: 1 });
     await sentBefore(ctx.client, b, a, 1, false);
     await sentBefore(ctx.client, c, a, 1, true);
-    const entries = await roundOf(ctx.client, a, [
+    const entries = await queueDayOf(ctx.client, a, [
       { person: b, reason: "liked_you" },
       { person: c, reason: "fish" },
     ]);
@@ -307,7 +312,7 @@ describe("earned fish", () => {
     for (const position of [1, 2]) {
       const answer = await choose(app, a, position, "fish");
       expect(answer.status).toBe(200);
-      expect(RoundDecisionAnswer.parse(await answer.json()).match).not.toBeNull();
+      expect(QueueDecisionAnswer.parse(await answer.json()).match).not.toBeNull();
     }
 
     expect(await decisionsOf(ctx.client, entries)).toEqual(["like", "like"]);
@@ -322,10 +327,10 @@ describe("earned fish", () => {
     await sentBefore(ctx.client, a, x, 3, true);
     await earnedUnits(ctx.client, a.accountId, { fish: 1 });
     await sentBefore(ctx.client, b, a, 1, false);
-    const entries = await roundOf(ctx.client, a, [b]);
+    const entries = await queueDayOf(ctx.client, a, [b]);
     const app = await appAt(ctx.client);
     const sent = await choose(app, a, 1, "fish");
-    expect(RoundDecisionAnswer.parse(await sent.json()).match).not.toBeNull();
+    expect(QueueDecisionAnswer.parse(await sent.json()).match).not.toBeNull();
 
     for (const change of ["like", "pass"]) {
       const refused = await choose(app, a, 1, change);
@@ -346,9 +351,9 @@ describe("earned fish", () => {
     if (!a || !b || !x) throw new Error("cast not written");
     await sentBefore(ctx.client, a, x, 3, true);
     await earnedUnits(ctx.client, a.accountId, { fish: 1 });
-    const entries = await roundOf(ctx.client, a, [b]);
+    const entries = await queueDayOf(ctx.client, a, [b]);
     // B blocks A once the unit is spent, just before the fish is written, as if it committed then.
-    const db = interleaved(ctx.client, /UPDATE round_entries e SET decision/, () =>
+    const db = interleaved(ctx.client, /UPDATE queue_entry e SET decision/, () =>
       block(ctx.client, b, a),
     );
 
@@ -367,12 +372,12 @@ describe("earned fish", () => {
     const [a, b, c] = await cast(ctx.client, 3);
     if (!a || !b || !c) throw new Error("cast not written");
     await earnedUnits(ctx.client, a.accountId, { fish: 1 });
-    await roundOf(ctx.client, a, [b, c]);
+    await queueDayOf(ctx.client, a, [b, c]);
     const app = await appAt(ctx.client);
 
     expect(await fishToSendAfter(await choose(app, a, 1, "fish"))).toBe(true);
-    const read = await app.request("/rounds/today", { headers: a.headers });
-    expect(RoundResponse.parse(await read.json()).fishToSend).toBe(true);
+    const read = await app.request("/queue/today", { headers: a.headers });
+    expect(QueueResponse.parse(await read.json()).fishToSend).toBe(true);
     expect(await fishToSendAfter(await choose(app, a, 2, "fish"))).toBe(false);
     // The earned one given back by a like is waiting again.
     expect(await fishToSendAfter(await choose(app, a, 2, "like"))).toBe(true);
@@ -385,9 +390,9 @@ describe("earned fish", () => {
     if (!a || !b || !x) throw new Error("cast not written");
     await sentBefore(ctx.client, a, x, 3, true);
     await earnedUnits(ctx.client, a.accountId, { fish: 1 });
-    const entries = await roundOf(ctx.client, a, [b]);
+    const entries = await queueDayOf(ctx.client, a, [b]);
     expect((await choose(await appAt(ctx.client), a, 1, "fish")).status).toBe(200);
-    await ctx.client.query("DELETE FROM round_entries WHERE id = $1", [entries[0]]);
+    await ctx.client.query("DELETE FROM queue_entry WHERE id = $1", [entries[0]]);
     expect(await unitsOf(ctx.client, a.accountId)).toEqual([
       { kind: "fish", spent: true, entryId: null },
     ]);
@@ -418,7 +423,7 @@ describe("any order of decisions", () => {
     cards.filter((card) => card.decision === "fish" && !card.paid).length;
   const paidOf = ({ cards }: Holdings) => cards.filter((card) => card.paid).length;
 
-  // Thirty runs of a round and up to ten decisions each, on real Postgres:
+  // Thirty runs of a queue and up to ten decisions each, on real Postgres:
   // 2.6 s alone on a laptop, 3 to 7 s on CI's shared arm runner beside the rest
   // of the suite, and twice past the default 15 s on 05/11/2026 (main's 4862a3c8
   // and #612) with nothing it runs changed. So a ceiling of its own.
@@ -449,7 +454,7 @@ describe("any order of decisions", () => {
             await likeBudget(ctx.client, likes);
             if (weekSpent) await sentBefore(ctx.client, a, x, 3, true);
             await earnedUnits(ctx.client, a.accountId, { fish: earned }, daysBefore(1));
-            const entries = await roundOf(ctx.client, a, [
+            const entries = await queueDayOf(ctx.client, a, [
               b,
               c,
               d,
@@ -520,7 +525,7 @@ describe("two devices", () => {
       const owner = person(a);
       await sentBefore(pool, owner, person(x), 3, true);
       await earnedUnits(pool, a, { fish: 1 });
-      const entries = await roundOf(pool, owner, [person(c), person(d)]);
+      const entries = await queueDayOf(pool, owner, [person(c), person(d)]);
       const { logger } = await captureLogger();
       const deps = (db: Queryable) => ({ db, logger, now: () => T });
       const choice = (position: number, decision: "fish" | "pass") => ({
@@ -536,7 +541,7 @@ describe("two devices", () => {
       const secondPid = await pidOf(second);
       await first.query("BEGIN");
       await second.query("BEGIN");
-      // One device's pass holds the round's row and has given the unit back; the other's fish waits.
+      // One device's pass holds the queue's row and has given the unit back; the other's fish waits.
       await decide(deps(first), MATCHES, fits, choice(1, "pass"));
       const racing = watched(decide(deps(second), MATCHES, fits, choice(2, "fish")));
       expect(await waitsFor(pool, secondPid, firstPid, racing.settled)).toBe(true);

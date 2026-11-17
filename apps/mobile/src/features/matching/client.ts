@@ -1,14 +1,14 @@
 import {
   type ApiComponents,
   type DealBreakerField,
+  type QueueChoice,
+  QueueDecisionAnswer,
+  type QueueEntry,
+  QueueResponse,
   type Relaxation,
   RelaxationAnswer,
   RelaxationsResponse,
   RelaxationUndone,
-  type RoundChoice,
-  RoundDecisionAnswer,
-  type RoundEntry,
-  RoundResponse,
   StarAnswer,
   StarList,
   type StarredPerson,
@@ -24,15 +24,15 @@ import { api, failed } from "@/lib/api";
  * none left adds the next people. Null entries before matching opens, an empty
  * list at the queue's end (ADR-062 §1).
  */
-export async function fetchRound(): Promise<RoundResponse> {
-  const { data, error, response } = await api.GET("/rounds/today");
-  if (!data) throw failed(response, error, "round");
-  return RoundResponse.parse(data);
+export async function fetchQueue(): Promise<QueueResponse> {
+  const { data, error, response } = await api.GET("/queue/today");
+  if (!data) throw failed(response, error, "queue");
+  return QueueResponse.parse(data);
 }
 
 /** The card was on the screen: the first report is recorded, a repeat writes nothing. */
 export async function reportSeen(day: string, position: number): Promise<void> {
-  const { error, response } = await api.POST("/rounds/{day}/entries/{position}/seen", {
+  const { error, response } = await api.POST("/queue/{day}/entries/{position}/seen", {
     params: { path: { day, position } },
   });
   if (!response.ok) throw failed(response, error, "seen");
@@ -46,19 +46,19 @@ export async function reportSeen(day: string, position: number): Promise<void> {
 export async function decide(
   day: string,
   position: number,
-  decision: RoundChoice,
-): Promise<RoundDecisionAnswer> {
-  const { data, error, response } = await api.PUT("/rounds/{day}/entries/{position}/decision", {
+  decision: QueueChoice,
+): Promise<QueueDecisionAnswer> {
+  const { data, error, response } = await api.PUT("/queue/{day}/entries/{position}/decision", {
     params: { path: { day, position } },
     body: { decision },
   });
   if (!data) throw failed(response, error, "decision");
-  return RoundDecisionAnswer.parse(data);
+  return QueueDecisionAnswer.parse(data);
 }
 
 /** What a short queue may relax today, and what is relaxed (#99, ADR-042 §4); counted when asked. */
 export async function fetchRelaxations(day: string): Promise<RelaxationsResponse> {
-  const { data, error, response } = await api.GET("/rounds/{day}/relaxations", {
+  const { data, error, response } = await api.GET("/queue/{day}/relaxations", {
     params: { path: { day } },
   });
   if (!data) throw failed(response, error, "relaxations");
@@ -66,8 +66,8 @@ export async function fetchRelaxations(day: string): Promise<RelaxationsResponse
 }
 
 /** One deal-breaker relaxed for today: the first cards it added, to append without a read (§5, ADR-062 §10). */
-export async function relaxToday(day: string, relaxation: Relaxation): Promise<RoundEntry[]> {
-  const { data, error, response } = await api.POST("/rounds/{day}/relaxations", {
+export async function relaxToday(day: string, relaxation: Relaxation): Promise<QueueEntry[]> {
+  const { data, error, response } = await api.POST("/queue/{day}/relaxations", {
     params: { path: { day } },
     // The contract's field is the deal-breakers' enum; zod's type of it is the wider field key.
     body: relaxation as ApiComponents["schemas"]["Relaxation"],
@@ -78,7 +78,7 @@ export async function relaxToday(day: string, relaxation: Relaxation): Promise<R
 
 /** Today's relaxation undone: the places of the undecided cards it took back (§6). */
 export async function undoRelaxation(day: string, field: DealBreakerField): Promise<number[]> {
-  const { data, error, response } = await api.DELETE("/rounds/{day}/relaxations/{field}", {
+  const { data, error, response } = await api.DELETE("/queue/{day}/relaxations/{field}", {
     params: { path: { day, field: field as ApiComponents["schemas"]["DealBreakerField"] } },
   });
   if (!data) throw failed(response, error, "undo relaxation");
@@ -94,7 +94,7 @@ export async function fetchStars(): Promise<StarredPerson[]> {
 
 /** A star on today's card (§1): the star, and whether it is the first the list shows. */
 export async function putStar(day: string, position: number): Promise<StarAnswer> {
-  const { data, error, response } = await api.PUT("/rounds/{day}/entries/{position}/star", {
+  const { data, error, response } = await api.PUT("/queue/{day}/entries/{position}/star", {
     params: { path: { day, position } },
   });
   if (!data) throw failed(response, error, "star");
@@ -108,10 +108,10 @@ export async function clearStar(id: string): Promise<void> {
 }
 
 /** A starred person's card, in today's log (§4): answered as a read of the queue is, with that one card. */
-export async function openStar(id: string): Promise<RoundResponse> {
+export async function openStar(id: string): Promise<QueueResponse> {
   const { data, error, response } = await api.POST("/stars/{id}/open", {
     params: { path: { id } },
   });
   if (!data) throw failed(response, error, "open star");
-  return RoundResponse.parse(data);
+  return QueueResponse.parse(data);
 }

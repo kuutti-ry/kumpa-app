@@ -11,7 +11,7 @@ import { PROFILE_FIELD_KEYS, PROFILE_FIELDS, type ProfileFields } from "@kuutti/
  * is needed.
  *
  * Which fields are soft is the registry's (`preferenceAbout`), never named
- * here. The round builder (#95) orders a round's non-forced places by the
+ * here. The queue's builder (#95) orders a queue's non-forced places by the
  * count, without weights; it never reaches a card or a log line as a
  * number (the matching document's invariant 6).
  */

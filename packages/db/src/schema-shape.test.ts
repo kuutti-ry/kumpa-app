@@ -14,13 +14,13 @@ import {
   PhotoRejectionReason,
   PhotoState,
   PushPlatform,
+  QueueDecision,
+  QueueReason,
   RelaxationKind,
   ReportMessageSide,
   ReportOutcome,
   ReportSource,
   RewardKind,
-  RoundDecision,
-  RoundReason,
   SanctionKind,
   SanctionReason,
   SanctionRule,
@@ -82,13 +82,13 @@ describe("the tables", () => {
       "profile",
       // A signed-in device's push token (#102, ADR-055).
       "push_token",
+      // A day's log of the queue and its entries (#96, ADR-034), and a day's relaxations (#99, ADR-042).
+      "queue_day",
+      "queue_entry",
+      "queue_relaxation",
       "report",
       "report_message",
       "reward",
-      // Today's round and its entries (#96, ADR-034), and a day's relaxations (#99, ADR-042).
-      "round_entries",
-      "round_relaxation",
-      "rounds",
       "sanction",
       "session",
       // One person's private mark on another (#575, ADR-064).
@@ -175,15 +175,15 @@ describe("a person's home (ADR-061)", () => {
     ]);
   });
 
-  it("gives a round's entry a frozen band, null on an entry from before it (§5)", () => {
-    expect(column("round_entries", "distance")?.getSQLType()).toBe("distance_band");
-    expect(column("round_entries", "distance")?.notNull).toBe(false);
+  it("gives a queue's entry a frozen band, null on an entry from before it (§5)", () => {
+    expect(column("queue_entry", "distance")?.getSQLType()).toBe("distance_band");
+    expect(column("queue_entry", "distance")?.notNull).toBe(false);
   });
 
   it("marks a second pass on its entry, off unless the pass is one (ADR-062 §6)", () => {
-    expect(column("round_entries", "second_pass")?.getSQLType()).toBe("boolean");
-    expect(column("round_entries", "second_pass")?.notNull).toBe(true);
-    expect(column("round_entries", "second_pass")?.default).toBe(false);
+    expect(column("queue_entry", "second_pass")?.getSQLType()).toBe("boolean");
+    expect(column("queue_entry", "second_pass")?.notNull).toBe(true);
+    expect(column("queue_entry", "second_pass")?.default).toBe(false);
   });
 });
 
@@ -213,13 +213,13 @@ describe("the foreign keys", () => {
       "photo_review.photo_id -> photo.id cascade",
       // A device's push token goes with its session, whatever deletes it (#102, ADR-055 §3).
       "push_token.session_id -> session.id cascade",
+      // A queue day's entries go with their day (#96), and its relaxations (#99).
+      "queue_entry.queue_day_id -> queue_day.id cascade",
+      "queue_relaxation.queue_day_id -> queue_day.id cascade",
       // A report's frozen copy goes with the report, twelve months from filing (#351).
       "report_message.report_id -> report.id cascade",
       // The units an invitation earned go with it (#107, ADR-044).
       "reward.invitation_id -> invitation.id cascade",
-      // A round's entries go with their round (#96), and its relaxations (#99).
-      "round_entries.round_id -> rounds.id cascade",
-      "round_relaxation.round_id -> rounds.id cascade",
     ]);
   });
 
@@ -254,13 +254,13 @@ describe("the foreign keys", () => {
       "profile",
       // A device's push token (#102), deleted at erasure before its session.
       "push_token",
+      // The person's own queue days, and the entries in which the person is somebody's card (#96).
+      "queue_day",
+      "queue_entry",
       "report",
       "report",
       // The units the person earned (#107), deleted at erasure.
       "reward",
-      // The entries in which the person is somebody's card, and the person's own rounds (#96).
-      "round_entries",
-      "rounds",
       "sanction",
       "session",
       // Who put a star and on whom (#575): gone at the erasure of either.
@@ -343,7 +343,7 @@ describe("the foreign keys", () => {
     ]);
   });
 
-  it("let an invitation outlive its inviter once redeemed and its redeemer once counted, and a spent unit its round entry, without the link (#107, ADR-044)", () => {
+  it("let an invitation outlive its inviter once redeemed and its redeemer once counted, and a spent unit its queue entry, without the link (#107, ADR-044)", () => {
     expect(references.filter((reference) => reference.startsWith("invitation.")).sort()).toEqual([
       "invitation.inviter_account_id -> account.id no action",
       "invitation.redeemed_by_account_id -> account.id no action",
@@ -359,7 +359,7 @@ describe("the foreign keys", () => {
     expect(references.filter((reference) => reference.startsWith("reward.")).sort()).toEqual([
       "reward.account_id -> account.id no action",
       "reward.invitation_id -> invitation.id cascade",
-      "reward.spent_entry_id -> round_entries.id set null",
+      "reward.spent_entry_id -> queue_entry.id set null",
     ]);
   });
 
@@ -391,7 +391,7 @@ describe("the indexes", () => {
     ["report_message", "report_message_seq_idx", ["report_id", "seq"]],
     ["notification_preference", "notification_preference_kind_idx", ["account_id", "kind"]],
     ["found_them_count", "found_them_count_day_reason_idx", ["day", "reason"]],
-    ["round_relaxation", "round_relaxation_round_field_idx", ["round_id", "field"]],
+    ["queue_relaxation", "queue_relaxation_day_field_idx", ["queue_day_id", "field"]],
     // Starred or not, with no degrees (#575).
     ["star", "star_account_candidate_idx", ["account_id", "candidate_id"]],
     // One invitation per code, and one redeemed per person (#107).
@@ -577,9 +577,9 @@ describe("the enums", () => {
     expect(enums.sanction_reason).toEqual(SanctionReason.options);
     // The automatic rule that applied a shadow ban (#105).
     expect(enums.sanction_rule).toEqual(SanctionRule.options);
-    // Why a card is in a round, and what was decided about it (#96).
-    expect(enums.round_reason).toEqual(RoundReason.options);
-    expect(enums.round_decision).toEqual(RoundDecision.options);
+    // Why a card is in a queue, and what was decided about it (#96).
+    expect(enums.queue_reason).toEqual(QueueReason.options);
+    expect(enums.queue_decision).toEqual(QueueDecision.options);
     // How far a card's person lives, in the only words there are for it (ADR-061 §5).
     expect(enums.distance_band).toEqual([...DISTANCE_BANDS]);
     // How a deal-breaker is relaxed for the day (#99).

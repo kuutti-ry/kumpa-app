@@ -6,13 +6,13 @@ import {
 } from "@kuutti/schema";
 
 /**
- * What a profile needs before the round builder may show it (#47): a name, at
+ * What a profile needs before the queue's builder may show it (#47): a name, at
  * least two approved photos (an automatic approval requires a face, ADR-006;
  * two since #56, where a third became a tip), a bio of fifty characters, a
  * ready line in its place (#239: the maintainer, "even if empty, but
  * placeholder - show the card") or two answered prompts, and the two things
  * onboarding sets (#46), seeks and the age window. Pure: the callers gather
- * the snapshot; the tips of #56 and the round builder of M4 read the same
+ * the snapshot; the tips of #56 and the queue's builder of M4 read the same
  * answer.
  */
 export type CompletenessSnapshot = {

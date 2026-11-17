@@ -354,12 +354,12 @@ export const PERSONA_HISTORIES: readonly PersonaHistory[] = [
     photos: 0,
     afterwards: "nothing",
   },
-  // The round's cast (#379): five women who seek women, so that each is let
+  // The queue's cast (#379): five women who seek women, so that each is let
   // in at once (ADR-015 §10: seeking one's own gender is no contest), all in
   // each other's pool both ways and in no other persona's (a test says so):
   // 36 and 37, above the report's pair's windows and below Kerttu.
-  // Iida's round holds the other four, Henna first, who liked her yesterday
-  // (rounds.ts). Complete profiles: the release's faces of them (#142). Each
+  // Iida's queue holds the other four, Henna first, who liked her yesterday
+  // (queue.ts). Complete profiles: the release's faces of them (#142). Each
   // of the four is in a band of her own from Iida's home, nearest first
   // (ADR-061 §5, §6; a test holds them to the list).
   {

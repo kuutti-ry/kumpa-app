@@ -10,7 +10,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { account } from "./identity.ts";
-import { roundEntries } from "./matching.ts";
+import { queueEntry } from "./matching.ts";
 
 /**
  * An invitation (#107, ADR-044): a code a person whose profile is complete
@@ -78,7 +78,7 @@ export const rewardKind = pgEnum("reward_kind", ["fish"]);
  * its friend's, in the amounts of matching_config invitation_reward read that
  * night. Never bought and never transferable. A unit is spent by the fish past
  * the window's budget it paid for, and given back when that decision changes
- * the same day. One spent stays spent when its round entry goes later (an
+ * the same day. One spent stays spent when its queue entry goes later (an
  * erased candidate, a prune): the link goes null, the time stays. Erasure
  * deletes the person's units with their invitations.
  */
@@ -95,7 +95,7 @@ export const reward = pgTable(
       .references(() => invitation.id, { onDelete: "cascade" }),
     earnedAt: timestamp("earned_at", { withTimezone: true }).notNull().defaultNow(),
     spentAt: timestamp("spent_at", { withTimezone: true }),
-    spentEntryId: uuid("spent_entry_id").references(() => roundEntries.id, {
+    spentEntryId: uuid("spent_entry_id").references(() => queueEntry.id, {
       onDelete: "set null",
     }),
   },

@@ -435,7 +435,7 @@ describe("changeConfig", () => {
     },
   );
 
-  // The five read back over the queue's log (round-builder.ts, rounds.ts), whose
+  // The five read back over the queue's log (queue-builder.ts, queue.ts), whose
   // prune keeps 365 days (#687): named here, not taken from KEPT_YEAR_KEYS, so a
   // key missing from the set or misspelt in it turns this red.
   describe.for([

@@ -256,7 +256,7 @@ describe("the bar of whom a pond seeks (#507)", () => {
     expect(response.status).toBe(500);
   });
 
-  test("the demo population fills the bar, and stays out of every pool and round", {
+  test("the demo population fills the bar, and stays out of every pool and queue", {
     timeout: 60_000,
   }, async ({ ctx }) => {
     const population = generatePopulation({ homes: { [HOME]: 1 } });
@@ -265,7 +265,7 @@ describe("the bar of whom a pond seeks (#507)", () => {
     await taken(ctx);
     expect(await askBar(ctx, person.headers)).toEqual({ men: 35, everyone: 25, women: 40 });
     expect(await numberOf(ctx)).toBe(50);
-    // Nobody here is a subject, so nobody is in a pool, on a card or in a round.
+    // Nobody here is a subject, so nobody is in a pool, on a card or in a queue.
     expect(await subjectsOfPond(ctx.client, DAY)).toEqual([]);
   });
 

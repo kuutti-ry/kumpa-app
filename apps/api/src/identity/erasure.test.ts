@@ -484,24 +484,24 @@ describe("account erasure", () => {
       await signedInAccount(ctx.client),
     ];
     const at = new Date("2026-10-16T09:00:00.000Z");
-    const round = await queued(
+    const queueDayId = await queued(
       ctx.client,
       a.accountId,
       [skipped.accountId, passed.accountId, undecided.accountId],
       at,
     );
     await ctx.client.query(
-      `UPDATE round_entries SET
-         decision = (CASE position WHEN 1 THEN 'skip' ELSE 'pass' END)::round_decision,
+      `UPDATE queue_entry SET
+         decision = (CASE position WHEN 1 THEN 'skip' ELSE 'pass' END)::queue_decision,
          decided_at = $2, second_pass = position = 2
-       WHERE round_id = $1 AND position < 3`,
-      [round, at],
+       WHERE queue_day_id = $1 AND position < 3`,
+      [queueDayId, at],
     );
     const { document, raw } = await openExport(
       await app.request("/account/export", { headers: a.headers }),
     );
     expect(
-      document.rounds.items[0]?.entries.map((entry) => ({
+      document.queue.items[0]?.entries.map((entry) => ({
         position: entry.position,
         decision: entry.decision,
         decisionInWords: entry.decisionInWords,

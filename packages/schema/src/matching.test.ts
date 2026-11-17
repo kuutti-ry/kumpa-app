@@ -2,9 +2,18 @@ import { describe, expect, it } from "vitest";
 import type { z } from "zod";
 import { DEAL_BREAKERS_CAP } from "./deal-breakers.ts";
 import {
-  ExportedRoundEntry,
+  ExportedQueueEntry,
   ExportedStars,
   QUEUE_PAGE,
+  QUEUE_POSITION_MAX,
+  QueueChoice,
+  QueueDayParams,
+  QueueDecision,
+  QueueDecisionAnswer,
+  QueueDecisionUpdate,
+  QueueEntry,
+  QueueEntryParams,
+  QueueResponse,
   Relaxation,
   RelaxationAnswer,
   RelaxationKind,
@@ -12,15 +21,6 @@ import {
   RelaxationParams,
   RelaxationsResponse,
   RelaxationUndone,
-  ROUND_POSITION_MAX,
-  RoundChoice,
-  RoundDayParams,
-  RoundDecision,
-  RoundDecisionAnswer,
-  RoundDecisionUpdate,
-  RoundEntry,
-  RoundEntryParams,
-  RoundResponse,
   STARS_CEILING,
   StarAnswer,
   StarList,
@@ -36,7 +36,7 @@ const codes = (schema: z.ZodType, input: unknown) =>
   schema.safeParse(input).error?.issues.map((issue) => issue.code) ?? [];
 
 describe("an entry's distance", () => {
-  const distance = RoundEntry.shape.distance;
+  const distance = QueueEntry.shape.distance;
 
   it.each(["nearby", "close", "around", "far"])("is the band %s", (band) => {
     expect(distance.parse(band)).toBe(band);
@@ -55,13 +55,13 @@ describe("an entry's distance", () => {
 
 describe("an entry by its day and place", () => {
   it("takes an ISO date and a place from 1 to the column's range, a place given as text", () => {
-    expect(RoundEntryParams.parse({ day: "2026-10-19", position: "3" })).toEqual({
+    expect(QueueEntryParams.parse({ day: "2026-10-19", position: "3" })).toEqual({
       day: "2026-10-19",
       position: 3,
     });
     expect(
-      RoundEntryParams.parse({ day: "2026-10-19", position: String(ROUND_POSITION_MAX) }).position,
-    ).toBe(ROUND_POSITION_MAX);
+      QueueEntryParams.parse({ day: "2026-10-19", position: String(QUEUE_POSITION_MAX) }).position,
+    ).toBe(QUEUE_POSITION_MAX);
   });
 
   it.each([
@@ -70,23 +70,23 @@ describe("an entry by its day and place", () => {
     ["a place of zero", { day: "2026-10-19", position: "0" }, "too_small"],
     [
       "a place past the most",
-      { day: "2026-10-19", position: String(ROUND_POSITION_MAX + 1) },
+      { day: "2026-10-19", position: String(QUEUE_POSITION_MAX + 1) },
       "too_big",
     ],
     ["a place in between", { day: "2026-10-19", position: "1.5" }, "invalid_type"],
   ] as const)("refuses %s", (_, input, code) => {
-    expect(codes(RoundEntryParams, input)).toEqual([code]);
+    expect(codes(QueueEntryParams, input)).toEqual([code]);
   });
 });
 
 describe("a decision", () => {
   it("is a like, a pass, a fish or a skip and nothing else (ADR-062 §3)", () => {
     for (const decision of ["like", "pass", "fish", "skip"] as const) {
-      expect(RoundDecisionUpdate.parse({ decision })).toEqual({ decision });
+      expect(QueueDecisionUpdate.parse({ decision })).toEqual({ decision });
     }
-    expect(codes(RoundDecisionUpdate, { decision: "superlike" })).toEqual(["invalid_value"]);
-    expect(codes(RoundDecisionUpdate, {})).toEqual(["invalid_value"]);
-    expect(codes(RoundDecisionUpdate, { decision: "like", note: "x" })).toEqual([
+    expect(codes(QueueDecisionUpdate, { decision: "superlike" })).toEqual(["invalid_value"]);
+    expect(codes(QueueDecisionUpdate, {})).toEqual(["invalid_value"]);
+    expect(codes(QueueDecisionUpdate, { decision: "like", note: "x" })).toEqual([
       "unrecognized_keys",
     ]);
   });
@@ -96,9 +96,9 @@ describe("the answer to a decision", () => {
   it("names a match or none, and says whether a fish can still go (#475) and whose turn waits (ADR-062 §5)", () => {
     const match = { conversationId: "7d8f3c2a-1b4e-4c6d-9e0f-2a3b4c5d6e7f" };
     const made = { match, fishToSend: false, likesLeft: 0, yourTurn: 8 };
-    expect(RoundDecisionAnswer.parse(made)).toEqual(made);
+    expect(QueueDecisionAnswer.parse(made)).toEqual(made);
     const none = { match: null, fishToSend: true, likesLeft: 7, yourTurn: 0 };
-    expect(RoundDecisionAnswer.parse(none)).toEqual(none);
+    expect(QueueDecisionAnswer.parse(none)).toEqual(none);
   });
 
   const answer = { match: null, fishToSend: true, likesLeft: 7, yourTurn: 0 };
@@ -115,12 +115,12 @@ describe("the answer to a decision", () => {
     ["the turn as a flag", { ...answer, yourTurn: true }, "invalid_type"],
     ["anything else", { ...answer, liked: true }, "unrecognized_keys"],
   ] as const)("refuses %s", (_, input, code) => {
-    expect(codes(RoundDecisionAnswer, input)).toEqual([code]);
+    expect(codes(QueueDecisionAnswer, input)).toEqual([code]);
   });
 });
 
 describe("the next cards of the queue", () => {
-  const round = {
+  const read = {
     day: "2026-10-19",
     entries: null,
     fishToSend: true,
@@ -129,14 +129,14 @@ describe("the next cards of the queue", () => {
   };
 
   it("names its day, null before matching opens and an empty list at the queue's end (ADR-062 §1)", () => {
-    expect(RoundResponse.parse(round)).toEqual(round);
-    expect(RoundResponse.parse({ ...round, entries: [] }).entries).toEqual([]);
-    expect(codes(RoundResponse, { ...round, entries: undefined })).toEqual(["invalid_type"]);
+    expect(QueueResponse.parse(read)).toEqual(read);
+    expect(QueueResponse.parse({ ...read, entries: [] }).entries).toEqual([]);
+    expect(codes(QueueResponse, { ...read, entries: undefined })).toEqual(["invalid_type"]);
   });
 
   it("says whether a fish can go today, never how many (#475)", () => {
-    expect(codes(RoundResponse, { ...round, fishToSend: undefined })).toEqual(["invalid_type"]);
-    expect(codes(RoundResponse, { ...round, fishToSend: 0 })).toEqual(["invalid_type"]);
+    expect(codes(QueueResponse, { ...read, fishToSend: undefined })).toEqual(["invalid_type"]);
+    expect(codes(QueueResponse, { ...read, fishToSend: 0 })).toEqual(["invalid_type"]);
   });
 
   it.each([
@@ -147,7 +147,7 @@ describe("the next cards of the queue", () => {
   ] as const)(
     "refuses the conversations on the caller's turn %s (ADR-062 §5)",
     (_, yourTurn, code) => {
-      expect(codes(RoundResponse, { ...round, yourTurn })).toEqual([code]);
+      expect(codes(QueueResponse, { ...read, yourTurn })).toEqual([code]);
     },
   );
 
@@ -157,13 +157,13 @@ describe("the next cards of the queue", () => {
     ["in part", 1.5, "invalid_type"],
     ["in words", "ten", "invalid_type"],
   ] as const)("refuses the likes left %s (#524)", (_, likesLeft, code) => {
-    expect(codes(RoundResponse, { ...round, likesLeft })).toEqual([code]);
+    expect(codes(QueueResponse, { ...read, likesLeft })).toEqual([code]);
   });
 
   it("hands over a page at most, and a page is ten (ADR-062 §15)", () => {
     expect(QUEUE_PAGE).toBe(10);
     const tooMany = Array.from({ length: QUEUE_PAGE + 1 }, () => ({}));
-    expect(codes(RoundResponse, { ...round, entries: tooMany })).toContain("too_big");
+    expect(codes(QueueResponse, { ...read, entries: tooMany })).toContain("too_big");
   });
 });
 
@@ -172,7 +172,7 @@ describe("a star (#575, ADR-064)", () => {
   const person = { id, name: "Katja", age: 44, photo: null };
 
   it("on an entry is its id or null, and must be said", () => {
-    const star = RoundEntry.shape.star;
+    const star = QueueEntry.shape.star;
     expect(star.parse(id)).toBe(id);
     expect(star.parse(null)).toBeNull();
     expect(codes(star, undefined)).toEqual(["invalid_type"]);
@@ -225,8 +225,8 @@ describe("a star (#575, ADR-064)", () => {
 
 describe("what a person does with a card", () => {
   it("is a like, a pass or a skip as stored, and a fish as chosen (ADR-062 §3)", () => {
-    expect(RoundDecision.options).toEqual(["like", "pass", "skip"]);
-    expect(RoundChoice.options).toEqual(["like", "pass", "fish", "skip"]);
+    expect(QueueDecision.options).toEqual(["like", "pass", "skip"]);
+    expect(QueueChoice.options).toEqual(["like", "pass", "fish", "skip"]);
   });
 });
 
@@ -278,10 +278,10 @@ describe("relaxing a deal-breaker for the day (#99, ADR-042)", () => {
     expect(codes(RelaxationAnswer, { entries: tooMany })).toContain("too_big");
     expect(RelaxationUndone.parse({ removed: [2, 3] })).toEqual({ removed: [2, 3] });
     expect(codes(RelaxationUndone, { removed: [0] })).toEqual(["too_small"]);
-    expect(codes(RelaxationUndone, { removed: [ROUND_POSITION_MAX + 1] })).toEqual(["too_big"]);
+    expect(codes(RelaxationUndone, { removed: [QUEUE_POSITION_MAX + 1] })).toEqual(["too_big"]);
   });
 
-  it("addresses a relaxation by its round's day and its field", () => {
+  it("addresses a relaxation by its queue's day and its field", () => {
     expect(RelaxationParams.parse({ day: "2026-10-21", field: "languages" })).toEqual({
       day: "2026-10-21",
       field: "languages",
@@ -289,17 +289,17 @@ describe("relaxing a deal-breaker for the day (#99, ADR-042)", () => {
     expect(codes(RelaxationParams, { day: "21.10.2026", field: "smoking" })).toEqual([
       "invalid_format",
     ]);
-    expect(codes(RoundDayParams, { day: "2026-13-01" })).toEqual(["invalid_format"]);
+    expect(codes(QueueDayParams, { day: "2026-13-01" })).toEqual(["invalid_format"]);
   });
 
   it("lets a card carry the field it came in by and who did not answer, or neither, as an older API sends it", () => {
-    const card = RoundEntry.shape.card;
+    const card = QueueEntry.shape.card;
     const base = { position: 1, reason: "relaxed", decision: null, distance: null, star: null };
-    expect(RoundEntry.shape.relaxedField.safeParse(undefined).success).toBe(true);
-    expect(RoundEntry.shape.notAnswered.safeParse(["smoking", "languages"]).success).toBe(true);
-    expect(RoundEntry.shape.notAnswered.safeParse(["intent"]).success).toBe(false);
+    expect(QueueEntry.shape.relaxedField.safeParse(undefined).success).toBe(true);
+    expect(QueueEntry.shape.notAnswered.safeParse(["smoking", "languages"]).success).toBe(true);
+    expect(QueueEntry.shape.notAnswered.safeParse(["intent"]).success).toBe(false);
     expect(card).toBeDefined();
-    expect(codes(RoundEntry.omit({ card: true }), { ...base, relaxedField: "nicotine" })).toEqual([
+    expect(codes(QueueEntry.omit({ card: true }), { ...base, relaxedField: "nicotine" })).toEqual([
       "invalid_value",
     ]);
   });
@@ -319,18 +319,18 @@ describe("relaxing a deal-breaker for the day (#99, ADR-042)", () => {
       distance: "nearby",
       distanceInWords: "Nearby",
     };
-    expect(ExportedRoundEntry.parse(entry).relaxedField).toBe("smoking");
+    expect(ExportedQueueEntry.parse(entry).relaxedField).toBe("smoking");
     // Null on an entry from before the band; never a number, nor a word of no band.
     expect(
-      ExportedRoundEntry.parse({ ...entry, distance: null, distanceInWords: null }).distance,
+      ExportedQueueEntry.parse({ ...entry, distance: null, distanceInWords: null }).distance,
     ).toBeNull();
-    expect(ExportedRoundEntry.safeParse({ ...entry, distance: 4 }).success).toBe(false);
-    expect(ExportedRoundEntry.safeParse({ ...entry, distance: "next door" }).success).toBe(false);
+    expect(ExportedQueueEntry.safeParse({ ...entry, distance: 4 }).success).toBe(false);
+    expect(ExportedQueueEntry.safeParse({ ...entry, distance: "next door" }).success).toBe(false);
     expect(
-      ExportedRoundEntry.parse({ ...entry, relaxedField: null, relaxedFieldInWords: null })
+      ExportedQueueEntry.parse({ ...entry, relaxedField: null, relaxedFieldInWords: null })
         .relaxedField,
     ).toBeNull();
-    expect(codes(ExportedRoundEntry, { ...entry, relaxedField: undefined })).toEqual([
+    expect(codes(ExportedQueueEntry, { ...entry, relaxedField: undefined })).toEqual([
       "invalid_value",
     ]);
   });
@@ -350,12 +350,12 @@ describe("relaxing a deal-breaker for the day (#99, ADR-042)", () => {
       distance: null,
       distanceInWords: null,
     };
-    expect(ExportedRoundEntry.parse(entry).decision).toBe("skip");
+    expect(ExportedQueueEntry.parse(entry).decision).toBe("skip");
     const second = { ...entry, decision: "pass", decisionInWords: "Pass", secondPass: true };
-    expect(ExportedRoundEntry.parse(second).secondPass).toBe(true);
-    expect(codes(ExportedRoundEntry, { ...entry, secondPass: undefined })).toEqual([
+    expect(ExportedQueueEntry.parse(second).secondPass).toBe(true);
+    expect(codes(ExportedQueueEntry, { ...entry, secondPass: undefined })).toEqual([
       "invalid_type",
     ]);
-    expect(codes(ExportedRoundEntry, { ...entry, secondPass: 1 })).toEqual(["invalid_type"]);
+    expect(codes(ExportedQueueEntry, { ...entry, secondPass: 1 })).toEqual(["invalid_type"]);
   });
 });

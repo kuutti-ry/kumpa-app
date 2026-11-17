@@ -3,9 +3,9 @@ import type { Queryable } from "@kuutti/db";
 import {
   ConversationList,
   ErrorResponse,
-  RoundDecisionAnswer,
-  type RoundReason,
-  RoundResponse,
+  QueueDecisionAnswer,
+  type QueueReason,
+  QueueResponse,
 } from "@kuutti/schema";
 import type { App } from "../app.ts";
 import { archiveJob, conversationBetween } from "../chat/index.ts";
@@ -14,7 +14,6 @@ import { finnishDay } from "../lib/finnish-day.ts";
 import { withMatchingConfig } from "../test/account.ts";
 import { STOPPED_CLOCK as T } from "../test/global-setup.ts";
 import { captureLogger, describe, expect, test } from "../test/harness.ts";
-import { pidOf, waitsFor, watched, withTwoConnections } from "../test/races.ts";
 import {
   appAt,
   cast,
@@ -26,8 +25,9 @@ import {
   MATCHES,
   peopleWhoFit,
   shownAt,
-} from "../test/rounds.ts";
-import { decide } from "./rounds.ts";
+} from "../test/queue.ts";
+import { pidOf, waitsFor, watched, withTwoConnections } from "../test/races.ts";
+import { decide } from "./queue.ts";
 
 // The match (#100, ADR-038, features/matching/matches.feature): two likes
 // make a conversation in the statement of the second, the answer names it,
@@ -45,11 +45,11 @@ type Person = { accountId: string; headers: { authorization: string } };
 
 const daysBefore = (days: number) => new Date(T.getTime() - days * DAY_MS);
 
-/** A round for `owner` on the day `days` before today, these people its cards, in order. */
-const roundOf = (
+/** A queue for `owner` on the day `days` before today, these people its cards, in order. */
+const queueDayOf = (
   db: Queryable,
   owner: Person,
-  cards: (Person | { person: Person; reason: RoundReason })[],
+  cards: (Person | { person: Person; reason: QueueReason })[],
   days = 0,
 ) =>
   logged(
@@ -64,7 +64,7 @@ const roundOf = (
     ),
   );
 
-/** `liker` liked `liked` on a round of `days` before today, a fish if said. */
+/** `liker` liked `liked` on a queue of `days` before today, a fish if said. */
 async function likedBefore(
   db: Queryable,
   liker: Person,
@@ -72,15 +72,15 @@ async function likedBefore(
   days: number,
   fish = false,
 ) {
-  const roundId = await roundOf(db, liker, [liked], days);
+  const queueDayId = await queueDayOf(db, liker, [liked], days);
   await db.query(
-    "UPDATE round_entries SET decision = 'like', decided_at = $2, fish = $3 WHERE round_id = $1",
-    [roundId, daysBefore(days), fish],
+    "UPDATE queue_entry SET decision = 'like', decided_at = $2, fish = $3 WHERE queue_day_id = $1",
+    [queueDayId, daysBefore(days), fish],
   );
 }
 
 const decideBy = (app: App, who: Person, position: number, decision: string, day = TODAY) =>
-  app.request(`/rounds/${day}/entries/${position}/decision`, {
+  app.request(`/queue/${day}/entries/${position}/decision`, {
     method: "PUT",
     headers: { ...who.headers, "content-type": "application/json" },
     body: JSON.stringify({ decision }),
@@ -88,7 +88,7 @@ const decideBy = (app: App, who: Person, position: number, decision: string, day
 
 async function answered(response: Response) {
   expect(response.status).toBe(200);
-  return RoundDecisionAnswer.parse(await response.json()).match;
+  return QueueDecisionAnswer.parse(await response.json()).match;
 }
 
 async function conversationsOf(app: App, who: Person) {
@@ -108,11 +108,11 @@ async function between(db: Queryable, a: Person, b: Person): Promise<number> {
   return rows.length;
 }
 
-/** The decision on each card of a round, in order. */
-async function decisionsIn(db: Queryable, roundId: string) {
+/** The decision on each card of a queue, in order. */
+async function decisionsIn(db: Queryable, queueDayId: string) {
   const { rows } = await db.query<{ decision: string | null }>(
-    "SELECT decision FROM round_entries WHERE round_id = $1 ORDER BY position",
-    [roundId],
+    "SELECT decision FROM queue_entry WHERE queue_day_id = $1 ORDER BY position",
+    [queueDayId],
   );
   return rows.map((row) => row.decision);
 }
@@ -127,7 +127,7 @@ describe("a match", () => {
     const [a, b] = await cast(ctx.client, 2);
     if (!a || !b) throw new Error("cast not written");
     await likedBefore(ctx.client, b, a, 1);
-    await roundOf(ctx.client, a, [b]);
+    await queueDayOf(ctx.client, a, [b]);
     const app = await appAt(ctx.client);
 
     const match = await answered(await decideBy(app, a, 1, "like"));
@@ -151,7 +151,7 @@ describe("a match", () => {
   }) => {
     const [a, b] = await cast(ctx.client, 2);
     if (!a || !b) throw new Error("cast not written");
-    await roundOf(ctx.client, a, [b]);
+    await queueDayOf(ctx.client, a, [b]);
     const app = await appAt(ctx.client);
 
     expect(await answered(await decideBy(app, a, 1, "like"))).toBeNull();
@@ -163,7 +163,7 @@ describe("a match", () => {
     const [a, b] = await cast(ctx.client, 2);
     if (!a || !b) throw new Error("cast not written");
     await likedBefore(ctx.client, b, a, 1);
-    await roundOf(ctx.client, a, [b]);
+    await queueDayOf(ctx.client, a, [b]);
     expect(await answered(await decideBy(await appAt(ctx.client), a, 1, "pass"))).toBeNull();
     expect(await between(ctx.client, a, b)).toBe(0);
   });
@@ -171,8 +171,8 @@ describe("a match", () => {
   test("Two likes of the same day make one match, whichever comes second", async ({ ctx }) => {
     const [a, b] = await cast(ctx.client, 2);
     if (!a || !b) throw new Error("cast not written");
-    await roundOf(ctx.client, a, [b]);
-    await roundOf(ctx.client, b, [a]);
+    await queueDayOf(ctx.client, a, [b]);
+    await queueDayOf(ctx.client, b, [a]);
     const app = await appAt(ctx.client);
 
     expect(await answered(await decideBy(app, a, 1, "like"))).toBeNull();
@@ -186,8 +186,8 @@ describe("a match", () => {
   test("A like that made a match is final", async ({ ctx }) => {
     const [a, b] = await cast(ctx.client, 2);
     if (!a || !b) throw new Error("cast not written");
-    await roundOf(ctx.client, a, [b]);
-    await roundOf(ctx.client, b, [a]);
+    await queueDayOf(ctx.client, a, [b]);
+    await queueDayOf(ctx.client, b, [a]);
     const app = await appAt(ctx.client);
     await decideBy(app, a, 1, "like");
     await answered(await decideBy(app, b, 1, "like"));
@@ -200,7 +200,7 @@ describe("a match", () => {
       }
     }
     const { rows } = await ctx.client.query<{ decision: string }>(
-      `SELECT e.decision FROM round_entries e JOIN rounds r ON r.id = e.round_id
+      `SELECT e.decision FROM queue_entry e JOIN queue_day r ON r.id = e.queue_day_id
         WHERE r.account_id = ANY($1::uuid[])`,
       [[a.accountId, b.accountId]],
     );
@@ -212,10 +212,10 @@ describe("a match", () => {
     const [a, b] = await cast(ctx.client, 2);
     if (!a || !b) throw new Error("cast not written");
     await likedBefore(ctx.client, b, a, 1);
-    await roundOf(ctx.client, a, [b]);
+    await queueDayOf(ctx.client, a, [b]);
     const app = await appAt(ctx.client);
     await answered(await decideBy(app, a, 1, "like"));
-    const refused = await app.request(`/rounds/${TODAY}/entries/1/decision`, {
+    const refused = await app.request(`/queue/${TODAY}/entries/1/decision`, {
       method: "PUT",
       headers: { ...a.headers, "content-type": "application/json", "accept-language": "fi" },
       body: JSON.stringify({ decision: "pass" }),
@@ -229,8 +229,8 @@ describe("a match", () => {
   test("A like taken back before the other's makes no match", async ({ ctx }) => {
     const [a, b] = await cast(ctx.client, 2);
     if (!a || !b) throw new Error("cast not written");
-    await roundOf(ctx.client, a, [b]);
-    await roundOf(ctx.client, b, [a]);
+    await queueDayOf(ctx.client, a, [b]);
+    await queueDayOf(ctx.client, b, [a]);
     const app = await appAt(ctx.client);
     await answered(await decideBy(app, a, 1, "like"));
     await answered(await decideBy(app, a, 1, "pass"));
@@ -247,7 +247,7 @@ describe("a match", () => {
       const [a, b] = await cast(ctx.client, 2);
       if (!a || !b) throw new Error("cast not written");
       await likedBefore(ctx.client, b, a, days);
-      await roundOf(ctx.client, a, [b]);
+      await queueDayOf(ctx.client, a, [b]);
 
       const match = await answered(await decideBy(await appAt(ctx.client), a, 1, "like"));
 
@@ -262,7 +262,7 @@ describe("a match", () => {
     const [a, b, c, d] = await cast(ctx.client, 4);
     if (!a || !b || !c || !d) throw new Error("cast not written");
     await likedBefore(ctx.client, b, a, 1);
-    await roundOf(ctx.client, a, [b]);
+    await queueDayOf(ctx.client, a, [b]);
     await ctx.client.query("UPDATE account SET state = 'shadow_banned' WHERE id = $1", [
       a.accountId,
     ]);
@@ -272,7 +272,7 @@ describe("a match", () => {
     expect(await between(ctx.client, a, b)).toBe(0);
 
     await likedBefore(ctx.client, d, c, 1);
-    await roundOf(ctx.client, c, [d]);
+    await queueDayOf(ctx.client, c, [d]);
     await ctx.client.query(
       `INSERT INTO block (blocker_identity_id, blocked_identity_id)
        SELECT x.identity_id, y.identity_id FROM account x, account y WHERE x.id = $1 AND y.id = $2`,
@@ -285,8 +285,8 @@ describe("a match", () => {
   test("Only a new like makes a match, so a like made a fish opens nothing", async ({ ctx }) => {
     const [a, b] = await cast(ctx.client, 2);
     if (!a || !b) throw new Error("cast not written");
-    await roundOf(ctx.client, a, [b]);
-    await roundOf(ctx.client, b, [a]);
+    await queueDayOf(ctx.client, a, [b]);
+    await queueDayOf(ctx.client, b, [a]);
     const app = await appAt(ctx.client);
     expect(await answered(await decideBy(app, a, 1, "like"))).toBeNull();
     await ctx.client.query("UPDATE account SET state = 'shadow_banned' WHERE id = $1", [
@@ -311,7 +311,7 @@ describe("a match", () => {
       [c, d],
     ] as const) {
       await likedBefore(ctx.client, first, second, 9);
-      await roundOf(ctx.client, second, [first], 8);
+      await queueDayOf(ctx.client, second, [first], 8);
       await answered(await decideBy(eightDaysAgo, second, 1, "like", finnishDay(daysBefore(8))));
     }
     const cd = await conversationBetween(ctx.client, c.accountId, d.accountId, daysBefore(8));
@@ -349,14 +349,14 @@ describe("a match", () => {
     const [a, b] = await cast(ctx.client, 2);
     if (!a || !b) throw new Error("cast not written");
     await likedBefore(ctx.client, b, a, 1);
-    await roundOf(ctx.client, a, [b]);
+    await queueDayOf(ctx.client, a, [b]);
     const app = await appAt(ctx.client);
     const match = await answered(await decideBy(app, a, 1, "like"));
     const { logger } = await captureLogger();
 
     await eraseAccount({ db: ctx.client, logger, now: () => T }, b.accountId);
 
-    const { rows } = await ctx.client.query("SELECT 1 FROM rounds WHERE account_id = $1", [
+    const { rows } = await ctx.client.query("SELECT 1 FROM queue_day WHERE account_id = $1", [
       b.accountId,
     ]);
     expect(rows).toHaveLength(0);
@@ -380,7 +380,7 @@ describe("a second match (ADR-062 §7)", () => {
       "archived",
     );
     await likedBefore(ctx.client, b, a, 1);
-    await roundOf(ctx.client, a, [b]);
+    await queueDayOf(ctx.client, a, [b]);
     const app = await appAt(ctx.client);
 
     const match = await answered(await decideBy(app, a, 1, "like"));
@@ -413,7 +413,7 @@ describe("a second match (ADR-062 §7)", () => {
     const ended = daysBefore(90);
     const old = await endedConversation(ctx.client, a.accountId, b.accountId, ended, "closed");
     await likedBefore(ctx.client, b, a, 1);
-    await roundOf(ctx.client, a, [b]);
+    await queueDayOf(ctx.client, a, [b]);
 
     const match = await answered(await decideBy(await appAt(ctx.client), a, 1, "like"));
 
@@ -430,7 +430,7 @@ describe("a second match (ADR-062 §7)", () => {
       const [a, b] = await cast(ctx.client, 2);
       if (!a || !b) throw new Error("cast not written");
       await endedConversation(ctx.client, a.accountId, b.accountId, daysBefore(90), how);
-      const roundId = await roundOf(ctx.client, a, [b]);
+      const queueDayId = await queueDayOf(ctx.client, a, [b]);
       const app = await appAt(ctx.client);
 
       expect(await answered(await decideBy(app, a, 1, "like"))).toBeNull();
@@ -438,7 +438,7 @@ describe("a second match (ADR-062 §7)", () => {
       expect(await between(ctx.client, a, b)).toBe(1);
       // Part of no match, so it is no final like either.
       expect(await answered(await decideBy(app, a, 1, "pass"))).toBeNull();
-      expect(await decisionsIn(ctx.client, roundId)).toEqual(["pass"]);
+      expect(await decisionsIn(ctx.client, queueDayId)).toEqual(["pass"]);
     });
   });
 
@@ -447,8 +447,8 @@ describe("a second match (ADR-062 §7)", () => {
   }) => {
     const [a, b] = await cast(ctx.client, 2);
     if (!a || !b) throw new Error("cast not written");
-    await roundOf(ctx.client, a, [b]);
-    await roundOf(ctx.client, b, [a]);
+    await queueDayOf(ctx.client, a, [b]);
+    await queueDayOf(ctx.client, b, [a]);
     const app = await appAt(ctx.client);
     await answered(await decideBy(app, a, 1, "like"));
     const match = await answered(await decideBy(app, b, 1, "like"));
@@ -475,7 +475,7 @@ describe("a second match (ADR-062 §7)", () => {
         WHERE id = (SELECT conversation_id FROM conversation_participant WHERE account_id = $1)`,
       [a.accountId, daysBefore(1)],
     );
-    await roundOf(ctx.client, a, [b]);
+    await queueDayOf(ctx.client, a, [b]);
 
     expect(await answered(await decideBy(await appAt(ctx.client), a, 1, "like"))).toBeNull();
   });
@@ -503,7 +503,7 @@ describe("a second match (ADR-062 §7)", () => {
 });
 
 describe("the your-turn limit (ADR-062 §5)", () => {
-  /** "A" in a round of today, with as many conversations on their turn. */
+  /** "A" in a queue of today, with as many conversations on their turn. */
   async function waitingOn(db: Queryable, a: Person, waiting: number) {
     return conversationsWaiting(db, a.accountId, waiting);
   }
@@ -527,9 +527,9 @@ describe("the your-turn limit (ADR-062 §5)", () => {
         if (card !== "an ordinary card")
           await likedBefore(ctx.client, b, a, 1, card === "a fish card");
         const reason = { "a liked-you card": "liked_you", "a fish card": "fish" }[card] as
-          | RoundReason
+          | QueueReason
           | undefined;
-        const roundId = await roundOf(ctx.client, a, [reason ? { person: b, reason } : b]);
+        const queueDayId = await queueDayOf(ctx.client, a, [reason ? { person: b, reason } : b]);
         const response = await decideBy(
           await appAt(ctx.client),
           a,
@@ -539,12 +539,12 @@ describe("the your-turn limit (ADR-062 §5)", () => {
 
         if (answer === "recorded") {
           expect(response.status).toBe(200);
-          expect(await decisionsIn(ctx.client, roundId)).toEqual(["like"]);
+          expect(await decisionsIn(ctx.client, queueDayId)).toEqual(["like"]);
           // A like back is a match; the other likes wait.
           expect(await between(ctx.client, a, b)).toBe(card === "an ordinary card" ? 0 : 1);
         } else {
           expect((await refusal(response)).code).toBe(answer);
-          expect(await decisionsIn(ctx.client, roundId)).toEqual([null]);
+          expect(await decisionsIn(ctx.client, queueDayId)).toEqual([null]);
           expect(await between(ctx.client, a, b)).toBe(0);
         }
       },
@@ -556,7 +556,7 @@ describe("the your-turn limit (ADR-062 §5)", () => {
     if (!a || !b || !c || !d) throw new Error("cast not written");
     await waitingOn(ctx.client, a, 8);
     await likedBefore(ctx.client, b, a, 1);
-    const roundId = await roundOf(ctx.client, a, [b, c, d]);
+    const queueDayId = await queueDayOf(ctx.client, a, [b, c, d]);
     await ctx.client.query(
       `UPDATE preferences SET value = '["man"]'::jsonb WHERE account_id = $1 AND field = 'seeks'`,
       [d.accountId],
@@ -573,20 +573,20 @@ describe("the your-turn limit (ADR-062 §5)", () => {
     expect(answers[1]).toEqual(answers[0]);
     expect(answers[2]).toEqual(answers[0]);
     expect(answers[0]?.code).toBe("your_turn_limit");
-    expect(await decisionsIn(ctx.client, roundId)).toEqual([null, null, null]);
+    expect(await decisionsIn(ctx.client, queueDayId)).toEqual([null, null, null]);
     expect(await between(ctx.client, a, b)).toBe(0);
     // Refused before the budget too: nothing of the day's likes went.
-    const read = await app.request("/rounds/today", { headers: a.headers });
-    expect(RoundResponse.parse(await read.json()).likesLeft).toBe(10);
+    const read = await app.request("/queue/today", { headers: a.headers });
+    expect(QueueResponse.parse(await read.json()).likesLeft).toBe(10);
   });
 
   test("the refusal is said in the request's language", async ({ ctx }) => {
     const [a, b] = await cast(ctx.client, 2);
     if (!a || !b) throw new Error("cast not written");
     await waitingOn(ctx.client, a, 8);
-    await roundOf(ctx.client, a, [b]);
+    await queueDayOf(ctx.client, a, [b]);
 
-    const refused = await (await appAt(ctx.client)).request(`/rounds/${TODAY}/entries/1/decision`, {
+    const refused = await (await appAt(ctx.client)).request(`/queue/${TODAY}/entries/1/decision`, {
       method: "PUT",
       headers: { ...a.headers, "content-type": "application/json", "accept-language": "fi" },
       body: JSON.stringify({ decision: "like" }),
@@ -601,19 +601,19 @@ describe("the your-turn limit (ADR-062 §5)", () => {
     const [a, b, c] = await cast(ctx.client, 3);
     if (!a || !b || !c) throw new Error("cast not written");
     await waitingOn(ctx.client, a, 8);
-    const roundId = await roundOf(ctx.client, a, [b, c]);
+    const queueDayId = await queueDayOf(ctx.client, a, [b, c]);
     const app = await appAt(ctx.client);
 
     expect((await decideBy(app, a, 1, "pass")).status).toBe(200);
     expect((await decideBy(app, a, 2, "skip")).status).toBe(200);
 
-    expect(await decisionsIn(ctx.client, roundId)).toEqual(["pass", "skip"]);
+    expect(await decisionsIn(ctx.client, queueDayId)).toEqual(["pass", "skip"]);
   });
 
   test("The your-turn limit lets a like go that is standing already", async ({ ctx }) => {
     const [a, b, c] = await cast(ctx.client, 3);
     if (!a || !b || !c) throw new Error("cast not written");
-    const roundId = await roundOf(ctx.client, a, [b, c]);
+    const queueDayId = await queueDayOf(ctx.client, a, [b, c]);
     const app = await appAt(ctx.client);
     expect((await decideBy(app, a, 1, "like")).status).toBe(200);
     expect((await decideBy(app, a, 2, "fish")).status).toBe(200);
@@ -625,7 +625,7 @@ describe("the your-turn limit (ADR-062 §5)", () => {
     // Taken back and liked again, it is a new like.
     expect((await decideBy(app, a, 1, "pass")).status).toBe(200);
     expect((await refusal(await decideBy(app, a, 1, "like"))).code).toBe("your_turn_limit");
-    expect(await decisionsIn(ctx.client, roundId)).toEqual(["pass", "like"]);
+    expect(await decisionsIn(ctx.client, queueDayId)).toEqual(["pass", "like"]);
   });
 
   test("A your_turn_limit of 0 is off", async ({ ctx }) => {
@@ -633,11 +633,11 @@ describe("the your-turn limit (ADR-062 §5)", () => {
     const [a, b] = await cast(ctx.client, 2);
     if (!a || !b) throw new Error("cast not written");
     await waitingOn(ctx.client, a, 8);
-    const roundId = await roundOf(ctx.client, a, [b]);
+    const queueDayId = await queueDayOf(ctx.client, a, [b]);
 
     expect((await decideBy(await appAt(ctx.client), a, 1, "like")).status).toBe(200);
 
-    expect(await decisionsIn(ctx.client, roundId)).toEqual(["like"]);
+    expect(await decisionsIn(ctx.client, queueDayId)).toEqual(["like"]);
   });
 
   test("A liked-you card keeps its two weeks at the your-turn limit", async ({ ctx }) => {
@@ -645,7 +645,7 @@ describe("the your-turn limit (ADR-062 §5)", () => {
     if (!a || !b) throw new Error("cast not written");
     const [other] = await waitingOn(ctx.client, a, 8);
     await likedBefore(ctx.client, b, a, 1);
-    await roundOf(ctx.client, a, [{ person: b, reason: "liked_you" }]);
+    await queueDayOf(ctx.client, a, [{ person: b, reason: "liked_you" }]);
     const app = await appAt(ctx.client);
     expect((await refusal(await decideBy(app, a, 1, "like"))).code).toBe("your_turn_limit");
 
@@ -673,20 +673,20 @@ describe("the your-turn limit (ADR-062 §5)", () => {
     if (!a || !b) throw new Error("cast not written");
     await waitingOn(ctx.client, a, 2);
     await likedBefore(ctx.client, b, a, 1);
-    await roundOf(ctx.client, a, [{ person: b, reason: "liked_you" }]);
+    await queueDayOf(ctx.client, a, [{ person: b, reason: "liked_you" }]);
     const app = await appAt(ctx.client);
 
-    const read = await app.request("/rounds/today", { headers: a.headers });
-    expect(RoundResponse.parse(await read.json()).yourTurn).toBe(2);
+    const read = await app.request("/queue/today", { headers: a.headers });
+    expect(QueueResponse.parse(await read.json()).yourTurn).toBe(2);
 
     const liked = await decideBy(app, a, 1, "like");
     expect(liked.status).toBe(200);
-    expect(RoundDecisionAnswer.parse(await liked.json()).yourTurn).toBe(3);
+    expect(QueueDecisionAnswer.parse(await liked.json()).yourTurn).toBe(3);
   });
 });
 
 describe("the same moment", () => {
-  /** Two people, each the card of the other's round today, on a database of their own. */
+  /** Two people, each the card of the other's queue today, on a database of their own. */
   async function eachOthersCard(pool: Queryable) {
     const ids = await peopleWhoFit(pool, 2);
     const [a, b] = ids;
@@ -782,7 +782,7 @@ describe("the same moment", () => {
       // Committed, so the checks below would see anything the refusal wrote.
       await second.query("COMMIT");
       const { rows } = await pool.query<{ decision: string }>(
-        `SELECT e.decision FROM round_entries e JOIN rounds r ON r.id = e.round_id
+        `SELECT e.decision FROM queue_entry e JOIN queue_day r ON r.id = e.queue_day_id
           WHERE r.account_id = $1`,
         [a],
       );
@@ -849,7 +849,7 @@ describe("the same moment", () => {
       const liking = watched(decide({ ...deps, db: paused }, MATCHES, FITS, choice(a, "like")));
       await atOpening;
       const erasing = watched(eraseAccount({ ...deps, db: second }, b));
-      // The erasure waits for the like before it touches anything of a round.
+      // The erasure waits for the like before it touches anything of a queue.
       expect(await waitsFor(pool, secondPid, firstPid, erasing.settled)).toBe(true);
       go();
       const liked = await liking.outcome;

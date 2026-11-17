@@ -19,7 +19,7 @@ import type { Logger } from "./lib/logger.ts";
 import { mailerFor } from "./lib/mail.ts";
 import { pusherFor } from "./lib/push.ts";
 import { initSentry, sentryReporter } from "./lib/sentry.ts";
-import { pruneRounds } from "./matching/index.ts";
+import { pruneQueueDays } from "./matching/index.ts";
 import {
   createMediaDeps,
   prunePhotoAccess,
@@ -192,7 +192,7 @@ export async function boot({
   // the team an attestation is held to; with no team, none is read.
   logger.info({ ios: config.IOS_ATTESTATION, team: config.IOS_TEAM_ID }, "app attestation");
   // The process's one push (#102, ADR-055): the app's message and match
-  // pushes and the round's, asking the same live registry who is in the app.
+  // pushes and the queue's, asking the same live registry who is in the app.
   const push = createPush({
     db: pool,
     logger,
@@ -228,8 +228,8 @@ export async function boot({
     pondCounterJob(counter),
     // The invitations whose redeemer's profile is complete tonight (#107, ADR-044 §7).
     invitationCountJob({ db: pool, logger, now }),
-    // Rounds keep a year (#502, ADR-062 §13), their entries and relaxations with them.
-    { name: "prune-rounds", run: async () => ({ pruned: await pruneRounds(pool, now()) }) },
+    // Queue days keep a year (#502, ADR-062 §13), their entries and relaxations with them.
+    { name: "prune-queue-days", run: async () => ({ pruned: await pruneQueueDays(pool, now()) }) },
     // A photo nobody decided in photo_queue_reject_days is rejected as not reviewed (#376),
     // wherever there is a queue, Rekognition or none.
     { name: "reject-unreviewed-photos", run: () => rejectUnreviewedPhotos({ db: pool, now }) },

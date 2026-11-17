@@ -20,7 +20,7 @@ import {
 // The preference routes' remaining branches (#46, #147, #149): every way the
 // guard refuses, a save that meets an erasure, rows that no longer parse, and
 // a withdrawn seek answer. The hard rows are rule 7's: what is stored here is
-// what the round builder never crosses, in either direction.
+// what the queue's builder never crosses, in either direction.
 
 const errorCode = async (res: Response) =>
   ((await res.json()) as { error: { code: string } }).error.code;

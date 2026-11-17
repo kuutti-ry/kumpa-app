@@ -99,7 +99,7 @@ attack("i18n:review --import: a corrected text takes over the review of the text
 
 // "CI names them on the pull request, so an approval nobody asked for shows."
 const slang = (fields: Partial<Messages[string]>): Messages => ({
-  "round.title": {
+  "queue.title": {
     en: "Save",
     description: "d",
     fi: "Tallenna",

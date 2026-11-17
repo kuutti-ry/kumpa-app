@@ -87,12 +87,12 @@ export {
   summarise,
 } from "./population.ts";
 export {
-  PERSONA_ROUNDS,
-  type PersonaRound,
-  type RoundsResult,
-  writeRounds,
+  PERSONA_QUEUE_DAYS,
+  type PersonaQueueDay,
+  type QueueDaysResult,
+  writeQueueDays,
   writeWaitingLikes,
-} from "./rounds.ts";
+} from "./queue.ts";
 export { everyText } from "./words.ts";
 export {
   type ConsentVersions,

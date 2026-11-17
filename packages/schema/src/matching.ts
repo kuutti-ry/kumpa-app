@@ -4,7 +4,7 @@ import { DistanceBand } from "./distance.ts";
 import { ProfileCard } from "./profile.ts";
 import { exportPart } from "./report.ts";
 
-// The queue (#502, ADR-062) and the day's log of it, the round (#96, TD-11,
+// The queue (#502, ADR-062) and the day's log of it, the queue (#96, TD-11,
 // TD-12, ADR-034): what one person goes through on one Finnish calendar day,
 // each card with why it is there and the person's own decision, which may
 // change until the day ends. No answer carries a score, a seen time or
@@ -17,17 +17,17 @@ import { exportPart } from "./report.ts";
 export const QUEUE_PAGE = 10;
 
 /** The highest place of a day's log: the column's range, which nobody meets, not a limit on how far a person reads. */
-export const ROUND_POSITION_MAX = 32_767;
+export const QUEUE_POSITION_MAX = 32_767;
 
-/** Why a candidate is in the round (TD-12), the label on every card. Mirrors the database's round_reason. */
-export const RoundReason = z
+/** Why a candidate is in the queue (TD-12), the label on every card. Mirrors the database's queue_reason. */
+export const QueueReason = z
   .enum(["matches_filters", "liked_you", "seen_before", "relaxed", "fish"])
-  .meta({ id: "RoundReason" });
-export type RoundReason = z.infer<typeof RoundReason>;
+  .meta({ id: "QueueReason" });
+export type QueueReason = z.infer<typeof QueueReason>;
 
-/** What the person did with a card. Mirrors the database's round_decision. */
-export const RoundDecision = z.enum(["like", "pass", "skip"]).meta({ id: "RoundDecision" });
-export type RoundDecision = z.infer<typeof RoundDecision>;
+/** What the person did with a card. Mirrors the database's queue_decision. */
+export const QueueDecision = z.enum(["like", "pass", "skip"]).meta({ id: "QueueDecision" });
+export type QueueDecision = z.infer<typeof QueueDecision>;
 
 /**
  * What a person chooses on a card, and reads back: a like, a pass, a fish,
@@ -35,18 +35,18 @@ export type RoundDecision = z.infer<typeof RoundDecision>;
  * a skip, Later on the button, which moves on and costs nobody anything
  * (ADR-062 §3).
  */
-export const RoundChoice = z.enum(["like", "pass", "fish", "skip"]).meta({ id: "RoundChoice" });
-export type RoundChoice = z.infer<typeof RoundChoice>;
+export const QueueChoice = z.enum(["like", "pass", "fish", "skip"]).meta({ id: "QueueChoice" });
+export type QueueChoice = z.infer<typeof QueueChoice>;
 
-const position = z.int().min(1).max(ROUND_POSITION_MAX);
+const position = z.int().min(1).max(QUEUE_POSITION_MAX);
 
-/** One card of the round, at its place, with the person's own decision so far. */
-export const RoundEntry = z
+/** One card of the queue, at its place, with the person's own decision so far. */
+export const QueueEntry = z
   .object({
     position,
-    reason: RoundReason,
+    reason: QueueReason,
     /** Null while undecided. */
-    decision: RoundChoice.nullable(),
+    decision: QueueChoice.nullable(),
     card: ProfileCard,
     /** How far the card's person lives, as it stood when the entry was written (ADR-061 §5). Null on an entry from before distance. */
     distance: DistanceBand.nullable(),
@@ -61,8 +61,8 @@ export const RoundEntry = z
      */
     notAnswered: z.array(DealBreakerField).max(DEAL_BREAKERS_CAP).optional(),
   })
-  .meta({ id: "RoundEntry" });
-export type RoundEntry = z.infer<typeof RoundEntry>;
+  .meta({ id: "QueueEntry" });
+export type QueueEntry = z.infer<typeof QueueEntry>;
 
 /**
  * How a person loosens one of their own deal-breakers for the day (#99,
@@ -80,7 +80,7 @@ export const Relaxation = z
 export type Relaxation = z.infer<typeof Relaxation>;
 
 /**
- * A relaxation a short round offers (ADR-042 §4), with `more`: how much it
+ * A relaxation a short queue offers (ADR-042 §4), with `more`: how much it
  * widens the person's pool, rounded down to a step of `pond_counter_k` (ADR-015
  * §6), so zero says fewer than a step. Never a count of anything else.
  */
@@ -106,22 +106,22 @@ export type RelaxationsResponse = z.infer<typeof RelaxationsResponse>;
 
 /** The first cards a relaxation added to the queue, in order, so the phone adds them without a read (ADR-042 §5, ADR-062 §10). */
 export const RelaxationAnswer = z
-  .object({ entries: z.array(RoundEntry).max(QUEUE_PAGE) })
+  .object({ entries: z.array(QueueEntry).max(QUEUE_PAGE) })
   .strict()
   .meta({ id: "RelaxationAnswer" });
 export type RelaxationAnswer = z.infer<typeof RelaxationAnswer>;
 
-/** A relaxation undone: the places of the cards it added that were still undecided, which leave the round (ADR-042 §6). */
+/** A relaxation undone: the places of the cards it added that were still undecided, which leave the queue (ADR-042 §6). */
 export const RelaxationUndone = z
-  .object({ removed: z.array(position).max(ROUND_POSITION_MAX) })
+  .object({ removed: z.array(position).max(QUEUE_POSITION_MAX) })
   .strict()
   .meta({ id: "RelaxationUndone" });
 export type RelaxationUndone = z.infer<typeof RelaxationUndone>;
 
-/** A round by its day: a day that has ended answers round_expired. */
-export const RoundDayParams = z.object({ day: z.iso.date() }).meta({ id: "RoundDayParams" });
+/** A queue by its day: a day that has ended answers day_ended. */
+export const QueueDayParams = z.object({ day: z.iso.date() }).meta({ id: "QueueDayParams" });
 
-/** A relaxation by its round's day and its deal-breaker's field. */
+/** A relaxation by its queue's day and its deal-breaker's field. */
 export const RelaxationParams = z
   .object({ day: z.iso.date(), field: DealBreakerField })
   .meta({ id: "RelaxationParams" });
@@ -130,7 +130,7 @@ export const RelaxationParams = z
  * Whether the fish's budget lets the caller send one today (#475, ADR-039
  * §3, §6): one of the week's own, or one their invitations earned waiting
  * (ADR-044 §8). The day's likes, which a fish counts in too, are `likesLeft`'s.
- * The round offers Send a fish only while it is true and a like is left, or
+ * The queue offers Send a fish only while it is true and a like is left, or
  * on a card the person already liked (the maintainer's of 01/11/2026, #503),
  * and on the card that holds the fish. Never a count, nor anything of the fish
  * others sent.
@@ -159,39 +159,39 @@ const yourTurn = z.int().min(0);
  * that cannot be shown now (a block, a sanction, a profile no longer complete,
  * a filter of either side) is left out, so places may skip a number.
  */
-export const RoundResponse = z
+export const QueueResponse = z
   .object({
     day: z.iso.date(),
-    entries: z.array(RoundEntry).max(QUEUE_PAGE).nullable(),
+    entries: z.array(QueueEntry).max(QUEUE_PAGE).nullable(),
     fishToSend,
     likesLeft,
     yourTurn,
   })
-  .meta({ id: "RoundResponse" });
-export type RoundResponse = z.infer<typeof RoundResponse>;
+  .meta({ id: "QueueResponse" });
+export type QueueResponse = z.infer<typeof QueueResponse>;
 
-/** An entry by its round's day and its place: a day that has ended answers round_expired. */
-export const RoundEntryParams = z
-  .object({ day: z.iso.date(), position: z.coerce.number().int().min(1).max(ROUND_POSITION_MAX) })
-  .meta({ id: "RoundEntryParams" });
+/** An entry by its queue's day and its place: a day that has ended answers day_ended. */
+export const QueueEntryParams = z
+  .object({ day: z.iso.date(), position: z.coerce.number().int().min(1).max(QUEUE_POSITION_MAX) })
+  .meta({ id: "QueueEntryParams" });
 
 /** A like, a pass, a fish or a skip; another one the same day replaces it. */
-export const RoundDecisionUpdate = z
-  .object({ decision: RoundChoice })
+export const QueueDecisionUpdate = z
+  .object({ decision: QueueChoice })
   .strict()
-  .meta({ id: "RoundDecisionUpdate" });
-export type RoundDecisionUpdate = z.infer<typeof RoundDecisionUpdate>;
+  .meta({ id: "QueueDecisionUpdate" });
+export type QueueDecisionUpdate = z.infer<typeof QueueDecisionUpdate>;
 
 /**
  * The answer to a decision (#100): the conversation the card's like is part
  * of, a match made by this like or before it; null for a pass and for a like
  * that made none. Nothing says whether the other person liked, unless it is a
- * match. `fishToSend` as the round says it, after this decision: a fish sent
+ * match. `fishToSend` as the queue says it, after this decision: a fish sent
  * may spend the last, one changed to a like or a pass gives it back (#475).
  * `likesLeft` and `yourTurn` likewise, so the screen follows each decision
  * without a read.
  */
-export const RoundDecisionAnswer = z
+export const QueueDecisionAnswer = z
   .object({
     match: z.object({ conversationId: z.uuid() }).strict().nullable(),
     fishToSend,
@@ -199,8 +199,8 @@ export const RoundDecisionAnswer = z
     yourTurn,
   })
   .strict()
-  .meta({ id: "RoundDecisionAnswer" });
-export type RoundDecisionAnswer = z.infer<typeof RoundDecisionAnswer>;
+  .meta({ id: "QueueDecisionAnswer" });
+export type QueueDecisionAnswer = z.infer<typeof QueueDecisionAnswer>;
 
 /**
  * How many stars one person's rows may ever hold, whatever matching_config
@@ -257,17 +257,17 @@ export const ExportedStars = exportPart(
 ).meta({ id: "ExportedStars" });
 export type ExportedStars = z.infer<typeof ExportedStars>;
 
-/** One card of a round in the person's own export (ADR-007 §4): never whom, in keys and in words. */
-export const ExportedRoundEntry = z
+/** One card of a queue in the person's own export (ADR-007 §4): never whom, in keys and in words. */
+export const ExportedQueueEntry = z
   .object({
     position,
-    reason: RoundReason,
+    reason: QueueReason,
     reasonInWords: z.string(),
     /** The deal-breaker a relaxed card came in by (ADR-042 §10), in key and in words; null on every other card. */
     relaxedField: DealBreakerField.nullable(),
     relaxedFieldInWords: z.string().nullable(),
     seenAt: z.iso.datetime().nullable(),
-    decision: RoundChoice.nullable(),
+    decision: QueueChoice.nullable(),
     decisionInWords: z.string().nullable(),
     decidedAt: z.iso.datetime().nullable(),
     /** A pass with an earlier pass behind it, which holds a year (ADR-062 §6). */
@@ -276,8 +276,8 @@ export const ExportedRoundEntry = z
     distance: DistanceBand.nullable(),
     distanceInWords: z.string().nullable(),
   })
-  .meta({ id: "ExportedRoundEntry" });
-export type ExportedRoundEntry = z.infer<typeof ExportedRoundEntry>;
+  .meta({ id: "ExportedQueueEntry" });
+export type ExportedQueueEntry = z.infer<typeof ExportedQueueEntry>;
 
 /** A deal-breaker the person relaxed for the day (ADR-042 §10), in keys and in words. */
 export const ExportedRelaxation = z
@@ -290,20 +290,18 @@ export const ExportedRelaxation = z
   })
   .meta({ id: "ExportedRelaxation" });
 
-export const ExportedRound = z
+export const ExportedQueueDay = z
   .object({
     day: z.iso.date(),
-    builtAt: z.iso.datetime(),
-    openedAt: z.iso.datetime().nullable(),
-    completedAt: z.iso.datetime().nullable(),
+    startedAt: z.iso.datetime(),
     relaxations: z.array(ExportedRelaxation).max(DEAL_BREAKERS_CAP),
-    entries: z.array(ExportedRoundEntry).max(ROUND_POSITION_MAX),
+    entries: z.array(ExportedQueueEntry).max(QUEUE_POSITION_MAX),
   })
-  .meta({ id: "ExportedRound" });
-export type ExportedRound = z.infer<typeof ExportedRound>;
+  .meta({ id: "ExportedQueueDay" });
+export type ExportedQueueDay = z.infer<typeof ExportedQueueDay>;
 
-// The person's own rounds, newest day first, at most 1000.
-export const ExportedRounds = exportPart(z.array(ExportedRound).max(1000)).meta({
-  id: "ExportedRounds",
+// The person's own queue days, newest day first, at most 1000.
+export const ExportedQueue = exportPart(z.array(ExportedQueueDay).max(1000)).meta({
+  id: "ExportedQueue",
 });
-export type ExportedRounds = z.infer<typeof ExportedRounds>;
+export type ExportedQueue = z.infer<typeof ExportedQueue>;

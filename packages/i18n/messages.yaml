@@ -427,7 +427,7 @@ profile.field.height:
 
 profile.field.distance:
   en: "Distance"
-  description: "Label of the distance row of the deal-breakers (#514, ADR-061 §7), also in the round's line on a relaxed deal-breaker and in a person's export. It reads the home, so it is no field of the profile registry."
+  description: "Label of the distance row of the deal-breakers (#514, ADR-061 §7), also in the queue's line on a relaxed deal-breaker and in a person's export. It reads the home, so it is no field of the profile registry."
   fi: "Etäisyys"
   sv: "Avstånd"
   machine: { fi: true, sv: true }
@@ -1792,28 +1792,28 @@ profile.option.height.shorter:
 
 profile.option.distance.nearby:
   en: "Nearby"
-  description: "The nearest of the four distance bands (#514, ADR-061 §5): a line of its own on somebody's card in a round, and a button of the distance row of the deal-breakers, where it takes in nobody further. Says how far in words, never in kilometres: the distance behind the word is a setting. Short: the row holds four buttons."
+  description: "The nearest of the four distance bands (#514, ADR-061 §5): a line of its own on somebody's card in a queue, and a button of the distance row of the deal-breakers, where it takes in nobody further. Says how far in words, never in kilometres: the distance behind the word is a setting. Short: the row holds four buttons."
   fi: "Lähellä"
   sv: "I närheten"
   machine: { fi: true, sv: true }
 
 profile.option.distance.close:
   en: "Close"
-  description: "The second of the four distance bands (#514, ADR-061 §5): further than nearby. A line of its own on somebody's card in a round, and a button of the distance row of the deal-breakers, where it takes in nearby people too. Never in kilometres. Short: the row holds four buttons."
+  description: "The second of the four distance bands (#514, ADR-061 §5): further than nearby. A line of its own on somebody's card in a queue, and a button of the distance row of the deal-breakers, where it takes in nearby people too. Never in kilometres. Short: the row holds four buttons."
   fi: "Melko lähellä"
   sv: "Ganska nära"
   machine: { fi: true, sv: true }
 
 profile.option.distance.around:
   en: "Around"
-  description: "The third of the four distance bands (#514, ADR-061 §5): the same part of the country, further than close. A line of its own on somebody's card in a round, and a button of the distance row of the deal-breakers, where it takes in nearby and close people too. Never in kilometres. Short: the row holds four buttons."
+  description: "The third of the four distance bands (#514, ADR-061 §5): the same part of the country, further than close. A line of its own on somebody's card in a queue, and a button of the distance row of the deal-breakers, where it takes in nearby and close people too. Never in kilometres. Short: the row holds four buttons."
   fi: "Samoilla seuduilla"
   sv: "I trakten"
   machine: { fi: true, sv: true }
 
 profile.option.distance.far:
   en: "Far"
-  description: "The last of the four distance bands (#514, ADR-061 §5): beyond around. A line of its own on somebody's card in a round; the filter has no such button, since taking everybody is no filter. Never in kilometres, and it must not read as a judgement of the person."
+  description: "The last of the four distance bands (#514, ADR-061 §5): beyond around. A line of its own on somebody's card in a queue; the filter has no such button, since taking everybody is no filter. Never in kilometres, and it must not read as a judgement of the person."
   fi: "Kauempana"
   sv: "Längre bort"
   machine: { fi: true, sv: true }
@@ -3517,7 +3517,7 @@ errors.report_window_closed:
   sv: "Det går inte längre att anmäla det här samtalet."
   machine: { fi: true, sv: true }
 
-errors.round_expired:
+errors.day_ended:
   en: "That day ended at midnight, so this was not saved."
   description: "The queue (409, #96, ADR-034): a card of a day that has ended was liked, passed, skipped or reported seen; the app reads the queue again."
   fi: "Päivä päättyi keskiyöllä, joten tätä ei tallennettu."
@@ -3540,35 +3540,35 @@ errors.found_them_answered:
 
 errors.match_made:
   en: "This like made a match, so it stays. You can still end the conversation under Conversations."
-  description: "Today's round (409, #100, ADR-038): a like that made a match was changed; a like that is part of a match is final (the maintainer, 20/10/2026). Conversations is the list's name (chat.list.title). Nothing was saved."
+  description: "Today's queue (409, #100, ADR-038): a like that made a match was changed; a like that is part of a match is final (the maintainer, 20/10/2026). Conversations is the list's name (chat.list.title). Nothing was saved."
   fi: "Tästä tykkäyksestä tuli mätsi, joten se pysyy. Voit silti lopettaa keskustelun Keskusteluissa."
   sv: "Det här gillandet blev en match, så det står kvar. Du kan fortfarande avsluta samtalet under Samtal."
   machine: { fi: true, sv: true }
 
 errors.already_relaxed:
   en: "You relaxed that one for today already."
-  description: "Today's round (409, #99, ADR-042 §5): the same deal-breaker relaxed twice the same day, from two devices or a tap that crossed another. Nothing was saved."
+  description: "Today's queue (409, #99, ADR-042 §5): the same deal-breaker relaxed twice the same day, from two devices or a tap that crossed another. Nothing was saved."
   fi: "Joustit siitä jo tälle päivälle."
   sv: "Du har redan släppt på den för i dag."
   machine: { fi: true, sv: true }
 
 errors.relaxations_changed:
   en: "Your relaxations for today changed meanwhile. Look again and choose."
-  description: "Today's round (409, #99, ADR-042 §5): another device relaxed or undid a deal-breaker between this screen's read and its tap. Nothing was saved; the panel reads the offers again."
+  description: "Today's queue (409, #99, ADR-042 §5): another device relaxed or undid a deal-breaker between this screen's read and its tap. Nothing was saved; the panel reads the offers again."
   fi: "Tämän päivän joustosi muuttuivat sillä välin. Katso uudelleen ja valitse."
   sv: "Dina undantag för i dag ändrades under tiden. Titta igen och välj."
   machine: { fi: true, sv: true }
 
 errors.fish_budget_exceeded:
   en: "You cannot send a fish just now."
-  description: "Today's round (429 with Retry-After, #378, ADR-039): the person has sent matching_config fish_budget fish within the period of fish_window_days counted from a Monday, the calendar week (#475), and no earned fish waits; Retry-After says when the next can go. The round screen says it when another phone sent the week's fish meanwhile, and takes the fish button away; it never names the day of the next, which is Monday. Nothing was saved. Never a number or a period: both are tunables."
+  description: "Today's queue (429 with Retry-After, #378, ADR-039): the person has sent matching_config fish_budget fish within the period of fish_window_days counted from a Monday, the calendar week (#475), and no earned fish waits; Retry-After says when the next can go. The queue screen says it when another phone sent the week's fish meanwhile, and takes the fish button away; it never names the day of the next, which is Monday. Nothing was saved. Never a number or a period: both are tunables."
   fi: "Et voi lähettää kalaa juuri nyt."
   sv: "Du kan inte skicka en fisk just nu."
   machine: { fi: true, sv: true }
 
 errors.like_budget_exceeded:
   en: "You have used today's likes. New ones come after midnight; you can still pass."
-  description: "Today's round (429 with Retry-After, #98, ADR-036): the day's likes from matching_config like_budget_balanced are used, a like back counted like any other; a pass is never counted. The day rolls at midnight in Finland. Nothing was saved."
+  description: "Today's queue (429 with Retry-After, #98, ADR-036): the day's likes from matching_config like_budget_balanced are used, a like back counted like any other; a pass is never counted. The day rolls at midnight in Finland. Nothing was saved."
   fi: "Olet käyttänyt tämän päivän tykkäykset. Uusia tulee keskiyön jälkeen, mutta voit yhä ohittaa."
   sv: "Du har använt dagens gillanden. Nya kommer efter midnatt, men du kan fortfarande hoppa över."
   machine: { fi: true, sv: true }
@@ -5611,7 +5611,7 @@ photos.description.face.facialHair:
 
 settings.decisionButtons.label:
   en: "Like and Pass"
-  description: "Settings, title of the row in Appearance and language and of its screen (#82): where Like and Pass sit on today's round, for the right hand or the left, one-handed mode, and the marks they carry (#520)."
+  description: "Settings, title of the row in Appearance and language and of its screen (#82): where Like and Pass sit on today's queue, for the right hand or the left, one-handed mode, and the marks they carry (#520)."
   fi: "Tykkää ja Ohita"
   sv: "Gilla och Hoppa över"
   slangi: "Digaan ja Skippaan"
@@ -5640,7 +5640,7 @@ settings.decisionButtons.left:
 
 settings.decisionButtons.oneHanded:
   en: "One-handed"
-  description: "Like and Pass screen, the switch's label (#82): the round's buttons in one column on the chosen hand's side."
+  description: "Like and Pass screen, the switch's label (#82): the queue's buttons in one column on the chosen hand's side."
   fi: "Yhdellä kädellä"
   sv: "Med en hand"
   machine: { fi: true, sv: true }
@@ -6040,7 +6040,7 @@ admin.config.failed:
 
 admin.config.pastKeptYear:
   en: "The queue keeps its records a year, so this key holds at most 365 days."
-  description: "Admin panel, the API refused a waiting period or a window counted back over the queue's log that is longer than the year the log is kept (ROUND_RETENTION_DAYS, #687); change the number with the constant."
+  description: "Admin panel, the API refused a waiting period or a window counted back over the queue's log that is longer than the year the log is kept (QUEUE_RETENTION_DAYS, #687); change the number with the constant."
 
 admin.nav.overview:
   en: "Overview"
@@ -6170,7 +6170,7 @@ admin.automaticBans.rule.cards_served:
   en: "Was served the cards of {people, plural, one {# person} other {# people}} between {first} and {at}."
   description: "Admin panel, the automatic shadow bans: the velocity rule on cards served applied it; {people} is of how many different people, {first} the first card's time and {at} when the rule applied the ban (#86)."
 
-admin.automaticBans.rule.round_reads:
+admin.automaticBans.rule.queue_reads:
   en: "Read the queue or opened a starred card {reads, plural, one {# time} other {# times}} between {first} and {at}."
   description: "Admin panel, the automatic shadow bans: the velocity rule on reads of the queue applied it; {reads} is how many served reads of the queue, each starred card opened from the Starred list counted as one (ADR-064 §4), {first} the first one's time and {at} when the rule applied the ban (#86, ADR-041)."
 
@@ -7397,84 +7397,84 @@ account.export.report.outcome.acted:
   sv: "En moderator vidtog åtgärder"
   machine: { fi: true, sv: true }
 
-account.export.round.about:
+account.export.queue.about:
   en: "What you went through, a day each: when the day began and when you opened it, each card's place and why it was there, when you saw it, and whether you liked it, passed it or left it for later. A second pass, which holds a year, is marked. Who was on a card is not written here."
-  description: "Inside the downloaded data file (#96, ADR-034), the text that opens the part listing the person's own rounds. Plain; says why no name is there."
+  description: "Inside the downloaded data file (#96, ADR-034), the text that opens the part listing the person's own queue days. Plain; says why no name is there."
   fi: "Mitä kävit läpi, yksi kultakin päivältä: milloin päivä alkoi ja milloin avasit sen, kunkin kortin paikka ja miksi se oli mukana, milloin näit sen ja tykkäsitkö, ohititko vai jätitkö sen myöhemmäksi. Toinen ohitus, joka pätee vuoden, on merkitty. Sitä, kuka kortilla oli, ei kirjoiteta tähän."
   sv: "Det du gick igenom, en för varje dag: när dagen började och när du öppnade den, varje korts plats och varför det var med, när du såg det och om du gillade det, hoppade över det eller lämnade det till senare. En andra överhoppning, som gäller ett år, är markerad. Vem som fanns på ett kort står inte här."
   machine: { fi: true, sv: true }
 
-account.export.round.reason.matches_filters:
+account.export.queue.reason.matches_filters:
   en: "Matched all your filters"
-  description: "Inside the downloaded data file (#96), why a card was in the person's round (TD-12); the same reason the card's label gave."
+  description: "Inside the downloaded data file (#96), why a card was in the person's queue (TD-12); the same reason the card's label gave."
   fi: "Täytti kaikki suodattimesi"
   sv: "Matchade alla dina filter"
   machine: { fi: true, sv: true }
 
-account.export.round.reason.liked_you:
+account.export.queue.reason.liked_you:
   en: "Had liked you"
-  description: "Inside the downloaded data file (#96), why a card was in the person's round (TD-12): the card's person had liked them, as the card's label said."
+  description: "Inside the downloaded data file (#96), why a card was in the person's queue (TD-12): the card's person had liked them, as the card's label said."
   fi: "Oli tykännyt sinusta"
   sv: "Hade gillat dig"
   machine: { fi: true, sv: true }
 
-account.export.round.reason.seen_before:
+account.export.queue.reason.seen_before:
   en: "Seen before"
-  description: "Inside the downloaded data file (#96), why a card was in the person's round (TD-12): shown to them on an earlier day."
+  description: "Inside the downloaded data file (#96), why a card was in the person's queue (TD-12): shown to them on an earlier day."
   fi: "Nähty aiemmin"
   sv: "Sedd tidigare"
   machine: { fi: true, sv: true }
 
-account.export.round.reason.relaxed:
+account.export.queue.reason.relaxed:
   en: "There because you relaxed a filter"
-  description: "Inside the downloaded data file (#96), why a card was in the person's round (TD-12, #99): included after they relaxed a filter."
+  description: "Inside the downloaded data file (#96), why a card was in the person's queue (TD-12, #99): included after they relaxed a filter."
   fi: "Mukana, koska väljensit suodatinta"
   sv: "Med eftersom du lättade på ett filter"
   machine: { fi: true, sv: true }
 
-account.export.round.relaxation.unanswered:
+account.export.queue.relaxation.unanswered:
   en: "Let through people who did not answer it, for the day"
   description: "The data export (#99, ADR-042 §10): a deal-breaker the person relaxed for one day by letting through those who did not answer its field."
   fi: "Päästi päiväksi läpi ne, jotka eivät vastanneet siihen"
   sv: "Släppte för dagen igenom dem som inte svarade på den"
   machine: { fi: true, sv: true }
 
-account.export.round.relaxation.aside:
+account.export.queue.relaxation.aside:
   en: "Set aside for the day"
   description: "The data export (#99, ADR-042 §10): a deal-breaker the person set aside for one day."
   fi: "Ohitettu päiväksi"
   sv: "Bortsedd från för dagen"
   machine: { fi: true, sv: true }
 
-account.export.round.reason.fish:
+account.export.queue.reason.fish:
   en: "Had sent you a fish"
-  description: "Inside the downloaded data file (#378), why a card was in the person's round: the card's person had sent them a fish, as the card's label said."
+  description: "Inside the downloaded data file (#378), why a card was in the person's queue: the card's person had sent them a fish, as the card's label said."
   fi: "Oli lähettänyt sinulle kalan"
   sv: "Hade skickat en fisk till dig"
   machine: { fi: true, sv: true }
 
-account.export.round.decision.like:
+account.export.queue.decision.like:
   en: "Liked"
-  description: "Inside the downloaded data file (#96), the person's decision on a card of their round."
+  description: "Inside the downloaded data file (#96), the person's decision on a card of their queue."
   fi: "Tykkäsit"
   sv: "Gillade"
   machine: { fi: true, sv: true }
 
-account.export.round.decision.fish:
+account.export.queue.decision.fish:
   en: "Sent a fish"
-  description: "Inside the downloaded data file (#378), the person's decision on a card of their round: a fish, a like that says a little more, of which a person may send matching_config fish_budget in each calendar week, Monday to Sunday (fish_window_days counted from a Monday, #475)."
+  description: "Inside the downloaded data file (#378), the person's decision on a card of their queue: a fish, a like that says a little more, of which a person may send matching_config fish_budget in each calendar week, Monday to Sunday (fish_window_days counted from a Monday, #475)."
   fi: "Lähetit kalan"
   sv: "Skickade en fisk"
   machine: { fi: true, sv: true }
 
-account.export.round.decision.pass:
+account.export.queue.decision.pass:
   en: "Passed"
-  description: "Inside the downloaded data file (#96), the person's decision on a card of their round."
+  description: "Inside the downloaded data file (#96), the person's decision on a card of their queue."
   fi: "Ohitit"
   sv: "Hoppade över"
   machine: { fi: true, sv: true }
 
-account.export.round.decision.skip:
+account.export.queue.decision.skip:
   en: "Left for later"
   description: "Inside the downloaded data file (ADR-062 §3), the person's decision on a card: moved on without deciding."
   fi: "Jätit myöhemmäksi"
@@ -8053,14 +8053,14 @@ pond.gate.open:
 
 # --- The queue (#379, #502, ADR-034, ADR-062): one card at a time, like, pass and Later, to its end ---
 
-round.home.open:
+queue.home.open:
   en: "See people"
   description: "Button on the card of the home screen, once matching is open for the person: opens the queue of people to go through (#379, ADR-062 §14). Short; no count, no time."
   fi: "Katso ihmisiä"
   sv: "Se människor"
   machine: { fi: true, sv: true }
 
-round.title:
+queue.title:
   en: "People"
   description: "Title of the screen of the queue, in its header beside the back arrow (#379, ADR-062 §14)."
   fi: "Ihmiset"
@@ -8068,138 +8068,138 @@ round.title:
   slangi: "Jengi"
   machine: { fi: true, sv: true, slangi: true }
 
-round.back:
+queue.back:
   en: "Back to home"
-  description: "Back arrow of the round screen, heard by a screen reader: where it goes (#379)."
+  description: "Back arrow of the queue screen, heard by a screen reader: where it goes (#379)."
   fi: "Takaisin alkuun"
   sv: "Tillbaka till start"
   machine: { fi: true, sv: true }
 
-round.reason.matches_filters:
+queue.reason.matches_filters:
   en: "Matches your filters"
-  description: "Why a card is in the round (TD-12), above the card: the person is in the reader's filters and the reader in theirs. Never a score, never 'best match'. A short label."
+  description: "Why a card is in the queue (TD-12), above the card: the person is in the reader's filters and the reader in theirs. Never a score, never 'best match'. A short label."
   fi: "Vastaa suodattimiasi"
   sv: "Matchar dina filter"
   machine: { fi: true, sv: true }
 
-round.reason.liked_you:
+queue.reason.liked_you:
   en: "Liked you"
-  description: "Why a card is in the round (TD-12, #97), above the card: this person liked the reader, and liking back makes a match. Never says when or how often. A short label."
+  description: "Why a card is in the queue (TD-12, #97), above the card: this person liked the reader, and liking back makes a match. Never says when or how often. A short label."
   fi: "Tykkäsi sinusta"
   sv: "Gillade dig"
   machine: { fi: true, sv: true }
 
-round.reason.seen_before:
+queue.reason.seen_before:
   en: "Seen before"
-  description: "Why a card is in the round (TD-12), above the card: the reader was shown this person in an earlier round. A short label."
+  description: "Why a card is in the queue (TD-12), above the card: the reader was shown this person in an earlier queue. A short label."
   fi: "Nähty aiemmin"
   sv: "Sedd tidigare"
   machine: { fi: true, sv: true }
 
-round.reason.fish:
+queue.reason.fish:
   en: "Sent you a fish"
-  description: "Why a card is in the round (TD-12, #378, ADR-039): this person sent the reader a fish, a like that goes first; liking back makes a match. The word fish is the app's own for it (ADR-039 Open 1), for the native review. A short label."
+  description: "Why a card is in the queue (TD-12, #378, ADR-039): this person sent the reader a fish, a like that goes first; liking back makes a match. The word fish is the app's own for it (ADR-039 Open 1), for the native review. A short label."
   fi: "Lähetti sinulle kalan"
   sv: "Skickade en fisk till dig"
   machine: { fi: true, sv: true }
 
-round.reason.relaxedField:
+queue.reason.relaxedField:
   en: "Relaxed for today: {field}"
-  description: "Why a card is in the round (TD-12, #99, ADR-042 §9), above the card: the reader relaxed this deal-breaker for today and this person came in by it. {field} is the field's label, after a colon so nothing is inflected. A short label."
+  description: "Why a card is in the queue (TD-12, #99, ADR-042 §9), above the card: the reader relaxed this deal-breaker for today and this person came in by it. {field} is the field's label, after a colon so nothing is inflected. A short label."
   fi: "Joustettu tänään: {field}"
   sv: "Släppt på i dag: {field}"
   machine: { fi: true, sv: true }
 
-round.notAnswered:
+queue.notAnswered:
   en: "Doesn't say: {field}"
-  description: "Above a card of today's round (TD-12, #99, ADR-042 §8): this card says nothing on the field of one of the reader's own deal-breakers. The person left it unanswered or hid it, and the text must fit both without telling which (#515). {field} is the field's label, after a colon so nothing is inflected."
+  description: "Above a card of today's queue (TD-12, #99, ADR-042 §8): this card says nothing on the field of one of the reader's own deal-breakers. The person left it unanswered or hid it, and the text must fit both without telling which (#515). {field} is the field's label, after a colon so nothing is inflected."
   fi: "Ei kerro: {field}"
   sv: "Berättar inte: {field}"
   machine: { fi: true, sv: true }
 
-round.relaxed.undo:
+queue.relaxed.undo:
   en: "Undo for today: {field}"
   description: "Button on a card a relaxation brought, and in the short-pool panel (#99, ADR-042 §6): one tap undoes today's relaxation of this deal-breaker and takes back the cards it brought that the reader has not decided on. {field} is the field's label, after a colon."
   fi: "Peru tämän päivän jousto: {field}"
   sv: "Ångra dagens undantag: {field}"
   machine: { fi: true, sv: true }
 
-round.short.title:
+queue.short.title:
   en: "Few people today"
-  description: "Heading of the short-pool panel at the end of a short round (TD-12, #99, ADR-042 §2): the reader's deal-breakers leave few people. With the groups' headings under it (round.short.unanswered.title, round.short.aside.title) it is all the panel says (#581). Never blames the reader."
+  description: "Heading of the short-pool panel at the end of a short queue (TD-12, #99, ADR-042 §2): the reader's deal-breakers leave few people. With the groups' headings under it (queue.short.unanswered.title, queue.short.aside.title) it is all the panel says (#581). Never blames the reader."
   fi: "Tänään vähän ihmisiä"
   sv: "Få personer i dag"
   machine: { fi: true, sv: true }
 
-round.short.unanswered.title:
+queue.short.unanswered.title:
   en: "Include today those who did not answer"
   description: "Heading of a group in the short-pool panel (#99, ADR-042 §3, #581), over rows that name only a deal-breaker's field and how many more: for today, let through people who left that field unanswered. 'Today' has to carry that nothing changes tomorrow: no other line says so."
   fi: "Ota tänään mukaan ne, jotka eivät vastanneet"
   sv: "Ta i dag med dem som inte svarade"
   machine: { fi: true, sv: true }
 
-round.short.aside.title:
+queue.short.aside.title:
   en: "Set aside for today"
   description: "Heading of a group in the short-pool panel (#99, ADR-042 §3, #581), over rows that name only a deal-breaker's field and how many more: set that deal-breaker aside for today only. 'Today' has to carry that nothing changes tomorrow: no other line says so."
   fi: "Jousta tänään"
   sv: "Släpp på för i dag"
   machine: { fi: true, sv: true }
 
-round.short.unanswered:
+queue.short.unanswered:
   en: "Include those who did not answer: {field}"
-  description: "What a screen reader says for a row under round.short.unanswered.title in the short-pool panel (#99, ADR-042 §3, #581), before how many more; never drawn, since the row shows the field alone: for today, let through people who left this deal-breaker's field unanswered. {field} is the field's label, after a colon."
+  description: "What a screen reader says for a row under queue.short.unanswered.title in the short-pool panel (#99, ADR-042 §3, #581), before how many more; never drawn, since the row shows the field alone: for today, let through people who left this deal-breaker's field unanswered. {field} is the field's label, after a colon."
   fi: "Ota mukaan ne, jotka eivät vastanneet: {field}"
   sv: "Ta med dem som inte svarade: {field}"
   machine: { fi: true, sv: true }
 
-round.short.aside:
+queue.short.aside:
   en: "Set aside for today: {field}"
-  description: "What a screen reader says for a row under round.short.aside.title in the short-pool panel (#99, ADR-042 §3, #581), before how many more; never drawn, since the row shows the field alone: set this deal-breaker aside for today only. {field} is the field's label, after a colon."
+  description: "What a screen reader says for a row under queue.short.aside.title in the short-pool panel (#99, ADR-042 §3, #581), before how many more; never drawn, since the row shows the field alone: set this deal-breaker aside for today only. {field} is the field's label, after a colon."
   fi: "Jousta tänään: {field}"
   sv: "Släpp på för i dag: {field}"
   machine: { fi: true, sv: true }
 
-round.short.more:
+queue.short.more:
   en: "{more, plural, =0 {A few more people} one {About # more person} other {About # more people}}"
   description: "A short-pool row's second line, under the deal-breaker's field (#99, ADR-042 §4): how much the relaxation widens the reader's pool, rounded down to the counter's step (matching_config pond_counter_k, ten or more); zero means fewer than a step. Never a count of cards."
   fi: "{more, plural, =0 {Muutama ihminen lisää} one {Noin # ihminen lisää} other {Noin # ihmistä lisää}}"
   sv: "{more, plural, =0 {Några fler personer} one {Ungefär # person till} other {Ungefär # fler personer}}"
   machine: { fi: true, sv: true }
 
-round.short.nobody:
+queue.short.nobody:
   en: "Nobody new to show today after all."
   description: "Short-pool panel (#99, ADR-042 §5): the relaxation was made, but by the time it was tapped it found nobody to add today. It can still be undone."
   fi: "Ketään uutta ei sittenkään ole näytettävänä tänään."
   sv: "Det finns ingen ny att visa i dag ändå."
   machine: { fi: true, sv: true }
 
-round.fish:
+queue.fish:
   en: "Send a fish"
-  description: "Decision button on a round card, above like and pass, a filled rounded square with a fish (#378, ADR-039): a like with a mark, first in the other person's round; matching_config fish_budget of them in a calendar week, Monday to Sunday (fish_window_days from a Monday). Not offered on a card that liked the reader or sent a fish, nor with no likes left except on a card already liked (#503), nor once no fish can go (the week's is sent and no earned one waits), except on the card that holds it (#475). Never a number or a period on the button: both are tunables. The word fish is the app's own (ADR-039 Open 1), for the native review."
+  description: "Decision button on a queue card, above like and pass, a filled rounded square with a fish (#378, ADR-039): a like with a mark, first in the other person's queue; matching_config fish_budget of them in a calendar week, Monday to Sunday (fish_window_days from a Monday). Not offered on a card that liked the reader or sent a fish, nor with no likes left except on a card already liked (#503), nor once no fish can go (the week's is sent and no earned one waits), except on the card that holds it (#475). Never a number or a period on the button: both are tunables. The word fish is the app's own (ADR-039 Open 1), for the native review."
   fi: "Lähetä kala"
   sv: "Skicka en fisk"
   max_length: 24
   machine: { fi: true, sv: true }
 
-round.like:
+queue.like:
   en: "Like"
-  description: "Decision button on a round card, a filled pill with a heart (#379): the reader would like to talk to this person. By default at the right of the bottom bar; the person can mirror it for the left hand or stack it last in a one-handed column (#82). One word; see the glossary's like."
+  description: "Decision button on a queue card, a filled pill with a heart (#379): the reader would like to talk to this person. By default at the right of the bottom bar; the person can mirror it for the left hand or stack it last in a one-handed column (#82). One word; see the glossary's like."
   fi: "Tykkää"
   sv: "Gilla"
   slangi: "Digaan"
   max_length: 14
   machine: { fi: true, sv: true, slangi: true }
 
-round.pass:
+queue.pass:
   en: "Pass"
-  description: "Decision button on a round card, an outlined rectangle with a cross (#379): not this time. By default at the left of the bottom bar; the person can mirror it for the left hand or stack it in a one-handed column (#82). Neutral and kind, never a rejection; see the glossary's pass. One word."
+  description: "Decision button on a queue card, an outlined rectangle with a cross (#379): not this time. By default at the left of the bottom bar; the person can mirror it for the left hand or stack it in a one-handed column (#82). Neutral and kind, never a rejection; see the glossary's pass. One word."
   fi: "Ohita"
   sv: "Hoppa över"
   slangi: "Skippaan"
   max_length: 14
   machine: { fi: true, sv: true, slangi: true }
 
-round.skip:
+queue.skip:
   en: "Later"
   description: "Decision button on a card (ADR-062 §3): move on without deciding. It spends nothing and costs nobody anything, and the card returns another day. Plainer than Like and Pass, a text button. Finnish Ohita is already Pass, so this is never that word. One word."
   fi: "Myöhemmin"
@@ -8207,100 +8207,100 @@ round.skip:
   max_length: 14
   machine: { fi: true, sv: true }
 
-round.likesLeft:
+queue.likesLeft:
   en: "{likes, plural, =0 {No likes left today. New ones tomorrow.} one {# like left today} other {# likes left today}}"
-  description: "Line beside the decision buttons on a round card (#524, ADR-036 §6): how many of the day's likes the reader has left, counting down from matching_config like_budget_balanced to zero; a fish and a like back count in them. A plain fact in the same words at ten as at one: never urgent, never 'only one left'. =0: none are left and new ones come tomorrow, and passing stays possible. It wraps at large text sizes. The number is a tunable, so never write it out."
+  description: "Line beside the decision buttons on a queue card (#524, ADR-036 §6): how many of the day's likes the reader has left, counting down from matching_config like_budget_balanced to zero; a fish and a like back count in them. A plain fact in the same words at ten as at one: never urgent, never 'only one left'. =0: none are left and new ones come tomorrow, and passing stays possible. It wraps at large text sizes. The number is a tunable, so never write it out."
   fi: "{likes, plural, =0 {Tykkäyksiä ei ole tänään enää jäljellä. Uusia tulee huomenna.} one {# tykkäys jäljellä tänään} other {# tykkäystä jäljellä tänään}}"
   sv: "{likes, plural, =0 {Inga gillanden kvar i dag. Nya kommer i morgon.} one {# gillande kvar i dag} other {# gillanden kvar i dag}}"
   machine: { fi: true, sv: true }
 
-round.undo:
+queue.undo:
   en: "Undo"
-  description: "Button after a decision, in the round screen's header, or first in the bottom column in one-handed mode (#82): brings the last card back to decide again (ADR-034 §5, until midnight). One word."
+  description: "Button after a decision, in the queue screen's header, or first in the bottom column in one-handed mode (#82): brings the last card back to decide again (ADR-034 §5, until midnight). One word."
   fi: "Kumoa"
   sv: "Ångra"
   max_length: 12
   machine: { fi: true, sv: true }
 
-round.undo.label:
+queue.undo.label:
   en: "Undo your last decision"
-  description: "What a screen reader says for the Undo button of the round screen: the last card comes back to decide again (#379)."
+  description: "What a screen reader says for the Undo button of the queue screen: the last card comes back to decide again (#379)."
   fi: "Kumoa viimeisin valintasi"
   sv: "Ångra ditt senaste val"
   machine: { fi: true, sv: true }
 
-round.revisit.like:
+queue.revisit.like:
   en: "You liked this person. You can change that until midnight."
   description: "Above a card the reader brought back with Undo, when its decision is a like (ADR-034 §5): the like stands until another button is pressed."
   fi: "Tykkäsit tästä henkilöstä. Voit muuttaa sitä keskiyöhön asti."
   sv: "Du gillade den här personen. Du kan ändra det fram till midnatt."
   machine: { fi: true, sv: true }
 
-round.revisit.pass:
+queue.revisit.pass:
   en: "You passed on this person. You can change that until midnight."
   description: "Above a card the reader brought back with Undo, when its decision is a pass (ADR-034 §5): the pass stands until another button is pressed. Neutral, never a rejection."
   fi: "Ohitit tämän henkilön. Voit muuttaa sitä keskiyöhön asti."
   sv: "Du hoppade över den här personen. Du kan ändra det fram till midnatt."
   machine: { fi: true, sv: true }
 
-round.revisit.skip:
+queue.revisit.skip:
   en: "You left this person for later. You can change that until midnight."
   description: "Above a card the reader brought back with Undo, when its decision is a skip (ADR-062 §3): the skip stands until another button is pressed."
   fi: "Jätit tämän henkilön myöhemmäksi. Voit muuttaa sitä keskiyöhön asti."
   sv: "Du lämnade den här personen till senare. Du kan ändra det fram till midnatt."
   machine: { fi: true, sv: true }
 
-round.revisit.fish:
+queue.revisit.fish:
   en: "You sent this person a fish. You can change that until midnight."
   description: "Above a card the reader brought back with Undo, when its decision is a fish (ADR-034 §5, ADR-039): changed the same day, the fish is given back."
   fi: "Lähetit tälle henkilölle kalan. Voit muuttaa sitä keskiyöhön asti."
   sv: "Du skickade en fisk till den här personen. Du kan ändra det fram till midnatt."
   machine: { fi: true, sv: true }
 
-round.done:
+queue.done:
   en: "That's everybody for now."
   description: "The queue's screen at its end (ADR-062 §11): nobody is left to go through. The short pool's offers, then one button into What you seek, come under it. Calm and final: no count, no promise of when more come, and never 'come back tomorrow', which in a thin set would be false for a month."
   fi: "Siinä kaikki tällä erää."
   sv: "Det var alla för tillfället."
   machine: { fi: true, sv: true }
 
-round.yourTurn.refused:
+queue.yourTurn.refused:
   en: "{waiting, plural, one {# conversation is waiting for you.} other {# conversations are waiting for you.}} Answer or end one before you like anyone new."
   description: "The queue's screen, above the card, when a like or a fish was refused because matching_config your_turn_limit conversations wait on the person's answer (ADR-062 §5). {waiting} is their own number. The card stays and Pass and Later still work."
   fi: "{waiting, plural, one {# keskustelu odottaa sinua.} other {# keskustelua odottaa sinua.}} Vastaa tai lopeta yksi, ennen kuin tykkäät kenestäkään uudesta."
   sv: "{waiting, plural, one {# samtal väntar på dig.} other {# samtal väntar på dig.}} Svara på eller avsluta ett innan du gillar någon ny."
   machine: { fi: true, sv: true }
 
-round.none:
+queue.none:
   en: "There is nobody to show you yet."
   description: "The queue's screen when the reader has no queue: matching is not open for them (ADR-062 §1). No date, no count."
   fi: "Ei vielä ketään näytettävää."
   sv: "Det finns ingen att visa dig än."
   machine: { fi: true, sv: true }
 
-round.gone:
+queue.gone:
   en: "That card is no longer available."
-  description: "Round screen when the card on it could not be decided because it is gone meanwhile (404: the person was blocked, left, or is no longer shown). The card leaves the screen. Never says why."
+  description: "Queue screen when the card on it could not be decided because it is gone meanwhile (404: the person was blocked, left, or is no longer shown). The card leaves the screen. Never says why."
   fi: "Kortti ei ole enää saatavilla."
   sv: "Kortet är inte längre tillgängligt."
   machine: { fi: true, sv: true }
 
-round.match.title:
+queue.match.title:
   en: "It's a match"
-  description: "Round screen after a like made a match (#100, ADR-038): both liked each other. A short headline, no exclamation mark; see the tone guide."
+  description: "Queue screen after a like made a match (#100, ADR-038): both liked each other. A short headline, no exclamation mark; see the tone guide."
   fi: "Se on mätsi"
   sv: "Det är en match"
   slangi: "Nyt natsaa"
   machine: { fi: true, sv: true, slangi: true }
 
-round.match.open:
+queue.match.open:
   en: "Go to the conversation"
-  description: "Button under a match on the round screen (#100): opens the conversation the match opened."
+  description: "Button under a match on the queue screen (#100): opens the conversation the match opened."
   fi: "Siirry keskusteluun"
   sv: "Gå till samtalet"
   machine: { fi: true, sv: true }
 
-round.match.continue:
+queue.match.continue:
   en: "Back to people"
   description: "Button under a match on the queue's screen (#100): the queue goes on with its next card, or says that it has reached its end."
   fi: "Takaisin ihmisiin"
@@ -8309,35 +8309,35 @@ round.match.continue:
 
 # --- The match as a hello: the designers' try (outside production), Sini's idea of 15/11/2026 ---
 
-round.hello.title:
+queue.hello.title:
   en: "Well, hello!"
   description: "The neubrutalism try's match moment (outside production): the headline in a tilted slab after a like made a match. A greeting, not the word match: the two would like to hear more about each other, like a smile across a room. Two or three short words. The Finnish is Sini's, with her exclamation mark, which the tone guide does not allow: the maintainer's call before it leaves the try."
   fi: "Kas moi!"
   sv: "Nämen hej!"
   machine: { fi: true, sv: true }
 
-round.hello.both:
+queue.hello.both:
   en: "You would both like to hear more about each other."
   description: "The neubrutalism try's match moment (outside production), the one sentence under the headline: what happened, in plain words. Never a score, a fit or a feeling the two are said to share."
   fi: "Te molemmat haluatte kuulla toisistanne lisää."
   sv: "Ni vill båda höra mer om varandra."
   machine: { fi: true, sv: true }
 
-round.hello.open:
+queue.hello.open:
   en: "Say hello"
   description: "The neubrutalism try's match moment (outside production): the button that opens the conversation the match opened. It sends nothing by itself."
   fi: "Sano moi"
   sv: "Säg hej"
   machine: { fi: true, sv: true }
 
-round.hello.you:
+queue.hello.you:
   en: "You"
   description: "The neubrutalism try's match moment (outside production): the caption under the reader's own photo; the other photo's caption is that person's name."
   fi: "Sinä"
   sv: "Du"
   machine: { fi: true, sv: true }
 
-round.hello.photos:
+queue.hello.photos:
   en: "You and {name}"
   description: "The neubrutalism try's match moment (outside production): what a screen reader says for the two photos side by side. {name} is the other person's display name, in a list, so never inflected."
   fi: "Sinä ja {name}"
@@ -8362,7 +8362,7 @@ onboarding.ready.body:
 
 # --- The stars (#575, ADR-064): somebody marked for later, without a like or a pass ---
 
-round.star:
+queue.star:
   en: "Star"
   description: "Button on a card with no star on it (#575, ADR-064 §1): mark this person to come back to later, without a like or a pass. A private bookmark that spends nothing. Never a rating, a super like or anything the other person sees. One word."
   fi: "Tähti"
@@ -8370,7 +8370,7 @@ round.star:
   max_length: 14
   machine: { fi: true, sv: true }
 
-round.star.on:
+queue.star.on:
   en: "Starred"
   description: "The same button with the star on it (#575): a tap takes it off. The icon is filled as well, so the state is never colour alone. One word."
   fi: "Tähdellä"
@@ -8378,14 +8378,14 @@ round.star.on:
   max_length: 14
   machine: { fi: true, sv: true }
 
-round.star.label:
+queue.star.label:
   en: "Star: {name}"
   description: "What a screen reader says for the star on a card (#575), naming the person; the reader adds whether it is selected. {name} stays in the nominative after the colon."
   fi: "Tähti: {name}"
   sv: "Stjärna: {name}"
   machine: { fi: true, sv: true }
 
-round.star.first:
+queue.star.first:
   en: "Only you can see your stars."
   description: "Above the card when a star is the only one on the person's list (#575, ADR-064 §7), so that it cannot be taken for a super like, which other apps use a star for. The one line that says who sees a star: the Starred list says nothing of it (#581). Plain and calm."
   fi: "Vain sinä näet tähtesi."

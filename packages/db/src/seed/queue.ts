@@ -1,8 +1,8 @@
 import { type Queryable, transaction } from "../pool.ts";
 
 /**
- * The round of the personas' stories (#379, ADR-034, ADR-037, ADR-062): Iida
- * opens the app to the day's queue, the four women of the round's cast in it,
+ * The queue of the personas' stories (#379, ADR-034, ADR-037, ADR-062): Iida
+ * opens the app to the day's queue, the four women of the queue's cast in it,
  * Henna first, who liked her yesterday, so that Iida's like back is a match.
  *
  * One thing in it no route does, written as rows, as the conversations are:
@@ -11,14 +11,14 @@ import { type Queryable, transaction } from "../pool.ts";
  * API's demo commands, once they have opened matching (`openMatching`), as the
  * day's first read would.
  */
-export type PersonaRound = {
-  /** Whose round the day has, by persona key. */
+export type PersonaQueueDay = {
+  /** Whose queue the day has, by persona key. */
   of: string;
-  /** Who liked them the day before, by persona key: each waits first in the round as liked you. */
+  /** Who liked them the day before, by persona key: each waits first in the queue as liked you. */
   likedBy: readonly string[];
 };
 
-export const PERSONA_ROUNDS: readonly PersonaRound[] = [{ of: "iida", likedBy: ["henna"] }];
+export const PERSONA_QUEUE_DAYS: readonly PersonaQueueDay[] = [{ of: "iida", likedBy: ["henna"] }];
 
 /** What waits on somebody the day after it was given, by key (#560): nothing of it opens their day. */
 export type WaitingLikes = {
@@ -28,11 +28,11 @@ export type WaitingLikes = {
 };
 
 /**
- * `liked`: likes written; `already`: a round of that day the liker had before
+ * `liked`: likes written; `already`: a queue of that day the liker had before
  * (the staging job runs again without a reset); `missing`: a persona of the
  * story has no account this time.
  */
-export type RoundsResult = { liked: number; already: number; missing: number };
+export type QueueDaysResult = { liked: number; already: number; missing: number };
 
 /** The Finnish calendar day of an instant, as YYYY-MM-DD (the API's `finnishDay`). */
 const finnishDay = (at: Date): string =>
@@ -52,20 +52,20 @@ function dayBefore(day: string): string {
 
 /**
  * Writes the likes of the day before, between the accounts the stories gave the
- * personas, by key. A like is the liker's round of that day with the person as
- * its one card, seen and liked at midday; a round of that day the liker has
+ * personas, by key. A like is the liker's queue of that day with the person as
+ * its one card, seen and liked at midday; a queue of that day the liker has
  * already is left as it is.
  */
-export async function writeRounds(
+export async function writeQueueDays(
   db: Queryable,
   accounts: ReadonlyMap<string, string>,
   now: Date,
-): Promise<RoundsResult> {
-  const result: RoundsResult = { liked: 0, already: 0, missing: 0 };
+): Promise<QueueDaysResult> {
+  const result: QueueDaysResult = { liked: 0, already: 0, missing: 0 };
   const yesterday = dayBefore(finnishDay(now));
   // Midday in Finland on the day before (noon in winter, one in summer).
   const noon = new Date(`${yesterday}T10:00:00Z`);
-  for (const story of PERSONA_ROUNDS) {
+  for (const story of PERSONA_QUEUE_DAYS) {
     const of = accounts.get(story.of);
     if (!of) {
       result.missing += 1;
@@ -78,16 +78,15 @@ export async function writeRounds(
         continue;
       }
       const written = await transaction(db, async (tx) => {
-        const round = await tx.query<{ id: string }>(
-          `INSERT INTO rounds (account_id, day, built_at, opened_at, completed_at)
-           VALUES ($1, $2, $3, $3, $3)
+        const day = await tx.query<{ id: string }>(
+          `INSERT INTO queue_day (account_id, day, started_at) VALUES ($1, $2, $3)
            ON CONFLICT (account_id, day) DO NOTHING RETURNING id`,
           [liker, yesterday, noon],
         );
-        const id = round.rows[0]?.id;
+        const id = day.rows[0]?.id;
         if (!id) return false;
         await tx.query(
-          `INSERT INTO round_entries (round_id, position, candidate_id, reason, seen_at, decision, decided_at)
+          `INSERT INTO queue_entry (queue_day_id, position, candidate_id, reason, seen_at, decision, decided_at)
            VALUES ($1, 1, $2, 'matches_filters', $3, 'like', $3)`,
           [id, of, noon],
         );
@@ -101,8 +100,8 @@ export async function writeRounds(
 }
 
 /**
- * Writes likes and fish of the day before, as `writeRounds` does, for people who
- * like more than one person: the liker's one round of that day holds them all.
+ * Writes likes and fish of the day before, as `writeQueueDays` does, for people who
+ * like more than one person: the liker's one queue of that day holds them all.
  * A like already there stays, so a second run on the same day writes nothing.
  */
 export async function writeWaitingLikes(
@@ -110,8 +109,8 @@ export async function writeWaitingLikes(
   stories: readonly WaitingLikes[],
   accounts: ReadonlyMap<string, string>,
   now: Date,
-): Promise<RoundsResult> {
-  const result: RoundsResult = { liked: 0, already: 0, missing: 0 };
+): Promise<QueueDaysResult> {
+  const result: QueueDaysResult = { liked: 0, already: 0, missing: 0 };
   const yesterday = dayBefore(finnishDay(now));
   // Midday in Finland on the day before (noon in winter, one in summer).
   const noon = new Date(`${yesterday}T10:00:00Z`);
@@ -128,21 +127,20 @@ export async function writeWaitingLikes(
         continue;
       }
       const written = await transaction(db, async (tx) => {
-        const round = await tx.query<{ id: string }>(
-          `INSERT INTO rounds (account_id, day, built_at, opened_at, completed_at)
-           VALUES ($1, $2, $3, $3, $3)
+        const day = await tx.query<{ id: string }>(
+          `INSERT INTO queue_day (account_id, day, started_at) VALUES ($1, $2, $3)
            ON CONFLICT (account_id, day) DO UPDATE SET account_id = EXCLUDED.account_id
            RETURNING id`,
           [liker, yesterday, noon],
         );
         const entry = await tx.query(
-          `INSERT INTO round_entries
-             (round_id, position, candidate_id, reason, seen_at, decision, decided_at, fish)
+          `INSERT INTO queue_entry
+             (queue_day_id, position, candidate_id, reason, seen_at, decision, decided_at, fish)
            SELECT $1::uuid, coalesce(max(position), 0) + 1, $2::uuid, 'matches_filters', $3::timestamptz,
                   'like', $3::timestamptz, $4::boolean
-             FROM round_entries WHERE round_id = $1::uuid
-           ON CONFLICT (candidate_id, round_id) DO NOTHING`,
-          [round.rows[0]?.id, of, noon, fish],
+             FROM queue_entry WHERE queue_day_id = $1::uuid
+           ON CONFLICT (candidate_id, queue_day_id) DO NOTHING`,
+          [day.rows[0]?.id, of, noon, fish],
         );
         return entry.rowCount === 1;
       });

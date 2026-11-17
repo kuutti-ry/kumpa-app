@@ -2,7 +2,7 @@
 # which says that only she sees it, and the card stays. Home then has a way to
 # the Starred list, which it had not before; the list opens Henna's card as it
 # stands, and its row takes the star off. The list says nobody is there, and home
-# goes back to how it was. Nothing is decided, so round.yaml, Iida's too, finds
+# goes back to how it was. Nothing is decided, so queue.yaml, Iida's too, finds
 # her queue as the stories left it. Deciding from the list, the cap and whoever
 # the list leaves out are the API's and jest's tests.
 appId: fi.kuutti.app
