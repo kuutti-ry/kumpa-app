@@ -11,7 +11,7 @@
 # Her profile is finished (four approved photos, two prompts), so home does
 # not say it lacks anything. One run per `pnpm demo:reset`: afterwards she has
 # accepted the current wording.
-appId: fi.kuutti.app
+appId: fi.kumpa
 name: A person who accepted an older wording of the terms is asked for the current one, and nothing else is asked again
 ---
 - runFlow:

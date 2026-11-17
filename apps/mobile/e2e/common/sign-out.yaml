@@ -1,6 +1,6 @@
 # Sign out if the app is signed in, so a flow begins where a new person does.
 # Runs after open-app.yaml.
-appId: fi.kuutti.app
+appId: fi.kumpa
 ---
 # The app's lock over it (#418, ADR-045), left on by a flow that stopped
 # half-way: left through the bank, which signs this phone out and turns the
@@ -51,7 +51,7 @@ appId: fi.kuutti.app
       # so the scroll is optional; it keeps the minute a scroll has elsewhere for
       # a slow emulator, and those cases, the first flow after a reset or on a
       # fresh phone at most, spend it. The tap below asks for the button itself.
-      - openLink: kuutti://settings?open=device
+      - openLink: fi.kumpa://settings?open=device
       - extendedWaitUntil:
           visible: "Settings|Asetukset|Inställningar"
           timeout: 15000
@@ -71,7 +71,7 @@ appId: fi.kuutti.app
       # logout, its account rows gone: the root route is the sign-in screen, or
       # on a phone that has not recorded the current wordings the screen
       # before the bank (#418), which bank-login.yaml taps through.
-      - openLink: kuutti://
+      - openLink: fi.kumpa://
       - extendedWaitUntil:
           visible: "Sign in with your bank|Kirjaudu pankkitunnuksilla|Logga in med din bank|How we do things here|Näin täällä toimitaan|Så här gör vi här"
           timeout: 15000

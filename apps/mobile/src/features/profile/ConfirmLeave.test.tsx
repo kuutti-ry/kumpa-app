@@ -116,35 +116,35 @@ afterEach(() => {
 describe("useConfirmLeave", () => {
   it("lets a link through when nothing is unsaved", async () => {
     await renderWithTheme(<Holder name="A" unsaved={false} />);
-    expect((await link("kuutti://settings")).outcome).toBe("kuutti://settings");
+    expect((await link("fi.kumpa://settings")).outcome).toBe("fi.kumpa://settings");
     expect(screen.getByText("A is quiet")).toBeTruthy();
   });
 
   it("lets the first link of a cold start through, whatever is held", async () => {
     await renderWithTheme(<Holder name="A" unsaved />);
-    expect((await link("kuutti://settings", true)).outcome).toBe("kuutti://settings");
+    expect((await link("fi.kumpa://settings", true)).outcome).toBe("fi.kumpa://settings");
     expect(screen.getByText("A is quiet")).toBeTruthy();
   });
 
   it("holds a link while something is unsaved, and follows it on the word", async () => {
     await renderWithTheme(<Holder name="A" unsaved />);
-    const held = (await link("kuutti://")).outcome;
+    const held = (await link("fi.kumpa://")).outcome;
     expect(held).toBeInstanceOf(Promise);
     expect(screen.getByText("A asks")).toBeTruthy();
     expect(screen.getByText("Leave without saving?")).toBeTruthy();
     await press("Leave without saving");
-    await expect(held).resolves.toBe("kuutti://");
+    await expect(held).resolves.toBe("fi.kumpa://");
     expect(screen.getByText("A is quiet")).toBeTruthy();
     expect(navigation.dispatch).not.toHaveBeenCalled();
     // The change is dropped, so the screen, which a link leaves mounted under
     // the one it opens, holds nothing: the next link goes straight through.
     expect(screen.getByText("A holds nothing")).toBeTruthy();
-    expect((await link("kuutti://settings")).outcome).toBe("kuutti://settings");
+    expect((await link("fi.kumpa://settings")).outcome).toBe("fi.kumpa://settings");
   });
 
   it("drops a held link on Keep editing, and keeps the change", async () => {
     await renderWithTheme(<Holder name="A" unsaved />);
-    const held = (await link("kuutti://")).outcome;
+    const held = (await link("fi.kumpa://")).outcome;
     await press("Keep editing");
     await expect(held).resolves.toBeNull();
     expect(screen.getByText("A is quiet")).toBeTruthy();
@@ -153,7 +153,7 @@ describe("useConfirmLeave", () => {
 
   it("keeps the change and drops a held link when the dialog is closed", async () => {
     await renderWithTheme(<Holder name="A" unsaved />);
-    const held = (await link("kuutti://")).outcome;
+    const held = (await link("fi.kumpa://")).outcome;
     await press("Close");
     await expect(held).resolves.toBeNull();
     expect(screen.getByText("A is quiet")).toBeTruthy();
@@ -167,7 +167,7 @@ describe("useConfirmLeave", () => {
         <Holder name="front" unsaved />
       </>,
     );
-    const held = (await link("kuutti://")).outcome;
+    const held = (await link("fi.kumpa://")).outcome;
     expect(screen.getByText("front asks")).toBeTruthy();
     expect(screen.getByText("under is quiet")).toBeTruthy();
     await press("Keep editing");
@@ -181,7 +181,7 @@ describe("useConfirmLeave", () => {
         <Holder name="front" unsaved={false} />
       </>,
     );
-    const held = (await link("kuutti://")).outcome;
+    const held = (await link("fi.kumpa://")).outcome;
     expect(screen.getByText("under asks")).toBeTruthy();
     expect(screen.getByText("front is quiet")).toBeTruthy();
     await press("Keep editing");
@@ -229,7 +229,7 @@ describe("useConfirmLeave", () => {
     it("lets a link through too: nothing is held for it to wait on", async () => {
       await renderWithTheme(<Popping />);
       await press("Pop after letting go");
-      expect((await link("kuutti://settings")).outcome).toBe("kuutti://settings");
+      expect((await link("fi.kumpa://settings")).outcome).toBe("fi.kumpa://settings");
       expect(screen.queryByText("Leave without saving?")).toBeNull();
     });
   });

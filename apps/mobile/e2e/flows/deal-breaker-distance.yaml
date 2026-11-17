@@ -3,11 +3,11 @@
 # the home everybody has, so it asks nobody to share theirs first and says nothing
 # of those who did not answer. Far is on a card and not here: accepting it is no
 # filter. Sanna has no deal-breaker; the flow ends as it began.
-appId: fi.kuutti.app
+appId: fi.kumpa
 name: Distance takes a band of its four buttons, kept by going back, and Everyone takes it off
 ---
 - runFlow: ../common/sign-in.yaml
-- openLink: kuutti://profile/deal-breakers/distance
+- openLink: fi.kumpa://profile/deal-breakers/distance
 - extendedWaitUntil:
     visible: "✓ Everyone|✓ Kaikki|✓ Alla"
     timeout: 15000
@@ -32,7 +32,7 @@ name: Distance takes a band of its four buttons, kept by going back, and Everyon
 - extendedWaitUntil:
     notVisible: "Fine with me|Sopii minulle|Okej för mig"
     timeout: 15000
-- openLink: kuutti://profile/deal-breakers/distance
+- openLink: fi.kumpa://profile/deal-breakers/distance
 - extendedWaitUntil:
     visible: "✓ Around|✓ Samoilla seuduilla|✓ I trakten"
     timeout: 15000
@@ -45,7 +45,7 @@ name: Distance takes a band of its four buttons, kept by going back, and Everyon
 - extendedWaitUntil:
     notVisible: "Fine with me|Sopii minulle|Okej för mig"
     timeout: 15000
-- openLink: kuutti://profile/deal-breakers/distance
+- openLink: fi.kumpa://profile/deal-breakers/distance
 - extendedWaitUntil:
     visible: "✓ Everyone|✓ Kaikki|✓ Alla"
     timeout: 15000

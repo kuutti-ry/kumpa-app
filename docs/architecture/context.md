@@ -23,7 +23,7 @@ Who uses Kuutti, and which outside services it depends on: the direction of ever
 ```mermaid
 flowchart TB
   accTitle: Context, part 1: the people and what their devices reach
-  accDescr: A person uses the phone app and a moderator uses the admin panel in a browser. Both reach the API through CloudFront, and both log in at their bank through Telia Tunnistus, which sends the browser back to the API. The app takes its JavaScript from Expo's EAS Update, reports errors to Sentry and opens the legal texts through the API, which sends the browser on to the website. The API sends its pushes to Expo's push service, which delivers them to the app through Apple's or Google's push service. App attestation is planned for later.
+  accDescr: A person uses the phone app and a moderator uses the admin panel in a browser. Both reach the API through CloudFront, and both log in at their bank through Telia Tunnistus, which sends the browser back to the API. The app takes its JavaScript from Expo's EAS Update, reports errors to Sentry and opens the legal texts through the API, which sends the browser on to the website. The API sends its pushes to Expo's push service, which delivers them to the app through Apple's or Google's push service. An iPhone asks Apple to certify the app at sign-in, and Apple and Google read from the API which links are the app's.
   subgraph people["The people"]
     n1["A person, with the phone app"]
     n2["A moderator, with the admin panel in a browser"]
@@ -40,7 +40,7 @@ flowchart TB
     n9["Sentry, EU region: error reports"]
     n10["The website kumpa.fi, also at kuutti.app, on Amplify Hosting, its own repository"]
     n11["Expo push, then Apple's APNs or Google's FCM: the pushes"]
-    n12["App attestation by Apple and Google: planned for later, ADR-056"]:::notbuilt
+    n12["Apple and Google, for the app itself: App Attest on an iPhone, the links that are the app's, Play's word on an install"]
   end
   n1 -->|"uses"| n3
   n2 -->|"uses"| n4
@@ -57,8 +57,8 @@ flowchart TB
   n5 -->|"sends the browser on to a legal text, from /legal/terms or /legal/privacy"| n10
   n5 -->|"a push: one line of the app's words and what it is about, never a text or a name"| n11
   n11 -->|"wakes the phone with it"| n3
-  n3 -.->|"planned for later, ADR-056"| n12
-  classDef notbuilt stroke-dasharray: 5 5
+  n3 -->|"an iPhone's key for Apple to attest at sign-in, and on Android a question to Play about the install"| n12
+  n12 -->|"read the two files that say which links are the app's"| n6
 ```
 
 ### Steps
@@ -74,7 +74,7 @@ flowchart TB
 9. Sentry, in its EU data region: error reports from the API and the app, with every category of data the SDK would collect by itself switched off in the API. Each is on only where a DSN is set: the parameter `sentry-dsn` for the API, `EXPO_PUBLIC_SENTRY_DSN` for the app.
 10. The website `kumpa.fi`, also served at `kuutti.app`, on AWS Amplify Hosting, built from its own repository `kuutti-ry/kumpa-app-site`. The full legal texts are there. The app opens the API's `/legal/terms` or `/legal/privacy` in the phone's browser, at the anchor of its version, and the API answers with a redirect to the site's page (#208, ADR-010 §21), so the site can move without a build of the app. That redirect is the one arrow between the API and the website: the API never calls the site, and its browser allowlist on staging names the panel's two origins, `kuutti.app`'s and `kumpa.fi`'s, and nothing else.
 11. Push through Expo (#102, ADR-055): the API sends each push to Expo's push service over HTTPS, at most a hundred a request, and Expo hands it to Apple's APNs or Google's FCM, which wake the phone. A push carries the device's token, one line of the app's own words in the device's language (a new message, a new match) and its kind, never a message's text, a name, an account or the conversation, whose id would pair the two phones for the vendors. The app registers its token with the API (`PUT /push-token`) once the phone lets Kuutti notify; the API sends where the parameter `push` says `expo`, as on staging, and reads receipts back once, fifteen minutes later, to forget tokens Apple or Google no longer know. What Expo receives and keeps: `docs/vendors/expo.md`.
-12. App attestation by Apple and Google: planned for later, not built. The third of ADR-056 §1's triggers has come with the queue, which serves cards outside a bounded queue (ADR-062); starting it is the maintainer's call, on its own issue. Screenshots are never noticed, so no service stands for them (ADR-056 §4).
+12. Apple and Google, for the app itself; three things, none of them a call the API makes. App Attest (ADR-069, #580): at sign-in an iPhone asks Apple to attest a key it made, over the one-time code, and the API verifies Apple's answer against Apple's root without calling Apple. A build holds the module and the entitlement since #184's native batch; no environment requires an attestation yet, and Android has nothing of the kind. The verified links (ADR-074): Apple's CDN and Google read the API's two well-known files, each served only where its parameter is set, which say that links to `/auth/return` and under `/i/` on the API's hosts are the app's, so that a phone hands them to the app alone. Play's install referrer: on Android the app asks Play, once, what its install came with, which is an invitation's code when the install came from one's link. Screenshots are never noticed, so no service stands for them (ADR-056 §4).
 
 ## Part 2: the API and the AWS services it calls
 
@@ -201,12 +201,12 @@ flowchart TB
 - AWS: [infra/modules](../../infra/modules) (`compute`, `media`, `admin`, `observability`), [infra/envs/staging](../../infra/envs/staging), [infra/bootstrap](../../infra/bootstrap) (OIDC roles, the zones, the SES identities, billing); [infra/README.md](../../infra/README.md), Media, Mail, Admin panel, Observability, The website
 - Vendors: [docs/vendors/telia.md](../vendors/telia.md), [docs/vendors/expo.md](../vendors/expo.md), [docs/vendors/google-play.md](../vendors/google-play.md), [docs/vendors/app-store.md](../vendors/app-store.md)
 - Workflows: [.github/workflows](../../.github/workflows), drawn in [Delivery](delivery.md)
-- ADRs: [ADR-001](../adr/001-infrastructure-as-code.md) (one AWS account, OpenTofu), [ADR-004](../adr/004-eas-update-integrity.md) (updates not signed), [ADR-005](../adr/005-media-pipeline-and-delivery.md) (photos through CloudFront), [ADR-006](../adr/006-photo-moderation.md) (Rekognition), [ADR-014](../adr/014-demo-mode.md) §1 (the personas are the mock bank's alone), [ADR-016](../adr/016-fresh-bank-login.md) and [ADR-017](../adr/017-tunnistus-oidc-package.md) (the bank login and the Telia kit), [ADR-018](../adr/018-staging-is-the-demo.md) (staging holds test persons only), [ADR-025](../adr/025-admin-host.md) (the panel's host), [ADR-031](../adr/031-chat.md) and [ADR-032](../adr/032-notification-choices-and-notices.md) (no push yet), [ADR-041](../adr/041-velocity.md) (velocity), [ADR-056](../adr/056-attestation-later-no-screenshot-notice.md) (attestation later), [ADR-043](../adr/043-email-confirmation.md) (SES), [ADR-057](../adr/057-google-play-internal-testing.md) (the staging app on Google Play), [ADR-070](../adr/070-no-pull-request-previews.md) (no pull-request previews), [ADR-072](../adr/072-two-names-then-kumpa-alone.md) (two names, then `kumpa.fi` alone)
-- Issues: #102 (push), #86 (anti-scraping: attestation later), #385 and #196 (mail), #25 (production), #193 (the stores), #703 (the second names)
+- ADRs: [ADR-001](../adr/001-infrastructure-as-code.md) (one AWS account, OpenTofu), [ADR-004](../adr/004-eas-update-integrity.md) (updates not signed), [ADR-005](../adr/005-media-pipeline-and-delivery.md) (photos through CloudFront), [ADR-006](../adr/006-photo-moderation.md) (Rekognition), [ADR-014](../adr/014-demo-mode.md) §1 (the personas are the mock bank's alone), [ADR-016](../adr/016-fresh-bank-login.md) and [ADR-017](../adr/017-tunnistus-oidc-package.md) (the bank login and the Telia kit), [ADR-018](../adr/018-staging-is-the-demo.md) (staging holds test persons only), [ADR-025](../adr/025-admin-host.md) (the panel's host), [ADR-031](../adr/031-chat.md) and [ADR-032](../adr/032-notification-choices-and-notices.md) (no push yet), [ADR-041](../adr/041-velocity.md) (velocity), [ADR-056](../adr/056-attestation-later-no-screenshot-notice.md) (attestation later), [ADR-069](../adr/069-an-iphone-proves-it-runs-the-app.md) (App Attest), [ADR-074](../adr/074-the-links-the-app-takes.md) (the links that are the app's), [ADR-043](../adr/043-email-confirmation.md) (SES), [ADR-057](../adr/057-google-play-internal-testing.md) (the staging app on Google Play), [ADR-070](../adr/070-no-pull-request-previews.md) (no pull-request previews), [ADR-072](../adr/072-two-names-then-kumpa-alone.md) (two names, then `kumpa.fi` alone)
+- Issues: #102 (push), #86 (anti-scraping: attestation later), #580 (App Attest), #184 (the native batch: the verified links), #385 and #196 (mail), #25 (production), #193 (the stores), #703 (the second names)
 
 ## Open
 
 - SES: in its sandbox until the maintainer asks AWS for production access (ADR-043 Open 5, followed in #196); until then it delivers only to verified identities. The identities are in `infra/bootstrap`, which CI never applies; the maintainer applied `kuutti.app`'s on 2026-10-25, and `kumpa.fi`'s waits for his apply (ADR-072).
 - Sentry: whether `/kuutti/staging/sentry-dsn` and `EXPO_PUBLIC_SENTRY_DSN` are set is not in the repository. The Sentry organisation's slug is `kuutti-ry` (`kuutti-fi` until October 2026), which `deploy.yml` and the plugin block of `apps/mobile/app.json` name; this view names neither.
-- App attestation: the third of ADR-056 §1's triggers has come (ADR-062), and starting it stays the maintainer's. Nothing in the repository watches for the other two.
+- App attestation: built for iPhones on the maintainer's word of 2026-11-10 (ADR-069) and required nowhere; production's switch and Android's half are open there. Whether the App ID has the capability, and whether the verified links' parameters are set, is not in the repository (`docs/runbooks/devices.md`, Verified links).
 - Dokploy versus Kamal is open (CLAUDE.md, Decisions); the box is drawn with the tool it runs today.

@@ -1,13 +1,7 @@
 import { fireEvent, screen } from "@testing-library/react-native";
+import { setStringAsync } from "expo-clipboard";
 import { useLocales } from "expo-localization";
-import {
-  AccessibilityInfo,
-  Clipboard,
-  Dimensions,
-  Linking,
-  Platform,
-  StyleSheet,
-} from "react-native";
+import { AccessibilityInfo, Dimensions, Linking, Platform, StyleSheet } from "react-native";
 import { a11yProblems, type HostNode, pressables } from "@/test/a11y";
 import { renderWithTheme, underProviders } from "@/test/render";
 import { SharedContacts } from "./SharedContacts";
@@ -28,7 +22,8 @@ const REFUSED = "This did not open on your phone.";
 const labels = () =>
   pressables(screen.toJSON() as HostNode).map((node) => String(node.props.accessibilityLabel));
 const openWorks = () => jest.spyOn(Linking, "openURL").mockResolvedValue(true);
-const clipboard = () => jest.spyOn(Clipboard, "setString").mockImplementation(() => undefined);
+/** The phone's clipboard, which jest.setup.js stands in for: it takes what it is given. */
+const clipboard = () => jest.mocked(setStringAsync);
 const press = (role: "link" | "button", name: string) =>
   fireEvent.press(screen.getByRole(role, { name }));
 
@@ -37,7 +32,7 @@ beforeEach(() => {
   (AccessibilityInfo.announceForAccessibility as jest.Mock).mockClear();
   // React Native's jest setup makes these mocks already, and a spy on a mock keeps its calls.
   (Linking.openURL as jest.Mock).mockClear();
-  (Clipboard.setString as jest.Mock).mockClear();
+  jest.mocked(setStringAsync).mockClear();
 });
 afterEach(() => jest.restoreAllMocks());
 
@@ -143,6 +138,34 @@ describe("opening and copying what the other person shares", () => {
     expect(copied).toHaveBeenLastCalledWith("ville_k");
     expect(screen.queryByText("Instagram copied.")).toBeNull();
     expect(announced()).toEqual(["Instagram copied.", "Telegram copied."]);
+  });
+
+  it.each([
+    ["the phone says it took nothing", () => Promise.resolve(false)],
+    ["the clipboard fails", () => Promise.reject(new Error("no clipboard"))],
+  ])("says nothing of a copy when %s, and the next copy is said", async (_what, answer) => {
+    jest.replaceProperty(Platform, "OS", "ios");
+    const copied = clipboard();
+    copied.mockImplementationOnce(answer);
+    await renderWithTheme(<SharedContacts name="Ville" theirs={[INSTAGRAM]} />);
+    await press("button", "Copy Instagram: Ville");
+    expect(copied).toHaveBeenCalledWith("ville.k");
+    expect(screen.queryByText("Instagram copied.")).toBeNull();
+    expect(announced()).toEqual([]);
+    await press("button", "Copy Instagram: Ville");
+    expect(screen.getByText("Instagram copied.")).toBeTruthy();
+    expect(announced()).toEqual(["Instagram copied."]);
+  });
+
+  it("takes an earlier copy's line away when the next copy took nothing", async () => {
+    jest.replaceProperty(Platform, "OS", "ios");
+    const copied = clipboard();
+    await renderWithTheme(<SharedContacts name="Ville" theirs={[INSTAGRAM]} />);
+    await press("button", "Copy Instagram: Ville");
+    expect(screen.getByText("Instagram copied.")).toBeTruthy();
+    copied.mockImplementationOnce(() => Promise.resolve(false));
+    await press("button", "Copy Instagram: Ville");
+    expect(screen.queryByText("Instagram copied.")).toBeNull();
   });
 
   it("leaves a copy to its own live region on Android, outside the lines' region", async () => {

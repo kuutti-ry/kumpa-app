@@ -1,31 +1,38 @@
 import { createHash } from "node:crypto";
+import { getRandomValues } from "expo-crypto";
 import * as SecureStore from "expo-secure-store";
 import { hashPasscode, PASSCODE_LENGTH, passcodeMatches } from "./passcode";
 import { writeLock } from "./store";
 
 // The lock's passcode as the phone keeps it (#418, ADR-045 §3): a salted
-// SHA-256 with a fresh native UUID for the salt, never the digits, and a
-// comparison that answers only whether the typed code is the one set.
+// SHA-256 with sixteen fresh bytes of the system's generator for the salt,
+// never the digits, and a comparison that answers only whether the typed code
+// is the one set.
 
 const store = (SecureStore as unknown as { __store: Map<string, string> }).__store;
 const HEX_32 = /^[0-9a-f]{32}$/;
 const HEX_64 = /^[0-9a-f]{64}$/;
 const sha256 = (text: string) => createHash("sha256").update(text, "utf8").digest("hex");
+const random = jest.mocked(getRandomValues);
+/** The generator as jest.setup.js stands it in: Node's own. */
+const system = random.getMockImplementation();
 
 /**
- * Version-4 UUIDs counted up from a seed, so the salts are known and differ;
- * written in the letters a to f, so no run of digits in a salt can pass for
- * a code.
+ * Salts counted up from a seed, so they are known and differ; every half of
+ * a byte is one of a to f, so no run of digits in a salt can pass for a code.
  */
-function countedUuids(seed = 0) {
+function countedSalts(seed = 0) {
   let n = seed;
-  return jest.spyOn(globalThis.expo, "uuidv4").mockImplementation(() => {
+  random.mockImplementation((array) => {
     n += 1;
-    const letters = n
-      .toString(6)
-      .padStart(12, "0")
-      .replace(/[0-5]/g, (d) => "ABCDEF"[Number(d)] ?? "");
-    return `ABCDEFAB-CDEF-4ABC-8DEF-${letters}`;
+    const letters = n.toString(6).padStart(array.byteLength * 2, "0");
+    new Uint8Array(array.buffer).set(
+      Array.from(
+        { length: array.byteLength },
+        (_, i) => (10 + Number(letters[i * 2])) * 16 + 10 + Number(letters[i * 2 + 1]),
+      ),
+    );
+    return array;
   });
 }
 
@@ -36,17 +43,24 @@ const SPREAD = [
   "999999",
 ];
 
-beforeEach(() => store.clear());
-afterEach(() => jest.restoreAllMocks());
+beforeEach(() => {
+  store.clear();
+  random.mockReset();
+  if (system) random.mockImplementation(system);
+});
 
 describe("hashPasscode", () => {
-  it("salts with a native UUID, without its dashes, in lowercase", () => {
-    const uuidv4 = jest
-      .spyOn(globalThis.expo, "uuidv4")
-      .mockReturnValueOnce("0A1B2C3D-4E5F-4A6B-8C7D-8E9F0A1B2C3D");
+  it("salts with sixteen bytes of the system's generator, asked once, as lowercase hex", () => {
+    random.mockImplementationOnce((array) => {
+      new Uint8Array(array.buffer).set(Array.from({ length: 16 }, (_, i) => (i * 53 + 7) % 256));
+      return array;
+    });
     const stored = hashPasscode("123456");
-    expect(uuidv4).toHaveBeenCalledTimes(1);
-    expect(stored.salt).toBe("0a1b2c3d4e5f4a6b8c7d8e9f0a1b2c3d");
+    expect(random).toHaveBeenCalledTimes(1);
+    const [asked] = random.mock.calls[0] ?? [];
+    expect(asked).toBeInstanceOf(Uint8Array);
+    expect(asked).toHaveLength(16);
+    expect(stored.salt).toBe("073c71a6db10457aafe4194e83b8ed22");
   });
 
   it("is the SHA-256 of the salt and the code, as lowercase hex", () => {
@@ -69,7 +83,7 @@ describe("hashPasscode", () => {
 
 describe("the passcode at rest", () => {
   it("The passcode is stored only as a salted hash", async () => {
-    countedUuids();
+    countedSalts();
     const first = hashPasscode("123456");
     const second = hashPasscode("123456");
     // Salted: the same six digits set twice are two different hashes.
@@ -87,7 +101,7 @@ describe("the passcode at rest", () => {
   });
 
   it("never holds the digits in what it keeps, across a spread of codes", () => {
-    countedUuids(1000);
+    countedSalts(1000);
     for (const code of SPREAD) {
       const stored = hashPasscode(code);
       expect(JSON.stringify(stored)).not.toContain(code);
@@ -98,14 +112,14 @@ describe("the passcode at rest", () => {
 
 describe("passcodeMatches", () => {
   it("knows the code that was set, for a spread of codes", () => {
-    countedUuids(2000);
+    countedSalts(2000);
     for (const code of SPREAD) {
       expect(passcodeMatches(code, hashPasscode(code))).toBe(true);
     }
   });
 
   it("refuses every neighbouring code, a digit up or down in each place", () => {
-    countedUuids(3000);
+    countedSalts(3000);
     for (const code of ["000000", "123456", "999999", "509871"]) {
       const stored = hashPasscode(code);
       for (let place = 0; place < PASSCODE_LENGTH; place += 1) {

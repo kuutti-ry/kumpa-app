@@ -8,7 +8,7 @@ import { SITE_URL } from "./link.ts";
 // User-Agent, anything else to the website, and the code is never looked up.
 
 const APP_STORE = "https://apps.apple.com/app/id6700000000";
-const PLAY = "https://play.google.com/store/apps/details?id=fi.kuutti.app";
+const PLAY = "https://play.google.com/store/apps/details?id=fi.kumpa";
 const STORES = { APP_STORE_URL: APP_STORE, PLAY_STORE_URL: PLAY };
 
 const UA = {
@@ -57,7 +57,7 @@ describe("the one link", () => {
     const { location } = await follow(app, "/i/abcde-fghjk", UA.android);
     const url = new URL(location ?? "");
     expect(`${url.origin}${url.pathname}`).toBe("https://play.google.com/store/apps/details");
-    expect(url.searchParams.get("id")).toBe("fi.kuutti.app");
+    expect(url.searchParams.get("id")).toBe("fi.kumpa");
     expect(url.searchParams.get("referrer")).toBe("ABCDEFGHJK");
   });
 

@@ -11,10 +11,12 @@ export const SITE_URL = "https://kumpa.fi/";
  * iPhone or iPad to the App Store, an Android phone to Play and anything else
  * to the website, by the User-Agent alone. The code is never looked up, so no
  * database is asked and every code gets the same answer; on Android it rides
- * to Play as the install referrer, which the app reads once the native batch
- * can (#184). A store's address is configuration, unset until its listing is
- * out (#193), and the website until then. No page, nothing kept: the request
- * line names the route, never the code (lib/logger.ts).
+ * to Play as the install referrer, which the app reads at its first start
+ * (#184). A phone that has Kumpa never comes here with a code: the system
+ * hands `/i/{code}` to the app, which takes the code itself (identity's
+ * links.ts, ADR-074 §4). A store's address is configuration, unset until its
+ * listing is out (#193), and the website until then. No page, nothing kept:
+ * the request line names the route, never the code (lib/logger.ts).
  */
 export function invitationLinkRoutes(deps: Deps) {
   const app = new Hono<AppEnv>();

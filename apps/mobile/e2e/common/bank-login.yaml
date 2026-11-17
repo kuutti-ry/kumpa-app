@@ -5,7 +5,7 @@
 # mock bank's page names them (packages/db/src/seed/personas.ts, given + family).
 # No env header: a default there would override the PERSONA a caller passes.
 # The page opens in the system browser: Safari on iOS, Chrome on Android.
-appId: fi.kuutti.app
+appId: fi.kumpa
 ---
 # The sign-in button, or after a refusal that may pass the same button saying
 # "Try again" (#466), or on a phone that has not recorded the current wordings

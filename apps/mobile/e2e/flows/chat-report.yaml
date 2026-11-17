@@ -13,14 +13,14 @@
 # card is out of Laura's reach is the API's tests until the queue (#96) shows
 # a card; that the moderators find the pointed photo first is the panel's flow
 # (apps/admin/e2e/report.spec.ts).
-appId: fi.kuutti.app
+appId: fi.kumpa
 name: A report from a conversation takes it from the reporter's list, and the other finds it ended and can still report it
 ---
 - runFlow:
     file: ../common/sign-in.yaml
     env:
       PERSONA: Laura Saarinen
-- openLink: kuutti://chats
+- openLink: fi.kumpa://chats
 - extendedWaitUntil:
     visible: "Emmi, \\d+, .*"
     timeout: 15000
@@ -97,7 +97,7 @@ name: A report from a conversation takes it from the reporter's list, and the ot
     file: ../common/sign-in.yaml
     env:
       PERSONA: Emmi Kallio
-- openLink: kuutti://chats
+- openLink: fi.kumpa://chats
 - extendedWaitUntil:
     visible: "(Conversation ended|Keskustelu päättynyt|Samtalet har avslutats), .*"
     timeout: 15000

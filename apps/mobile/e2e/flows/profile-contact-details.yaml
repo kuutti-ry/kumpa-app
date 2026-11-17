@@ -3,11 +3,11 @@
 # save on leaving (#227), and the leaving is not held (#238): the refusal brings
 # the screen back with the draft and asks, with the reason, before leaving
 # without saving. Sanna's bio is untouched afterwards.
-appId: fi.kuutti.app
+appId: fi.kumpa
 name: A phone number in the bio is refused on leaving with the reason, and the stored bio stays
 ---
 - runFlow: ../common/sign-in.yaml
-- openLink: kuutti://profile/section/basics
+- openLink: fi.kumpa://profile/section/basics
 - extendedWaitUntil:
     visible: "(The basics|Perustiedot|Grunderna)(, .*)?"
     timeout: 15000
@@ -39,7 +39,7 @@ name: A phone number in the bio is refused on leaving with the reason, and the s
 - extendedWaitUntil:
     notVisible: "(The basics|Perustiedot|Grunderna)(, .*)?"
     timeout: 15000
-- openLink: kuutti://profile/card
+- openLink: fi.kumpa://profile/card
 - extendedWaitUntil:
     visible: "Your card|Korttisi|Ditt kort"
     timeout: 15000

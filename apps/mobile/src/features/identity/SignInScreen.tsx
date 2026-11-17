@@ -27,7 +27,7 @@ import { useSession } from "./session";
 import { challengeOf, newVerifier } from "./verifier";
 
 /**
- * What the deep link `kuutti://auth` may carry: a one-time code, or the
+ * What the deep link `fi.kumpa://auth` may carry: a one-time code, or the
  * refusal's code, its date, and a suspension's or a ban's reason (#715).
  */
 export type SignInParams = { code?: string; error?: string; until?: string; reason?: string };

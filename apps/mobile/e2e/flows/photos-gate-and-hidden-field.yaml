@@ -6,7 +6,7 @@
 # from people in the same field: the field leaves the card, the
 # work stays. Read only. Locally the check queues everything; on staging
 # Rekognition decides, so this flow holds locally.
-appId: fi.kuutti.app
+appId: fi.kumpa
 name: With one approved photo the gate says the profile lacks something, and a hidden field leaves the card
 ---
 - runFlow:
@@ -17,7 +17,7 @@ name: With one approved photo the gate says the profile lacks something, and a h
 
 # Six photos, the grid full: the one that is through says only that it is the
 # main one, and the five waiting, for the check or for a person, say In review (#581).
-- openLink: kuutti://photos
+- openLink: fi.kumpa://photos
 - extendedWaitUntil:
     visible: "Main photo|Pääkuva|Huvudfoto"
     timeout: 15000
@@ -40,7 +40,7 @@ name: With one approved photo the gate says the profile lacks something, and a h
     enabled: false
 
 # The profile says what is missing.
-- openLink: kuutti://profile
+- openLink: fi.kumpa://profile
 - extendedWaitUntil:
     visible: "Your profile|Profiilisi|Din profil"
     timeout: 15000
@@ -49,7 +49,7 @@ name: With one approved photo the gate says the profile lacks something, and a h
 
 # The card: the approved photos only; the work, not the field. What it lacks
 # stands above it, and nobody sees it yet, so nothing says others do (#581).
-- openLink: kuutti://profile/card
+- openLink: fi.kumpa://profile/card
 - extendedWaitUntil:
     visible: "Your card|Korttisi|Ditt kort"
     timeout: 15000

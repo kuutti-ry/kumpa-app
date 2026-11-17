@@ -10,11 +10,11 @@
 # system's, in the phone's language, so the flow asserts only that the app's
 # own failure line never shows, and closes what opened (data-export.yaml).
 # Using a code and the night's count are the API's tests.
-appId: fi.kuutti.app
+appId: fi.kumpa
 name: An invitation made in Settings shows its code once, is shared, and is withdrawn after asking
 ---
 - runFlow: ../common/sign-in.yaml
-- openLink: kuutti://settings
+- openLink: fi.kumpa://settings
 - extendedWaitUntil:
     visible: "Settings|Asetukset|Inställningar"
     timeout: 15000

@@ -122,7 +122,7 @@ async function bankCallback(app: App): Promise<URL> {
   const back = await app.request(`/auth/callback?code=good&state=${encodeURIComponent(state)}`);
   expect(back.status).toBe(302);
   const location = new URL(back.headers.get("location") ?? "");
-  expect(location.protocol).toBe("kuutti:");
+  expect(location.protocol).toBe("fi.kumpa:");
   return location;
 }
 

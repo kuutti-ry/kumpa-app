@@ -3,7 +3,7 @@
 # used for matching. Eetu, who turned 18 last month, is a newcomer; the flow
 # stops at whom he seeks, so one run per `pnpm demo:reset`, and the refusal
 # flow's check that Eetu reaches onboarding still holds.
-appId: fi.kuutti.app
+appId: fi.kumpa
 name: A label chosen after non-binary shows on the card after the gender
 ---
 - runFlow:
@@ -51,7 +51,7 @@ name: A label chosen after non-binary shows on the card after the gender
     visible: "Whom are you looking for\\?|Ketä etsit\\?|Vem söker du\\?"
     timeout: 15000
 
-- openLink: kuutti://profile/card
+- openLink: fi.kumpa://profile/card
 - extendedWaitUntil:
     visible: "Your card|Korttisi|Ditt kort"
     timeout: 15000

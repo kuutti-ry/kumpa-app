@@ -1,5 +1,6 @@
 import { sha256 } from "@noble/hashes/sha2.js";
 import { bytesToHex, utf8ToBytes } from "@noble/hashes/utils.js";
+import { getRandomValues } from "expo-crypto";
 
 /** Six digits (#418, the maintainer's proposal 4). */
 export const PASSCODE_LENGTH = 6;
@@ -18,11 +19,12 @@ const digest = (salt: string, code: string): string =>
  * lets a machine try in seconds, so what guards the passcode is where the hash
  * lies, this phone's keychain while it is unlocked, and the five tries. The
  * hash keeps the digits themselves out of the store, since people reuse the
- * code of their phone or their bank. The salt has to be unique, not secret: a
- * native version-4 UUID, the random source the sign-in's verifier uses (ADR-027 §5).
+ * code of their phone or their bank. The salt has to be unique, not secret:
+ * sixteen bytes from the system's generator, the random source the sign-in's
+ * verifier uses (ADR-027 §5), as 32 hex characters.
  */
 export function hashPasscode(code: string): PasscodeHash {
-  const salt = globalThis.expo.uuidv4().replace(/-/g, "").toLowerCase();
+  const salt = bytesToHex(getRandomValues(new Uint8Array(16)));
   return { salt, hash: digest(salt, code) };
 }
 

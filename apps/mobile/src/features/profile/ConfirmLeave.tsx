@@ -72,7 +72,7 @@ export function useConfirmLeave(unsaved: boolean, discard: () => void) {
 }
 
 /**
- * A link from outside the app (`kuutti://…`) while a screen holds something
+ * A link from outside the app (`fi.kumpa://…`) while a screen holds something
  * unsaved (#285): the link waits for the person's word, in the same dialog as
  * the arrow, and is followed on "Leave without saving" or dropped on "Keep
  * editing". Expo Router applies the path this resolves to and drops the link

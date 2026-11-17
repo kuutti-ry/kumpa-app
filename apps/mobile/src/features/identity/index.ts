@@ -15,6 +15,7 @@ export { PasscodeField } from "./lock/PasscodeField";
 export { GRACE_MINUTES } from "./lock/store";
 export { OnboardingScreen } from "./onboarding/OnboardingScreen";
 export { useOnboardingGate } from "./onboarding/useOnboardingGate";
+export { signInReturnPath } from "./return-link";
 export { SignedOutToStart } from "./SignedOutToStart";
 export { SignInScreen } from "./SignInScreen";
 export { SessionProvider, useSession } from "./session";

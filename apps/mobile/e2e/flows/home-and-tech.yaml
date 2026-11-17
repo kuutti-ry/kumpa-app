@@ -14,7 +14,7 @@
 # pond, so matching is open for Sanna;
 # `apps/mobile/src/features/pond/GateCard.test.tsx` has the other two states.
 # Read only.
-appId: fi.kuutti.app
+appId: fi.kumpa
 name: Home says how many people have completed their profiles and the gate in words, and the wrench names the API
 ---
 - runFlow: ../common/sign-in.yaml
@@ -73,7 +73,7 @@ name: Home says how many people have completed their profiles and the gate in wo
 - assertNotVisible: "The numbers change only in steps of .*|Luvut muuttuvat vain vähintään .*|Siffrorna ändras bara i steg om .*"
 - assertNotVisible: "Fill in the rest when you have a moment|Täydennä loput, kun sinulla on hetki|Fyll i resten när du har en stund"
 
-- openLink: kuutti://tech
+- openLink: fi.kumpa://tech
 - extendedWaitUntil:
     visible: "Tech config|Tekniset tiedot|Teknisk vy"
     timeout: 15000

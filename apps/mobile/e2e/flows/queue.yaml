@@ -13,7 +13,7 @@
 # shortcut: the note is typed at the phone's own text size; ADR-030 §11's
 # 200% wants a host step between flows (simctl content_size, adb font_scale),
 # which `pnpm e2e` does not have.
-appId: fi.kuutti.app
+appId: fi.kumpa
 name: The queue shows one card at a time, liking back makes a match, Later and Undo leave a decision open, and a report takes a card away
 ---
 - runFlow:

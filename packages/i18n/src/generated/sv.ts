@@ -322,7 +322,7 @@ export const sv: Readonly<Record<string, string>> = {
   "mail.sanction.subject.warn": "Kumpa: en varning från en moderator",
   "mail.sanction.why": "Du får det här eftersom du bekräftade den här adressen i Kumpa-appen. Ett beslut om ditt konto skickas alltid till dig, oavsett dina aviseringsinställningar.",
   "mail.signature": "Kuutti ry",
-  "native.ios.NSFaceIDUsageDescription": "Kuutti använder Face ID för att låsa upp appen när du har slagit på låset.",
+  "native.ios.NSFaceIDUsageDescription": "Kumpa använder Face ID för att låsa upp appen när du har slagit på låset.",
   "notices.invitationCounted.body": "Någon du bjöd in har gjort klart sin profil. {fish, plural, =0 {Tack för att du bjöd in.} one {Du fick en fisk.} other {Du fick # fiskar.}}",
   "notices.invitationCounted.title": "En av dina inbjudningar räknades",
   "notices.invitationFriend.body": "Inbjudan gav dig {fish, plural, one {en fisk} other {# fiskar}}.",

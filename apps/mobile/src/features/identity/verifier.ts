@@ -1,5 +1,6 @@
 import { sha256 } from "@noble/hashes/sha2.js";
 import { bytesToHex, utf8ToBytes } from "@noble/hashes/utils.js";
+import { getRandomValues } from "expo-crypto";
 
 /**
  * What binds a bank login's one-time code to this phone (RFC 8252 §8.1,
@@ -10,10 +11,12 @@ import { bytesToHex, utf8ToBytes } from "@noble/hashes/utils.js";
  * the API hashes the verifier.
  */
 
-// shortcut: two native v4 UUIDs (SecureRandom on Android, arc4random on iOS), 244 random bits,
-// because no CSPRNG reaches JavaScript without a native module; expo-crypto's
-// getRandomBytes(32) in the native batch (#184) lifts it (ADR-027).
-export const newVerifier = (): string =>
-  `${globalThis.expo.uuidv4()}${globalThis.expo.uuidv4()}`.replace(/-/g, "").toLowerCase();
+/**
+ * 32 bytes from the system's generator (SecRandomCopyBytes on iOS,
+ * SecureRandom on Android), 256 random bits, as RFC 7636 §4.1 asks of a
+ * verifier (ADR-027 §5). `getRandomValues` and not `getRandomBytes`, which
+ * falls back to Math.random in a development build without a sync bridge.
+ */
+export const newVerifier = (): string => bytesToHex(getRandomValues(new Uint8Array(32)));
 
 export const challengeOf = (verifier: string): string => bytesToHex(sha256(utf8ToBytes(verifier)));

@@ -6,7 +6,7 @@
 # its own, so the flow runs again without a reset; `pnpm demo:reset` takes the
 # conversation back to the stories' six messages and sends a seventh, Ville's
 # photo to Antti (the same file).
-appId: fi.kuutti.app
+appId: fi.kumpa
 name: A message reaches the other person with its time, the writer then sees it read, and a silent match waits in the archive
 ---
 # Letters only, unique to the run: the send refuses what looks like a phone
@@ -21,7 +21,7 @@ name: A message reaches the other person with its time, the writer then sees it 
     file: ../common/sign-in.yaml
     env:
       PERSONA: Antti Nurmi
-- openLink: kuutti://chats
+- openLink: fi.kumpa://chats
 - extendedWaitUntil:
     visible: "Archived|Arkistoidut|Arkiverade"
     timeout: 15000
@@ -58,7 +58,7 @@ name: A message reaches the other person with its time, the writer then sees it 
     file: ../common/sign-in.yaml
     env:
       PERSONA: Ville Rantanen
-- openLink: kuutti://chats
+- openLink: fi.kumpa://chats
 - extendedWaitUntil:
     visible: "Antti, \\d+, (1 unread message|1 lukematon viesti|1 oläst meddelande), (.* )?${output.token}, .*"
     timeout: 15000
@@ -73,7 +73,7 @@ name: A message reaches the other person with its time, the writer then sees it 
     file: ../common/sign-in.yaml
     env:
       PERSONA: Antti Nurmi
-- openLink: kuutti://chats
+- openLink: fi.kumpa://chats
 - extendedWaitUntil:
     visible: "Ville, \\d+, (You|Sinä|Du): (.* )?${output.token}, .*"
     timeout: 15000

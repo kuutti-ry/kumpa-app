@@ -700,7 +700,7 @@ export const enXA: Readonly<Record<string, string>> = {
   "mail.sanction.subject.warn": "［Kúúmpáá: áá wáárñííñg fróóm áá móódééráátóór］",
   "mail.sanction.why": "［ÝÝóóúú géét thííš bééçááúúšéé ýýóóúú çóóñfíírmééd thííš ááddrééšš ííñ théé Kúúmpáá áápp. ÁÁ dééçííšííóóñ áábóóúút ýýóóúúr ááççóóúúñt ííš áálwááýýš šééñt tóó ýýóóúú, wháátéévéér ýýóóúúr ñóótíífííçáátííóóñ šééttííñgš šááýý.］",
   "mail.signature": "［Kúúúúttíí rýý］",
-  "native.ios.NSFaceIDUsageDescription": "［Kúúúúttíí úúšééš Fááçéé ÍÍD tóó úúñlóóçk théé áápp whééñ ýýóóúú háávéé túúrñééd théé lóóçk óóñ.］",
+  "native.ios.NSFaceIDUsageDescription": "［Kúúmpáá úúšééš Fááçéé ÍÍD tóó úúñlóóçk théé áápp whééñ ýýóóúú háávéé túúrñééd théé lóóçk óóñ.］",
   "notices.invitationCounted.body": "［Šóóméébóódýý ýýóóúú ííñvíítééd hááš fííñííšhééd thééíír próófííléé. {fish,plural,one{ÝÝóóúú ééáárñééd áá fííšh.} other{ÝÝóóúú ééáárñééd # fííšh.} =0{Thááñk ýýóóúú fóór ííñvíítííñg théém.}}］",
   "notices.invitationCounted.title": "［ÁÁñ ííñvíítáátííóóñ óóf ýýóóúúrš çóóúúñtééd］",
   "notices.invitationFriend.body": "［Théé ííñvíítáátííóóñ ééáárñééd ýýóóúú {fish,plural,one{áá fííšh} other{# fííšh}}.］",

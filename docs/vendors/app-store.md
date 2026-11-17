@@ -1,6 +1,6 @@
 # App Store Connect and TestFlight (Apple)
 
-What Apple's developer program, App Store Connect and TestFlight are to Kuutti, and what Apple receives through them. Since 2026-11-02 the association has an organisation membership of the Apple Developer Program: Kuutti ry, team `2NC5W5B372`, its annual fee waived, renewed on 2027-11-03, with the maintainer's Apple Account at the association's address as its Account Holder (`docs/runbooks/custody.md`). The app is `fi.kuutti.app`. The one distribution in use is TestFlight's internal testing, which carries the staging app to the team (ADR-063); the development and preview builds stay ad hoc (`docs/runbooks/devices.md`). No credentials in this file, and no address but the public ones.
+What Apple's developer program, App Store Connect and TestFlight are to Kuutti, and what Apple receives through them. Since 2026-11-02 the association has an organisation membership of the Apple Developer Program: Kuutti ry, team `2NC5W5B372`, its annual fee waived, renewed on 2027-11-03, with the maintainer's Apple Account at the association's address as its Account Holder (`docs/runbooks/custody.md`). The app is `fi.kumpa`, Kumpa, since #184's native batch (ADR-063 §7): a second App ID on the team, registered on 2026-11-17. Until then it was `fi.kuutti.app`, whose App ID and record, Kuutti (6829809045), stay as they are: what this file says happened on a day in early November 2026 happened to that app, and Setting up `fi.kumpa`, below, says what is done again. The one distribution in use is TestFlight's internal testing, which carries the staging app to the team (ADR-063); the development and preview builds stay ad hoc (`docs/runbooks/devices.md`). No credentials in this file, and no address but the public ones.
 
 ## What Apple receives
 
@@ -25,7 +25,18 @@ From the testers' phones TestFlight sends Apple crash logs and usage data, which
 
 The App ID and every iOS build until 2026-11-02 are on the maintainer's individual team `HM4J7X495K`. Apple transfers an app only after it has been released on the App Store, so the App ID is deleted there and registered again on the association's team (ADR-063 §4). The deletion is allowed because nothing was ever uploaded to App Store Connect with it. Every profile that contains it becomes invalid, so the old development and preview builds are expected to stop opening. Between the deletion and the new registration any team could register the identifier, so the two follow at once (steps 2 and 3). CI builds iOS on every native change on `main` (`EAS_PLATFORMS`), and such a build would fail between the steps: no native merge meanwhile, or `gh variable set EAS_PLATFORMS --body android` for the switch and `--body "android ios"` after it.
 
-## What the association sets up, the maintainer's
+## Setting up `fi.kumpa`, the maintainer's
+
+The App ID `fi.kumpa` (explicit, Kumpa) is registered on the association's team since 2026-11-17. Nothing is deleted or moved this time, so none of the timing of the section above applies, and nothing of `fi.kuutti.app` is touched. In order:
+
+- **The capabilities.** The batch's build asks for Associated Domains and App Attest (ADR-074), and push as before. An interactive run of EAS switches on what the build's entitlements name; a build from CI cannot, so the first build is the interactive one, next.
+- **The first build, interactive**, as step 3 of the next section, on a checkout of `main` that carries the batch: EAS makes the App Store profile of `fi.kumpa` and offers push, where the team's key it already holds is the one to choose, not a new one. The build needs no record in App Store Connect; its upload does, so the run goes without `--auto-submit` while `ascAppId` names Kuutti's record.
+- **The record.** App Store Connect, Apps, New App: iOS, the name Kumpa, the bundle identifier `fi.kumpa`, a SKU of its own, full access. Its Apple ID goes into the submit profile's `ascAppId` in `eas.json`, by a pull request; until then `eas.json` names Kuutti's record, and a staging build of Kumpa has nowhere to go (ADR-063 §7). On 2026-11-17 App Store Connect was down, and the record was not made.
+- **The ad hoc profiles**, as step 4 of the next section, for the development and preview builds: the registered phones are the team's and stay.
+- **The testers**, as step 5 of the next section: the team's users get access to Kumpa, and the internal group of the new record gets them.
+- **The team id of the verified links**, step 6 of the next section, unchanged: the team is the same.
+
+## What the association set up for `fi.kuutti.app`, the maintainer's
 
 1. **The agreement.** The Apple Developer Program License Agreement, accepted by the Account Holder (done 2026-11-02); no app can be added before it. A free app needs no other agreement.
 2. **Free the identifier.** In App Store Connect on the individual team, check that no app exists for `fi.kuutti.app`; if one does, stop, since Apple refuses the deletion and ADR-063 is reopened. Then at developer.apple.com, on that team: Certificates, Identifiers & Profiles, Identifiers, `fi.kuutti.app`, Remove. On 2026-11-02 the maintainer removed it, and with it everything else of that team but its one registered device, so step 7 is done too.

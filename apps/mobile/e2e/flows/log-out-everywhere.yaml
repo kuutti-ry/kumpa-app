@@ -1,7 +1,7 @@
 # Log out everywhere (#35): every session of the account ends at once, this
 # device's with them, and opening the app again does not bring it back.
 # Sanna; her profile is untouched, only her sessions end.
-appId: fi.kuutti.app
+appId: fi.kumpa
 name: Log out everywhere ends this device's session, and reopening the app does not bring it back
 ---
 - runFlow: ../common/sign-in.yaml
@@ -13,7 +13,7 @@ name: Log out everywhere ends this device's session, and reopening the app does 
 # The scroll goes to the line under the button, which puts the whole button
 # in sight (the row is the list's foot, where nothing can be centred), and
 # the list's own scroll to the row ends before the tap.
-- openLink: kuutti://settings?open=device
+- openLink: fi.kumpa://settings?open=device
 - extendedWaitUntil:
     visible: "Settings|Asetukset|Inställningar"
     timeout: 15000
@@ -30,7 +30,7 @@ name: Log out everywhere ends this device's session, and reopening the app does 
 # Android the row's button behind the dialog, and its text, are matches too
 # for the row's words.
 - tapOn: "Log out on every phone|Kirjaudu ulos kaikilla puhelimilla|Logga ut på alla telefoner"
-- openLink: kuutti://
+- openLink: fi.kumpa://
 - extendedWaitUntil:
     visible: "Sign in with your bank|Kirjaudu pankkitunnuksilla|Logga in med din bank"
     timeout: 15000

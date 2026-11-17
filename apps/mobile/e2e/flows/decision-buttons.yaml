@@ -6,11 +6,11 @@
 # on a device: chosen, and kept when the row is opened again. Sanna; the flow
 # leaves the setting as it found it, right hand, two hands and Kumpa's style,
 # and the row closed.
-appId: fi.kuutti.app
+appId: fi.kumpa
 name: The Like and Pass setting places them for either hand, and one-handed
 ---
 - runFlow: ../common/sign-in.yaml
-- openLink: kuutti://settings
+- openLink: fi.kumpa://settings
 - extendedWaitUntil:
     visible: "Settings|Asetukset|Inställningar"
     timeout: 15000

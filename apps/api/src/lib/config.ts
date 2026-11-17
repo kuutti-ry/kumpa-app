@@ -108,6 +108,8 @@ const Env = z.object({
   // separated, colon form as `eas credentials` prints them) for
   // /.well-known/assetlinks.json, and the Apple team id for the AASA. Public
   // values; unset means the file answers 404 and the return uses the scheme.
+  // Set, that platform's bank login returns on the https link, /auth/return
+  // on the host of OIDC_REDIRECT_URI (#184, ADR-074 §2).
   ANDROID_CERT_FINGERPRINTS: z
     .string()
     .regex(

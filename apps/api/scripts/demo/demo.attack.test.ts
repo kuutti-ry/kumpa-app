@@ -122,7 +122,7 @@ describe("the walk to the bank and back", () => {
     const routes: Record<string, () => Response> = {
       "GET /auth/start": () => redirect("http://127.0.0.1:8080/ftn/authorize?state=state-1"),
       "POST /ftn/authorize": () => redirect(`${api}/auth/callback?code=bank-code&state=state-1`),
-      "GET /auth/callback": () => redirect(`kuutti://auth?code=${"c".repeat(43)}`),
+      "GET /auth/callback": () => redirect(`fi.kumpa://auth?code=${"c".repeat(43)}`),
       "POST /auth/exchange": () =>
         Response.json({
           outcome: "created",

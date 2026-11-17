@@ -5,14 +5,14 @@
 # asked again (ADR-010 §13, #219). Noa seeks everyone; she answers the same
 # again, which is no change (#147). The flow ends where it began: consent
 # given, everyone sought, the consent's row closed.
-appId: fi.kuutti.app
+appId: fi.kumpa
 name: Withdrawing the sensitive-answers consent asks whom one seeks again with the consent, and keeps the age window
 ---
 - runFlow:
     file: ../common/sign-in.yaml
     env:
       PERSONA: Noa Salmi
-- openLink: kuutti://settings
+- openLink: fi.kumpa://settings
 # The consent opens under its row (#287, #511); the row says whether it is
 # on, which Maestro reads after its title. Withdrawn, it sends Noa home to
 # onboarding; the row is closed at the end, from a Settings opened anew.
@@ -37,7 +37,7 @@ name: Withdrawing the sensitive-answers consent asks whom one seeks again with t
     timeout: 15000
 
 # Home asks whom she seeks again, nothing chosen, and waits for the consent.
-- openLink: kuutti://
+- openLink: fi.kumpa://
 - extendedWaitUntil:
     visible: "Whom are you looking for\\?|Ketä etsit\\?|Vem söker du\\?"
     timeout: 15000
@@ -82,7 +82,7 @@ name: Withdrawing the sensitive-answers consent asks whom one seeks again with t
     visible: "Matching opens for finished profiles\\. Yours still lacks something\\.|Seuranhaku avautuu valmiille profiileille\\. Sinun profiilistasi puuttuu vielä jotakin\\.|Matchningen öppnar för färdiga profiler\\. I din saknas ännu något\\."
     timeout: 15000
 - assertNotVisible: "What ages\\?|Minkä ikäisiä\\?|Vilka åldrar\\?"
-- openLink: kuutti://settings
+- openLink: fi.kumpa://settings
 - extendedWaitUntil:
     visible: "Settings|Asetukset|Inställningar"
     timeout: 15000

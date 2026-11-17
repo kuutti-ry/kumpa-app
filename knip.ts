@@ -35,9 +35,11 @@ const config: KnipConfig = {
         "e2e/scripts/*.js",
       ],
       metro: false,
-      // app.json's userInterfaceStyle wants it on Android. A native module moves
-      // the fingerprint and orphans every installed build, so it waits for the
-      // native batch (#184), or the setting changes: the maintainer's call.
+      // expo-system-ui needs no line here: knip reads app.json's
+      // userInterfaceStyle, which the module applies on Android (ADR-074 §7).
+      // @expo/app-integrity is in the binary for App Attest (#184, ADR-069) and
+      // never imported: src/lib/app-attest.ts finds it by its module's name, so
+      // that the same code runs in a build without it.
       // decode-uri-component and query-string come under expo-router and are
       // never listed: src/decode-uri-component.test.ts holds the copy the app
       // ships to its patch (GHSA-qr28-fpjm-wq7f, pnpm-workspace.yaml), and goes
@@ -45,7 +47,7 @@ const config: KnipConfig = {
       // expo, the same way: plugins/xcode-uuid.test.js holds what uuid's override
       // hands the one, plugins/expo-cli-zod.test.js what zod's hands the other.
       ignoreDependencies: [
-        "expo-system-ui",
+        "@expo/app-integrity",
         "decode-uri-component",
         "query-string",
         "xcode",
