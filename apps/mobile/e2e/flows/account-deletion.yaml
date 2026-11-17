@@ -4,7 +4,7 @@
 # bank login is refused for the cooldown, with the date. Aino is a newcomer:
 # her first login registers her, so the flow needs nobody else's state, and
 # `pnpm demo:reset` forgets her identity, the cooldown with it.
-appId: fi.kuutti.app
+appId: fi.kumpa
 name: Deleting the account asks first, signs the person out, and the next login is refused until the cooldown ends
 ---
 - runFlow:
@@ -12,7 +12,7 @@ name: Deleting the account asks first, signs the person out, and the next login 
     env:
       PERSONA: Aino Virtanen
 # Settings is reachable before onboarding is done.
-- openLink: kuutti://settings
+- openLink: fi.kumpa://settings
 # The deletion opens under Your account, the last row of the list (#287,
 # #511), last of its buttons below a hairline.
 - runFlow:
@@ -37,7 +37,7 @@ name: Deleting the account asks first, signs the person out, and the next login 
 # Deleted: signed out at once.
 - tapOn: "Delete my account|Poista tilini|Ta bort mitt konto"
 - tapOn: "Delete everything|Poista kaikki|Ta bort allt"
-- openLink: kuutti://
+- openLink: fi.kumpa://
 - extendedWaitUntil:
     visible: "Sign in with your bank|Kirjaudu pankkitunnuksilla|Logga in med din bank"
     timeout: 30000

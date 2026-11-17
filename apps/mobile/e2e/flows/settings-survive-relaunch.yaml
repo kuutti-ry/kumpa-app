@@ -5,11 +5,11 @@
 # and language with every row closed, as it began. The theme and the
 # language each open under their row, one row at a time, and the row's
 # summary says what is chosen.
-appId: fi.kuutti.app
+appId: fi.kumpa
 name: The session, the theme and the language survive closing and reopening the app
 ---
 - runFlow: ../common/sign-in.yaml
-- openLink: kuutti://settings
+- openLink: fi.kumpa://settings
 - extendedWaitUntil:
     visible: "Settings|Asetukset|Inställningar"
     timeout: 15000
@@ -48,7 +48,7 @@ name: The session, the theme and the language survive closing and reopening the 
 - stopApp
 - runFlow: ../common/open-app.yaml
 - assertVisible: "Din profil"
-- openLink: kuutti://settings
+- openLink: fi.kumpa://settings
 - extendedWaitUntil:
     visible: "Inställningar"
     timeout: 15000

@@ -9,11 +9,11 @@
 # where the row is still open, read again, and switches it on again, so the
 # flow leaves her as it found her, the row closed. The
 # other kinds work alike (the jest tests and the API's).
-appId: fi.kuutti.app
+appId: fi.kumpa
 name: The messages switch in Settings, Notifications, goes off, is kept on the server, and goes on again
 ---
 - runFlow: ../common/sign-in.yaml
-- openLink: kuutti://settings
+- openLink: fi.kumpa://settings
 - extendedWaitUntil:
     visible: "Settings|Asetukset|Inställningar"
     timeout: 15000
@@ -50,11 +50,11 @@ name: The messages switch in Settings, Notifications, goes off, is kept on the s
 
 # Kept on the server: home first, so Settings is read again rather than shown
 # as it was; the row comes back open, as it was left.
-- openLink: kuutti://
+- openLink: fi.kumpa://
 - extendedWaitUntil:
     visible: "Your profile|Profiilisi|Din profil"
     timeout: 15000
-- openLink: kuutti://settings
+- openLink: fi.kumpa://settings
 - runFlow:
     file: ../common/open-settings-row.yaml
     env:

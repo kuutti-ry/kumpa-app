@@ -7,7 +7,7 @@
 # Asked as `notVisible`, in half a second, and tapped behind a flag the condition
 # clears (README). Ends at the sign-in button, with `output.beforeSignIn` saying
 # whether the screen came. Runs from bank-login.yaml.
-appId: fi.kuutti.app
+appId: fi.kumpa
 ---
 - evalScript: ${output.beforeSignIn = true}
 - runFlow:

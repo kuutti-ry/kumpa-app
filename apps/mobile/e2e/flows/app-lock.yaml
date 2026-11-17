@@ -10,11 +10,11 @@
 # ends signed out with the lock off, and the next flow signs in as ever; a run
 # that stops with the lock on is no matter either, since sign-out.yaml leaves
 # the lock through the bank.
-appId: fi.kuutti.app
+appId: fi.kumpa
 name: A passcode set in Settings locks the app at a cold start and back from the background, and the bank is the way out
 ---
 - runFlow: ../common/sign-in.yaml
-- openLink: kuutti://settings
+- openLink: fi.kumpa://settings
 - extendedWaitUntil:
     visible: "Settings|Asetukset|Inställningar"
     timeout: 15000
@@ -92,7 +92,7 @@ name: A passcode set in Settings locks the app at a cold start and back from the
 
 # Back from the background with no time allowed: locked again.
 - pressKey: Home
-- openLink: kuutti://
+- openLink: fi.kumpa://
 - extendedWaitUntil:
     visible: "Kumpa is locked|Kumpa on lukittu|Kumpa är låst"
     timeout: 15000

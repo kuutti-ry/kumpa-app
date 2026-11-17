@@ -503,12 +503,12 @@ describe("a link from outside the app", () => {
     const { holdLinkWhileUnsaved } = jest.requireMock("@/features/profile") as {
       holdLinkWhileUnsaved: jest.Mock;
     };
-    expect(redirectSystemPath({ path: "kuutti://settings", initial: true })).toBe(
-      "kuutti://settings",
+    expect(redirectSystemPath({ path: "fi.kumpa://settings", initial: true })).toBe(
+      "fi.kumpa://settings",
     );
-    expect(holdLinkWhileUnsaved).toHaveBeenLastCalledWith("kuutti://settings", true);
-    expect(redirectSystemPath({ path: "kuutti://", initial: false })).toBe("kuutti://");
-    expect(holdLinkWhileUnsaved).toHaveBeenLastCalledWith("kuutti://", false);
+    expect(holdLinkWhileUnsaved).toHaveBeenLastCalledWith("fi.kumpa://settings", true);
+    expect(redirectSystemPath({ path: "fi.kumpa://", initial: false })).toBe("fi.kumpa://");
+    expect(holdLinkWhileUnsaved).toHaveBeenLastCalledWith("fi.kumpa://", false);
   });
 
   it("hands the bank login's return on its verified link to the sign-in's screen (#184)", () => {
@@ -519,8 +519,8 @@ describe("a link from outside the app", () => {
     expect(redirectSystemPath({ path: link, initial: true })).toBe("/auth?code=abc");
     expect(holdLinkWhileUnsaved).toHaveBeenLastCalledWith("/auth?code=abc", true);
     // The scheme's return is the path the router always took.
-    expect(redirectSystemPath({ path: "kuutti://auth?code=abc", initial: false })).toBe(
-      "kuutti://auth?code=abc",
+    expect(redirectSystemPath({ path: "fi.kumpa://auth?code=abc", initial: false })).toBe(
+      "fi.kumpa://auth?code=abc",
     );
   });
 

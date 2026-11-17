@@ -8,7 +8,7 @@
 # of the two comes depends on what ran on the phone before, so the step is
 # waited for with the code's, asked as `notVisible`, in half a second, and
 # tapped behind a flag the condition clears (README). Runs after sign-in.yaml.
-appId: fi.kuutti.app
+appId: fi.kumpa
 ---
 - extendedWaitUntil:
     visible: "How we do things here|Näin täällä toimitaan|Så här gör vi här|Did a friend invite you\\?|Kutsuiko ystävä sinut\\?|Bjöd en vän in dig\\?"

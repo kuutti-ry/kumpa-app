@@ -49,7 +49,7 @@ function scripted(overrides: Record<string, Route> = {}) {
   const routes: Record<string, Route> = {
     "GET /auth/start": () => redirect(`${BANK}?state=state-1`),
     "POST /ftn/authorize": () => redirect(`${API}/auth/callback?code=bank-code&state=state-1`),
-    "GET /auth/callback": () => redirect(`kuutti://auth?code=${"c".repeat(43)}`),
+    "GET /auth/callback": () => redirect(`fi.kumpa://auth?code=${"c".repeat(43)}`),
     "POST /auth/exchange": () =>
       json({
         outcome: "created",
@@ -112,9 +112,9 @@ describe("the walk to the bank, when the API does not answer as it should", () =
   });
 
   it("a deep link with neither a code nor an error is refused", async () => {
-    const api = scripted({ "GET /auth/callback": () => redirect("kuutti://auth?state=state-1") });
+    const api = scripted({ "GET /auth/callback": () => redirect("fi.kumpa://auth?state=state-1") });
     await expect(loginAs(persona, api.context)).rejects.toThrow(
-      "/auth/callback: no code and no error in kuutti:",
+      "/auth/callback: no code and no error in fi.kumpa:",
     );
   });
 
@@ -128,7 +128,7 @@ describe("the walk to the bank, when the API does not answer as it should", () =
   it("a refusal at the callback comes back as the refusal, with its date when there is one", async () => {
     const api = scripted({
       "GET /auth/callback": () =>
-        redirect("kuutti://auth?error=auth_cooldown&until=2026-12-01T00:00:00.000Z"),
+        redirect("fi.kumpa://auth?error=auth_cooldown&until=2026-12-01T00:00:00.000Z"),
     });
     expect(await loginAs(persona, api.context)).toEqual({
       kind: "refused",
@@ -186,7 +186,7 @@ describe("the walk to the bank, when the API does not answer as it should", () =
   const sentBack = (error: string, headers: Record<string, string> = {}) =>
     new Response(null, {
       status: 302,
-      headers: { location: `kuutti://auth?error=${error}`, ...headers },
+      headers: { location: `fi.kumpa://auth?error=${error}`, ...headers },
     });
   const sleeper = () => {
     const slept: number[] = [];
@@ -263,7 +263,7 @@ describe("the walk to the bank, when the API does not answer as it should", () =
   });
 
   it("a deep link with no error is taken for no bank on this computer", async () => {
-    const api = scripted({ "GET /auth/start": () => redirect("kuutti://auth?state=state-1") });
+    const api = scripted({ "GET /auth/start": () => redirect("fi.kumpa://auth?state=state-1") });
     await expect(loginAs(persona, api.context)).rejects.toThrow(
       "the API's bank is auth, not the mock bank on this computer: nothing was sent",
     );
@@ -414,7 +414,7 @@ describe("the local hands, before and after a login", () => {
 
   test("a login the bank refuses is the refusal, and leaves no session", async ({ ctx }) => {
     const api = scripted({
-      "GET /auth/callback": () => redirect("kuutti://auth?error=auth_banned"),
+      "GET /auth/callback": () => redirect("fi.kumpa://auth?error=auth_banned"),
     });
     const writer = viaRoutes({ ...api.context, db: ctx.client });
     expect(await writer.login(persona, "fi")).toEqual({ refused: "auth_banned" });

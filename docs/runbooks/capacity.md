@@ -71,7 +71,7 @@ curl -sS -o /dev/null -w '%{redirect_url}\n' "$api/auth/start?platform=ios&local
 ```
 
 1. Have the exchange below ready to paste. Open the printed address in a private browser window with the developer tools' network tab open, and sign in at the test bank as one of the test persons (`docs/vendors/telia.md` 1.4; locally, the mock bank's buttons are the personas).
-2. The last request, `/auth/callback`, answers 302 to `kuutti://auth?code=…`, which the browser cannot follow. Copy the code, 43 characters, from its `Location`.
+2. The last request, `/auth/callback`, answers 302 to `fi.kumpa://auth?code=…`, which the browser cannot follow. Copy the code, 43 characters, from its `Location`.
 3. Exchange the code **within sixty seconds of the callback**. After that, the exchange answers `auth_code_used`, and the sign-in starts again from the top:
 
 ```sh

@@ -44,7 +44,7 @@ sequenceDiagram
   app->>browser: Opens the API's sign-in start in the phone's own browser
   browser->>api: GET /auth/start with platform, locale and code_challenge
   alt Too many sign-ins from this network, or every attempt row taken
-    api-->>browser: 302 to kuutti://auth?error=auth_rate_limited, with Retry-After
+    api-->>browser: 302 to fi.kumpa://auth?error=auth_rate_limited, with Retry-After
   else Let through
     api->>db: Writes the attempt: state, nonce, platform, locale, code_challenge, ten minutes to live
     api-->>browser: 302 to Telia, with a request object signed with our sig key and prompt=login
@@ -88,10 +88,10 @@ sequenceDiagram
   alt Let in: a resume, the end of a break, or a new account
     api->>db: Resumes the account, or creates the identity or the account with birth_year and birth_month
     api->>db: Stores the SHA-256 of a one-time code on the attempt, 60 seconds to live
-    api-->>browser: 302 with the one-time code, to the API's own /auth/return where the platform's links are served, to kuutti://auth?code=… otherwise
+    api-->>browser: 302 with the one-time code, to the API's own /auth/return where the platform's links are served, to fi.kumpa://auth?code=… otherwise
   else Refused from step 12 on, a state the claim did not take spends nothing
     api->>db: Spends the attempt, and counts a banned, suspended or cooldown refusal on the identity
-    api-->>browser: 302 to kuutti://auth?error= with the refusal's code, and a ban's or a suspension's reason
+    api-->>browser: 302 to fi.kumpa://auth?error= with the refusal's code, and a ban's or a suspension's reason
   end
 ```
 
@@ -106,9 +106,9 @@ sequenceDiagram
 17. The API looks up the identity by `hetu_hmac`, and its live account. The re-registration rule decides (TD-7): a banned identity, a suspended one (with the day it ends, if it has one) and one inside the 30 days after deleting an account (the cooldown, with its date) are refused: 21.
 18. A known identity with a live account resumes it, and an account on a break comes off it (ADR-022). A known identity without one gets a new account, with nothing restored, and a person never seen gets an identity and then an account, with `birth_year` and `birth_month`. The identity's latest bank login is rewritten: `sub`, the session index, the token id, `auth_time`, `acr` and `amr`. Two logins of one person at once are settled by applying the rule again, and so is an erasure that commits between the two reads: the account insert itself refuses an identity inside its cooldown, and the rule, applied again, reads the cooldown: 21.
 19. The API stores the SHA-256 of a new one-time code, 32 random bytes, on the attempt, with 60 seconds to live, and logs one line: the level, the method and the outcome, nothing of the person.
-20. The browser is sent to the app with the code (ADR-074 §2): to `/auth/return?code=…` on the host of the registered redirect URI, over https, when the attempt's platform has its verified-links parameter (`IOS_TEAM_ID` for `ios`, `ANDROID_CERT_FINGERPRINTS` for `android`), and to `kuutti://auth?code=…` when it has not. Part 3.
+20. The browser is sent to the app with the code (ADR-074 §2): to `/auth/return?code=…` on the host of the registered redirect URI, over https, when the attempt's platform has its verified-links parameter (`IOS_TEAM_ID` for `ios`, `ANDROID_CERT_FINGERPRINTS` for `android`), and to `fi.kumpa://auth?code=…` when it has not. Part 3.
 21. A refusal after the claim spends the attempt, so a replay is refused too, and a banned, suspended or cooldown refusal is counted on the identity.
-22. The browser is sent to `kuutti://auth?error=` with the refusal's code (`auth_state_mismatch`, `auth_cancelled`, `auth_provider_error`, `auth_under_18`, `auth_banned`, `auth_suspended`, `auth_cooldown`), and `&until=` for a cooldown and for a suspension with an end day, and `&reason=` for a ban and a suspension: the reason of the newest one open on the identity, a value of the closed list (ADR-073 §2), which the refusal's log line carries as a code. The app shows a reason only of that list. The app says each on its card: `auth_state_mismatch` and `auth_provider_error` by the card's title alone, over Try again, since nobody acts on which of them it was, and the others with a sentence of their own (#581).
+22. The browser is sent to `fi.kumpa://auth?error=` with the refusal's code (`auth_state_mismatch`, `auth_cancelled`, `auth_provider_error`, `auth_under_18`, `auth_banned`, `auth_suspended`, `auth_cooldown`), and `&until=` for a cooldown and for a suspension with an end day, and `&reason=` for a ban and a suspension: the reason of the newest one open on the identity, a value of the closed list (ADR-073 §2), which the refusal's log line carries as a code. The app shows a reason only of that list. The app says each on its card: `auth_state_mismatch` and `auth_provider_error` by the card's title alone, over Try again, since nobody acts on which of them it was, and the others with a sentence of their own (#581).
 
 ## Part 3: back in the app
 
@@ -121,8 +121,8 @@ sequenceDiagram
   participant app as The app
   participant api as The API
   participant db as The database
-  browser->>app: The phone hands over the return, the verified https link or kuutti://auth?code=…
-  Note over browser,api: A browser that follows the https link itself asks GET /auth/return, which looks nothing up and answers 302 to kuutti://auth
+  browser->>app: The phone hands over the return, the verified https link or fi.kumpa://auth?code=…
+  Note over browser,api: A browser that follows the https link itself asks GET /auth/return, which looks nothing up and answers 302 to fi.kumpa://auth
   app->>app: Takes the pending mark and its verifier, once, or refuses the link
   app->>api: POST /auth/exchange with the code, the verifier and, where its build can, an iPhone's attestation
   api->>db: Verifies an iPhone's attestation if one came, then spends the code if its hash, the verifier's SHA-256 and its minute match
@@ -134,7 +134,7 @@ sequenceDiagram
 
 ### Steps
 
-23. The phone hands the return to the app. A verified `https://…/auth/return?code=…` reaches the app alone, and the app reads it as the scheme's `/auth?code=…` before its router sees it (`signInReturnPath`); `kuutti://auth?code=…` opens the app as it always did. Where the phone did not hand the https link over (a build from before the links, a link that did not verify on this phone), the browser asks `GET /auth/return` itself: it looks nothing up and answers 302 with `no-store`, to `kuutti://auth?code=…` for a code that reads as one and to `kuutti://auth?error=auth_code_used` for anything else (ADR-074 §3). Nothing of the address is logged.
+23. The phone hands the return to the app. A verified `https://…/auth/return?code=…` reaches the app alone, and the app reads it as the scheme's `/auth?code=…` before its router sees it (`signInReturnPath`); `fi.kumpa://auth?code=…` opens the app through its scheme. Where the phone did not hand the https link over (a link that did not verify on this phone, a browser that keeps its own links), the browser asks `GET /auth/return` itself: it looks nothing up and answers 302 with `no-store`, to `fi.kumpa://auth?code=…` for a code that reads as one and to `fi.kumpa://auth?error=auth_code_used` for anything else (ADR-074 §3). Nothing of the address is logged.
 24. The app takes the pending mark and its verifier, once: reading the mark spends it. No mark, a mark older than ten minutes, or a phone already signed in: the link is refused as `unexpected_link`, and nothing is sent. A code somebody else sent as a link stops here.
 25. On an iPhone whose build holds Expo's App Attest module (a build since #184's native batch, ADR-074 §7), the app first makes a key in the Secure Enclave and has Apple attest it with the code as the challenge, waiting ten seconds at most (`attest`, `apps/mobile/src/lib/app-attest.ts`); a failure, or anything the exchange would not take, means none is sent. Then it posts the code and the verifier, and the attestation if it has one, to `POST /auth/exchange`. The verifier travels only in this body.
 26. The body may carry an iPhone's attestation (step 25, ADR-069 §2). When one comes and the environment has the team's id, the API verifies it by Apple's eleven steps before the code is touched; a refusal is 403 `attestation_refused` and the code stays unspent. Then one statement spends the code, and only when all hold: its hash matches, the attempt's `code_challenge` is the SHA-256 of the verifier, the attempt belongs to an account, the code is unused and within its minute. An attempt that said `ios` is spent without an attestation only where the environment does not require one, which none does yet, and an attempt that said `android` never with one. Anything else is 401 `auth_code_used`, and a wrong verifier leaves the code unspent (ADR-027 §3); an iPhone's good code refused for want of a required attestation is 403 `attestation_refused`. The exchange is no sign-in door, but the address's own limit can answer 429.

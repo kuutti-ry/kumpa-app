@@ -2,11 +2,11 @@
 # in words, a few lines, Send, and the thanks; the moderators' side is the
 # API's tests. Sanna: the row she leaves is hers alone, one run is far from
 # her day's cap of five, and `pnpm demo:reset` takes the rows with her account.
-appId: fi.kuutti.app
+appId: fi.kumpa
 name: Feedback sent from Settings is thanked, the kind chosen in words
 ---
 - runFlow: ../common/sign-in.yaml
-- openLink: kuutti://settings
+- openLink: fi.kumpa://settings
 - extendedWaitUntil:
     visible: "Settings|Asetukset|Inställningar"
     timeout: 15000

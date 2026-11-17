@@ -5,7 +5,7 @@
 # goes back to how it was. Nothing is decided, so queue.yaml, Iida's too, finds
 # her queue as the stories left it. Deciding from the list, the cap and whoever
 # the list leaves out are the API's and jest's tests.
-appId: fi.kuutti.app
+appId: fi.kumpa
 name: A star on a card brings the person to a Starred list only they see, and taking it off leaves everything as it was
 ---
 - runFlow:

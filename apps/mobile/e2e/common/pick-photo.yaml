@@ -10,7 +10,7 @@
 # on the emulators), newest first. The upload runs through the API's pipeline
 # (rule 4). BUTTON's default is a fallback, not an env header, which would
 # override what the caller passes (sign-in.yaml).
-appId: fi.kuutti.app
+appId: fi.kumpa
 ---
 - tapOn: ${BUTTON || "Add a photo|Lisää kuva|Lägg till ett foto"}
 - extendedWaitUntil:

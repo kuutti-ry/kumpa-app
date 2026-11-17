@@ -7,11 +7,11 @@
 # the flow reads what the eye has instead. Sanna has none; the flow removes the
 # one it saves. Each run sends her one code of the five a Finnish day allows
 # (email_codes_per_day): a sixth run on the same day needs `pnpm demo:reset` first.
-appId: fi.kuutti.app
+appId: fi.kumpa
 name: A malformed e-mail is refused in words, a valid one is saved, and it can be removed
 ---
 - runFlow: ../common/sign-in.yaml
-- openLink: kuutti://account/email
+- openLink: fi.kumpa://account/email
 - extendedWaitUntil:
     visible: "A way to stay in touch|Tapa pitää yhteyttä|Ett sätt att hålla kontakten"
     timeout: 15000

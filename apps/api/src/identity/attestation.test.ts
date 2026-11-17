@@ -24,7 +24,7 @@ import * as repo from "./repo.ts";
 // have their own tests, against Apple's bytes too (app-attest.test.ts).
 
 const TEAM = "ABCDE12345";
-const APP_ID = `${TEAM}.fi.kuutti.app`;
+const APP_ID = `${TEAM}.fi.kumpa`;
 const { root, issuer: rootIssuer } = makeRoot();
 const authority = makeIssuer(rootIssuer, "Test App Attestation CA 1");
 const newPhone = () =>

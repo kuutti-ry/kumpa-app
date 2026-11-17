@@ -31,8 +31,8 @@ describe("the bank login's return on the verified link", () => {
   });
 
   it.each([
-    ["the scheme's return", "kuutti://auth?code=abc"],
-    ["the scheme's stale path", "kuutti://auth/return"],
+    ["the scheme's return", "fi.kumpa://auth?code=abc"],
+    ["the scheme's stale path", "fi.kumpa://auth/return"],
     ["plain http", "http://api.kumpa.fi/auth/return?code=abc"],
     ["the bank's callback", "https://api.kumpa.fi/auth/callback?code=abc&state=x"],
     ["a longer path", "https://api.kumpa.fi/auth/return/more?code=abc"],
@@ -44,7 +44,7 @@ describe("the bank login's return on the verified link", () => {
     ["an invitation's link", "https://api.kumpa.fi/i/ABCDE-FGHJK"],
     [
       "a return carried in the scheme's query",
-      "kuutti://auth?next=https://api.kumpa.fi/auth/return?code=abc",
+      "fi.kumpa://auth?next=https://api.kumpa.fi/auth/return?code=abc",
     ],
     ["a return with words before it", "see https://api.kumpa.fi/auth/return?code=abc"],
     ["no host", "https:///auth/return?code=abc"],

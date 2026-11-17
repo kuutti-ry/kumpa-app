@@ -2,7 +2,7 @@
   "expo": {
     "name": "Kumpa",
     "slug": "kuutti",
-    "scheme": "kuutti",
+    "scheme": "fi.kumpa",
     "version": "0.127.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -12,7 +12,7 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "fi.kuutti.app",
+      "bundleIdentifier": "fi.kumpa",
       "associatedDomains": [
         "applinks:api.kumpa.fi",
         "applinks:api.kuutti.app",
@@ -28,7 +28,7 @@
       }
     },
     "android": {
-      "package": "fi.kuutti.app",
+      "package": "fi.kumpa",
       "adaptiveIcon": {
         "backgroundColor": "#232323",
         "foregroundImage": "./assets/android-icon-foreground.png",

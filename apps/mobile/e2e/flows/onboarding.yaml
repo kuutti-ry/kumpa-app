@@ -16,7 +16,7 @@
 # onboarded after `pnpm demo:reset`; the photos are his from the release of
 # pictures, which the local check queues, so home says the profile still
 # lacks something.
-appId: fi.kuutti.app
+appId: fi.kumpa
 name: A registered person is taken through onboarding one question per screen, and resumes at the intent after the app is closed
 ---
 - addMedia:

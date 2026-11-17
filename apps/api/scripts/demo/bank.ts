@@ -168,7 +168,7 @@ async function bankOf(context: BankContext, locale: Locale, challenge: string): 
   const bank = locationOf(start, "/auth/start");
   // A start the API refuses goes back to the app, as for a browser: said by
   // its code, rather than taken for a bank somewhere else.
-  const refused = bank.protocol === "kuutti:" ? bank.searchParams.get("error") : null;
+  const refused = bank.protocol === "fi.kumpa:" ? bank.searchParams.get("error") : null;
   if (refused) throw new DemoError(`/auth/start: the API refused the login with ${refused}`);
   // The claims are artificial, and still they go to the mock bank on this
   // computer and nowhere else: an API configured for a real broker would

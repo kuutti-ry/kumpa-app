@@ -77,7 +77,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Redirect to the broker; when this address has sent too many requests or started too many sign-ins, or too many are under way at once (ADR-026), to kuutti://auth?error=auth_rate_limited with Retry-After. */
+                /** @description Redirect to the broker; when this address has sent too many requests or started too many sign-ins, or too many are under way at once (ADR-026), to fi.kumpa://auth?error=auth_rate_limited with Retry-After. */
                 302: {
                     headers: {
                         [name: string]: unknown;
@@ -137,7 +137,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Redirect to kuutti://auth?code=… on success, or to https://<this API's host>/auth/return?code=… where the platform's verified link is served, or to kuutti://auth?error=<code> (auth_state_mismatch, auth_cancelled, auth_under_18, auth_banned, auth_suspended with &until=<date> when the suspension has an end, auth_cooldown with &until=<date>, auth_provider_error; auth_banned and auth_suspended with &reason=<the sanction's reason> when a sanction is behind them) so the app shows the refusal. */
+                /** @description Redirect to fi.kumpa://auth?code=… on success, or to https://<this API's host>/auth/return?code=… where the platform's verified link is served, or to fi.kumpa://auth?error=<code> (auth_state_mismatch, auth_cancelled, auth_under_18, auth_banned, auth_suspended with &until=<date> when the suspension has an end, auth_cooldown with &until=<date>, auth_provider_error; auth_banned and auth_suspended with &reason=<the sanction's reason> when a sanction is behind them) so the app shows the refusal. */
                 302: {
                     headers: {
                         [name: string]: unknown;

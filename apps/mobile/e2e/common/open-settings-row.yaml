@@ -8,7 +8,7 @@
 # list may come back scrolled anywhere, down to Logging out
 # where common/sign-out.yaml left it: up to its top first, then down to the
 # row.
-appId: fi.kuutti.app
+appId: fi.kumpa
 ---
 - scrollUntilVisible:
     element: "Appearance and language|Ulkoasu ja kieli|Utseende och språk"

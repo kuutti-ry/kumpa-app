@@ -254,7 +254,7 @@ describe("a sign-in start the address's limit refuses (ADR-026 §4)", () => {
 
     const appStart = await get("/auth/start?platform=ios");
     expect(appStart.status).toBe(302);
-    expect(appStart.headers.get("location")).toBe("kuutti://auth?error=auth_rate_limited");
+    expect(appStart.headers.get("location")).toBe("fi.kumpa://auth?error=auth_rate_limited");
     expect(Number(appStart.headers.get("retry-after"))).toBeGreaterThan(0);
     const staffStart = await get("/admin/auth/start");
     expect(staffStart.status).toBe(302);

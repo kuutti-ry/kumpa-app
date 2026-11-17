@@ -658,7 +658,7 @@ describe("a bank login racing another request", () => {
     expect(db.ran()).toBe(true);
     expect(back.status).toBe(302);
     const location = new URL(back.headers.get("location") ?? "");
-    expect(location.protocol).toBe("kuutti:");
+    expect(location.protocol).toBe("fi.kumpa:");
     expect(location.searchParams.get("code")).toBeNull();
     expect(location.searchParams.get("error")).toBe("auth_cooldown");
     const { rows } = await ctx.client.query<{
@@ -714,7 +714,7 @@ describe("a bank login racing another request", () => {
     expect(db.ran()).toBe(true);
     expect(back.status).toBe(302);
     const location = new URL(back.headers.get("location") ?? "");
-    expect(location.protocol).toBe("kuutti:");
+    expect(location.protocol).toBe("fi.kumpa:");
     expect(location.searchParams.get("code")).toBeNull();
     expect(location.searchParams.get("error")).toBe("auth_cooldown");
     const { rows } = await ctx.client.query<{
@@ -796,7 +796,7 @@ describe("a bank login racing another request", () => {
 
   /** The app's exchange of the code its link carries: what the login was, once it answered 200. */
   async function exchangedAs(app: ReturnType<typeof createApp>, back: URL | undefined) {
-    expect(back?.protocol).toBe("kuutti:");
+    expect(back?.protocol).toBe("fi.kumpa:");
     expect(back?.searchParams.get("error")).toBeNull();
     const res = await exchange(app, "/auth/exchange", back?.searchParams.get("code") ?? "");
     expect(res.status).toBe(200);
@@ -852,7 +852,7 @@ describe("a bank login racing another request", () => {
     const back = await callbackTo(app, state);
     expect(bankCalls()).toBe(1);
     expect(again).toHaveLength(1);
-    expect(again[0]?.protocol).toBe("kuutti:");
+    expect(again[0]?.protocol).toBe("fi.kumpa:");
     expect(again[0]?.searchParams.get("error")).toBe("auth_state_mismatch");
     expect(again[0]?.searchParams.get("code")).toBeNull();
     expect(await exchangedAs(app, back)).toBe("created");

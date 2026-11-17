@@ -9,7 +9,7 @@
 # sends a photo with a caption of its own, counted against Antti's photos of
 # the day (matching_config message_photos_per_day, 10): after that many runs
 # in a Finnish day, `pnpm demo:reset` first.
-appId: fi.kuutti.app
+appId: fi.kumpa
 name: A photo with a caption reaches the other person, small in the thread and full size on a tap
 ---
 - addMedia:
@@ -25,7 +25,7 @@ name: A photo with a caption reaches the other person, small in the thread and f
     file: ../common/sign-in.yaml
     env:
       PERSONA: Antti Nurmi
-- openLink: kuutti://chats
+- openLink: fi.kumpa://chats
 - extendedWaitUntil:
     visible: "Your turn: \\d+|Their turn|Sinun vuorosi: \\d+|Toisen vuoro|Din tur: \\d+|Den andras tur"
     timeout: 15000
@@ -66,7 +66,7 @@ name: A photo with a caption reaches the other person, small in the thread and f
     file: ../common/sign-in.yaml
     env:
       PERSONA: Ville Rantanen
-- openLink: kuutti://chats
+- openLink: fi.kumpa://chats
 - extendedWaitUntil:
     visible: "Antti, \\d+, (1 unread message|1 lukematon viesti|1 oläst meddelande), (.* )?${output.token}, .*"
     timeout: 15000

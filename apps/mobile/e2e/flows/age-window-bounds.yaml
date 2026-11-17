@@ -4,7 +4,7 @@
 # an area too small to keep, so the card has nothing to choose from (ADR-061
 # §2, §3). Siiri (99) is a newcomer; the flow stops at the photos, so one run
 # per `pnpm demo:reset`.
-appId: fi.kuutti.app
+appId: fi.kumpa
 name: At 99 the age window starts at 94 to 99 and neither end can leave the bounds
 ---
 - runFlow:

@@ -49,8 +49,8 @@ afterEach(() => jest.restoreAllMocks());
 
 describe("a link from outside the app", () => {
   it.each([
-    ["the scheme's return", "kuutti://auth?code=abc"],
-    ["the scheme with the link's path", `kuutti://i/${CODE}`],
+    ["the scheme's return", "fi.kumpa://auth?code=abc"],
+    ["the scheme with the link's path", `fi.kumpa://i/${CODE}`],
     ["the bank login's return", "https://api.kumpa.fi/auth/return?code=abc"],
     ["the store's link, which carries no code", "https://api.kumpa.fi/i"],
     ["the store's link with a query", "https://api.kumpa.fi/i?x=1"],

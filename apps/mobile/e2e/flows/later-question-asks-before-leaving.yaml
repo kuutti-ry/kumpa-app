@@ -3,11 +3,11 @@
 # arrow asks and is kept on the word; a link from outside the app waits for the
 # word the same way (app/+native-intent.ts) and is followed on it. Sanna has not
 # answered what she thinks of drugs, and nothing of it is stored.
-appId: fi.kuutti.app
+appId: fi.kumpa
 name: A later question left unsaved asks first, on the arrow and on a link from outside
 ---
 - runFlow: ../common/sign-in.yaml
-- openLink: kuutti://profile/later/drugsAttitude
+- openLink: fi.kumpa://profile/later/drugsAttitude
 - extendedWaitUntil:
     visible: "Drugs, your attitude|Suhtautuminen huumeisiin|Inställning till droger"
     timeout: 15000
@@ -22,7 +22,7 @@ name: A later question left unsaved asks first, on the arrow and on a link from 
 - tapOn: "Keep editing|Jatka muokkaamista|Fortsätt redigera"
 - assertVisible: "✓ Not my thing|✓ Ei minun juttuni|✓ Inte min grej"
 
-- openLink: kuutti://
+- openLink: fi.kumpa://
 - extendedWaitUntil:
     visible: "Leave without saving\\?|Poistutaanko tallentamatta\\?|Lämna utan att spara\\?"
     timeout: 15000
@@ -34,7 +34,7 @@ name: A later question left unsaved asks first, on the arrow and on a link from 
     timeout: 15000
 
 # Nothing of it is stored: its words without the tick.
-- openLink: kuutti://profile/later/drugsAttitude
+- openLink: fi.kumpa://profile/later/drugsAttitude
 - extendedWaitUntil:
     visible: "Not my thing|Ei minun juttuni|Inte min grej"
     timeout: 15000

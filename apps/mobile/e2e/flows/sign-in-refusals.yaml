@@ -6,7 +6,7 @@
 # depends on the phone and on how far they have come (#418, #581). Age is
 # counted from the end of the birth month, so Venla, who turns 18 this month,
 # is refused on every day but its last.
-appId: fi.kuutti.app
+appId: fi.kumpa
 name: The bank login refuses the banned, the recently deleted and those under 18, and lets in 18 and 99
 ---
 - runFlow: ../common/open-app.yaml

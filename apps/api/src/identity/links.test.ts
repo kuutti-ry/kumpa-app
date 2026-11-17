@@ -3,6 +3,7 @@ import fc from "fast-check";
 import { describe, expect } from "vitest";
 import { createApp } from "../app.ts";
 import { captureLogger, test, testConfig } from "../test/harness.ts";
+import { APP_SCHEME } from "./codes.ts";
 import {
   ANDROID_PACKAGE,
   INVITATION_PATHS,
@@ -117,6 +118,7 @@ describe("what the app's build claims (apps/mobile/app.json)", () => {
     readFileSync(new URL("../../../mobile/app.json", import.meta.url), "utf8"),
   ) as {
     expo: {
+      scheme: string;
       ios: { bundleIdentifier: string; associatedDomains: string[] };
       android: {
         package: string;
@@ -140,6 +142,12 @@ describe("what the app's build claims (apps/mobile/app.json)", () => {
   test("is the app the two files name", () => {
     expect(expo.android.package).toBe(ANDROID_PACKAGE);
     expect(expo.ios.bundleIdentifier).toBe(IOS_BUNDLE_ID);
+  });
+
+  // The API's own answers are held to the literal in routes.test.ts; this is
+  // the other half, that the build claims what they are sent to.
+  test("takes the scheme the API sends a return and a refusal to", () => {
+    expect(expo.scheme).toBe(APP_SCHEME);
   });
 
   test("on an iPhone: the links of the four hosts, and nothing else of theirs", () => {
@@ -168,7 +176,7 @@ describe("the return a browser kept", () => {
     const { app, lines } = await appAndLogs(ctx);
     const res = await app.request(`/auth/return?code=${CODE}`);
     expect(res.status).toBe(302);
-    expect(res.headers.get("location")).toBe(`kuutti://auth?code=${CODE}`);
+    expect(res.headers.get("location")).toBe(`fi.kumpa://auth?code=${CODE}`);
     expect(res.headers.get("cache-control")).toBe("no-store");
     expect(await res.text()).toBe("");
     const request = lines().find((line) => line.msg === "request");
@@ -191,7 +199,7 @@ describe("the return a browser kept", () => {
       const { app, lines } = await appAndLogs(ctx);
       const res = await app.request(`/auth/return${query}`);
       expect(res.status).toBe(302);
-      expect(res.headers.get("location")).toBe("kuutti://auth?error=auth_code_used");
+      expect(res.headers.get("location")).toBe("fi.kumpa://auth?error=auth_code_used");
       expect(res.headers.get("cache-control")).toBe("no-store");
       expect(res.headers.get("content-type")).toBeNull();
       // Nothing of what was sent is repeated, in the answer or in a line.
@@ -204,7 +212,7 @@ describe("the return a browser kept", () => {
   }) => {
     const app = await appWith(ctx);
     const res = await app.request(`/auth/return?code=${CODE}&code=${"B".repeat(43)}`);
-    expect(res.headers.get("location")).toBe(`kuutti://auth?code=${CODE}`);
+    expect(res.headers.get("location")).toBe(`fi.kumpa://auth?code=${CODE}`);
   });
 
   test("whatever stands in the code's place, the answer is that very code or the one refusal", async ({
@@ -224,8 +232,8 @@ describe("the return a browser kept", () => {
         expect(res.status).toBe(302);
         expect(res.headers.get("location")).toBe(
           /^[A-Za-z0-9_-]{43}$/.test(code)
-            ? `kuutti://auth?code=${code}`
-            : "kuutti://auth?error=auth_code_used",
+            ? `fi.kumpa://auth?code=${code}`
+            : "fi.kumpa://auth?error=auth_code_used",
         );
       }),
       { seed: 20261117, numRuns: 300 },

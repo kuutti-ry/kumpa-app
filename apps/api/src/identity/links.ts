@@ -16,8 +16,8 @@ import { appErrorUrl, appReturnUrl } from "./codes.ts";
  * native build. Machine callers (Google's and Apple's verifiers), so plain
  * routes with the exact media type each expects and a day of caching.
  */
-export const ANDROID_PACKAGE = "fi.kuutti.app";
-export const IOS_BUNDLE_ID = "fi.kuutti.app";
+export const ANDROID_PACKAGE = "fi.kumpa";
+export const IOS_BUNDLE_ID = "fi.kumpa";
 /** The https path of the bank login's return, which the app claims on its API's hosts (app.json). */
 export const RETURN_PATH = "/auth/return";
 /** The one link with a code (rewards/link.ts): the app claims it too, and takes the code itself (ADR-044 §13). */
@@ -99,10 +99,10 @@ export function appLinkRoutes(deps: Deps) {
     );
   });
 
-  // The return the phone did not hand to the app (ADR-074 §3): a build from
-  // before the links, a link the system has not verified, a browser that
-  // keeps it. The browser goes on to the app's scheme, where the callback
-  // sent it before. A machine's door for a browser: no page, nothing looked
+  // The return the phone did not hand to the app (ADR-074 §3): a link the
+  // system has not verified, a browser that keeps it. The browser goes on to
+  // the app's scheme, where the callback sends a platform without its
+  // parameter. A machine's door for a browser: no page, nothing looked
   // up or kept, and no JSON left in a tab. Anything but a code of the right
   // shape goes on as the refusal every bad code gets, in the app's words. The
   // request's line names the route, never the code (lib/logger.ts).

@@ -3,11 +3,11 @@
 # keeps what was stored. A list of fourteen or more has a search box (#148, #239), which
 # filters the chips as one types; the twelve fields fit a screen and have none. Sanna's field and work are both arts and culture;
 # nothing is saved.
-appId: fi.kuutti.app
+appId: fi.kumpa
 name: Field and work take as many choices as apply, Ask me later keeps what was stored, and long lists can be searched
 ---
 - runFlow: ../common/sign-in.yaml
-- openLink: kuutti://profile/later/field
+- openLink: fi.kumpa://profile/later/field
 - extendedWaitUntil:
     visible: "Field|Ala|Bransch"
     timeout: 15000
@@ -36,7 +36,7 @@ name: Field and work take as many choices as apply, Ask me later keeps what was 
     centerElement: true
     timeout: 60000
 - tapOn: "Ask me later|Kysy myöhemmin|Fråga mig senare"
-- openLink: kuutti://profile/later/field
+- openLink: fi.kumpa://profile/later/field
 - extendedWaitUntil:
     visible: "Field|Ala|Bransch"
     timeout: 15000
@@ -45,7 +45,7 @@ name: Field and work take as many choices as apply, Ask me later keeps what was 
     text: "Tech|Teknologia|Teknik"
     selected: false
 
-- openLink: kuutti://profile/later/occupation
+- openLink: fi.kumpa://profile/later/occupation
 - extendedWaitUntil:
     visible: "Work|Työ|Arbete"
     timeout: 15000
@@ -68,7 +68,7 @@ name: Field and work take as many choices as apply, Ask me later keeps what was 
 
 # The languages are named in the app's language (#238); Tagalog is the one
 # name the three catalogues share, so one search finds it in any of them.
-- openLink: kuutti://profile/later/languages
+- openLink: fi.kumpa://profile/later/languages
 - extendedWaitUntil:
     visible: "Languages|Kielet|Språk"
     timeout: 15000

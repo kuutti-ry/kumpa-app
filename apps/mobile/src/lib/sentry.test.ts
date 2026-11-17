@@ -220,7 +220,7 @@ describe("sentry options", () => {
   it.each([
     [
       "the bank's return on the scheme",
-      "The navigation state parsed from the URL kuutti://auth?code=one-time",
+      "The navigation state parsed from the URL fi.kumpa://auth?code=one-time",
     ],
     ["the bank's return on its verified link", "https://api.kumpa.fi/auth/return?code=one-time"],
     ["the return as the router is handed it", "/auth?code=one-time"],

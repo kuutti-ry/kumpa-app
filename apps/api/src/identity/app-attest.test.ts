@@ -24,7 +24,7 @@ import {
   verifyAttestation,
 } from "./app-attest.ts";
 
-const APP_ID = "ABCDE12345.fi.kuutti.app";
+const APP_ID = "ABCDE12345.fi.kumpa";
 const NOW = new Date("2026-11-10T12:00:00Z");
 const HASH = clientDataHashOf("the one-time code");
 
