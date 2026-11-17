@@ -62,3 +62,4 @@ A partitioned table drops with its partitions, and a `DROP` fires none of the ro
 ## History
 
 - 2026-11-16 (#208): written and built on the maintainer's word of that day in a session.
+- 2026-11-16 (#208): the site's change deployed, so `check:legal-versions` no longer tolerates a `research` kind on the site; the `RETIRED_KINDS` shortcut is deleted.
