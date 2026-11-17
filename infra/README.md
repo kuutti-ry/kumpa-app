@@ -78,6 +78,12 @@ Commit `versions.tf` and `.terraform.lock.hcl`. The lockfile carries hashes for 
 
 Later changes to `bootstrap/` are applied the same way, by the maintainer: it owns the CI roles, so CI cannot apply it.
 
+The organisation is adopted the same way (`bootstrap/organization.tf`, #691): an import block, never created or destroyed here, its trusted services left as they are. It carries the AI services opt-out at its root, so no AWS AI service the policy covers, Rekognition among them, may use what it is sent to improve itself (ADR-006 §1). A precondition refuses an organisation this account does not manage. The first plan after it must show the organisation imported with `AISERVICES_OPT_OUT_POLICY` added to its policy types and nothing else changed, one policy and one attachment created. A `-` line under `enabled_policy_types` means stop: the list is the whole list, and a type missing from it is switched off. After the apply, the effective policy's `default` reads back as `optOut`:
+
+```sh
+aws organizations describe-effective-policy --policy-type AISERVICES_OPT_OUT_POLICY --query EffectivePolicy.PolicyContent --output text
+```
+
 `terraform.tfvars` and any `*.tfstate` are gitignored. The state bucket holds secrets: it is versioned, encrypted, public access is blocked, and only the CI roles and the maintainer can read it.
 
 About 24 hours after the first apply the `Project` tag shows up in Cost Explorer; activate it as a cost allocation tag then (it cannot be activated before it has appeared in billing data, which is why it is not a resource here):
