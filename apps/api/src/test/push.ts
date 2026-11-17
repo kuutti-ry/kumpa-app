@@ -1,8 +1,11 @@
 import type { Queryable } from "@kuutti/db";
 import { Notices } from "@kuutti/schema";
 import { expect } from "vitest";
-import type { App } from "../app.ts";
+import { type App, createApp } from "../app.ts";
+import type { MailMessage } from "../lib/mail.ts";
 import type { Pusher, PushMessage, PushReceipt, PushTicket } from "../lib/push.ts";
+import { createPush } from "../notifications/index.ts";
+import { captureLogger, testConfig } from "./harness.ts";
 
 // The push's doubles (#102, ADR-055 §8): a pusher that keeps what it was
 // handed in memory and answers what the test chooses, a schedule that keeps
@@ -62,6 +65,29 @@ export function memoryPusher(): MemoryPusher {
     },
   };
   return pusher;
+}
+
+/**
+ * The app with a push of its own over a memory pusher and a memory mailer:
+ * what it pushed and mailed, its log, and `settled` to wait for the
+ * background sending (#715: a sanction's mail goes there, ADR-073 §4).
+ */
+export async function mailingApp(db: Queryable, now: () => Date = () => new Date()) {
+  const { logger, lines } = await captureLogger();
+  const pusher = memoryPusher();
+  const sent: MailMessage[] = [];
+  const mailer = { send: async (message: MailMessage) => void sent.push(message) };
+  const push = createPush({
+    db,
+    logger,
+    now,
+    pusher,
+    mailer,
+    online: () => false,
+    pause: async () => {},
+  });
+  const app = createApp({ config: testConfig(), logger, db, now, pusher, mailer, push });
+  return { app, push, pusher, mailer, sent, logs: lines, settled: () => push.settled() };
 }
 
 /** A schedule that keeps each task with its delay; the test runs them and awaits them. */

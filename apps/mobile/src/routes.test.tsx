@@ -314,13 +314,19 @@ describe("a conversation's photo full size, /chats/photo/[messageId] (#350)", ()
 });
 
 describe("the bank login's return, /auth", () => {
-  it("hands the code, the refusal and its date to the sign-in screen", async () => {
-    params({ code: "c", error: "auth_cooldown", until: "2026-10-22" });
+  it("hands the code, the refusal, its date and its reason to the sign-in screen", async () => {
+    params({
+      code: "c",
+      error: "auth_banned",
+      until: "2026-10-22",
+      reason: ["harassment", "other"],
+    });
     await render(<AuthReturnRoute />);
     expect(propsOf("SignInScreen")).toEqual({
       code: "c",
-      error: "auth_cooldown",
+      error: "auth_banned",
       until: "2026-10-22",
+      reason: "harassment",
     });
   });
 

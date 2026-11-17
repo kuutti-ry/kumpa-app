@@ -154,15 +154,27 @@ Feature: Automatic shadow bans
     When moderator "M" reverses it with a note
     Then "B" is active, "C" reads the line, and one sanction.review row by "M" says lift
 
+  Scenario Outline: A rule's shadow ban is never told, whether a moderator keeps it or reverses it
+    Given "B" has a confirmed address, and the rule <rule> shadow-banned "B"
+    When moderator "M" decides <outcome> with a note
+    Then "B" has no notice and no mail of it, before the look or after
+
+    Examples:
+      | rule           | outcome |
+      | reports        | keep    |
+      | reports        | lift    |
+      | first_messages | keep    |
+      | first_messages | lift    |
+
   Scenario: After a reversal only what follows counts
     Given a rule shadow-banned "B" after reports by "C", "D" and "E", and a moderator reversed it
     When "F" reports "B"
     Then "B" is not sanctioned
 
   Scenario: Past the review deadline the shadow ban stays until a moderator decides
-    Given auto_shadow_ban_review_hours is 48 and a rule shadow-banned "B" 49 hours ago
+    Given auto_shadow_ban_review_hours is 168 and a rule shadow-banned "B" 169 hours ago
     When a moderator reads the automatic shadow bans and the front page
-    Then the ban is still open, listed and counted, with the API's clock and 48 review hours
+    Then the ban is still open, listed and counted, with the API's clock and 168 review hours
 
   Scenario: The list shows the rules' open shadow bans oldest first, and nobody their own
     Given a rule shadow-banned "B" and then "C", and a moderator shadow-banned "D"

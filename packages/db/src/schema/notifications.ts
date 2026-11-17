@@ -47,15 +47,16 @@ export const notificationPreference = pgTable(
 /**
  * What a notice in the app is about (#176, ADR-032): a moderator's warning
  * (ADR-024 §7), an invitation of the person's that counted (#107, ADR-044),
- * the invitation they used, counted (#503), or an announcement to everybody
- * (#573, ADR-068 §3). #312's decisions and M5's matches add their kinds when
- * they write one.
+ * the invitation they used, counted (#503), an announcement to everybody
+ * (#573, ADR-068 §3), or a moderator's shadow ban, told to its owner (#715, ADR-073 §2).
+ * #312's decisions and M5's matches add their kinds when they write one.
  */
 export const noticeKind = pgEnum("notice_kind", [
   "warning",
   "invitation_counted",
   "invitation_friend",
   "announcement",
+  "shadow_ban",
 ]);
 
 /**
@@ -126,22 +127,23 @@ export const notice = pgTable(
   (table) => [
     // The person's notices, newest first.
     index("notice_account_created_idx").on(table.accountId, table.createdAt),
-    check(
-      "notice_warning_check",
-      sql`(${table.kind} = 'warning') = (${table.sanctionId} IS NOT NULL)`,
-    ),
     // Named by the old kinds: Postgres refuses an enum value in the
     // transaction that adds it, and the migrator applies every pending
-    // migration in one. "An invitation's notice, and only it, points at its
-    // invitation", and "an announcement's, and only it, at its announcement"
-    // (#573), the one kind that is neither of the three before it.
+    // migration in one. "A sanction's notice, a warning's or a shadow ban's
+    // (#715), and only it, points at its sanction", the kinds that are none
+    // of the other three; "an invitation's notice, and only it, points at its
+    // invitation", and "an announcement's, and only it, at its announcement" (#573).
+    check(
+      "notice_sanction_check",
+      sql`(${table.kind} NOT IN ('invitation_counted', 'invitation_friend', 'announcement')) = (${table.sanctionId} IS NOT NULL)`,
+    ),
     check(
       "notice_invitation_check",
       sql`(${table.kind} IN ('invitation_counted', 'invitation_friend')) = (${table.invitationId} IS NOT NULL)`,
     ),
     check(
       "notice_announcement_check",
-      sql`(${table.kind} NOT IN ('warning', 'invitation_counted', 'invitation_friend')) = (${table.announcementId} IS NOT NULL)`,
+      sql`(${table.kind} = 'announcement') = (${table.announcementId} IS NOT NULL)`,
     ),
     // The notices of one announcement: its push and its email read them.
     index("notice_announcement_idx")

@@ -88,7 +88,7 @@ sequenceDiagram
     api-->>browser: 302 to kuutti://auth?code=…
   else Refused from step 12 on, a state the claim did not take spends nothing
     api->>db: Spends the attempt, and counts a banned, suspended or cooldown refusal on the identity
-    api-->>browser: 302 to kuutti://auth?error= with the refusal's code
+    api-->>browser: 302 to kuutti://auth?error= with the refusal's code, and a ban's or a suspension's reason
   end
 ```
 
@@ -105,7 +105,7 @@ sequenceDiagram
 19. The API stores the SHA-256 of a new one-time code, 32 random bytes, on the attempt, with 60 seconds to live, and logs one line: the level, the method and the outcome, nothing of the person.
 20. The browser is sent to `kuutti://auth?code=…`: part 3.
 21. A refusal after the claim spends the attempt, so a replay is refused too, and a banned, suspended or cooldown refusal is counted on the identity.
-22. The browser is sent to `kuutti://auth?error=` with the refusal's code (`auth_state_mismatch`, `auth_cancelled`, `auth_provider_error`, `auth_under_18`, `auth_banned`, `auth_suspended`, `auth_cooldown`), and `&until=` for a cooldown and for a suspension with an end day. The app says each on its card: `auth_state_mismatch` and `auth_provider_error` by the card's title alone, over Try again, since nobody acts on which of them it was, and the others with a sentence of their own (#581).
+22. The browser is sent to `kuutti://auth?error=` with the refusal's code (`auth_state_mismatch`, `auth_cancelled`, `auth_provider_error`, `auth_under_18`, `auth_banned`, `auth_suspended`, `auth_cooldown`), and `&until=` for a cooldown and for a suspension with an end day, and `&reason=` for a ban and a suspension: the reason of the newest one open on the identity, a value of the closed list (ADR-073 §2), which the refusal's log line carries as a code. The app shows a reason only of that list. The app says each on its card: `auth_state_mismatch` and `auth_provider_error` by the card's title alone, over Try again, since nobody acts on which of them it was, and the others with a sentence of their own (#581).
 
 ## Part 3: back in the app
 
@@ -199,7 +199,7 @@ sequenceDiagram
 - Configuration: the `oidc-*` parameters in [infra/envs/staging/main.tf](../../infra/envs/staging/main.tf); the two Telia keys and the HMAC key in SSM ([infra/README.md](../../infra/README.md), Secrets)
 - Locally: the mock bank in [services/mock-idp](../../services/mock-idp), the plain dialect of the same kit
 - Specs: [bank-login.feature](../../features/identity/bank-login.feature), [re-registration.feature](../../features/identity/re-registration.feature), [sessions.feature](../../features/identity/sessions.feature)
-- ADRs: [ADR-006](../adr/006-photo-moderation.md) §5, [ADR-010](../adr/010-onboarding-and-consents.md) §15, [ADR-014](../adr/014-demo-mode.md) §1, [ADR-016](../adr/016-fresh-bank-login.md), [ADR-017](../adr/017-tunnistus-oidc-package.md), [ADR-022](../adr/022-taking-a-break.md), [ADR-024](../adr/024-sanctions.md) §5, [ADR-025](../adr/025-admin-host.md), [ADR-026](../adr/026-limits-per-person-and-sign-in-doors.md) §4, §6, §8, [ADR-027](../adr/027-sign-in-code-bound-to-the-device.md), [ADR-058](../adr/058-sessions-end-after-ninety-idle-days.md), [ADR-059](../adr/059-refresh-token-carries-its-session.md)
+- ADRs: [ADR-006](../adr/006-photo-moderation.md) §5, [ADR-010](../adr/010-onboarding-and-consents.md) §15, [ADR-014](../adr/014-demo-mode.md) §1, [ADR-016](../adr/016-fresh-bank-login.md), [ADR-017](../adr/017-tunnistus-oidc-package.md), [ADR-022](../adr/022-taking-a-break.md), [ADR-024](../adr/024-sanctions.md) §5, [ADR-073](../adr/073-telling-a-sanction.md) §2, [ADR-025](../adr/025-admin-host.md), [ADR-026](../adr/026-limits-per-person-and-sign-in-doors.md) §4, §6, §8, [ADR-027](../adr/027-sign-in-code-bound-to-the-device.md), [ADR-058](../adr/058-sessions-end-after-ninety-idle-days.md), [ADR-059](../adr/059-refresh-token-carries-its-session.md)
 - Issues: #32, #33 (the bank login), #35 (sessions), #36 (the app's side), #49 (staff), #186 (the bound code), #324 (a state answered once), #41 (the doors), #472 (the session's end), #490 (the refresh token's secret)
 
 ## Open

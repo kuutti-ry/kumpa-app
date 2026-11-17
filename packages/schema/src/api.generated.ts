@@ -137,7 +137,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Redirect to kuutti://auth?code=… on success, or to kuutti://auth?error=<code> (auth_state_mismatch, auth_cancelled, auth_under_18, auth_banned, auth_suspended with &until=<date> when the suspension has an end, auth_cooldown with &until=<date>, auth_provider_error) so the app shows the refusal. */
+                /** @description Redirect to kuutti://auth?code=… on success, or to kuutti://auth?error=<code> (auth_state_mismatch, auth_cancelled, auth_under_18, auth_banned, auth_suspended with &until=<date> when the suspension has an end, auth_cooldown with &until=<date>, auth_provider_error; auth_banned and auth_suspended with &reason=<the sanction's reason> when a sanction is behind them) so the app shows the refusal. */
                 302: {
                     headers: {
                         [name: string]: unknown;
@@ -7961,7 +7961,7 @@ export interface components {
         /** @enum {string} */
         NotificationKind: "message" | "match" | "moderation" | "announcement";
         /** @enum {string} */
-        NoticeKind: "warning" | "invitation_counted" | "invitation_friend" | "announcement";
+        NoticeKind: "warning" | "invitation_counted" | "invitation_friend" | "announcement" | "shadow_ban";
         ExportedRounds: {
             /** @description What this part is, in the request's language. */
             about: string;
@@ -8524,7 +8524,7 @@ export interface components {
         Notices: {
             notices: components["schemas"]["Notice"][];
         };
-        Notice: components["schemas"]["WarningNotice"] | components["schemas"]["InvitationCountedNotice"] | components["schemas"]["InvitationFriendNotice"] | components["schemas"]["AnnouncementNotice"];
+        Notice: components["schemas"]["WarningNotice"] | components["schemas"]["ShadowBanNotice"] | components["schemas"]["InvitationCountedNotice"] | components["schemas"]["InvitationFriendNotice"] | components["schemas"]["AnnouncementNotice"];
         WarningNotice: {
             /** Format: uuid */
             id: string;
@@ -8537,6 +8537,20 @@ export interface components {
              * @enum {string}
              */
             kind: "warning";
+            reason: components["schemas"]["SanctionReason"];
+        };
+        ShadowBanNotice: {
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            at: string;
+            /** Format: date-time */
+            readAt: string | null;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "shadow_ban";
             reason: components["schemas"]["SanctionReason"];
         };
         InvitationCountedNotice: {

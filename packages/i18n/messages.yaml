@@ -3799,14 +3799,14 @@ signIn.error.auth_banned:
 
 signIn.error.auth_suspended:
   en: This account is suspended for now.
-  description: Sign-in screen, the identity is suspended.
+  description: Sign-in screen, the identity is suspended; a suspension's email's first line where its day is missing (#715).
   fi: Tämä tili on toistaiseksi jäädytetty.
   sv: Det här kontot är tills vidare avstängt.
   machine: { fi: true, sv: true }
 
 signIn.error.auth_suspended_until:
   en: "This account is suspended. You can sign in again from: {date}"
-  description: "Sign-in screen, the identity is suspended until a day (#307, ADR-024 §5); {date} is the first day the person may sign in again, formatted in Finland's time zone (after a colon, so no language inflects it). Without a valid day the screen says signIn.error.auth_suspended instead."
+  description: "Sign-in screen, the identity is suspended until a day (#307, ADR-024 §5), and the first line of a suspension's email (#715, ADR-073 §4); {date} is the first day the person may sign in again, formatted in Finland's time zone (after a colon, so no language inflects it). Without a valid day the screen says signIn.error.auth_suspended instead."
   fi: "Tämä tili on jäädytetty. Voit kirjautua taas sisään alkaen: {date}"
   sv: "Det här kontot är avstängt. Du kan logga in igen från och med: {date}"
   machine: { fi: true, sv: true }
@@ -7011,20 +7011,20 @@ admin.sanction.title.ban:
   description: "Admin panel, a person's page, the sanctions (#308): the confirm step's title for a ban."
 
 admin.sanction.effect.warn:
-  en: "Writes a warning on the person's file. Nothing else changes for them."
-  description: "Admin panel, a person's page, the sanctions (#308): what a warning does, in words."
+  en: "Writes a warning on the person's file and tells them its reason and how to contest it, in the app and by email if they confirmed an address; never the note. Nothing else changes for them."
+  description: "Admin panel, a person's page, the sanctions (#308): what a warning does, in words, and what the person is told of it (#715, ADR-073)."
 
 admin.sanction.effect.shadow_ban:
-  en: "Hides the person from everyone else at once, without telling them: they see no change."
-  description: "Admin panel, a person's page, the sanctions (#308): what a shadow ban does, in words."
+  en: "Hides the person from everyone else at once and tells them its reason and how to contest it, in the app and by email if they confirmed an address; never the note."
+  description: "Admin panel, a person's page, the sanctions (#308): what a shadow ban does, in words, and what the person is told of it (#715, ADR-073)."
 
 admin.sanction.effect.suspend:
-  en: "Ends every session now and refuses the bank login until the start of the chosen day in Finland, when the night lifts it."
-  description: "Admin panel, a person's page, the sanctions (#308): what a suspension does, in words."
+  en: "Ends every session now and refuses the bank login until the start of the chosen day in Finland, when the night lifts it. The bank login, and an email if they confirmed an address, tell them its reason and how to contest it; never the note."
+  description: "Admin panel, a person's page, the sanctions (#308): what a suspension does, in words, and what the person is told of it (#715, ADR-073)."
 
 admin.sanction.effect.ban:
-  en: "Ends every session now and refuses the next bank login and any new account, until an admin lifts it."
-  description: "Admin panel, a person's page, the sanctions (#308): what a ban does, in words."
+  en: "Ends every session now and refuses the next bank login and any new account, until an admin lifts it. The bank login, and an email if they confirmed an address, tell them its reason and how to contest it; never the note."
+  description: "Admin panel, a person's page, the sanctions (#308): what a ban does, in words, and what the person is told of it (#715, ADR-073)."
 
 admin.sanction.kind.warn:
   en: "Warning"
@@ -7915,6 +7915,48 @@ mail.announcement.why:
   description: "An announcement's email (#573, ADR-068 §5), after its body: why the person gets it, and where the Announcements switch is (Settings › Notifications), which stops the email and the push but not the notice in the app. No link: the mail carries none."
   fi: "Saat tämän, koska vahvistit tämän osoitteen Kumpa-sovelluksessa. Kumpa-tiedotteet voi laittaa pois päältä Asetuksista, kohdasta Ilmoitukset."
   sv: "Du får det här eftersom du bekräftade den här adressen i Kumpa-appen. Meddelanden från Kumpa kan stängas av i Inställningar, under Aviseringar."
+  machine: { fi: true, sv: true }
+
+mail.sanction.subject.warn:
+  en: "Kumpa: a warning from a moderator"
+  description: "The subject of a warning's email (#715, ADR-073 §4): sent at the sanction to a confirmed address, whatever the switches say."
+  fi: "Kumpa: varoitus moderaattorilta"
+  sv: "Kumpa: en varning från en moderator"
+  machine: { fi: true, sv: true }
+
+mail.sanction.subject.shadow_ban:
+  en: "Kumpa: others don't see your profile for now"
+  description: "The subject of a shadow ban's email (#715, ADR-073 §4)."
+  fi: "Kumpa: muut eivät toistaiseksi näe profiiliasi"
+  sv: "Kumpa: andra ser inte din profil för tillfället"
+  machine: { fi: true, sv: true }
+
+mail.sanction.subject.suspend:
+  en: "Kumpa: your account is suspended"
+  description: "The subject of a suspension's email (#715, ADR-073 §4)."
+  fi: "Kumpa: tilisi on jäädytetty"
+  sv: "Kumpa: ditt konto är avstängt"
+  machine: { fi: true, sv: true }
+
+mail.sanction.subject.ban:
+  en: "Kumpa: your account is closed"
+  description: "The subject of a ban's email (#715, ADR-073 §4)."
+  fi: "Kumpa: tilisi on suljettu"
+  sv: "Kumpa: ditt konto är stängt"
+  machine: { fi: true, sv: true }
+
+mail.sanction.ban.what:
+  en: "Your account is closed for good: you cannot sign in, and you cannot open a new one."
+  description: "A ban's email (#715, ADR-073 §4), first: what a ban does (TD-7, ADR-024 §4). The statement after it says why and how to contest it."
+  fi: "Tilisi on suljettu pysyvästi: et voi kirjautua sisään etkä avata uutta tiliä."
+  sv: "Ditt konto är stängt för gott: du kan inte logga in och inte öppna ett nytt."
+  machine: { fi: true, sv: true }
+
+mail.sanction.why:
+  en: "You get this because you confirmed this address in the Kumpa app. A decision about your account is always sent to you, whatever your notification settings say."
+  description: "A sanction's email (#715, ADR-073 §4), after its statement: why the person gets it, and that no switch stops it (the maintainer, 17/11/2026). No link."
+  fi: "Saat tämän, koska vahvistit tämän osoitteen Kumpa-sovelluksessa. Tiliäsi koskeva päätös lähetetään sinulle aina, ilmoitusasetuksistasi riippumatta."
+  sv: "Du får det här eftersom du bekräftade den här adressen i Kumpa-appen. Ett beslut om ditt konto skickas alltid till dig, oavsett dina aviseringsinställningar."
   machine: { fi: true, sv: true }
 
 mail.signature:
@@ -9558,10 +9600,87 @@ notices.warning.title:
   machine: { fi: true, sv: true }
 
 notices.warning.body:
-  en: "Reason: {reason}. A warning by itself changes nothing in how you use the app."
-  description: "The home screen's notices (#176, ADR-024 §7), under the warning's title: reason is the sanction's reason in words (account.export.sanction.reason.*), in a nominative position after the colon. Never the app's name in an inflected position."
-  fi: "Syy: {reason}. Varoitus ei sellaisenaan muuta mitään siinä, miten käytät sovellusta."
-  sv: "Skäl: {reason}. En varning ändrar i sig ingenting i hur du använder appen."
+  en: "A warning by itself changes nothing in how you use the app."
+  description: "The home screen's notices and the warning's email (#176, ADR-024 §7; #715), under the warning's title: what a warning does. The statement's lines (sanction.statement.*) follow it with the reason, the rule of the terms and how to contest it."
+  fi: "Varoitus ei sellaisenaan muuta mitään siinä, miten käytät sovellusta."
+  sv: "En varning ändrar i sig ingenting i hur du använder appen."
+  machine: { fi: true, sv: true }
+
+notices.shadowBan.title:
+  en: "Others don't see your profile for now"
+  description: "The home screen's notices (#715, ADR-073 §2): a moderator's shadow ban, told to its owner at once; an automatic rule's is never told. Calm, no blame; the lines under it say why and how to contest it."
+  fi: "Muut eivät toistaiseksi näe profiiliasi"
+  sv: "Andra ser inte din profil för tillfället"
+  machine: { fi: true, sv: true }
+
+notices.shadowBan.body:
+  en: "For now your profile is not shown to other people, and your likes and messages do not reach them."
+  description: "The home screen's notices and the shadow ban's email (#715, ADR-073 §2), under the title: what a shadow ban does (ADR-024 §6, ADR-033): the profile out of everybody's queue, a like back makes no match, a message is held. Nothing about how long."
+  fi: "Profiiliasi ei toistaiseksi näytetä muille, eivätkä tykkäyksesi ja viestisi tavoita heitä."
+  sv: "Din profil visas för tillfället inte för andra, och dina gillanden och meddelanden når dem inte."
+  machine: { fi: true, sv: true }
+
+sanction.statement.why:
+  en: "Why: {reason}."
+  description: "A sanction's statement (#715, ADR-073 §1), in the notices, at the bank login's refusal and in the email: the reason a moderator chose, in the words of account.export.sanction.reason.*, after a colon so nothing inflects it."
+  fi: "Syy: {reason}."
+  sv: "Skäl: {reason}."
+  machine: { fi: true, sv: true }
+
+sanction.statement.ground.harassment:
+  en: "The terms of use, section 4: you must not threaten, harass or pressure anyone, or ask anyone for money."
+  description: "A sanction's statement (#715, ADR-073 §1): the rule of the terms the reason harassment rests on, in the terms' own words shortened (section 4). Not a legal text: the site's terms bind."
+  fi: "Käyttöehdot, kohta 4: et saa uhkailla, häiritä tai painostaa ketään etkä pyytää keneltäkään rahaa."
+  sv: "Användarvillkoren, punkt 4: du får inte hota, trakassera eller pressa någon eller be någon om pengar."
+  machine: { fi: true, sv: true }
+
+sanction.statement.ground.misrepresentation:
+  en: "The terms of use, section 4: you must give true information about yourself and upload only photos that show you."
+  description: "A sanction's statement (#715, ADR-073 §1): the rule of the terms the reason misrepresentation rests on (section 4)."
+  fi: "Käyttöehdot, kohta 4: sinun on annettava itsestäsi oikeat tiedot ja ladattava vain kuvia, joissa olet itse."
+  sv: "Användarvillkoren, punkt 4: du ska ge sanna uppgifter om dig själv och bara ladda upp bilder som visar dig."
+  machine: { fi: true, sv: true }
+
+sanction.statement.ground.under_age:
+  en: "The terms of use, section 3: you must be at least 18 years old."
+  description: "A sanction's statement (#715, ADR-073 §1): the rule of the terms the reason under_age rests on (section 3)."
+  fi: "Käyttöehdot, kohta 3: sinun on oltava vähintään 18-vuotias."
+  sv: "Användarvillkoren, punkt 3: du måste vara minst 18 år."
+  machine: { fi: true, sv: true }
+
+sanction.statement.ground.commercial_use:
+  en: "The terms of use, section 4: you must not use Kumpa for a commercial purpose or ask anyone for money."
+  description: "A sanction's statement (#715, ADR-073 §1): the rule of the terms the reason commercial_use rests on (section 4)."
+  fi: "Käyttöehdot, kohta 4: et saa käyttää Kumpa-sovellusta kaupalliseen tarkoitukseen etkä pyytää keneltäkään rahaa."
+  sv: "Användarvillkoren, punkt 4: du får inte använda Kumpa i kommersiellt syfte eller be någon om pengar."
+  machine: { fi: true, sv: true }
+
+sanction.statement.ground.scraping:
+  en: "The terms of use, section 4: you must not use Kumpa by automated means, or copy, store or pass on another user's photos or profile."
+  description: "A sanction's statement (#715, ADR-073 §1): the rule of the terms the reason scraping rests on (section 4)."
+  fi: "Käyttöehdot, kohta 4: et saa käyttää Kumpa-sovellusta automaattisin keinoin etkä kopioida, tallentaa tai välittää toisen käyttäjän kuvia tai profiilia."
+  sv: "Användarvillkoren, punkt 4: du får inte använda Kumpa automatiserat eller kopiera, spara eller sprida en annan användares bilder eller profil."
+  machine: { fi: true, sv: true }
+
+sanction.statement.ground.other:
+  en: "The terms of use, section 6: if the terms are breached, Kuutti ry may limit an account."
+  description: "A sanction's statement (#715, ADR-073 §1): what a moderator's sanction for the reason other rests on, the moderation section of the terms (section 6), since no single rule is named."
+  fi: "Käyttöehdot, kohta 6: jos ehtoja rikotaan, Kuutti ry voi rajoittaa tiliä."
+  sv: "Användarvillkoren, punkt 6: om villkoren bryts kan Kuutti ry begränsa ett konto."
+  machine: { fi: true, sv: true }
+
+sanction.statement.moderator:
+  en: "A moderator decided this."
+  description: "A sanction's statement (#715, ADR-073 §1): that no automatic means decided it. Said of every sanction staff applied, an admin's ban too; an automatic rule's shadow ban is never told."
+  fi: "Tämän päätti moderaattori."
+  sv: "Det här beslutade en moderator."
+  machine: { fi: true, sv: true }
+
+sanction.statement.contest:
+  en: "If you think we got this wrong, write to hello@kuutti.app. Someone other than the person who decided will look at it again."
+  description: "A sanction's statement (#715, ADR-073 §3), last: how to contest a decision staff made. The address is the association's public one, for now (the maintainer, 17/11/2026); the second look is ADR-024 §3's review by somebody else. The address stays exactly as it is in every language."
+  fi: "Jos olemme mielestäsi erehtyneet, kirjoita osoitteeseen hello@kuutti.app. Asian katsoo uudelleen joku muu kuin päätöksen tehnyt."
+  sv: "Om du tycker att vi har gjort fel, skriv till hello@kuutti.app. Någon annan än den som beslutade går igenom det på nytt."
   machine: { fi: true, sv: true }
 
 notices.read:

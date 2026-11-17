@@ -131,7 +131,7 @@ describe("GET /admin/overview", () => {
     expect(await read(app, staff.headers)).toEqual({
       now: "2026-10-16T09:00:00.000Z",
       responseHours: 24,
-      reviewHours: 48,
+      reviewHours: 168,
       queues: [
         { queue: "reports", waiting: 0, oldestSince: null },
         { queue: "automatic_bans", waiting: 0, oldestSince: null },
@@ -204,7 +204,7 @@ describe("GET /admin/overview", () => {
     expect(await read(app, staff.headers)).toEqual({
       now: "2026-10-16T09:00:00.000Z",
       responseHours: 24,
-      reviewHours: 48,
+      reviewHours: 168,
       queues: [
         { queue: "reports", waiting: 0, oldestSince: null },
         { queue: "automatic_bans", waiting: 0, oldestSince: null },

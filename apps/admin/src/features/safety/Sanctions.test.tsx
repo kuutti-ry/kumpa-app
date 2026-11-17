@@ -278,7 +278,8 @@ describe("the actions on a person", () => {
       role: "moderator",
       button: "Warn",
       title: "Warn this person",
-      effect: "Writes a warning on the person's file. Nothing else changes for them.",
+      effect:
+        "Writes a warning on the person's file and tells them its reason and how to contest it, in the app and by email if they confirmed an address; never the note. Nothing else changes for them.",
       reason: "harassment",
       route: LIST,
       body: { kind: "warn", reason: "harassment", note: TEXT },
@@ -291,7 +292,7 @@ describe("the actions on a person", () => {
       button: "Shadow ban",
       title: "Hide this person from others",
       effect:
-        "Hides the person from everyone else at once, without telling them: they see no change.",
+        "Hides the person from everyone else at once and tells them its reason and how to contest it, in the app and by email if they confirmed an address; never the note.",
       reason: "scraping",
       route: LIST,
       body: { kind: "shadow_ban", reason: "scraping", note: TEXT },
@@ -304,7 +305,7 @@ describe("the actions on a person", () => {
       button: "Suspend",
       title: "Suspend this person",
       effect:
-        "Ends every session now and refuses the bank login until the start of the chosen day in Finland, when the night lifts it.",
+        "Ends every session now and refuses the bank login until the start of the chosen day in Finland, when the night lifts it. The bank login, and an email if they confirmed an address, tell them its reason and how to contest it; never the note.",
       reason: "misrepresentation",
       route: LIST,
       body: { kind: "suspend", reason: "misrepresentation", note: TEXT, endsOn: "2026-11-01" },
@@ -317,7 +318,7 @@ describe("the actions on a person", () => {
       button: "Ban",
       title: "Ban this person",
       effect:
-        "Ends every session now and refuses the next bank login and any new account, until an admin lifts it.",
+        "Ends every session now and refuses the next bank login and any new account, until an admin lifts it. The bank login, and an email if they confirmed an address, tell them its reason and how to contest it; never the note.",
       reason: "under_age",
       route: BANS,
       body: { reason: "under_age", note: TEXT },

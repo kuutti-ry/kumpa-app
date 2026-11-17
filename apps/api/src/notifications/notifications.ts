@@ -17,7 +17,8 @@ import * as repo from "./repo.ts";
 // sent from here: the senders read the choice (the push of #102, in
 // `push.ts`). A notice is what must reach the person even without a push, the
 // first of them a moderator's warning (ADR-024 §7), the second an invitation
-// of theirs that counted (#107, ADR-044 §9).
+// of theirs that counted (#107, ADR-044 §9); a moderator's shadow ban told
+// to its owner is the sanction's other (#715, ADR-073 §2).
 
 /** Every kind in its order, each on unless the person switched it off. */
 export async function choicesOf(db: Queryable, accountId: string): Promise<NotificationChoice[]> {
@@ -39,14 +40,14 @@ export async function setChoice(
 }
 
 /**
- * One notice as the contract has it: a warning with its reason, a counted
- * invitation with what it earned the person, an announcement with its words
- * in the reader's language (ADR-068 §3).
+ * One notice as the contract has it: a warning or a shadow ban with its
+ * reason, a counted invitation with what it earned the person, an
+ * announcement with its words in the reader's language (ADR-068 §3).
  */
 function noticeOf(row: repo.NoticeRow, locale: string): Notice {
   const base = { id: row.id, at: row.at.toISOString(), readAt: row.readAt?.toISOString() ?? null };
-  if (row.kind === "warning") {
-    // A warning holds its sanction (notice_warning_check), so its reason is there.
+  // A sanction's notice holds its sanction (notice_sanction_check), so its reason is there.
+  if (row.kind === "warning" || row.kind === "shadow_ban") {
     return { ...base, kind: row.kind, reason: row.reason as SanctionReason };
   }
   if (row.kind === "announcement") {
@@ -78,12 +79,16 @@ export async function readNotice(
   }
 }
 
-/** A moderator's warning tells the person in the app (ADR-024 §7), in the warning's transaction. */
-export async function recordWarningNotice(
+/**
+ * A warning and a moderator's shadow ban tell the person in the app (ADR-024
+ * §7, ADR-073 §2), in the sanction's transaction; a suspension and a ban end
+ * the sessions and are told at the bank login.
+ */
+export async function recordSanctionNotice(
   db: Queryable,
-  input: { accountId: string; sanctionId: string; at: Date },
+  input: { accountId: string; kind: "warning" | "shadow_ban"; sanctionId: string; at: Date },
 ): Promise<void> {
-  await repo.insertWarningNotice(db, input);
+  await repo.insertSanctionNotice(db, input);
 }
 
 /** A counted invitation tells its inviter and its friend (ADR-044 §9), in the night's count's transaction. */

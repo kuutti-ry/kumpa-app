@@ -1,5 +1,5 @@
-import type { PlainMessageKey } from "@kuutti/i18n";
-import type { Notice, SanctionReason } from "@kuutti/schema";
+import { sanctionStatement } from "@kuutti/i18n";
+import type { Notice } from "@kuutti/schema";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useRef, useState } from "react";
 import { View } from "react-native";
@@ -10,24 +10,31 @@ import { useT } from "@/lib/locale";
 import { useHapticTap } from "@/theme/haptics";
 import { fetchNotices, markNoticeRead } from "./client";
 
-/** A warning's reason in the words the export gives it (ADR-024 §8). */
-const REASONS: Record<SanctionReason, PlainMessageKey> = {
-  harassment: "account.export.sanction.reason.harassment",
-  misrepresentation: "account.export.sanction.reason.misrepresentation",
-  under_age: "account.export.sanction.reason.under_age",
-  commercial_use: "account.export.sanction.reason.commercial_use",
-  scraping: "account.export.sanction.reason.scraping",
-  other: "account.export.sanction.reason.other",
-};
-
-/** A notice's title and its sentence, from its kind and what it points at; an announcement's are its own. */
-function wordsOf(notice: Notice, t: ReturnType<typeof useT>["t"]): { title: string; body: string } {
+/**
+ * A notice's title, its sentence and, for a sanction, its statement's lines
+ * (#715, ADR-073 §1), from its kind and what it points at; an announcement's
+ * words are its own.
+ */
+function wordsOf(
+  notice: Notice,
+  t: ReturnType<typeof useT>["t"],
+): { title: string; body: string; statement?: string[] } {
   // Kuutti's words to everybody, already in the reader's language (#573, ADR-068 §3).
   if (notice.kind === "announcement") return { title: notice.title, body: notice.body };
+  // A moderator's warning (ADR-024 §7): its reason, the rule and how to contest it.
   if (notice.kind === "warning") {
     return {
       title: t("notices.warning.title"),
-      body: t("notices.warning.body", { reason: t(REASONS[notice.reason]) }),
+      body: t("notices.warning.body"),
+      statement: sanctionStatement(t, notice.reason),
+    };
+  }
+  // A moderator's shadow ban, told at once (ADR-073 §2); a rule's is never told.
+  if (notice.kind === "shadow_ban") {
+    return {
+      title: t("notices.shadowBan.title"),
+      body: t("notices.shadowBan.body"),
+      statement: sanctionStatement(t, notice.reason),
     };
   }
   // What the counted invitation earned the person, never who the other was (ADR-044 §9).
@@ -47,7 +54,8 @@ function wordsOf(notice: Notice, t: ReturnType<typeof useT>["t"]): { title: stri
  * The notices on the home screen (#176, ADR-032): what must reach the person
  * even without a push, the unread ones only, newest first, under a heading of
  * their own; nothing at all when there are none. Today that is a moderator's
- * warning with its reason (ADR-024 §7), an invitation of the person's that
+ * warning (ADR-024 §7) and shadow ban (#715), each with its reason, the
+ * rule it rests on and how to contest it, an invitation of the person's that
  * counted, with what it earned (#107), and an announcement to everybody in
  * its own words (#573). Each has Got it, a button, which marks
  * it read and takes it off the screen; a failure says so and keeps it. Read
@@ -98,6 +106,9 @@ export function Notices() {
           <View key={notice.id} className="gap-2 rounded-lg border border-border p-4">
             <Text className="font-semibold">{words.title}</Text>
             <Text>{words.body}</Text>
+            {words.statement?.map((line) => (
+              <Text key={line}>{line}</Text>
+            ))}
             {failed === notice.id && (
               <Text accessibilityLiveRegion="assertive">{t("load.failed.press")}</Text>
             )}

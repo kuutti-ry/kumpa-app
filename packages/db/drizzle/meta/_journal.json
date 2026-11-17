@@ -71,6 +71,20 @@
       "when": 1794849013210,
       "tag": "0009_no_research_kinds",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794898761216,
+      "tag": "0010_shadow_ban_notice",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1794913810785,
+      "tag": "0011_shadow_ban_review_week",
+      "breakpoints": true
     }
   ]
 }
