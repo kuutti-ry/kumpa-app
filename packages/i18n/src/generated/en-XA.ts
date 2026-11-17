@@ -730,7 +730,7 @@ export const enXA: Readonly<Record<string, string>> = {
   "onboarding.changeFrom": "［Ñééxt çhááñgéé póóššííbléé: {date}.］",
   "onboarding.consents.binding": "［Théé ÉÉñglííšh tééxt ííš théé óóñéé tháát çóóúúñtš; thííš ííš áá trááñšláátííóóñ.］",
   "onboarding.consents.explain": "［Rééáád bóóth. ÝÝóóúú ááççéépt ééxááçtlýý thííš vééršííóóñ óóf ééááçh tééxt; ííf óóñéé çhááñgééš, wéé áášk ýýóóúú áágááííñ.］",
-  "onboarding.consents.fullText": "［Rééáád théé fúúll tééxt óóñ kúúúúttíí.áápp (vééršííóóñ {version})］",
+  "onboarding.consents.fullText": "［Rééáád théé fúúll tééxt óóñ théé wéébšíítéé (vééršííóóñ {version})］",
   "onboarding.consents.outdatedApp": "［Thííš tééxt hááš áá ñééwéér vééršííóóñ thááñ théé óóñéé búúíílt ííñtóó thííš áápp. ÚÚpdáátéé théé áápp tóó çóóñtííñúúéé.］",
   "onboarding.continue": "［Çóóñtííñúúéé］",
   "onboarding.failed": "［Šóómééthííñg dííd ñóót lóóáád. Trýý áágááííñ.］",

@@ -388,7 +388,7 @@ describe("OnboardingScreen", () => {
     ).toBe(true);
     expect(screen.getByText(/special categories of personal data/)).toBeTruthy();
     expect(
-      screen.getByRole("link", { name: `Read the full text on kuutti.app (version ${SPECIAL})` }),
+      screen.getByRole("link", { name: `Read the full text on the website (version ${SPECIAL})` }),
     ).toBeTruthy();
     await press(screen.getByLabelText("I consent to Kuutti ry storing whom I seek"));
     await flush();
@@ -1328,7 +1328,7 @@ describe("OnboardingScreen", () => {
     for (const version of new Set([TERMS, PRIVACY])) {
       expect(
         screen.getAllByRole("link", {
-          name: `Read the full text on kuutti.app (version ${version})`,
+          name: `Read the full text on the website (version ${version})`,
         }),
       ).toHaveLength([TERMS, PRIVACY].filter((v) => v === version).length);
     }

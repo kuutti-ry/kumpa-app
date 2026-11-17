@@ -135,7 +135,7 @@ If a Sentry event shows anything on the list in `sentry-setup.md` ("What Sentry 
 
 ### Evidence
 
-- Database: `aws rds create-db-snapshot --db-instance-identifier kuutti-<env> --db-snapshot-identifier kuutti-<env>-incident-<yyyymmdd>`. A manual snapshot is kept until deleted, outside the 35 days: delete it when the review is done, since it holds people's data.
+- Database: `aws rds create-db-snapshot --db-instance-identifier kuutti-<env> --db-snapshot-identifier kuutti-<env>-incident-<yyyymmdd>`. A manual snapshot is kept until deleted, outside the 35 days: delete it when the review is done, since it holds people's data, and within 35 days of taking it at the latest, the period the privacy policy gives for copies (#190). A review that needs more keeps it in the incident record, as below.
 - Logs: `/kuutti/<env>/api` keeps 30 days. Save the query results the review needs into the incident record (never the advisory or an issue): account ids and request ids, nothing more.
 - The box: every Session Manager session is in `/kuutti/ssm-sessions`. A rebuild destroys the root volume, and with it the containers' files, Docker's volumes and the box's own logs; only CloudWatch, the Dokploy backup and the database outlive it. For a box that may be compromised, snapshot the root volume before the rebuild (Keys and tokens, the box's row).
 
