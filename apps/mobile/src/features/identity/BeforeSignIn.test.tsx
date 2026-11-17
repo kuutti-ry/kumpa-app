@@ -3,6 +3,7 @@ import { fireEvent, screen } from "@testing-library/react-native";
 import { useLocales } from "expo-localization";
 import * as SecureStore from "expo-secure-store";
 import { Linking } from "react-native";
+import { apiBaseUrl } from "@/lib/api-url";
 import { a11yProblems, type HostNode, pressables } from "@/test/a11y";
 import { renderWithTheme } from "@/test/render";
 import { BeforeSignIn, NormsAndConsents } from "./BeforeSignIn";
@@ -58,7 +59,7 @@ describe("BeforeSignIn: the terms and the privacy summary", () => {
     // Both wordings carry the same version today; each card has its own link.
     expect(
       screen.getAllByRole("link", {
-        name: `Read the full text on kuutti.app (version ${TERMS})`,
+        name: `Read the full text on the website (version ${TERMS})`,
       }),
     ).toHaveLength(TERMS === PRIVACY ? 2 : 1);
     expect(screen.getAllByRole("link")).toHaveLength(2);
@@ -76,8 +77,8 @@ describe("BeforeSignIn: the terms and the privacy summary", () => {
     await fireEvent.press(links[0] as (typeof links)[number]);
     await fireEvent.press(links[1] as (typeof links)[number]);
     expect(open.mock.calls.map((call) => call[0])).toEqual([
-      `https://kuutti.app/legal/terms/#terms-${TERMS}`,
-      `https://kuutti.app/legal/privacy/#privacy-${PRIVACY}`,
+      `${apiBaseUrl()}/legal/terms#terms-${TERMS}`,
+      `${apiBaseUrl()}/legal/privacy#privacy-${PRIVACY}`,
     ]);
     // Reading the full text is no answer: the screen stays where it was.
     expect(screen.getByRole("button", { name: "I'm in, and I accept both" })).toBeTruthy();

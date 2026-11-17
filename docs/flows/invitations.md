@@ -101,7 +101,7 @@ flowchart TB
     s17{"Which phone asks?"}
     s18["Sends an iPhone or iPad to the App Store"]
     s19["Sends an Android phone to Play, the code with it"]
-    s20["Sends anything else, or a phone whose store is not out yet, to kuutti.app"]
+    s20["Sends anything else, or a phone whose store is not out yet, to the website, kumpa.fi"]
     s23{"May the friend still use a code?"}
     s27{"Tries left today, by invitation_tries_per_day?"}
     s29{"May the friend still use a code, checked again?"}
@@ -142,9 +142,9 @@ flowchart TB
 
 16. The friend taps the link in the message.
 17. The API looks at which phone asks, by the request's User-Agent alone. The code is never looked up, so every code gets the same answer, and nothing is kept. iPhone or iPad: 18. Android: 19. Anything else: 20.
-18. An iPhone or an iPad goes to the App Store, or to kuutti.app while the store's listing is not out (#193). The App Store carries nothing through an install, so the friend will type the code (25). Then 22.
-19. An Android phone goes to Play, the code with it as the install referrer, which Play hands the app at its first start; or to kuutti.app while the listing is not out. Then 21.
-20. Anything else goes to kuutti.app, whose page has both stores. Then 22.
+18. An iPhone or an iPad goes to the App Store, or to the website, kumpa.fi, while the store's listing is not out (#193). The App Store carries nothing through an install, so the friend will type the code (25). Then 22.
+19. An Android phone goes to Play, the code with it as the install referrer, which Play hands the app at its first start; or to kumpa.fi while the listing is not out. Then 21.
+20. Anything else goes to kumpa.fi, whose page has both stores. Then 22.
 21. The app takes the code from the link by itself: not built yet, #184's native batch. Today nothing reads it, and the friend will type the code (25). Then 22.
 22. The friend gets the app, accepts the terms and the privacy summary, and signs in with their bank ([Signing in](sign-in.md), [Onboarding](onboarding.md)).
 23. Onboarding asks the API whether the friend may still use a code: their profile and onboarding are not complete, their identity has never had an account deleted, they have used no code before, and they have given the current terms and privacy consents. Yes: 25. No, or the question could not be answered: 24.
@@ -229,3 +229,4 @@ flowchart TB
 - 2026-11-04 (#581, PR #590): Invitations loses its opening line and its count of friends who finished; its button is "Create an invitation".
 - 2026-11-07 (#574, PR #642): the shared message carries one link with the code, which sends a phone to its store and anything else to the website.
 - 2026-11-16 (#700, PR #701): the invitation's message and the line under the code name the app Kumpa.
+- 2026-11-17 (#208): the website the link sends a computer to, or a phone whose store is not out, is kumpa.fi, the site's home since that day.

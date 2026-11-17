@@ -46,21 +46,21 @@ const SITE = {
     version: "2026-09-draft-1",
     hash: "65b7fa7d00ed9290",
     language: "en",
-    url: "https://kuutti.app/legal/terms/#terms-2026-09-draft-1",
+    url: "https://kumpa.fi/legal/terms/#terms-2026-09-draft-1",
     dated: "2026-10-01",
   },
   privacy: {
     version: "2026-09-draft-1",
     hash: "422ac16a1df3d859",
     language: "en",
-    url: "https://kuutti.app/legal/privacy/#privacy-2026-09-draft-1",
+    url: "https://kumpa.fi/legal/privacy/#privacy-2026-09-draft-1",
     dated: "2026-10-06",
   },
   special_category: {
     version: "2026-10-draft-2",
     hash: SENSITIVE_EN,
     language: "en",
-    url: "https://kuutti.app/legal/privacy/#special_category-2026-10-draft-2",
+    url: "https://kumpa.fi/legal/privacy/#special_category-2026-10-draft-2",
     dated: "2026-10-08",
   },
 };
@@ -81,7 +81,7 @@ describe("parsePublished", () => {
       version: "2026-10-draft-2",
       hash: SENSITIVE_EN,
       language: "en",
-      url: "https://kuutti.app/legal/privacy/#special_category-2026-10-draft-2",
+      url: "https://kumpa.fi/legal/privacy/#special_category-2026-10-draft-2",
     });
   });
 
@@ -109,13 +109,13 @@ describe("fetchPublished", () => {
     const fetchImpl = vi.fn(async () => new Response(JSON.stringify(SITE)));
     await expect(fetchPublished(fetchImpl)).resolves.toEqual(published());
     expect(fetchImpl).toHaveBeenCalledWith(
-      "https://kuutti.app/legal/versions.json",
+      "https://kumpa.fi/legal/versions.json",
       expect.objectContaining({
         headers: { accept: "application/json" },
         signal: expect.any(AbortSignal),
       }),
     );
-    expect(VERSIONS_URL).toBe("https://kuutti.app/legal/versions.json");
+    expect(VERSIONS_URL).toBe("https://kumpa.fi/legal/versions.json");
   });
 
   it("fails on a 404, so a site that has not published the file is never a pass", async () => {
@@ -205,11 +205,11 @@ describe("legalVersionProblems", () => {
     site.privacy = {
       ...SITE.privacy,
       version: "2026-11-1",
-      url: "https://kuutti.app/legal/privacy/#privacy-2026-11-1",
+      url: "https://kumpa.fi/legal/privacy/#privacy-2026-11-1",
     };
     expect(legalVersionProblems(APP, site, TEXTS)).toEqual([
       expect.stringMatching(
-        /^privacy: the app carries 2026-09-draft-1, the site publishes 2026-11-1 \(https:\/\/kuutti\.app\/legal\/privacy\/#privacy-2026-11-1\)\. The site's text leads/,
+        /^privacy: the app carries 2026-09-draft-1, the site publishes 2026-11-1 \(https:\/\/kumpa\.fi\/legal\/privacy\/#privacy-2026-11-1\)\. The site's text leads/,
       ),
     ]);
   });
@@ -240,15 +240,15 @@ describe("legalVersionProblems", () => {
     site.terms = {
       ...SITE.terms,
       version: "2026-09-draft-1",
-      url: "https://kuutti.app/fi/legal/terms/#terms-2026-09-draft-1",
+      url: "https://kumpa.fi/fi/legal/terms/#terms-2026-09-draft-1",
     };
     expect(legalVersionProblems(APP, site, TEXTS)).toEqual([
-      "terms: the app links to https://kuutti.app/legal/terms/#terms-2026-09-draft-1, the site publishes the text at https://kuutti.app/fi/legal/terms/#terms-2026-09-draft-1",
+      "terms: the app links to https://kumpa.fi/legal/terms/#terms-2026-09-draft-1, the site publishes the text at https://kumpa.fi/fi/legal/terms/#terms-2026-09-draft-1",
     ]);
   });
 
   it("fails on a kind both carry that the app has no page for", () => {
-    const police = { ...SITE.terms, version: "1", url: "https://kuutti.app/x" };
+    const police = { ...SITE.terms, version: "1", url: "https://kumpa.fi/x" };
     const site = { ...published(), police };
     expect(legalVersionProblems({ ...APP, police: "1" }, site, TEXTS)).toEqual([
       "police: the app has no page for it to link to (src/legal.ts)",
@@ -335,7 +335,7 @@ describe("legalVersionProblems", () => {
     site.special_category = {
       ...SITE.special_category,
       hash: "72a206b59f5659c5",
-      url: "https://kuutti.app/legal/special_category/",
+      url: "https://kumpa.fi/legal/special_category/",
     };
     expect(legalVersionProblems(APP, site, TEXTS)).toEqual([
       expect.stringMatching(/^special_category: the app links to /),

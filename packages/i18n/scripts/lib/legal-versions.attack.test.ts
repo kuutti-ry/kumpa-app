@@ -28,13 +28,13 @@ const SITE: Published = {
     version: "2026-09-draft-1",
     hash: "65b7fa7d00ed9290",
     language: "en",
-    url: "https://kuutti.app/legal/terms/#terms-2026-09-draft-1",
+    url: "https://kumpa.fi/legal/terms/#terms-2026-09-draft-1",
   },
   special_category: {
     version: "2026-10-draft-2",
     hash: siteFingerprint(FI["legal.special_category.title"], FI["legal.special_category.summary"]),
     language: "fi",
-    url: "https://kuutti.app/legal/privacy/#special_category-2026-10-draft-2",
+    url: "https://kumpa.fi/legal/privacy/#special_category-2026-10-draft-2",
   },
 };
 const sensitive = SITE.special_category as Published[string];
