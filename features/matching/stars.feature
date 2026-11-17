@@ -83,7 +83,7 @@ Feature: A star: somebody marked for later, without a like or a pass
   Scenario: A card of a day that has ended takes no star
     Given "A" holds "B"'s card from yesterday
     When "A" stars it
-    Then the answer is round_expired
+    Then the answer is day_ended
 
   Scenario: Another person's card is out of reach
     Given "A" has "B" at the first place of today's queue, and "C" has no queue

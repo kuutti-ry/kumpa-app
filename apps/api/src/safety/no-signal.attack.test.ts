@@ -39,8 +39,8 @@ const UNSEEN: [string, Reader, string, string, string?][] = [
   [
     "a block read in a DELETE's USING",
     readsBlock,
-    "db.query(`DELETE FROM round_entries e USING block b WHERE b.id = e.id`)",
-    "db.query(`DELETE FROM round_entries e USING session s WHERE s.id = e.id`)",
+    "db.query(`DELETE FROM queue_entry e USING block b WHERE b.id = e.id`)",
+    "db.query(`DELETE FROM queue_entry e USING session s WHERE s.id = e.id`)",
   ],
   [
     "a block read FROM ONLY",

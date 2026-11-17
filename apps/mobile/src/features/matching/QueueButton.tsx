@@ -7,7 +7,7 @@ import { useHapticTap } from "@/theme/haptics";
  * The way to the queue (#379, ADR-062 §14), on the home screen's gate card once
  * matching is open for the person (#94). Its word only: no count, no time.
  */
-export function RoundButton() {
+export function QueueButton() {
   const { t } = useT();
   const router = useRouter();
   const tap = useHapticTap();
@@ -15,10 +15,10 @@ export function RoundButton() {
     <Button
       onPress={() => {
         tap();
-        router.push("/round");
+        router.push("/queue");
       }}
     >
-      {t("round.home.open")}
+      {t("queue.home.open")}
     </Button>
   );
 }

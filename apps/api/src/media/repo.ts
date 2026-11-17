@@ -221,7 +221,7 @@ export async function wasShown(
   // shown photos were all deleted since (an erasure, a new set, M4's sweep of
   // old rows, ADR-008 §3) can no longer be blocked or reported from that card,
   // and a first try answers 404 where a paused person's answers 204 (ADR-030
-  // §5, §6); a record of the contact that outlives the photos, or the round's
+  // §5, §6); a record of the contact that outlives the photos, or the queue's
   // own (#96), lifts it.
   const { rows } = await db.query<{ shown: boolean }>(
     `SELECT EXISTS (SELECT 1 FROM card_shown s JOIN photo p ON p.id = s.photo_id
@@ -276,7 +276,7 @@ export type CardServed = {
  * A block between the two writes nothing (#84, ADR-030 §2): asked in this
  * statement, so a block that lands after the card builder's own look is
  * still honoured where the record is written. Nor does a viewer erased
- * meanwhile (#96: today's round builds its cards one after another): the
+ * meanwhile (#96: today's queue builds its cards one after another): the
  * viewer's row is held FOR SHARE, so an erasure in flight finishes first and
  * the tombstone is seen. The viewer's account id is in
  * every branch (rule 6); the photo ids are the card the server built, never

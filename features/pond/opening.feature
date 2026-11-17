@@ -14,11 +14,11 @@ Feature: A pond opens when an admin opens it
   Scenario: Matching opens in a pond when an admin opens it, and not before
     Given a pond nobody has opened, with thirty-one people who all fit
     When each of them reads the queue
-    Then nobody has a round, and each is told that it has not opened yet
+    Then nobody has a queue, and each is told that it has not opened yet
     When an admin opens the pond
     Then each is told that matching is open
     When each of them reads the queue
-    Then each has a round
+    Then each has a queue
 
   Scenario Outline: A person is told one of three things
     Given a person who is <person> in a pond that is <pond>
@@ -35,19 +35,19 @@ Feature: A pond opens when an admin opens it
   Scenario: Only a finished profile and current consents count
     Given an open pond with a person whose profile lacks its photos, one whose consent is for an older wording, a shadow-banned one and a paused one
     When each of them reads the queue
-    Then none of them is a card in anybody's round
-    And the shadow-banned person has a round of their own, like anybody
+    Then none of them is a card in anybody's queue
+    And the shadow-banned person has a queue of their own, like anybody
 
   Scenario: Another person's state is never served
     Given two people in an open pond, one finished and one not
     When each asks
     Then each is told their own, and naming the other in the request changes nothing
 
-  Scenario: Closing a pond opens no new round and ends no conversation
-    Given an open pond where "A" has today's round and a conversation
+  Scenario: Closing a pond opens no new queue and ends no conversation
+    Given an open pond where "A" has today's queue and a conversation
     When an admin closes the pond
-    Then "A" reads today's round and the conversation as they were, and is told that matching has not opened
-    And the next day's read opens "A" no round
+    Then "A" reads today's queue and the conversation as they were, and is told that matching has not opened
+    And the next day's read opens "A" no queue
 
   Scenario: The switch is written to the audit log once, with no words
     Given a pond nobody has opened

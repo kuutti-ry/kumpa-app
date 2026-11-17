@@ -15,7 +15,7 @@ Never inflect a dynamic value: `in {name}` and `{name}ssa` fail the check. A sen
 
 `fi-x-stadi` is Stadin slangi, a made-up language beside the real ones, marked as one in `FICTIONAL_LOCALES` (`src/locales.ts`). It stays out of `RELEASED_LOCALES`, and a person only reaches it by choosing it in the app.
 
-A key may carry a `slangi:` text with `machine: { slangi: true }`. A key without one is the Finnish text, so nothing is ever missing, and `pnpm i18n:translate` never fills it. `pnpm i18n:check` refuses a `slangi:` text outside `isSlangKey` (`scripts/lib/schema.ts`): it stands in the round, home, the profile editor and settings, never on a failure, consent, a person's data, safety, a session or an answer that says who somebody is. Keep it kind, never mocking, and use no gendered word (kundi, friidu, mimmi): gender in Kuutti is self-declared.
+A key may carry a `slangi:` text with `machine: { slangi: true }`. A key without one is the Finnish text, so nothing is ever missing, and `pnpm i18n:translate` never fills it. `pnpm i18n:check` refuses a `slangi:` text outside `isSlangKey` (`scripts/lib/schema.ts`): it stands in the queue, home, the profile editor and settings, never on a failure, consent, a person's data, safety, a session or an answer that says who somebody is. Keep it kind, never mocking, and use no gendered word (kundi, friidu, mimmi): gender in Kuutti is self-declared.
 
 ## The native review (#55)
 

@@ -21,14 +21,14 @@ home:
 distance bands:
   definition: How far another person lives, always one of four words, nearest first - Nearby, Close, Around, Far. They stand alone on a card and on the buttons of a filter, and never mean a number of kilometres, which is a setting behind them. Far says only that; it must not read as a judgement of the person.
 
-round:
-  definition: A member's queue of profiles for the day, read one card at a time, as far as they like, and the day's record of it. It has no fixed size and it ends; there is no feed. The word should sound finite and calm.
+queue:
+  definition: The profiles a member meets, read one card at a time, as far as they like, and each day's record of it. It has no fixed size and it ends; there is no feed. The word should sound finite and calm.
 
 like:
   definition: Telling the app you would like to talk to someone. A noun and a verb in English; never a score, never a count shown to others.
 
 pass:
-  definition: Deciding not to talk to someone in this round. Neutral and kind; it must not read as rejection or as a judgement of the other person.
+  definition: Deciding not to talk to someone in this queue. Neutral and kind; it must not read as rejection or as a judgement of the other person.
 
 star:
   definition: A private mark a member puts on somebody's card, to come back to them later without a like or a pass. Only the member sees it; a bookmark, never a rating or a super like. Starred means having one.

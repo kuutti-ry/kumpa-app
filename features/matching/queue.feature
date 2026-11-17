@@ -1,9 +1,9 @@
-# features/matching/rounds.feature
+# features/matching/queue.feature
 Feature: The queue: whom it holds and in which order
   One queue to the end of the pool (#502, ADR-062; the maintainer, 29/10/2026
   and 01/11/2026). A person reads everybody who fits them, one card at a time,
   as far as they like. Nothing is built at night: the first read of a Finnish
-  day opens the day's log, its round, and a read that finds nothing left to go
+  day opens the day's log, its queue, and a read that finds nothing left to go
   through adds the next people, ten at a time. The cards are people of the same
   pond who are complete and seen by others, in each other's pool both ways
   (filters.feature). First come the people whose like waits on the person
@@ -24,7 +24,7 @@ Feature: The queue: whom it holds and in which order
   Scenario: Only somebody complete in an open pond opens a day
     Given "A" and "C" complete, and "B" whose profile lacks its photos
     When "C" reads the queue before matching has opened, and "A" and "B" read it once it has
-    Then "A" has today's round, and "B" and "C" have none
+    Then "A" has today's queue, and "B" and "C" have none
 
   Scenario: A read with undecided cards adds nobody
     Given "A" has twelve people in their pool and has read ten cards, nine of them decided
@@ -72,12 +72,12 @@ Feature: The queue: whom it holds and in which order
   Scenario: Nobody to show makes an empty queue, never a filler
     Given "A" whose matching has opened and nobody in their pool
     When "A" reads the queue
-    Then "A" has today's round with no cards
+    Then "A" has today's queue with no cards
 
-  Scenario: A person whose matching has not opened reads no round
+  Scenario: A person whose matching has not opened reads no queue
     Given "A" complete in a pond nobody has opened
     When "A" reads the queue
-    Then the day has no round, and none is written
+    Then the day has no queue, and none is written
 
   # Seen means displayed or decided (ADR-062 §2): an entry queued and never
   # displayed is nothing, and the day's first read deletes the person's own such
@@ -192,7 +192,7 @@ Feature: The queue: whom it holds and in which order
   Scenario: The sender learns nothing of what became of a like
     Given "B" liked "A" yesterday, and "B" has read today's queue
     When "A" passes "B"
-    Then what "B" reads of their own queue and of their rounds' history is as it was
+    Then what "B" reads of their own queue and of their queue days' history is as it was
 
   # The inbox stop (ADR-062 §4; the maintainer, 29/10/2026 and 01/11/2026): the
   # most-liked people's likes pile up and die unread, so somebody with
@@ -303,13 +303,13 @@ Feature: The queue: whom it holds and in which order
     When "A" reads the queue
     Then "A"'s queue is "C", then "D", each labelled seen before
 
-  Scenario: Every entry is written with its band, whichever way it came into the round
-    Given "A"'s round holds somebody new, somebody whose like waited, somebody seen before and somebody a relaxation let in
+  Scenario: Every entry is written with its band, whichever way it came into the queue
+    Given "A"'s queue holds somebody new, somebody whose like waited, somebody seen before and somebody a relaxation let in
     When "A" reads the queue
     Then each entry says the band between the two homes as they stood when it was written
 
   Scenario: An entry keeps its band, so moving home and reading again says nothing new
-    Given "A"'s round holds "B" as close
+    Given "A"'s queue holds "B" as close
     When "A" moves next door to "B", then "B" moves far away, and "A" reads the queue after each move
     Then "B"'s entry says close every time
 
@@ -319,7 +319,7 @@ Feature: The queue: whom it holds and in which order
     Then today's entries and their order are as they were
     And the next day's read measures from the new home with the new edge
 
-  Scenario: Only a round's entry says a band, and as a word
-    Given "A"'s round holds "B"
+  Scenario: Only a queue's entry says a band, and as a word
+    Given "A"'s queue holds "B"
     When "A" reads the queue and previews their own card
     Then "B"'s entry says a band, neither card says one, and no answer holds a distance in kilometres

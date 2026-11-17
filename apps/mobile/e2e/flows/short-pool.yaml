@@ -7,11 +7,11 @@
 # Nothing is tapped, and reading the offers relaxes nothing (a relaxation and its
 # undo are jest's and the API's). The deal-breaker and the answer are taken back,
 # so Riikka ends as the stories have it.
-# Riikka is a card of Iida's round, since only those five have anybody a filter can
+# Riikka is a card of Iida's queue, since only those five have anybody a filter can
 # leave out, and Iida's four are in Iida's log of the day from the reset on, where
 # no offer can add them. A card has no short button at the mock bank, hence
-# PERSONA_ON_CARD. The flow runs after `round`, so that one stopping half-way
-# cannot take a card from it, and it holds whatever `round` did: Iida has not
+# PERSONA_ON_CARD. The flow runs after `queue`, so that one stopping half-way
+# cannot take a card from it, and it holds whatever `queue` did: Iida has not
 # answered smoking either, and the others are still left out. A run that stops
 # half-way leaves the filter on Riikka: `pnpm demo:reset` first.
 appId: fi.kuutti.app
@@ -70,7 +70,7 @@ name: With few people left, the queue's end offers the deal-breakers to relax fo
     timeout: 15000
 
 # The end of the queue, and under it the offers, read a moment after.
-- openLink: kuutti://round
+- openLink: kuutti://queue
 - extendedWaitUntil:
     visible: "That's everybody for now\\.|Siinä kaikki tällä erää\\.|Det var alla för tillfället\\."
     timeout: 15000

@@ -22,7 +22,7 @@ const PILE: Record<string, string> = {
   "end-suspensions": "safety/sanctions.attack.test.ts",
   "pond-counter": "jobs/pond-counter.attack.test.ts",
   "invitation-count": "jobs/invitation-count.attack.test.ts",
-  "prune-rounds": "matching/rounds.attack.test.ts",
+  "prune-queue-days": "matching/queue.attack.test.ts",
   "reject-unreviewed-photos": "media/unreviewed-photos.attack.test.ts",
   "prune-photo-check-notes": "safety/photo-check.attack.test.ts",
   "prune-photo-access": "media/access-prune.attack.test.ts",

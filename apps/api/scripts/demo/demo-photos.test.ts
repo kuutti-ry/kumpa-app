@@ -115,7 +115,7 @@ describe("the stories' photos in their conversations (#350)", () => {
     async ({ ctx }) => {
       const assets = await release();
       const { writer, store, media, logger } = await world(ctx, assets);
-      // The round's cast (#379) has no conversation: its eleven faces through
+      // The queue's cast (#379) has no conversation: its eleven faces through
       // the pipeline would only spend the test's time.
       const results = await giveStories(writer, ["iida", "henna", "katja", "minna", "riikka"]);
       await giveConversations(ctx.client, results, new Date());

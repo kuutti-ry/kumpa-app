@@ -24,7 +24,7 @@ export const SanctionRule = z
     "same_first_message",
     "photo_fetches",
     "cards_served",
-    "round_reads",
+    "queue_reads",
   ])
   .meta({ id: "SanctionRule" });
 export type SanctionRule = z.infer<typeof SanctionRule>;

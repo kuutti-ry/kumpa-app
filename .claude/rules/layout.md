@@ -33,7 +33,7 @@ The same name appears in the same form wherever the feature has a part:
 features/matching/*.feature             spec (Gherkin, rules layer only)
 packages/schema/src/matching.ts         zod contracts, the only shared code
 packages/db/src/schema/matching.ts      tables
-apps/api/src/matching/                  the work: routes.ts, round-routes.ts, rounds.ts, pool.ts, index.ts, *.test.ts
+apps/api/src/matching/                  the work: routes.ts, queue-routes.ts, queue.ts, pool.ts, index.ts, *.test.ts
 apps/mobile/src/features/matching/      components, hooks, queries
 apps/admin/src/features/matching/       only if moderation touches it
 ```
@@ -44,7 +44,7 @@ The seam between apps is shared vocabulary and one shared contract, never shared
 
 ```
 apps/api/src/
-  <slice>/      routes.ts or <topic>-routes.ts, a file per job (rounds.ts, sanctions.ts), repo.ts where the slice keeps its SQL apart, index.ts, *.test.ts
+  <slice>/      routes.ts or <topic>-routes.ts, a file per job (queue.ts, sanctions.ts), repo.ts where the slice keeps its SQL apart, index.ts, *.test.ts
   lib/          db.ts  config.ts  logger.ts  s3.ts  ssm.ts  auth-middleware.ts
   jobs/         the nightly runner, and what reads across slices: the pond counter and the invitation count, who of a pond is complete, the queue's builder, the Starred list. A slice's own sweep stays in its slice
   app.ts

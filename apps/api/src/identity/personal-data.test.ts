@@ -177,6 +177,9 @@ const REGISTER: Record<string, Entry> = {
   },
   profile: { erasure: "goes", by: "eraseProfileOfAccount", exported: ["profile"] },
   push_token: { erasure: "goes", by: "erasePushTokensOf", exported: ["sessions"] },
+  queue_day: { erasure: "goes", by: "eraseQueueOf", exported: ["queue"] },
+  queue_entry: { erasure: "goes", by: "eraseQueueOf", exported: ["queue"] },
+  queue_relaxation: { erasure: "goes", by: "eraseQueueOf", exported: ["queue"] },
   report: {
     erasure: "stays",
     why: "Twelve months from filing, whoever of the two is erased (ADR-030 §8).",
@@ -191,9 +194,6 @@ const REGISTER: Record<string, Entry> = {
     exported: { not: "In nobody's export, the reporter's included (ADR-030 §12)." },
   },
   reward: { erasure: "goes", by: "eraseInvitationsOf", exported: ["invitations"] },
-  round_entries: { erasure: "goes", by: "eraseRoundsOf", exported: ["rounds"] },
-  round_relaxation: { erasure: "goes", by: "eraseRoundsOf", exported: ["rounds"] },
-  rounds: { erasure: "goes", by: "eraseRoundsOf", exported: ["rounds"] },
   sanction: {
     erasure: "stays",
     why: "Only the open bans and suspensions, which carry the identity's standing (ADR-024 §8).",

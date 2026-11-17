@@ -1,4 +1,4 @@
-import type { ProfileCard, RoundEntry, RoundResponse } from "@kuutti/schema";
+import type { ProfileCard, QueueEntry, QueueResponse } from "@kuutti/schema";
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react-native";
 import { useLocales } from "expo-localization";
 import * as SecureStore from "expo-secure-store";
@@ -9,7 +9,7 @@ import { FAILED_TO_LOAD } from "@/test/failed";
 import { textsInOrder as said } from "@/test/layout";
 import { renderWithTheme, underProviders } from "@/test/render";
 import { TOUCH_TARGET } from "@/theme/a11y";
-import { RoundScreen } from "./RoundScreen";
+import { QueueScreen } from "./QueueScreen";
 
 // The queue on the phone (#379, #502, ADR-034, ADR-062): one card at a time
 // with its reason, like, pass and Later as buttons, Undo on the last decision,
@@ -24,8 +24,8 @@ import { RoundScreen } from "./RoundScreen";
 
 const {
   __router: router,
-  __focus: focusRound,
-  __blur: blurRound,
+  __focus: focusQueue,
+  __blur: blurQueue,
 } = jest.requireMock("expo-router") as {
   __router: { push: jest.Mock; back: jest.Mock };
   __focus: () => void;
@@ -44,7 +44,7 @@ const noContent = () => new Response(null, { status: 204 });
 
 const DAY = "2026-10-20";
 const NEXT_DAY = "2026-10-21";
-/** 12:00 in Finland on DAY: a test that brings the round back in sight sets the phone's clock. */
+/** 12:00 in Finland on DAY: a test that brings the queue back in sight sets the phone's clock. */
 const NOON = Date.parse("2026-10-20T09:00:00Z");
 const CONVERSATION = "3f9a2c1e-5b7d-4f01-8a2b-1c3d4e5f6a70";
 const PHOTO = "0b1c1c4e-9a8e-4a0b-9c3a-0c8d1e2f3a01" as ProfileCard["photos"][number]["id"];
@@ -67,9 +67,9 @@ function card(n: number, name: string): ProfileCard {
 const entry = (
   position: number,
   name: string,
-  reason: RoundEntry["reason"] = "matches_filters",
-  decision: RoundEntry["decision"] = null,
-): RoundEntry => ({
+  reason: QueueEntry["reason"] = "matches_filters",
+  decision: QueueEntry["decision"] = null,
+): QueueEntry => ({
   position,
   reason,
   decision,
@@ -78,7 +78,7 @@ const entry = (
   star: null,
 });
 
-const ROUND: RoundResponse = {
+const READ: QueueResponse = {
   day: DAY,
   entries: [entry(1, "Henna", "liked_you"), entry(2, "Katja"), entry(4, "Minna", "seen_before")],
   fishToSend: true,
@@ -90,10 +90,10 @@ type Call = { method: string; path: string; body: unknown };
 type Answer = (call: Call) => Response | Promise<Response> | undefined;
 /**
  * The API as the screen sees it: `answer` first, then the defaults (the first
- * read `round` and any later one the queue's end, a seen recorded, a decision
+ * read `read` and any later one the queue's end, a seen recorded, a decision
  * with no match, a block done).
  */
-function api(answer: Answer = () => undefined, round: RoundResponse = ROUND) {
+function api(answer: Answer = () => undefined, read: QueueResponse = READ) {
   const calls: Call[] = [];
   globalThis.fetch = jest.fn(async (input: Request | string, init?: RequestInit) => {
     const request = input instanceof Request ? input : new Request(input, init);
@@ -106,9 +106,9 @@ function api(answer: Answer = () => undefined, round: RoundResponse = ROUND) {
     calls.push(call);
     const given = await answer(call);
     if (given) return given;
-    if (call.path === "/rounds/today") {
-      const first = calls.filter((c) => c.path === "/rounds/today").length === 1;
-      return json(first ? round : { ...round, entries: [] });
+    if (call.path === "/queue/today") {
+      const first = calls.filter((c) => c.path === "/queue/today").length === 1;
+      return json(first ? read : { ...read, entries: [] });
     }
     if (call.path.endsWith("/seen")) return noContent();
     if (call.path.endsWith("/decision"))
@@ -127,13 +127,13 @@ function api(answer: Answer = () => undefined, round: RoundResponse = ROUND) {
         ),
     seen: () =>
       calls.filter((c) => c.path.endsWith("/seen")).map((c) => Number(c.path.split("/")[4])),
-    reads: () => calls.filter((c) => c.path === "/rounds/today").length,
+    reads: () => calls.filter((c) => c.path === "/queue/today").length,
   };
 }
 
 const settle = () => act(() => new Promise<void>((resolve) => setTimeout(resolve, 20)));
 const show = async () => {
-  await renderWithTheme(<RoundScreen />);
+  await renderWithTheme(<QueueScreen />);
   await settle();
 };
 const press = async (name: string) => {
@@ -290,11 +290,11 @@ describe("the queue", () => {
   it("reads the queue again when a decision finds that the day ended, and says so", async () => {
     let reads = 0;
     const sent = api((call) => {
-      if (call.path === "/rounds/today") {
+      if (call.path === "/queue/today") {
         reads += 1;
         return json(
           reads === 1
-            ? ROUND
+            ? READ
             : {
                 day: NEXT_DAY,
                 entries: [entry(1, "Riikka")],
@@ -304,8 +304,8 @@ describe("the queue", () => {
               },
         );
       }
-      if (call.path.startsWith(`/rounds/${DAY}/`) && call.path.endsWith("/decision")) {
-        return refusal("round_expired", 409);
+      if (call.path.startsWith(`/queue/${DAY}/`) && call.path.endsWith("/decision")) {
+        return refusal("day_ended", 409);
       }
       return undefined;
     });
@@ -320,11 +320,11 @@ describe("the queue", () => {
   it("reads the queue again when a card's seen report finds that the day ended, with no word, the reader taken to the new card (#581)", async () => {
     let reads = 0;
     const sent = api((call) => {
-      if (call.path === "/rounds/today") {
+      if (call.path === "/queue/today") {
         reads += 1;
         return json(
           reads === 1
-            ? ROUND
+            ? READ
             : {
                 day: NEXT_DAY,
                 entries: [entry(1, "Riikka")],
@@ -334,7 +334,7 @@ describe("the queue", () => {
               },
         );
       }
-      if (call.path === `/rounds/${DAY}/entries/1/seen`) return refusal("round_expired", 409);
+      if (call.path === `/queue/${DAY}/entries/1/seen`) return refusal("day_ended", 409);
       return undefined;
     });
     await show();
@@ -348,10 +348,10 @@ describe("the queue", () => {
   });
 
   it("says that liking back a liked-you card is a match, and leads to the conversation", async () => {
-    // Back from the conversation on the round's own day, which reads nothing anew.
+    // Back from the conversation on the queue's own day, which reads nothing anew.
     jest.spyOn(Date, "now").mockReturnValue(NOON);
     const sent = api((call) =>
-      call.path === `/rounds/${DAY}/entries/1/decision`
+      call.path === `/queue/${DAY}/entries/1/decision`
         ? json({
             match: { conversationId: CONVERSATION },
             fishToSend: true,
@@ -375,21 +375,21 @@ describe("the queue", () => {
 
     await press("Go to the conversation");
     expect(router.push).toHaveBeenCalledWith(`/chats/${CONVERSATION}`);
-    // The conversation covers the round, which stays mounted under it: the
+    // The conversation covers the queue, which stays mounted under it: the
     // match stays in front of the next card, neither shown nor reported seen.
-    await act(async () => blurRound());
+    await act(async () => blurQueue());
     await settle();
     expect(heading("It's a match")).toBeTruthy();
     expect(screen.queryByRole("heading", { name: "Katja, 32" })).toBeNull();
     expect(sent.seen()).toEqual([1]);
-    // Back from the conversation, the round goes on, the next card reported once.
-    await act(async () => focusRound());
+    // Back from the conversation, the queue goes on, the next card reported once.
+    await act(async () => focusQueue());
     await settle();
     expect(heading("Katja, 32")).toBeTruthy();
     expect(sent.seen()).toEqual([1, 2]);
     await act(async () => {
-      blurRound();
-      focusRound();
+      blurQueue();
+      focusQueue();
     });
     await settle();
     expect(heading("Katja, 32")).toBeTruthy();
@@ -448,7 +448,7 @@ describe("the queue", () => {
 
   it("says that a like which made a match stays, when changing it is refused, and goes on", async () => {
     api((call) =>
-      call.path === `/rounds/${DAY}/entries/2/decision` &&
+      call.path === `/queue/${DAY}/entries/2/decision` &&
       (call.body as { decision: string }).decision === "pass"
         ? refusal("match_made", 409)
         : undefined,
@@ -607,7 +607,7 @@ describe("the queue", () => {
 
   it("takes a card that was liked into a match elsewhere as liked, when its first decision here is refused", async () => {
     api((call) =>
-      call.path === `/rounds/${DAY}/entries/1/decision` ? refusal("match_made", 409) : undefined,
+      call.path === `/queue/${DAY}/entries/1/decision` ? refusal("match_made", 409) : undefined,
     );
     await show();
     await press("Pass");
@@ -634,7 +634,7 @@ describe("the queue", () => {
 
   it("takes a card that is gone meanwhile off the screen, and says so", async () => {
     api((call) =>
-      call.path === `/rounds/${DAY}/entries/1/decision` ? refusal("not_found", 404) : undefined,
+      call.path === `/queue/${DAY}/entries/1/decision` ? refusal("not_found", 404) : undefined,
     );
     await show();
     await press("Like");
@@ -645,7 +645,7 @@ describe("the queue", () => {
 
   it("takes a card off the screen when its seen report finds it gone", async () => {
     const sent = api((call) =>
-      call.path === `/rounds/${DAY}/entries/2/seen` ? refusal("not_found", 404) : undefined,
+      call.path === `/queue/${DAY}/entries/2/seen` ? refusal("not_found", 404) : undefined,
     );
     await show();
     await press("Like");
@@ -660,7 +660,7 @@ describe("the queue", () => {
 
   it("takes a card brought back by Undo off the screen when it is gone meanwhile, and goes on", async () => {
     api((call) =>
-      call.path === `/rounds/${DAY}/entries/1/decision` &&
+      call.path === `/queue/${DAY}/entries/1/decision` &&
       (call.body as { decision: string }).decision === "pass"
         ? refusal("not_found", 404)
         : undefined,
@@ -693,18 +693,18 @@ describe("the queue", () => {
 
   /**
    * The old day's card 1 waits on its seen report while a like finds the day
-   * ended and the new day's round, with its own card 1, is read; then the
+   * ended and the new day's queue, with its own card 1, is read; then the
    * report answers.
    */
   const lateSeen = (late: () => Response) => {
     let answer = () => {};
     let reads = 0;
     const sent = api((call) => {
-      if (call.path === "/rounds/today") {
+      if (call.path === "/queue/today") {
         reads += 1;
         return json(
           reads === 1
-            ? ROUND
+            ? READ
             : {
                 day: NEXT_DAY,
                 entries: [entry(1, "Riikka")],
@@ -714,13 +714,13 @@ describe("the queue", () => {
               },
         );
       }
-      if (call.path === `/rounds/${DAY}/entries/1/seen`) {
+      if (call.path === `/queue/${DAY}/entries/1/seen`) {
         return new Promise<Response>((resolve) => {
           answer = () => resolve(late());
         });
       }
-      if (call.path.startsWith(`/rounds/${DAY}/`) && call.path.endsWith("/decision")) {
-        return refusal("round_expired", 409);
+      if (call.path.startsWith(`/queue/${DAY}/`) && call.path.endsWith("/decision")) {
+        return refusal("day_ended", 409);
       }
       return undefined;
     });
@@ -740,7 +740,7 @@ describe("the queue", () => {
   });
 
   it("reads nothing more when a seen report finds the day ended after it was read anew", async () => {
-    const { sent, answer } = lateSeen(() => refusal("round_expired", 409));
+    const { sent, answer } = lateSeen(() => refusal("day_ended", 409));
     await show();
     await press("Like");
     expect(heading("Riikka, 31")).toBeTruthy();
@@ -764,7 +764,7 @@ describe("the queue", () => {
           yourTurn: 0,
         }),
     ],
-    ["the day ended", () => refusal("round_expired", 409)],
+    ["the day ended", () => refusal("day_ended", 409)],
     ["the card gone", () => refusal("not_found", 404)],
     ["a failure", () => refusal("internal", 500)],
   ])(
@@ -774,11 +774,11 @@ describe("the queue", () => {
       let answer = () => {};
       let reads = 0;
       const sent = api((call) => {
-        if (call.path === "/rounds/today") {
+        if (call.path === "/queue/today") {
           reads += 1;
           return json(
             reads === 1
-              ? ROUND
+              ? READ
               : {
                   day: NEXT_DAY,
                   entries: [entry(1, "Riikka"), entry(2, "Saara")],
@@ -788,12 +788,12 @@ describe("the queue", () => {
                 },
           );
         }
-        if (call.path === `/rounds/${DAY}/entries/1/seen`) {
+        if (call.path === `/queue/${DAY}/entries/1/seen`) {
           return new Promise<Response>((resolve) => {
-            expire = () => resolve(refusal("round_expired", 409));
+            expire = () => resolve(refusal("day_ended", 409));
           });
         }
-        if (call.path === `/rounds/${DAY}/entries/1/decision`) {
+        if (call.path === `/queue/${DAY}/entries/1/decision`) {
           return new Promise<Response>((resolve) => {
             answer = () => resolve(late());
           });
@@ -845,7 +845,7 @@ describe("the queue", () => {
 
   it("says that the day's cards are used up instead of the queue, with nothing to try again", async () => {
     api((call) =>
-      call.path === "/rounds/today"
+      call.path === "/queue/today"
         ? refusal("card_budget_exceeded", 429, { "retry-after": "3600" })
         : undefined,
     );
@@ -900,9 +900,9 @@ describe("the queue", () => {
     async (_why, failure, why) => {
       let reads = 0;
       api((call) => {
-        if (call.path !== "/rounds/today") return undefined;
+        if (call.path !== "/queue/today") return undefined;
         reads += 1;
-        return reads === 1 ? failure() : json(ROUND);
+        return reads === 1 ? failure() : json(READ);
       });
       await show();
       expect(screen.getByText(FAILED_TO_LOAD)).toBeTruthy();
@@ -971,11 +971,11 @@ describe("the queue", () => {
     const sent = api((call) =>
       call.path.endsWith("/decision")
         ? new Promise<Response>((resolve) => {
-            release = () => resolve(refusal("round_expired", 409));
+            release = () => resolve(refusal("day_ended", 409));
           })
         : undefined,
     );
-    const view = await renderWithTheme(<RoundScreen />);
+    const view = await renderWithTheme(<QueueScreen />);
     await settle();
     await act(async () => {
       fireEvent.press(screen.getByRole("button", { name: "Like" }));
@@ -1067,7 +1067,7 @@ describe("the queue", () => {
     let reads = 0;
     api((call) => {
       if (call.path.startsWith("/photos/")) return refusal("not_found", 404);
-      if (call.path === "/rounds/today") {
+      if (call.path === "/queue/today") {
         reads += 1;
         return json(
           reads === 1
@@ -1081,7 +1081,7 @@ describe("the queue", () => {
               },
         );
       }
-      if (call.path.endsWith("/decision")) return refusal("round_expired", 409);
+      if (call.path.endsWith("/decision")) return refusal("day_ended", 409);
       return undefined;
     });
     await show();
@@ -1097,10 +1097,10 @@ describe("a queue left open past midnight", () => {
   const AFTER_MIDNIGHT = Date.parse("2026-10-20T21:30:00Z");
   const LATE_EVENING = Date.parse("2026-10-20T20:00:00Z");
   /** The first read is `first`; any later one is the next day's queue. */
-  const days = (first: RoundResponse) => {
+  const days = (first: QueueResponse) => {
     let reads = 0;
     return api((call) => {
-      if (call.path !== "/rounds/today") return undefined;
+      if (call.path !== "/queue/today") return undefined;
       reads += 1;
       return json(
         reads === 1
@@ -1193,7 +1193,7 @@ describe("a queue left open past midnight", () => {
     });
     await show();
     await appBecomes("active");
-    // Its clock reaches the round's day.
+    // Its clock reaches the queue's day.
     now.mockReturnValue(Date.parse("2026-10-20T21:00:30Z"));
     await appBecomes("active");
     expect(heading("Henna, 31")).toBeTruthy();
@@ -1204,11 +1204,11 @@ describe("a queue left open past midnight", () => {
     const now = jest.spyOn(Date, "now").mockReturnValue(NOON);
     let reads = 0;
     const sent = api((call) => {
-      if (call.path === "/rounds/today") {
+      if (call.path === "/queue/today") {
         reads += 1;
         return json(
           reads === 1
-            ? ROUND
+            ? READ
             : {
                 day: NEXT_DAY,
                 entries: [entry(1, "Riikka")],
@@ -1218,7 +1218,7 @@ describe("a queue left open past midnight", () => {
               },
         );
       }
-      if (call.path === `/rounds/${DAY}/entries/1/decision`) {
+      if (call.path === `/queue/${DAY}/entries/1/decision`) {
         return json({
           match: { conversationId: CONVERSATION },
           fishToSend: true,
@@ -1231,12 +1231,12 @@ describe("a queue left open past midnight", () => {
     await show();
     await press("Like");
     await press("Go to the conversation");
-    await act(async () => blurRound());
+    await act(async () => blurQueue());
     now.mockReturnValue(AFTER_MIDNIGHT);
     await appBecomes("active");
     // Under the conversation, nothing is read and nothing reported seen.
     expect(sent.reads()).toBe(1);
-    await act(async () => focusRound());
+    await act(async () => focusQueue());
     await settle();
     expect(heading("Riikka, 31")).toBeTruthy();
     expect(liveLines()).toEqual([]);
@@ -1250,13 +1250,13 @@ describe("a queue left open past midnight", () => {
 const NEXT_MORNING = Date.parse("2026-10-21T06:00:00Z");
 const BUDGETS = { fishToSend: true, likesLeft: 10, yourTurn: 0 };
 /** A read of the day, these cards in it. */
-const page = (...entries: RoundEntry[]): RoundResponse => ({ day: DAY, entries, ...BUDGETS });
-type Read = RoundResponse | (() => Response | Promise<Response>);
+const page = (...entries: QueueEntry[]): QueueResponse => ({ day: DAY, entries, ...BUDGETS });
+type Read = QueueResponse | (() => Response | Promise<Response>);
 /** The API's reads, these in turn and then the queue's end. */
 const reading = (...reads: Read[]): Answer => {
   const left = [...reads];
   return (call) => {
-    if (call.path !== "/rounds/today") return undefined;
+    if (call.path !== "/queue/today") return undefined;
     const read = left.shift() ?? page();
     return typeof read === "function" ? read() : json(read);
   };
@@ -1481,7 +1481,7 @@ describe("reading on past the last card (ADR-062 §1)", () => {
       });
       api((call) =>
         call.path.endsWith("/decision") && (call.body as { decision: string }).decision === "like"
-          ? refusal("round_expired", 409)
+          ? refusal("day_ended", 409)
           : reads(call),
       );
       await show();
@@ -1518,10 +1518,10 @@ describe("reading on past the last card (ADR-062 §1)", () => {
       expect(sent.reads()).toBe(1);
       await press(button);
       if (away) {
-        await act(async () => blurRound());
+        await act(async () => blurQueue());
         await settle();
         expect(sent.reads()).toBe(1);
-        await act(async () => focusRound());
+        await act(async () => focusQueue());
         await settle();
       }
       expect(heading("Katja, 32")).toBeTruthy();
@@ -1564,7 +1564,7 @@ describe("the queue's end (ADR-062 §11)", () => {
       offers: [{ field: "smoking", kind: "aside", more: 10 }],
       relaxed: [],
     };
-    api((call) => (call.path === `/rounds/${DAY}/relaxations` ? json(offered) : undefined), page());
+    api((call) => (call.path === `/queue/${DAY}/relaxations` ? json(offered) : undefined), page());
     await show();
     const tree = JSON.stringify(screen.toJSON());
     expect(tree.indexOf("That's everybody for now.")).toBeLessThan(
@@ -1589,10 +1589,10 @@ describe("the queue's end (ADR-062 §11)", () => {
     const sent = api(reading(page(), page(entry(1, "Henna"))));
     await show();
     await press(SEEK);
-    await act(async () => blurRound());
+    await act(async () => blurQueue());
     await settle();
     expect(sent.reads()).toBe(1);
-    await act(async () => focusRound());
+    await act(async () => focusQueue());
     await settle();
     expect(heading("Henna, 31")).toBeTruthy();
     expect(sent.reads()).toBe(2);
@@ -1603,7 +1603,7 @@ describe("the queue's end (ADR-062 §11)", () => {
     const next = waiting();
     const sent = api(reading(page(), next.read));
     await show();
-    await act(async () => focusRound());
+    await act(async () => focusQueue());
     expect(screen.getByText("Loading…")).toBeTruthy();
     expect(screen.queryByText("That's everybody for now.")).toBeNull();
     await next.answer(json(page()));
@@ -1627,7 +1627,7 @@ describe("the queue's end (ADR-062 §11)", () => {
     await show();
     await press("Pass");
     expect(screen.getByText("That's everybody for now.")).toBeTruthy();
-    await act(async () => focusRound());
+    await act(async () => focusQueue());
     await settle();
     expect(sent.reads()).toBe(3);
     await press("Undo your last decision");
@@ -1641,7 +1641,7 @@ describe("the queue's end (ADR-062 §11)", () => {
   it("reads nothing as a queue not open comes back in sight on its own day", async () => {
     const sent = api(undefined, { ...page(), entries: null });
     await show();
-    await act(async () => focusRound());
+    await act(async () => focusQueue());
     await settle();
     expect(screen.getByText("There is nobody to show you yet.")).toBeTruthy();
     expect(sent.reads()).toBe(1);
@@ -1650,7 +1650,7 @@ describe("the queue's end (ADR-062 §11)", () => {
 
 describe("Later (ADR-062 §3)", () => {
   it("moves on, spends no like, and is a decision like the others", async () => {
-    const sent = api(undefined, { ...ROUND, likesLeft: 7 });
+    const sent = api(undefined, { ...READ, likesLeft: 7 });
     await show();
     await press("Later");
     expect(heading("Katja, 32")).toBeTruthy();
@@ -1712,7 +1712,7 @@ describe("Later (ADR-062 §3)", () => {
 describe("the your-turn limit (ADR-062 §5)", () => {
   const WAITING = (n: number) =>
     `${n} conversations are waiting for you. Answer or end one before you like anyone new.`;
-  const round = (yourTurn: number): RoundResponse => ({
+  const read = (yourTurn: number): QueueResponse => ({
     ...page(entry(2, "Katja"), entry(4, "Minna"), entry(5, "Riikka")),
     yourTurn,
   });
@@ -1736,7 +1736,7 @@ describe("the your-turn limit (ADR-062 §5)", () => {
     "refuses a %s in words with the number, and the card stays for Pass and Later",
     async (kind, button) => {
       const asked = list(8);
-      const sent = api((call) => limited(call) ?? asked(call), round(8));
+      const sent = api((call) => limited(call) ?? asked(call), read(8));
       await show();
       await press(button);
       expect(screen.getByText(WAITING(8))).toBeTruthy();
@@ -1779,7 +1779,7 @@ describe("the your-turn limit (ADR-062 §5)", () => {
     const sent = api((call) => {
       paths.push(call.path);
       return limited(call) ?? asked(call);
-    }, round(2));
+    }, read(2));
     const fetched = globalThis.fetch as jest.Mock;
     await show();
     await press("Like");
@@ -1800,7 +1800,7 @@ describe("the your-turn limit (ADR-062 §5)", () => {
     "says the number it holds when the list fails: %s, and the card stays",
     async (_what, gone) => {
       const asked = list(gone);
-      api((call) => limited(call) ?? asked(call), round(3));
+      api((call) => limited(call) ?? asked(call), read(3));
       await show();
       await press("Like");
       expect(screen.getByText(WAITING(3))).toBeTruthy();
@@ -1818,7 +1818,7 @@ describe("the your-turn limit (ADR-062 §5)", () => {
       )
         return json({ ...BUDGETS, match: null, yourTurn: 9 });
       return limited(call) ?? asked(call);
-    }, round(8));
+    }, read(8));
     await show();
     await press("Pass");
     await press("Like");
@@ -1833,7 +1833,7 @@ describe("the your-turn limit (ADR-062 §5)", () => {
         ? json({ open: [], archived: [], yourTurn: { waiting: 8, limit: 8, warning: 6 } })
         : refusal("internal", 500);
     });
-    api((call) => limited(call) ?? asked(call), round(2));
+    api((call) => limited(call) ?? asked(call), read(2));
     await show();
     await press("Like");
     expect(screen.getByText(WAITING(8))).toBeTruthy();
@@ -1845,7 +1845,7 @@ describe("the your-turn limit (ADR-062 §5)", () => {
   it("says nothing of an old day's refusal once another day was read meanwhile", async () => {
     const now = jest.spyOn(Date, "now").mockReturnValue(NOON);
     const late = waiting();
-    const reads = reading(round(8), { ...page(entry(1, "Riikka")), day: NEXT_DAY });
+    const reads = reading(read(8), { ...page(entry(1, "Riikka")), day: NEXT_DAY });
     const asked = list(late.read);
     api((call) => limited(call) ?? asked(call) ?? reads(call));
     await show();
@@ -1883,7 +1883,7 @@ describe("the your-turn limit (ADR-062 §5)", () => {
   ] as const)("says it in %s for %i", async (languageTag, yourTurn, words) => {
     (useLocales as jest.Mock).mockReturnValue([{ languageTag }]);
     const asked = list(yourTurn);
-    api((call) => limited(call) ?? asked(call), round(yourTurn));
+    api((call) => limited(call) ?? asked(call), read(yourTurn));
     await show();
     await press(languageTag === "en" ? "Like" : languageTag === "fi" ? "Tykkää" : "Gilla");
     expect(screen.getByText(words)).toBeTruthy();
@@ -1892,7 +1892,7 @@ describe("the your-turn limit (ADR-062 §5)", () => {
   it("says it where a notice is said, each time: in sight under the header, aloud on iOS", async () => {
     jest.replaceProperty(Platform, "OS", "ios");
     const asked = list(8);
-    api((call) => limited(call) ?? asked(call), round(8));
+    api((call) => limited(call) ?? asked(call), read(8));
     await show();
     await press("Like");
     await press("Like");
@@ -1904,7 +1904,7 @@ describe("the your-turn limit (ADR-062 §5)", () => {
 
 describe("where the decision buttons sit (#82)", () => {
   const KEY = "kuutti.preference.decisionButtons";
-  const STRANGERS: RoundResponse = {
+  const STRANGERS: QueueResponse = {
     day: DAY,
     entries: [entry(2, "Katja"), entry(4, "Minna")],
     fishToSend: true,
@@ -1918,23 +1918,23 @@ describe("where the decision buttons sit (#82)", () => {
       .getAllByRole("button")
       .map((button) => button.props.accessibilityLabel as string)
       .filter((label) => CONTROLS.includes(label));
-  const column = () => screen.queryByTestId("round-one-handed");
+  const column = () => screen.queryByTestId("queue-one-handed");
   /** Whether a control is inside the one-handed column. */
   const inColumn = (name: string) => {
     for (let node = screen.getByRole("button", { name }).parent; node; node = node.parent) {
-      if (node.props.testID === "round-one-handed") return true;
+      if (node.props.testID === "queue-one-handed") return true;
     }
     return false;
   };
   /** Whether a control is in the row with the likes left and the fish, which wraps. */
   const inRow = (name: string) => {
     for (let node = screen.getByRole("button", { name }).parent; node; node = node.parent) {
-      if (node.props.testID === "round-likes-row") return true;
+      if (node.props.testID === "queue-likes-row") return true;
     }
     return false;
   };
   /** The classes of the row that holds the likes left and the fish: justified to the hand's side. */
-  const onTheHandsSide = () => screen.getByTestId("round-likes-row").props.className;
+  const onTheHandsSide = () => screen.getByTestId("queue-likes-row").props.className;
   const placed = async (choice: object | null) => {
     if (choice) store.set(KEY, JSON.stringify(choice));
     api(undefined, STRANGERS);
@@ -2075,7 +2075,7 @@ describe("where the decision buttons sit (#82)", () => {
   /** Whether the likes-left line is inside the one-handed column. */
   const lineInColumn = () => {
     for (let node = screen.getByText("10 likes left today").parent; node; node = node.parent) {
-      if (node.props.testID === "round-one-handed") return true;
+      if (node.props.testID === "queue-one-handed") return true;
     }
     return false;
   };
@@ -2089,7 +2089,7 @@ describe("where the decision buttons sit (#82)", () => {
       await placed(choice);
       const line = screen.getByText("10 likes left today");
       expect(line.props.className).toMatch(side);
-      expect(line.parent?.props.testID).toBe("round-likes-row");
+      expect(line.parent?.props.testID).toBe("queue-likes-row");
       expect(column()).toBeNull();
       const tree = JSON.stringify(screen.toJSON());
       expect(tree.indexOf("10 likes left today")).toBeLessThan(tree.indexOf("Send a fish"));
@@ -2539,15 +2539,15 @@ describe("the fish and the day's likes (#503, the maintainer's of 01/11/2026)", 
 
 describe("how far each person lives (#514, ADR-061 §5)", () => {
   const place = { fi: "Kallio", sv: "Berghäll" };
-  const placed = (at: RoundEntry, distance: RoundEntry["distance"]): RoundEntry => ({
+  const placed = (at: QueueEntry, distance: QueueEntry["distance"]): QueueEntry => ({
     ...at,
     distance,
     card: { ...at.card, place },
   });
-  const round = (...entries: RoundEntry[]): RoundResponse => ({ ...ROUND, entries });
+  const read = (...entries: QueueEntry[]): QueueResponse => ({ ...READ, entries });
 
   it("says the band each entry was written with, on the card, in words", async () => {
-    api(undefined, round(placed(entry(1, "Henna"), "close"), placed(entry(2, "Katja"), "far")));
+    api(undefined, read(placed(entry(1, "Henna"), "close"), placed(entry(2, "Katja"), "far")));
     await show();
     expect(heading("Henna, 31")).toBeTruthy();
     expect(screen.getByText("Kallio")).toBeTruthy();
@@ -2561,7 +2561,7 @@ describe("how far each person lives (#514, ADR-061 §5)", () => {
   });
 
   it("says no band for an entry from before distance, whose card still has its place", async () => {
-    api(undefined, round(placed(entry(1, "Henna"), null)));
+    api(undefined, read(placed(entry(1, "Henna"), null)));
     await show();
     expect(screen.getByText("Kallio")).toBeTruthy();
     expect(screen.queryByText(/^(Nearby|Close|Around|Far)$/)).toBeNull();
@@ -2569,7 +2569,7 @@ describe("how far each person lives (#514, ADR-061 §5)", () => {
 
   it("leaves a card's band where the entry froze it, a day's read later too", async () => {
     // The band is the entry's, so nothing on the phone reads a home to work one out.
-    const sent = api(undefined, round(placed(entry(1, "Henna"), "nearby")));
+    const sent = api(undefined, read(placed(entry(1, "Henna"), "nearby")));
     await show();
     expect(screen.getByText("Nearby")).toBeTruthy();
     expect(sent.calls.filter((c) => c.path === "/profile" || c.path === "/account/home")).toEqual(
@@ -2579,7 +2579,7 @@ describe("how far each person lives (#514, ADR-061 §5)", () => {
 });
 
 describe("the short pool (#99, ADR-042)", () => {
-  const RELAXATIONS = `/rounds/${DAY}/relaxations`;
+  const RELAXATIONS = `/queue/${DAY}/relaxations`;
   const offered = {
     short: true,
     offers: [
@@ -2588,14 +2588,14 @@ describe("the short pool (#99, ADR-042)", () => {
     ],
     relaxed: [],
   };
-  const EMPTY: RoundResponse = {
+  const EMPTY: QueueResponse = {
     day: DAY,
     entries: [],
     fishToSend: true,
     likesLeft: 10,
     yourTurn: 0,
   };
-  const relaxedCard: RoundEntry = { ...entry(5, "Liisa", "relaxed"), relaxedField: "smoking" };
+  const relaxedCard: QueueEntry = { ...entry(5, "Liisa", "relaxed"), relaxedField: "smoking" };
   const INCLUDE = "Include those who did not answer: Smoking. About 10 more people";
   const ASIDE = "Set aside for today: Smoking. A few more people";
 
@@ -2800,7 +2800,7 @@ describe("the short pool (#99, ADR-042)", () => {
       offers: [{ field: "distance", kind: "aside", more: 10 }],
       relaxed: [],
     };
-    const card: RoundEntry = { ...relaxedCard, relaxedField: "distance" };
+    const card: QueueEntry = { ...relaxedCard, relaxedField: "distance" };
     const sent = api((call) => {
       if (call.path === RELAXATIONS && call.method === "GET") return json(aside);
       if (call.path === RELAXATIONS) return json({ entries: [card] });
@@ -2935,7 +2935,7 @@ describe("the short pool (#99, ADR-042)", () => {
   it("reads the queue anew when a relaxation finds that the day ended", async () => {
     const sent = api((call) => {
       if (call.path === RELAXATIONS && call.method === "GET") return json(offered);
-      if (call.path === RELAXATIONS) return refusal("round_expired", 409);
+      if (call.path === RELAXATIONS) return refusal("day_ended", 409);
       return undefined;
     }, EMPTY);
     await show();
@@ -2987,9 +2987,9 @@ describe("the short pool (#99, ADR-042)", () => {
 });
 
 describe("undoing a relaxation from a card (#99, ADR-042 §6)", () => {
-  const RELAXATIONS = `/rounds/${DAY}/relaxations`;
-  const relaxedCard: RoundEntry = { ...entry(5, "Liisa", "relaxed"), relaxedField: "smoking" };
-  const round = (decision: RoundEntry["decision"] = null): RoundResponse => ({
+  const RELAXATIONS = `/queue/${DAY}/relaxations`;
+  const relaxedCard: QueueEntry = { ...entry(5, "Liisa", "relaxed"), relaxedField: "smoking" };
+  const read = (decision: QueueEntry["decision"] = null): QueueResponse => ({
     day: DAY,
     entries: [{ ...relaxedCard, decision }],
     fishToSend: true,
@@ -3000,7 +3000,7 @@ describe("undoing a relaxation from a card (#99, ADR-042 §6)", () => {
   it.each([
     [
       "the day ended",
-      () => refusal("round_expired", 409),
+      () => refusal("day_ended", 409),
       "That day ended at midnight, so this was not saved.",
     ],
     ["it failed", () => refusal("internal_error", 500), "That did not go through. Try again."],
@@ -3009,7 +3009,7 @@ describe("undoing a relaxation from a card (#99, ADR-042 §6)", () => {
       if (call.method === "DELETE") return answer();
       if (call.path === RELAXATIONS) return json({ short: false, offers: [], relaxed: [] });
       return undefined;
-    }, round());
+    }, read());
     await show();
 
     await press("Undo for today: Smoking");
@@ -3025,7 +3025,7 @@ describe("undoing a relaxation from a card (#99, ADR-042 §6)", () => {
   ])("changes nothing of the new day when an undo answers after it: %s", async (_what, late) => {
     const now = jest.spyOn(Date, "now").mockReturnValue(NOON);
     const undoing = waiting();
-    const reads = reading(round(), { ...page(entry(5, "Riikka")), day: NEXT_DAY });
+    const reads = reading(read(), { ...page(entry(5, "Riikka")), day: NEXT_DAY });
     api((call) => (call.method === "DELETE" ? undoing.read() : reads(call)));
     await show();
     await act(async () => {
@@ -3088,10 +3088,10 @@ describe("undoing a relaxation from a card (#99, ADR-042 §6)", () => {
 describe("a star on a card (#575, ADR-064)", () => {
   const KEY = "kuutti.preference.decisionButtons";
   const STAR_ID = "7a1c1c4e-9a8e-4a0b-9c3a-0c8d1e2f3a01";
-  const CARD_STAR = `/rounds/${DAY}/entries/2/star`;
+  const CARD_STAR = `/queue/${DAY}/entries/2/star`;
   const CLEAR = `/stars/${STAR_ID}`;
   const FIRST = "Only you can see your stars.";
-  const STRANGERS: RoundResponse = {
+  const STRANGERS: QueueResponse = {
     day: DAY,
     entries: [entry(2, "Katja"), entry(4, "Minna")],
     fishToSend: true,
@@ -3138,7 +3138,7 @@ describe("a star on a card (#575, ADR-064)", () => {
     expect(within(toggle()).getByText("Star")).toBeTruthy();
     expect(heading("Katja, 32")).toBeTruthy();
     expect(calls.filter((c) => c.path.endsWith("/decision"))).toEqual([]);
-    expect(calls.filter((c) => c.path === "/rounds/today")).toHaveLength(1);
+    expect(calls.filter((c) => c.path === "/queue/today")).toHaveLength(1);
   });
 
   it("says that only the person sees it when it is the first", async () => {
@@ -3196,7 +3196,7 @@ describe("a star on a card (#575, ADR-064)", () => {
 
   it("reads the new day when the day has ended", async () => {
     const { reads } = api(
-      (call) => (call.path === CARD_STAR ? refusal("round_expired", 409) : undefined),
+      (call) => (call.path === CARD_STAR ? refusal("day_ended", 409) : undefined),
       STRANGERS,
     );
     await show();
@@ -3218,7 +3218,7 @@ describe("a star on a card (#575, ADR-064)", () => {
   });
 
   it("reads a star gone meanwhile as off, and the card stays", async () => {
-    const held: RoundResponse = {
+    const held: QueueResponse = {
       ...STRANGERS,
       entries: [{ ...entry(2, "Katja"), star: STAR_ID }, entry(4, "Minna")],
     };
@@ -3291,7 +3291,7 @@ describe("a star on a card (#575, ADR-064)", () => {
     await show();
     const row = screen.getByText("Matches your filters").parent?.parent;
     expect(row && within(row).getByRole("button", { name: "Star: Katja" })).toBeTruthy();
-    expect(screen.queryByTestId("round-one-handed")).toBeNull();
+    expect(screen.queryByTestId("queue-one-handed")).toBeNull();
     noProblems();
   });
 
@@ -3300,7 +3300,7 @@ describe("a star on a card (#575, ADR-064)", () => {
     api(undefined, STRANGERS);
     await show();
     await settle();
-    const column = screen.getByTestId("round-one-handed");
+    const column = screen.getByTestId("queue-one-handed");
     expect(within(column).getByRole("button", { name: "Star: Katja" })).toBeTruthy();
     expect(screen.getAllByRole("button", { name: "Star: Katja" })).toHaveLength(1);
     noProblems();
@@ -3310,7 +3310,7 @@ describe("a star on a card (#575, ADR-064)", () => {
 describe("a card opened from the Starred list (#575, ADR-064 §2)", () => {
   const STAR_ID = "7a1c1c4e-9a8e-4a0b-9c3a-0c8d1e2f3a01";
   const OPEN = `/stars/${STAR_ID}/open`;
-  const OPENED: RoundResponse = {
+  const OPENED: QueueResponse = {
     day: DAY,
     entries: [{ ...entry(9, "Katja", "seen_before"), star: STAR_ID }],
     fishToSend: true,
@@ -3318,11 +3318,11 @@ describe("a card opened from the Starred list (#575, ADR-064 §2)", () => {
     yourTurn: 0,
   };
   const opening =
-    (round: RoundResponse = OPENED): Answer =>
+    (read: QueueResponse = OPENED): Answer =>
     (call) =>
-      call.path === OPEN && call.method === "POST" ? json(round) : undefined;
+      call.path === OPEN && call.method === "POST" ? json(read) : undefined;
   const showStar = async () => {
-    await renderWithTheme(<RoundScreen star={STAR_ID} />);
+    await renderWithTheme(<QueueScreen star={STAR_ID} />);
     await settle();
   };
   const BACK = "Back to Starred";
@@ -3388,8 +3388,8 @@ describe("a card opened from the Starred list (#575, ADR-064 §2)", () => {
     await press("Like");
 
     await act(async () => {
-      blurRound();
-      focusRound();
+      blurQueue();
+      focusQueue();
     });
     await settle();
 
@@ -3488,7 +3488,7 @@ describe("a match as a hello, in the designers' try", () => {
   const OWN = "1b1c1c4e-9a8e-4a0b-9c3a-0c8d1e2f3a02";
   const WAITING = "1b1c1c4e-9a8e-4a0b-9c3a-0c8d1e2f3a03";
   const matchOn = (position: number) => (call: Call) =>
-    call.path === `/rounds/${DAY}/entries/${position}/decision`
+    call.path === `/queue/${DAY}/entries/${position}/decision`
       ? json({
           match: { conversationId: CONVERSATION },
           fishToSend: true,
@@ -3574,7 +3574,7 @@ describe("a match as a hello, in the designers' try", () => {
               })
             : undefined),
       {
-        ...ROUND,
+        ...READ,
         entries: [
           { ...liked, card: { ...liked.card, photos: [photo] as ProfileCard["photos"] } },
           entry(2, "Katja"),

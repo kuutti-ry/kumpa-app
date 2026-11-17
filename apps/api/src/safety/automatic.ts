@@ -14,7 +14,7 @@ import { applySanction } from "./sanctions.ts";
 // a moderator confirms or reverses it. Reports by different people;
 // conversations opened faster than a person writes; the same first message to
 // many; and #86's velocity (ADR-041): other people's photos fetched, cards
-// served and the round read faster than a person does, for the reason
+// served and the queue read faster than a person does, for the reason
 // "scraping". Only ever a shadow ban, by nobody: the person
 // learns nothing from any route, and a machine never warns, suspends or bans
 // (the database's sanction_rule_check). Each check runs after the request
@@ -40,9 +40,9 @@ const AUTO_SHADOW_BAN_PHOTO_FETCHES_MINUTES_KEY = "auto_shadow_ban_photo_fetches
 /** matching_config: different people's cards served within the minutes (the maintainer, 01/11/2026, ADR-062 §9): with no ceiling on cards, this alarm is what stands. */
 const AUTO_SHADOW_BAN_CARDS_SERVED_KEY = "auto_shadow_ban_cards_served";
 const AUTO_SHADOW_BAN_CARDS_SERVED_MINUTES_KEY = "auto_shadow_ban_cards_served_minutes";
-/** matching_config: reads of the day's round within the minutes. */
-const AUTO_SHADOW_BAN_ROUND_READS_KEY = "auto_shadow_ban_round_reads";
-const AUTO_SHADOW_BAN_ROUND_READS_MINUTES_KEY = "auto_shadow_ban_round_reads_minutes";
+/** matching_config: reads of the day's queue within the minutes. */
+const AUTO_SHADOW_BAN_QUEUE_READS_KEY = "auto_shadow_ban_queue_reads";
+const AUTO_SHADOW_BAN_QUEUE_READS_MINUTES_KEY = "auto_shadow_ban_queue_reads_minutes";
 /** matching_config: the hours a moderator has to confirm or reverse one; past them it stays, and says late. */
 export const AUTO_SHADOW_BAN_REVIEW_HOURS_KEY = "auto_shadow_ban_review_hours";
 
@@ -55,7 +55,7 @@ const RULE_NOTE: Record<SanctionRule, string> = {
   same_first_message: "Applied by the automatic rule on the same first message to several people",
   photo_fetches: "Applied by the automatic rule on other people's photos fetched within the window",
   cards_served: "Applied by the automatic rule on cards served within the window",
-  round_reads: "Applied by the automatic rule on reads of the queue within the window",
+  queue_reads: "Applied by the automatic rule on reads of the queue within the window",
 };
 
 /** The reason on the sanction: the velocity rules' is scraping (the maintainer, 21/10/2026), the others' other. */
@@ -65,7 +65,7 @@ const RULE_REASON: Record<SanctionRule, SanctionReason> = {
   same_first_message: "other",
   photo_fetches: "scraping",
   cards_served: "scraping",
-  round_reads: "scraping",
+  queue_reads: "scraping",
 };
 
 export type RuleDeps = { db: Queryable; logger: Logger; now: () => Date };
@@ -134,7 +134,7 @@ type ReadCheck = { record?: (at: Date) => Promise<void> };
  */
 async function underRuleLock(
   deps: RuleDeps,
-  check: "reports" | "first_message" | "photo_fetch" | "round_read",
+  check: "reports" | "first_message" | "photo_fetch" | "queue_read",
   accountId: string,
   measure: (tx: Queryable, at: Date, floor: Date | null) => Promise<Met | null>,
   read?: ReadCheck,
@@ -257,7 +257,7 @@ export async function checkPhotoFetches(deps: RuleDeps, accountId: string): Prom
 }
 
 /**
- * The round's reads, in memory (ADR-041 §3, the maintainer's of 21/10/2026):
+ * The queue's reads, in memory (ADR-041 §3, the maintainer's of 21/10/2026):
  * nothing stores a read, so nothing is erased or exported, and a restart
  * forgets them. An account keeps the times of its reads within the window,
  * at most the threshold's worth, which is all a count needs to reach it, and
@@ -267,7 +267,7 @@ export async function checkPhotoFetches(deps: RuleDeps, accountId: string): Prom
  * §7); the timer runs only while something is kept and never holds the
  * process open.
  */
-function roundReadLog(now: () => Date) {
+function queueReadLog(now: () => Date) {
   const reads = new Map<string, number[]>();
   let windowMs = 0;
   let sweeping = false;
@@ -310,15 +310,15 @@ function roundReadLog(now: () => Date) {
  * themselves. One per app, since it holds the reads; app.ts hands it to the
  * queue's and the stars' routes, so the matching slice never imports safety.
  */
-export function roundReadRule(deps: RuleDeps): (accountId: string) => Promise<void> {
-  const reads = roundReadLog(deps.now);
+export function queueReadRule(deps: RuleDeps): (accountId: string) => Promise<void> {
+  const reads = queueReadLog(deps.now);
   return async (accountId) => {
     const measure = async (db: Queryable, at: Date, floor: Date | null): Promise<Met | null> => {
       const config = await matchingConfigNumbers(db, [
         AUTO_SHADOW_BAN_CARDS_SERVED_KEY,
         AUTO_SHADOW_BAN_CARDS_SERVED_MINUTES_KEY,
-        AUTO_SHADOW_BAN_ROUND_READS_KEY,
-        AUTO_SHADOW_BAN_ROUND_READS_MINUTES_KEY,
+        AUTO_SHADOW_BAN_QUEUE_READS_KEY,
+        AUTO_SHADOW_BAN_QUEUE_READS_MINUTES_KEY,
       ]);
       // The cards are the more direct evidence of what was seen, said first when both are met.
       const cards = config[AUTO_SHADOW_BAN_CARDS_SERVED_KEY];
@@ -333,25 +333,25 @@ export function roundReadRule(deps: RuleDeps): (accountId: string) => Promise<vo
       }
       const times = reads.since(
         accountId,
-        since(at, config[AUTO_SHADOW_BAN_ROUND_READS_MINUTES_KEY] * MINUTE_MS, floor),
+        since(at, config[AUTO_SHADOW_BAN_QUEUE_READS_MINUTES_KEY] * MINUTE_MS, floor),
       );
       const first = times[0];
-      if (first === undefined || !reaches(times.length, config[AUTO_SHADOW_BAN_ROUND_READS_KEY])) {
+      if (first === undefined || !reaches(times.length, config[AUTO_SHADOW_BAN_QUEUE_READS_KEY])) {
         return null;
       }
-      return { rule: "round_reads", count: times.length, firstAt: new Date(first) };
+      return { rule: "queue_reads", count: times.length, firstAt: new Date(first) };
     };
-    await underRuleLock(deps, "round_read", accountId, measure, {
+    await underRuleLock(deps, "queue_read", accountId, measure, {
       record: async (at) => {
         const config = await matchingConfigNumbers(deps.db, [
-          AUTO_SHADOW_BAN_ROUND_READS_KEY,
-          AUTO_SHADOW_BAN_ROUND_READS_MINUTES_KEY,
+          AUTO_SHADOW_BAN_QUEUE_READS_KEY,
+          AUTO_SHADOW_BAN_QUEUE_READS_MINUTES_KEY,
         ]);
         reads.add(
           accountId,
           at,
-          config[AUTO_SHADOW_BAN_ROUND_READS_MINUTES_KEY] * MINUTE_MS,
-          config[AUTO_SHADOW_BAN_ROUND_READS_KEY],
+          config[AUTO_SHADOW_BAN_QUEUE_READS_MINUTES_KEY] * MINUTE_MS,
+          config[AUTO_SHADOW_BAN_QUEUE_READS_KEY],
         );
       },
     });

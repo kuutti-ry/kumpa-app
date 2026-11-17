@@ -41,7 +41,7 @@ const RULE: Record<SanctionRule, (t: TFunction, count: number, span: Span) => st
     t("admin.automaticBans.rule.photo_fetches", { photos, ...span }),
   cards_served: (t, people, span) =>
     t("admin.automaticBans.rule.cards_served", { people, ...span }),
-  round_reads: (t, reads, span) => t("admin.automaticBans.rule.round_reads", { reads, ...span }),
+  queue_reads: (t, reads, span) => t("admin.automaticBans.rule.queue_reads", { reads, ...span }),
 };
 
 type Decision = { ban: AutomaticBan; outcome: "keep" | "lift" };

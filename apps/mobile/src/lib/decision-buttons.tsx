@@ -2,7 +2,7 @@ import * as React from "react";
 import { readPreference, storedObject, writePreference } from "./preferences";
 
 /**
- * Where the round's decision buttons sit (#82): for the right hand or the
+ * Where the queue's decision buttons sit (#82): for the right hand or the
  * left, and in one-handed mode a column on that side with Undo brought down
  * from the header, all within a thumb's reach. Kept on the phone with the
  * theme and the language, never sent to the API: it is about the hand and
@@ -44,7 +44,7 @@ type Settings = {
 
 const DecisionButtonsContext = React.createContext<Settings | null>(null);
 
-/** Reads the stored choice once and hands it to the round screen and to the setting's screen. */
+/** Reads the stored choice once and hands it to the queue screen and to the setting's screen. */
 export function DecisionButtonsProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = React.useState<DecisionButtons>({
     ...DEFAULT_DECISION_BUTTONS,

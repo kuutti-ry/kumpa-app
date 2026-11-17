@@ -110,10 +110,10 @@ describe("GateCard", () => {
     "carries what the home screen hands it for an open gate only: %s (#379)",
     async (state, words, shown) => {
       answering([() => json(gate(state))]);
-      const screen = await renderWithTheme(<GateCard whenOpen={<View testID="round" />} />);
+      const screen = await renderWithTheme(<GateCard whenOpen={<View testID="queue" />} />);
       await settle();
       expect(screen.getByText(words)).toBeTruthy();
-      expect(screen.queryByTestId("round") !== null).toBe(shown);
+      expect(screen.queryByTestId("queue") !== null).toBe(shown);
     },
   );
 

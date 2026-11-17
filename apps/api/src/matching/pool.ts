@@ -18,10 +18,10 @@ import { pausedOf } from "./deal-breakers.ts";
  * open to either and the other is no dance partner (ADR-015 §10, §13),
  * neither has blocked the other (#84, ADR-030 §2), and each one's answers
  * and the distance between the two pass the other's deal-breakers (#149, #87,
- * ADR-061 §7). The round builder draws its candidates through this (#95), so
+ * ADR-061 §7). The queue's builder draws its candidates through this (#95), so
  * that no caller can show somebody a filter excludes.
  * The soft preferences only order what passes (`soft.ts`); hiding from one's
- * own field is a setting the round builder reads (ADR-019 §5), not a filter.
+ * own field is a setting the queue's builder reads (ADR-019 §5), not a filter.
  *
  * Pure, and it names no gender: the rule is the same for everybody.
  */

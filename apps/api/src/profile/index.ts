@@ -1,6 +1,6 @@
 // The profile slice's public surface (rules/layout.md): the routes, and the
 // erasure and export halves the identity slice calls (#51). The card
-// builder, which today's round (#96) serves its cards through, handed to the
+// builder, which today's queue (#96) serves its cards through, handed to the
 // matching slice by app.ts.
 
 // The card's age and fields, which a person's page in the panel shows as the card does (#306).

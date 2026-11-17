@@ -7,7 +7,7 @@ import type { Logger } from "../lib/logger.ts";
 // "Löysin hänet" (#83, ADR-040): a person tells Kuutti they found somebody,
 // and why, from a closed list. It is an indication and nothing more, the
 // maintainer's of 21/10/2026: nothing in the app changes, no state, no
-// session, no round, no conversation. It feeds the association's one measure
+// session, no queue, no conversation. It feeds the association's one measure
 // of success, an anonymous count by Finnish day and reason that names no
 // person (found_them_count), so it outlives every erasure. The account keeps
 // only that it answered, so each counts once, and never which reason.

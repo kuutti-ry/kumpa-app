@@ -23,7 +23,7 @@
  *      among them), then what the flows act on: Mikael signs in once as anybody does and is made a
  *      moderator with the maintainer's own command line (ADR-006 §5), Laura reports their
  *      conversation pointing at the photo the stories have Emmi send her (#476), and Iida's
- *      round names the person whose page the sanction flow opens.
+ *      queue names the person whose page the sanction flow opens.
  *   4. The panel's production build against that API, served with the headers of
  *      infra/modules/admin/main.tf, read from the file: its CSP, with the S3 stand-in added to
  *      img-src alone, for the photo URLs the API presigns on it locally (deployed, a photo comes
@@ -62,7 +62,7 @@ import {
   ListObjectsV2Command,
   S3Client,
 } from "@aws-sdk/client-s3";
-import { ConversationList, MessagePage, RoundResponse } from "@kuutti/schema";
+import { ConversationList, MessagePage, QueueResponse } from "@kuutti/schema";
 import { createPool } from "../../../packages/db/src/pool.ts";
 import { DEMO_PERSONAS } from "../../../packages/db/src/seed/personas.ts";
 import { demoAssetsDir } from "../../../packages/db/src/seed/photos.ts";
@@ -386,9 +386,9 @@ class Stack {
     });
 
     const iida = await session("iida");
-    const round = RoundResponse.parse(await call(context, iida, "GET", "/rounds/today"));
-    const riikka = round.entries?.find((entry) => entry.card.displayName === "Riikka");
-    if (!riikka) throw new Error("Iida's round has no Riikka: did the stories run?");
+    const read = QueueResponse.parse(await call(context, iida, "GET", "/queue/today"));
+    const riikka = read.entries?.find((entry) => entry.card.displayName === "Riikka");
+    if (!riikka) throw new Error("Iida's queue has no Riikka: did the stories run?");
     return { personAccount: riikka.card.accountId };
   }
 

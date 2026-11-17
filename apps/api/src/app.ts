@@ -31,7 +31,7 @@ import {
   wellKnownRoutes,
 } from "./identity/index.ts";
 import { isComplete, matchingStatusOf } from "./jobs/pool.ts";
-import { fillQueue, fitsNow, relaxationOffers, relaxedCandidates } from "./jobs/round-builder.ts";
+import { fillQueue, fitsNow, relaxationOffers, relaxedCandidates } from "./jobs/queue-builder.ts";
 import { starPlace, starredPeople, starsShown } from "./jobs/stars.ts";
 import { requireAdmin } from "./lib/admin-middleware.ts";
 import { requireSession } from "./lib/auth-middleware.ts";
@@ -53,7 +53,7 @@ import { servedDocument } from "./lib/openapi.ts";
 import type { Pusher } from "./lib/push.ts";
 import { addressOf, limited, personOf, rateLimit } from "./lib/rate-limit.ts";
 import { serverRequestId } from "./lib/request-id.ts";
-import { preferencesRoutes, readPreferences, roundRoutes, starRoutes } from "./matching/index.ts";
+import { preferencesRoutes, queueRoutes, readPreferences, starRoutes } from "./matching/index.ts";
 import { type MediaDeps, photoAdminRoutes, photoRoutes, UPLOAD_ROUTE } from "./media/index.ts";
 import {
   announcementAdminRoutes,
@@ -73,9 +73,9 @@ import {
   feedbackAdminRoutes,
   feedbackRoutes,
   overviewAdminRoutes,
+  queueReadRule,
   reportAdminRoutes,
   reportRoutes,
-  roundReadRule,
   sanctionAdminRoutes,
   staffAdminRoutes,
 } from "./safety/index.ts";
@@ -239,10 +239,10 @@ export function createApp(deps: Deps) {
   // A ban and its lift and review (#307, ADR-024 §3).
   const admins = staff(["admin"]);
 
-  // The automatic rules' clock and connection (#105, ADR-033), and the round
+  // The automatic rules' clock and connection (#105, ADR-033), and the queue
   // reads one of them counts in memory, once for this app (#86, ADR-041).
   const ruleDeps = { db: deps.db, logger: deps.logger, now: deps.now ?? (() => new Date()) };
-  const roundRead = roundReadRule(ruleDeps);
+  const queueRead = queueReadRule(ruleDeps);
 
   app.route("/", healthRoutes(deps));
   app.route("/", authRoutes(deps, guard, moderators));
@@ -280,7 +280,7 @@ export function createApp(deps: Deps) {
       socketsPerAccount: deps.config.WS_SOCKETS_PER_ACCOUNT,
     });
   // The pushes (#102, ADR-055): the notifications slice decides whom to tell,
-  // the chat, the round's and the sanctions' routes only say when; a
+  // the chat, the queue's and the sanctions' routes only say when; a
   // sanction staff applied is mailed to its person (#715, ADR-073 §4).
   const push =
     deps.push ??
@@ -377,7 +377,7 @@ export function createApp(deps: Deps) {
   };
   app.route(
     "/",
-    roundRoutes(
+    queueRoutes(
       deps,
       guard,
       cardOf,
@@ -393,8 +393,8 @@ export function createApp(deps: Deps) {
         yourTurn: conversationsOnTurn,
         made: push.match,
       },
-      roundRead,
-      // A short round's relaxations (#99, ADR-042) read the pond as the builder does.
+      queueRead,
+      // A short queue's relaxations (#99, ADR-042) read the pond as the builder does.
       {
         offers: (accountId) => relaxationOffers(builderDeps(), accountId),
         candidates: (accountId, relaxation) =>
@@ -418,7 +418,7 @@ export function createApp(deps: Deps) {
         people: (accountId) => starredPeople(builderDeps(), accountId),
       },
       { yourTurn: conversationsOnTurn },
-      roundRead,
+      queueRead,
       ownFieldsOf,
     ),
   );

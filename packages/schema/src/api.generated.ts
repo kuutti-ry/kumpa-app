@@ -1083,7 +1083,7 @@ export interface paths {
         put?: never;
         /**
          * Tell Kuutti you found somebody
-         * @description "Löysin hänet" (#83, ADR-040): the reason, from a closed list, counted once per account in an anonymous daily count that names nobody. An indication only: nothing else changes, no state, no session, no round, no conversation.
+         * @description "Löysin hänet" (#83, ADR-040): the reason, from a closed list, counted once per account in an anonymous daily count that names nobody. An indication only: nothing else changes, no state, no session, no queue, no conversation.
          */
         post: {
             parameters: {
@@ -1160,7 +1160,7 @@ export interface paths {
         put?: never;
         /**
          * Take a break: pause this account
-         * @description The account goes to paused (#170, ADR-022): the profile leaves every pool, counter and round, and every session of the account ends, this one included. Nothing is erased: the profile, the photos, the preferences and the consents stay as they are, and the next bank login brings the account back as it was. The body confirms; the screen asks first.
+         * @description The account goes to paused (#170, ADR-022): the profile leaves every pool, counter and queue, and every session of the account ends, this one included. Nothing is erased: the profile, the photos, the preferences and the consents stay as they are, and the next bank login brings the account back as it was. The body confirms; the screen asks first.
          */
         post: {
             parameters: {
@@ -2053,7 +2053,7 @@ export interface paths {
         };
         /**
          * The caller's profile and what it still needs
-         * @description The profile as saved (null before the first save), the completeness rule's verdict (what is missing before the profile can enter a round), and the home in names, which PUT /account/home writes and this document never does.
+         * @description The profile as saved (null before the first save), the completeness rule's verdict (what is missing before the profile can enter a queue), and the home in names, which PUT /account/home writes and this document never does.
          */
         get: {
             parameters: {
@@ -2164,7 +2164,7 @@ export interface paths {
         };
         /**
          * The caller's own card, as others will see it
-         * @description The card built the way a round builds it for someone else, with the age from the bank-verified year and month, the approved photos in order (bytes through GET /photos/{id}/{variant}) and what is still missing. Nothing is recorded: this is the owner looking at themselves.
+         * @description The card built the way a queue builds it for someone else, with the age from the bank-verified year and month, the approved photos in order (bytes through GET /photos/{id}/{variant}) and what is still missing. Nothing is recorded: this is the owner looking at themselves.
          */
         get: {
             parameters: {
@@ -2755,7 +2755,7 @@ export interface paths {
         put?: never;
         /**
          * Block the person of a card one was shown
-         * @description From then on neither is shown to the other, in either direction, in any round, card, photo or pool. Between the two identities, so it holds for a later account of either; final. Nobody is told.
+         * @description From then on neither is shown to the other, in either direction, in any queue, card, photo or pool. Between the two identities, so it holds for a later account of either; final. Nobody is told.
          */
         post: {
             parameters: {
@@ -6573,7 +6573,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/rounds/today": {
+    "/queue/today": {
         parameters: {
             query?: never;
             header?: never;
@@ -6599,7 +6599,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["RoundResponse"];
+                        "application/json": components["schemas"]["QueueResponse"];
                     };
                 };
                 /** @description unauthenticated, session_expired or session_revoked. */
@@ -6630,7 +6630,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/rounds/{day}/entries/{position}/seen": {
+    "/queue/{day}/entries/{position}/seen": {
         parameters: {
             query?: never;
             header?: never;
@@ -6680,7 +6680,7 @@ export interface paths {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description not_found: no round today, no card at that place, a card that can no longer be shown (a block, a sanction, or for a like a filter of either side), or a day not begun. */
+                /** @description not_found: no queue today, no card at that place, a card that can no longer be shown (a block, a sanction, or for a like a filter of either side), or a day not begun. */
                 404: {
                     headers: {
                         [name: string]: unknown;
@@ -6689,7 +6689,7 @@ export interface paths {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description round_expired: the day named has ended; nothing was written. */
+                /** @description day_ended: the day named has ended; nothing was written. */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -6706,7 +6706,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/rounds/{day}/entries/{position}/decision": {
+    "/queue/{day}/entries/{position}/decision": {
         parameters: {
             query?: never;
             header?: never;
@@ -6716,7 +6716,7 @@ export interface paths {
         get?: never;
         /**
          * Like, pass or skip a card
-         * @description Recorded, or replacing the day's earlier decision on the card; the same decision again writes nothing. A day that has ended answers round_expired. A skip moves on, spends nothing and answers no like; the card returns another day. A like counts against the day's matching_config like_budget_balanced, a like back on a liked_you or fish card too; a pass or a skip never does. A new like or fish answers your_turn_limit with matching_config your_turn_limit conversations waiting on the caller, and not_found where either side's filters no longer let the two meet. A like of somebody whose like of the caller stands is a match: the answer names its conversation, and that like is final. A fish is a like with a mark, matching_config fish_budget of them in each fish_window_days counted from a Monday, the calendar week; on a liked_you or fish card it is a like. Past the fish's budget, a fish invitations earned the caller is used by itself, left out of the count after, and given back when the decision changes the same day. The answer's fishToSend, likesLeft and yourTurn are the queue's after this decision.
+         * @description Recorded, or replacing the day's earlier decision on the card; the same decision again writes nothing. A day that has ended answers day_ended. A skip moves on, spends nothing and answers no like; the card returns another day. A like counts against the day's matching_config like_budget_balanced, a like back on a liked_you or fish card too; a pass or a skip never does. A new like or fish answers your_turn_limit with matching_config your_turn_limit conversations waiting on the caller, and not_found where either side's filters no longer let the two meet. A like of somebody whose like of the caller stands is a match: the answer names its conversation, and that like is final. A fish is a like with a mark, matching_config fish_budget of them in each fish_window_days counted from a Monday, the calendar week; on a liked_you or fish card it is a like. Past the fish's budget, a fish invitations earned the caller is used by itself, left out of the count after, and given back when the decision changes the same day. The answer's fishToSend, likesLeft and yourTurn are the queue's after this decision.
          */
         put: {
             parameters: {
@@ -6730,7 +6730,7 @@ export interface paths {
             };
             requestBody: {
                 content: {
-                    "application/json": components["schemas"]["RoundDecisionUpdate"];
+                    "application/json": components["schemas"]["QueueDecisionUpdate"];
                 };
             };
             responses: {
@@ -6740,7 +6740,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["RoundDecisionAnswer"];
+                        "application/json": components["schemas"]["QueueDecisionAnswer"];
                     };
                 };
                 /** @description Validation failed. */
@@ -6761,7 +6761,7 @@ export interface paths {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description not_found: no round today, no card at that place, a card that can no longer be shown (a block, a sanction, or for a like a filter of either side), or a day not begun. */
+                /** @description not_found: no queue today, no card at that place, a card that can no longer be shown (a block, a sanction, or for a like a filter of either side), or a day not begun. */
                 404: {
                     headers: {
                         [name: string]: unknown;
@@ -6770,7 +6770,7 @@ export interface paths {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description round_expired: the day named has ended; match_made: the card's like made a match and stays; your_turn_limit: too many conversations wait on the caller's answer. Nothing was written. */
+                /** @description day_ended: the day named has ended; match_made: the card's like made a match and stays; your_turn_limit: too many conversations wait on the caller's answer. Nothing was written. */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -6797,7 +6797,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/rounds/{day}/relaxations": {
+    "/queue/{day}/relaxations": {
         parameters: {
             query?: never;
             header?: never;
@@ -6805,7 +6805,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * What today's round may relax, and what is relaxed
+         * What today's queue may relax, and what is relaxed
          * @description Once no new person is left in the queue, every deal-breaker of the caller's that is not paused and not relaxed today, each way it can be relaxed for the day: unanswered (let through those who did not answer its field) and aside (set it aside), each listed only when it would add somebody today, with more: how much it widens the caller's pool, rounded down to a step of matching_config pond_counter_k. Counted on asking. Also the relaxations in force today. Never another filter (ADR-042).
          */
         get: {
@@ -6846,7 +6846,7 @@ export interface paths {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description not_found: no round today, or a day not begun. */
+                /** @description not_found: no queue today, or a day not begun. */
                 404: {
                     headers: {
                         [name: string]: unknown;
@@ -6855,7 +6855,7 @@ export interface paths {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description round_expired: the day named has ended; nothing was written. */
+                /** @description day_ended: the day named has ended; nothing was written. */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -6913,7 +6913,7 @@ export interface paths {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description not_found: no round today, a day not begun, or a relaxation the offers would not list (no deal-breaker of the caller's on that field, a paused one, or unanswered where those people are let through already). Nothing was written. */
+                /** @description not_found: no queue today, a day not begun, or a relaxation the offers would not list (no deal-breaker of the caller's on that field, a paused one, or unanswered where those people are let through already). Nothing was written. */
                 404: {
                     headers: {
                         [name: string]: unknown;
@@ -6922,7 +6922,7 @@ export interface paths {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description round_expired: the day named has ended; already_relaxed: that deal-breaker is relaxed today; relaxations_changed: another device relaxed or undid one since this tap's offers were counted. Nothing was written. */
+                /** @description day_ended: the day named has ended; already_relaxed: that deal-breaker is relaxed today; relaxations_changed: another device relaxed or undid one since this tap's offers were counted. Nothing was written. */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -6948,7 +6948,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/rounds/{day}/relaxations/{field}": {
+    "/queue/{day}/relaxations/{field}": {
         parameters: {
             query?: never;
             header?: never;
@@ -7001,7 +7001,7 @@ export interface paths {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description not_found: no round today, a day not begun, or that field not relaxed today. */
+                /** @description not_found: no queue today, a day not begun, or that field not relaxed today. */
                 404: {
                     headers: {
                         [name: string]: unknown;
@@ -7010,7 +7010,7 @@ export interface paths {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description round_expired: the day named has ended; nothing was written. */
+                /** @description day_ended: the day named has ended; nothing was written. */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -7074,7 +7074,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/rounds/{day}/entries/{position}/star": {
+    "/queue/{day}/entries/{position}/star": {
         parameters: {
             query?: never;
             header?: never;
@@ -7125,7 +7125,7 @@ export interface paths {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description not_found: no such card in today's round, one that can no longer be shown, or one holding a like or a pass. */
+                /** @description not_found: no such card in today's queue, one that can no longer be shown, or one holding a like or a pass. */
                 404: {
                     headers: {
                         [name: string]: unknown;
@@ -7134,7 +7134,7 @@ export interface paths {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description round_expired: the day named has ended; stars_full: the list shows matching_config stars_max people. Nothing was written. */
+                /** @description day_ended: the day named has ended; stars_full: the list shows matching_config stars_max people. Nothing was written. */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -7248,7 +7248,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["RoundResponse"];
+                        "application/json": components["schemas"]["QueueResponse"];
                     };
                 };
                 /** @description Validation failed. */
@@ -7448,7 +7448,7 @@ export interface paths {
         };
         /**
          * Set whom the caller seeks, the age window, or both
-         * @description Either or both, each replacing its row: a non-empty set of genders, an age window within 18 and 99 with min at most max. Onboarding saves each on its own screen (ADR-010 §13). Hard rows: the round builder never crosses them, in either direction. The set of genders needs the sensitive-answers consent of the current wording (ADR-010 §16).
+         * @description Either or both, each replacing its row: a non-empty set of genders, an age window within 18 and 99 with min at most max. Onboarding saves each on its own screen (ADR-010 §13). Hard rows: the queue's builder never crosses them, in either direction. The set of genders needs the sensitive-answers consent of the current wording (ADR-010 §16).
          */
         put: {
             parameters: {
@@ -7606,7 +7606,7 @@ export interface components {
             conversations: components["schemas"]["ExportedConversation"][];
             contacts: components["schemas"]["StoredContact"][];
             notifications: components["schemas"]["ExportedNotifications"];
-            rounds: components["schemas"]["ExportedRounds"];
+            queue: components["schemas"]["ExportedQueue"];
             stars: components["schemas"]["ExportedStars"];
             invitations: components["schemas"]["ExportedInvitations"];
         };
@@ -7962,22 +7962,18 @@ export interface components {
         NotificationKind: "message" | "match" | "moderation" | "announcement";
         /** @enum {string} */
         NoticeKind: "warning" | "invitation_counted" | "invitation_friend" | "announcement" | "shadow_ban";
-        ExportedRounds: {
+        ExportedQueue: {
             /** @description What this part is, in the request's language. */
             about: string;
-            items: components["schemas"]["ExportedRound"][];
+            items: components["schemas"]["ExportedQueueDay"][];
         };
-        ExportedRound: {
+        ExportedQueueDay: {
             /** Format: date */
             day: string;
             /** Format: date-time */
-            builtAt: string;
-            /** Format: date-time */
-            openedAt: string | null;
-            /** Format: date-time */
-            completedAt: string | null;
+            startedAt: string;
             relaxations: components["schemas"]["ExportedRelaxation"][];
-            entries: components["schemas"]["ExportedRoundEntry"][];
+            entries: components["schemas"]["ExportedQueueEntry"][];
         };
         ExportedRelaxation: {
             field: components["schemas"]["DealBreakerField"];
@@ -7989,15 +7985,15 @@ export interface components {
         };
         /** @enum {string} */
         RelaxationKind: "unanswered" | "aside";
-        ExportedRoundEntry: {
+        ExportedQueueEntry: {
             position: number;
-            reason: components["schemas"]["RoundReason"];
+            reason: components["schemas"]["QueueReason"];
             reasonInWords: string;
             relaxedField: components["schemas"]["DealBreakerField"] & unknown;
             relaxedFieldInWords: string | null;
             /** Format: date-time */
             seenAt: string | null;
-            decision: components["schemas"]["RoundChoice"];
+            decision: components["schemas"]["QueueChoice"];
             decisionInWords: string | null;
             /** Format: date-time */
             decidedAt: string | null;
@@ -8006,9 +8002,9 @@ export interface components {
             distanceInWords: string | null;
         };
         /** @enum {string} */
-        RoundReason: "matches_filters" | "liked_you" | "seen_before" | "relaxed" | "fish";
+        QueueReason: "matches_filters" | "liked_you" | "seen_before" | "relaxed" | "fish";
         /** @enum {string|null} */
-        RoundChoice: "like" | "pass" | "fish" | "skip" | null;
+        QueueChoice: "like" | "pass" | "fish" | "skip" | null;
         /** @enum {string|null} */
         DistanceBand: "nearby" | "close" | "around" | "far" | null;
         ExportedStars: {
@@ -8792,7 +8788,7 @@ export interface components {
             createdAt: string;
         };
         /** @enum {string} */
-        SanctionRule: "reports" | "first_messages" | "same_first_message" | "photo_fetches" | "cards_served" | "round_reads";
+        SanctionRule: "reports" | "first_messages" | "same_first_message" | "photo_fetches" | "cards_served" | "queue_reads";
         SanctionList: {
             items: components["schemas"]["SanctionEntry"][];
         };
@@ -9197,18 +9193,18 @@ export interface components {
             postalCode?: string;
             showArea?: boolean;
         };
-        RoundResponse: {
+        QueueResponse: {
             /** Format: date */
             day: string;
-            entries: components["schemas"]["RoundEntry"][] | null;
+            entries: components["schemas"]["QueueEntry"][] | null;
             fishToSend: boolean;
             likesLeft: number;
             yourTurn: number;
         };
-        RoundEntry: {
+        QueueEntry: {
             position: number;
-            reason: components["schemas"]["RoundReason"];
-            decision: components["schemas"]["RoundChoice"];
+            reason: components["schemas"]["QueueReason"];
+            decision: components["schemas"]["QueueChoice"];
             card: components["schemas"]["ProfileCard"];
             distance: components["schemas"]["DistanceBand"];
             /** Format: uuid */
@@ -9216,7 +9212,7 @@ export interface components {
             relaxedField?: components["schemas"]["DealBreakerField"];
             notAnswered?: components["schemas"]["DealBreakerField"][];
         };
-        RoundDecisionAnswer: {
+        QueueDecisionAnswer: {
             match: {
                 /** Format: uuid */
                 conversationId: string;
@@ -9225,8 +9221,8 @@ export interface components {
             likesLeft: number;
             yourTurn: number;
         };
-        RoundDecisionUpdate: {
-            decision: components["schemas"]["RoundChoice"];
+        QueueDecisionUpdate: {
+            decision: components["schemas"]["QueueChoice"];
         };
         RelaxationsResponse: {
             short: boolean;
@@ -9243,7 +9239,7 @@ export interface components {
             kind: components["schemas"]["RelaxationKind"];
         };
         RelaxationAnswer: {
-            entries: components["schemas"]["RoundEntry"][];
+            entries: components["schemas"]["QueueEntry"][];
         };
         RelaxationUndone: {
             removed: number[];

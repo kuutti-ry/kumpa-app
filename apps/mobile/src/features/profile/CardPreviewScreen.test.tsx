@@ -110,7 +110,7 @@ describe("CardPreviewScreen", () => {
     expect(screen.getByText("Non-binary")).toBeTruthy();
     expect(screen.getByText("Genderfluid")).toBeTruthy();
     expect(screen.getByText("Espoo")).toBeTruthy();
-    // The owner's preview says where, and never how far (ADR-061 §5): only a round's entry has a band.
+    // The owner's preview says where, and never how far (ADR-061 §5): only a queue's entry has a band.
     expect(screen.queryByText(/^(Nearby|Close|Around|Far)$/)).toBeNull();
     // Languages in the reader's language, as every option (ADR-019 §3, #238); what both
     // answered is filled, in bold and heard as shared (#644).

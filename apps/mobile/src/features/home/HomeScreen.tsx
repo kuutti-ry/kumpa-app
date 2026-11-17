@@ -11,7 +11,7 @@ import { Ink } from "@/components/ui/ink";
 import { Text } from "@/components/ui/text";
 import { ChatsButton } from "@/features/chat";
 import { useOnboardingGate, useSession } from "@/features/identity";
-import { RoundButton, StarsButton } from "@/features/matching";
+import { QueueButton, StarsButton } from "@/features/matching";
 import { Notices, PushOffer } from "@/features/notifications";
 import { GateCard, PondCard } from "@/features/pond";
 import { isProduction } from "@/lib/environment";
@@ -104,7 +104,7 @@ export function HomeScreen() {
             <GateCard
               whenOpen={
                 <>
-                  <RoundButton />
+                  <QueueButton />
                   <StarsButton />
                   <PushOffer />
                 </>

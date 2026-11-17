@@ -150,10 +150,10 @@ describe("HomeScreen", () => {
       return json({ error: { code: "not_found" } }, 404);
     });
     await renderWithTheme(<HomeScreen />);
-    const round = await screen.findByRole("button", { name: "See people" });
+    const seePeople = await screen.findByRole("button", { name: "See people" });
     expect(screen.getByText("Matching is open for you.")).toBeTruthy();
-    await userEvent.setup().press(round);
-    expect(router.push).toHaveBeenCalledWith("/round");
+    await userEvent.setup().press(seePeople);
+    expect(router.push).toHaveBeenCalledWith("/queue");
     expect(pressables(screen.toJSON() as HostNode).flatMap((node) => a11yProblems(node))).toEqual(
       [],
     );

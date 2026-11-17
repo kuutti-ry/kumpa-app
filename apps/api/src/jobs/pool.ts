@@ -13,7 +13,7 @@ import {
   dealBreakersFrom,
   type PoolPerson,
   preferencesFrom,
-  type RoundCandidate,
+  type QueueCandidate,
 } from "../matching/index.ts";
 import { homeRules, keptPlace, pointOf } from "../pond/index.ts";
 import { ageInYears, answeredFieldsOf, answeredPromptsOf, completeness } from "../profile/index.ts";
@@ -54,9 +54,9 @@ type FactsRow = {
   special_category: boolean;
 };
 
-/** A person whose profile and onboarding are complete, as the round builder sees them (#95). */
-export type Subject = RoundCandidate & {
-  /** Seen by others: a shadow-banned person has rounds of their own and is in nobody's pool. */
+/** A person whose profile and onboarding are complete, as the queue's builder sees them (#95). */
+export type Subject = QueueCandidate & {
+  /** Seen by others: a shadow-banned person has queue days of their own and is in nobody's pool. */
   visible: boolean;
 };
 
@@ -73,7 +73,7 @@ export const PROFILE_FACTS = `(SELECT count(*) FROM photo ph
 
 /**
  * Whether a profile is complete, decided by `completeness()` itself from the
- * facts the profile screen gathers, so the round, the counter and the screen
+ * facts the profile screen gathers, so the queue, the counter and the screen
  * cannot disagree.
  */
 export function profileComplete(
@@ -214,7 +214,7 @@ export async function subjectsAmong(
 }
 
 /**
- * Everybody who is complete, the one pond there is (ADR-061 §8), for the round
+ * Everybody who is complete, the one pond there is (ADR-061 §8), for the queue
  * builder (#95, ADR-035): whether they are seen by others, and their pool
  * facts. Read with no lock: the builder's one writer asks each candidate's
  * liveness and the blocks again in the statements that write (ADR-034 §8).
@@ -231,7 +231,7 @@ export async function subjectsOfPond(db: Queryable, at: Date): Promise<Subject[]
   );
 }
 
-/** One person, or null while they are not complete: the round builder's first look (#95, ADR-035 §5). */
+/** One person, or null while they are not complete: the queue's builder's first look (#95, ADR-035 §5). */
 export async function subjectOf(
   db: Queryable,
   accountId: string,
@@ -242,7 +242,7 @@ export async function subjectOf(
 
 /**
  * The blocks between the people read, by who set them (#84, ADR-030
- * §3): a blocked pair is not in each other's pool, so the rounds never show
+ * §3): a blocked pair is not in each other's pool, so the queue days never show
  * them to each other. Read here, not through the safety slice: this reader
  * reads every slice's rows itself.
  */

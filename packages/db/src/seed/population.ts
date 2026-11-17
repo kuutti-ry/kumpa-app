@@ -337,7 +337,7 @@ function onboarded(random: Random, label: string, gender: Gender, epoch: Date): 
  * finished profiles, and without a release of faces the population has none,
  * so these get two photos that have no picture (`PLACEHOLDER_PHOTO_PREFIX`).
  * They have not accepted the terms' latest wording, a state real people are in,
- * so the night's counter sees a finished profile, and no round or card ever
+ * so the night's counter sees a finished profile, and no queue or card ever
  * sees them. Nobody is added: they are people the generator drew anyway, picked
  * by what they drew, which leaves everybody else as they were.
  */

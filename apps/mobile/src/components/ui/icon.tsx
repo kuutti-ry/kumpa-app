@@ -37,7 +37,7 @@ function Icon({ as: IconComponent, className, size = 20, ...props }: IconProps) 
 
 /**
  * An icon drawn here in Lucide's grid and line (24 points, a 2-point stroke
- * in the text colour, round ends), for what Lucide has no icon for. Taken by
+ * in the text colour, queue ends), for what Lucide has no icon for. Taken by
  * Icon like any of Lucide's.
  */
 function drawn(name: string, children: React.ReactNode): LucideIcon {

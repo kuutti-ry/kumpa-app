@@ -1,6 +1,6 @@
 ---
 name: change-rule
-description: Walk a change to how Kuutti behaves toward people: matching, rounds, likes, the pond, rewards, notifications or profile presentation. Use before touching any of them, and whenever a value or a rule would change. It refuses anything on the never-build list, and confirms parameters with the maintainer before building. A hook refuses edits on those paths until this skill has run in the session.
+description: Walk a change to how Kuutti behaves toward people: matching, the queue, likes, the pond, rewards, notifications or profile presentation. Use before touching any of them, and whenever a value or a rule would change. It refuses anything on the never-build list, and confirms parameters with the maintainer before building. A hook refuses edits on those paths until this skill has run in the session.
 argument-hint: [the rule or area]
 ---
 

@@ -101,7 +101,7 @@ export function ageInYears(birthYear: number, birthMonth: number, at: Date): num
   return now.month >= birthMonth ? years : years - 1;
 }
 
-/** The subject's completeness from the rows: the owner's screen, the preview and the round read the same answer. */
+/** The subject's completeness from the rows: the owner's screen, the preview and the queue read the same answer. */
 export async function completenessOf(
   deps: CardDeps,
   accountId: string,
@@ -122,7 +122,7 @@ export async function completenessOf(
 
 /**
  * The card (#47, ADR-009), one builder for two callers. For the owner it is
- * the preview: complete or not, nothing recorded. For anyone else (the round
+ * the preview: complete or not, nothing recorded. For anyone else (the queue
  * builder of M4; no route in M3) the subject must be live and complete, with
  * no block between the two (#84), the shown record is written for every
  * photo on the card and the card counts against matching_config
@@ -199,7 +199,7 @@ export async function buildCard(
     );
   }
   const onCard = fieldsOnCard(subject.profile);
-  // A name and never digits (ADR-061 §3). No band here: a band is the round's entry's (§5).
+  // A name and never digits (ADR-061 §3). No band here: a band is the queue's entry's (§5).
   const home = homeSummary(subject.homePlace, subject.homeShowsArea, rules);
   const cardPhotos: CardPhoto[] = photos.map((p) => ({
     id: p.id,

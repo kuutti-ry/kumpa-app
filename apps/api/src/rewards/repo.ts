@@ -215,7 +215,7 @@ export async function insertUnits(
 }
 
 /**
- * Spends the person's oldest unit not used yet on a round entry; false with
+ * Spends the person's oldest unit not used yet on a queue entry; false with
  * none left. `SKIP LOCKED`: a unit another transaction is spending or giving
  * back is not this one's to wait for.
  */
@@ -246,7 +246,7 @@ export async function releaseOn(
   return result.rowCount ?? 0;
 }
 
-/** The round entries the person's units paid for. */
+/** The queue entries the person's units paid for. */
 export async function paidEntries(db: Queryable, accountId: string): Promise<string[]> {
   const { rows } = await db.query<{ spent_entry_id: string }>(
     `SELECT spent_entry_id FROM reward

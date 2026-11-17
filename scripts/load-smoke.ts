@@ -49,7 +49,7 @@
  *   50 sessions, 60 thumbnail URLs per account (a tenth of the day's budget), 10 s a request,
  *   200 sockets and 4 an account (the API holds 5 and closes the oldest for a sixth, which must
  *   never be a persona's own phone).
- * - The alarm on the queue's reads (auto_shadow_ban_round_reads, ADR-041): the plan takes at most
+ * - The alarm on the queue's reads (auto_shadow_ban_queue_reads, ADR-041): the plan takes at most
  *   40 % of it per account, a rate past that reading the queue on one visit in Q, spread as the
  *   photos screen is, so a run never shadow-bans its own test persons.
  * - ADR-026's budgets: never a sign-in start (the doors). The plan takes at most 40 % of the
@@ -135,7 +135,7 @@ const REST_SHARE = 0.5;
 const WINDOW_MS = 60_000;
 /** Thumbnail URLs per account in one run: a tenth of the day's 600 (photo_fetches_per_day, ADR-008 §1). */
 const URLS_PER_ACCOUNT = 60;
-/** Reads of the queue a minute at which an account is shadow-banned: matching_config auto_shadow_ban_round_reads (ADR-041 §3). */
+/** Reads of the queue a minute at which an account is shadow-banned: matching_config auto_shadow_ban_queue_reads (ADR-041 §3). */
 const QUEUE_READS_ALARM = 30;
 /**
  * The 5xx alarm fires at five in five minutes (infra/modules/observability); the run stops sending
@@ -193,7 +193,7 @@ const ROUTES = {
   counter: { name: "GET /ponds/counter", method: "GET", signedIn: true, expect: 200 },
   onboarding: { name: "GET /onboarding", method: "GET", signedIn: true, expect: 200 },
   gate: { name: "GET /gate", method: "GET", signedIn: true, expect: 200 },
-  queue: { name: "GET /rounds/today", method: "GET", signedIn: true, expect: 200 },
+  queue: { name: "GET /queue/today", method: "GET", signedIn: true, expect: 200 },
   profile: { name: "GET /profile", method: "GET", signedIn: true, expect: 200 },
   photos: { name: "GET /photos", method: "GET", signedIn: true, expect: 200 },
   thumb: { name: "GET /photos/{id}/thumb", method: "GET", signedIn: true, expect: 200 },
@@ -707,7 +707,7 @@ async function signedIn(run: Run, account: Account): Promise<void> {
   await get(ROUTES.onboarding, "/onboarding");
   // The home's two reads, the counter asked with the session for the pond's bar (ADR-013 §18).
   await Promise.all([get(ROUTES.gate, "/gate"), get(ROUTES.counter, "/ponds/counter")]);
-  if (queue) await get(ROUTES.queue, "/rounds/today");
+  if (queue) await get(ROUTES.queue, "/queue/today");
   await Promise.all([get(ROUTES.profile, "/profile"), get(ROUTES.photos, "/photos")]);
   if (!thumbs) return;
   // The photos screen reads the list itself (usePhotos), then a URL for each thumbnail.
@@ -1893,7 +1893,7 @@ async function standInRuns(
       "GET /photos/{id}/thumb",
       "GET /ponds/counter",
       "GET /profile",
-      "GET /rounds/today",
+      "GET /queue/today",
       "POST /auth/exchange",
       "POST /auth/refresh",
     ]);
@@ -1909,7 +1909,7 @@ async function standInRuns(
     expect(
       "the queue's reads of a whole run",
       [
-        times(a.seen, "GET /rounds/today"),
+        times(a.seen, "GET /queue/today"),
         runA.out.some((line) =>
           line.includes("the queue read on one visit in 20, under its alarm"),
         ),
@@ -2467,7 +2467,7 @@ async function standIn(
         expiresAt: later,
       });
     }
-    if (["GET /onboarding", "GET /gate", "GET /profile", "GET /rounds/today"].includes(route)) {
+    if (["GET /onboarding", "GET /gate", "GET /profile", "GET /queue/today"].includes(route)) {
       return answer(200, {});
     }
     return refused(404, "not_found");

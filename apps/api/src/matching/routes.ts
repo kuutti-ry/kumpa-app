@@ -37,7 +37,7 @@ const saveRoute = createRoute({
   path: "/preferences",
   summary: "Set whom the caller seeks, the age window, or both",
   description:
-    "Either or both, each replacing its row: a non-empty set of genders, an age window within 18 and 99 with min at most max. Onboarding saves each on its own screen (ADR-010 §13). Hard rows: the round builder never crosses them, in either direction. The set of genders needs the sensitive-answers consent of the current wording (ADR-010 §16).",
+    "Either or both, each replacing its row: a non-empty set of genders, an age window within 18 and 99 with min at most max. Onboarding saves each on its own screen (ADR-010 §13). Hard rows: the queue's builder never crosses them, in either direction. The set of genders needs the sensitive-answers consent of the current wording (ADR-010 §16).",
   ...bearer,
   request: { body: { required: true, ...json(PreferencesUpdate) } },
   responses: {

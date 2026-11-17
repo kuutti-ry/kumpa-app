@@ -18,7 +18,7 @@ type State =
   | { status: "ready"; preview: CardPreviewResponse };
 
 /**
- * The owner looking at their own card (#47): built the way a round builds it,
+ * The owner looking at their own card (#47): built the way a queue builds it,
  * nothing recorded. What it still needs stands above it, as on the profile, and
  * a card can be called what others see only once nothing is missing (#581).
  */

@@ -130,7 +130,7 @@ function mergeFieldAndWork(chips: readonly Unheard[]): Unheard[] {
 /**
  * A card as others see it (#47, #150), in two depths (#644, the maintainer's
  * of 07/11/2026). The short card: the name with the age, then the gender
- * with the identity label after it, the name of the home and, in a round, how
+ * with the identity label after it, the name of the home and, in a queue, how
  * far it is in words (ADR-061 §3, §5), on one line with no digits, no
  * kilometres and no meaning in a colour; the photos; the key facts as chips;
  * one answer in the person's own words, the first prompt or the bio when
@@ -170,7 +170,7 @@ export function ProfileCardView({
   onGone,
 }: {
   card: ProfileCard;
-  /** How far the person lives, as their round entry froze it (ADR-061 §5); a card outside a round has none. */
+  /** How far the person lives, as their queue entry froze it (ADR-061 §5); a card outside a queue has none. */
   distance?: DistanceBand | null;
   /** A photo URL the API refused (#52 budget or another code): the screen says so instead of a silent placeholder. */
   onRefused?: OnRefused;

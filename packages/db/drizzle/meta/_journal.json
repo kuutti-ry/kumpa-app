@@ -85,6 +85,20 @@
       "when": 1794913810785,
       "tag": "0011_shadow_ban_review_week",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1794921762268,
+      "tag": "0012_queue_names_sql",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1794921828065,
+      "tag": "0013_queue_names",
+      "breakpoints": true
     }
   ]
 }

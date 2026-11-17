@@ -36,7 +36,7 @@ import {
   type TestContext,
   test,
 } from "../../src/test/harness.ts";
-import { giveConversations, giveRounds } from "./histories.ts";
+import { giveConversations, giveQueueDays } from "./histories.ts";
 import { resetPersonas } from "./reset.ts";
 import { giveStories, personaHashes, viaServices } from "./services.ts";
 
@@ -399,7 +399,7 @@ describe("the stories through the services", () => {
     });
   });
 
-  test("leave Iida a round for the day, Henna first, who liked her the day before, and a second run changes nothing (#379)", async ({
+  test("leave Iida a queue for the day, Henna first, who liked her the day before, and a second run changes nothing (#379)", async ({
     ctx,
   }) => {
     const { logger, writer, now } = await world(ctx);
@@ -418,19 +418,19 @@ describe("the stories through the services", () => {
          FROM unnest($1::uuid[]) AS id, generate_series(0, 1) n`,
       [cast],
     );
-    // Before her pond opens the builder writes Iida no round. Iida alone, so
+    // Before her pond opens the builder writes Iida no queue. Iida alone, so
     // Henna is missing and her like waits for the commands' call.
     const iidaOnly = results.filter((r) => r.key === "iida");
-    expect(await giveRounds({ db: ctx.client, logger, now }, iidaOnly)).toEqual({
+    expect(await giveQueueDays({ db: ctx.client, logger, now }, iidaOnly)).toEqual({
       liked: 0,
       already: 0,
       missing: 1,
       standing: 0,
     });
     // The commands' order: matching opened, then one call, which writes the
-    // like and builds the round on it.
+    // like and builds the queue on it.
     await openMatching(ctx.client, "test");
-    expect(await giveRounds({ db: ctx.client, logger, now }, results)).toEqual({
+    expect(await giveQueueDays({ db: ctx.client, logger, now }, results)).toEqual({
       liked: 1,
       already: 0,
       missing: 0,
@@ -442,7 +442,7 @@ describe("the stories through the services", () => {
       reason: string;
       distance: string;
     }>(
-      `SELECT e.candidate_id, e.reason, e.distance FROM rounds r JOIN round_entries e ON e.round_id = r.id
+      `SELECT e.candidate_id, e.reason, e.distance FROM queue_day r JOIN queue_entry e ON e.queue_day_id = r.id
         WHERE r.account_id = $1 AND r.day = $2 ORDER BY e.position`,
       [account("iida"), finnishDay(now())],
     );
@@ -455,15 +455,15 @@ describe("the stories through the services", () => {
       { candidate_id: account("riikka"), reason: "matches_filters", distance: "far" },
     ]);
 
-    // Staging's job runs again without a reset: the round and the like stay as they were.
-    expect(await giveRounds({ db: ctx.client, logger, now }, results)).toEqual({
+    // Staging's job runs again without a reset: the queue and the like stay as they were.
+    expect(await giveQueueDays({ db: ctx.client, logger, now }, results)).toEqual({
       liked: 0,
       already: 1,
       missing: 0,
       standing: 1,
     });
     const after = await ctx.client.query(
-      "SELECT count(*)::int AS n FROM rounds WHERE account_id = $1",
+      "SELECT count(*)::int AS n FROM queue_day WHERE account_id = $1",
       [account("iida")],
     );
     expect(after.rows).toEqual([{ n: 1 }]);

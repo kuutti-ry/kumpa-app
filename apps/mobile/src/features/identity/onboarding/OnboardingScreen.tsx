@@ -301,7 +301,7 @@ export function OnboardingScreen() {
       <ProfileReady
         still={still}
         onContinue={() => router.replace("/")}
-        you={<OwnPhoto label={t("round.hello.you")} inReview />}
+        you={<OwnPhoto label={t("queue.hello.you")} inReview />}
       />
     ) : (
       <SafeAreaView className="flex-1 bg-background" />

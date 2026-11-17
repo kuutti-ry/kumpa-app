@@ -8,9 +8,9 @@ export { auditBoundary, recordAudit } from "./audit.ts";
 export { auditAdminRoutes } from "./audit-routes.ts";
 // The automatic shadow bans (#105, ADR-033): the check after a conversation's
 // first message, which app.ts hands the chat's routes; and #86's velocity
-// (ADR-041), the checks after a photo's URL and a read of the round, which it
-// hands the photo and round routes.
-export { checkFirstMessage, checkPhotoFetches, roundReadRule } from "./automatic.ts";
+// (ADR-041), the checks after a photo's URL and a read of the queue, which it
+// hands the photo and queue routes.
+export { checkFirstMessage, checkPhotoFetches, queueReadRule } from "./automatic.ts";
 // Blocks and reports from a card (#84, ADR-030) and from a conversation
 // (#351): the routes, the halves the export and erasure call, and the night's
 // prune. Erasure keeps both (TD-7's kept side), and the photos a report's

@@ -7,7 +7,7 @@
 # one gets her fish (#378). Then the queue says that is everybody, and its one
 # button leads into What you seek and back. Which of Katja, Minna and Riikka
 # comes when is the day's order, so the flow decides by place, never by name.
-# The stories give Iida her queue (packages/db/src/seed/rounds.ts), and no
+# The stories give Iida her queue (packages/db/src/seed/queue.ts), and no
 # other persona fits her; a match and a block are final, so the flow runs once
 # after each `pnpm demo:reset`.
 # shortcut: the note is typed at the phone's own text size; ADR-030 §11's

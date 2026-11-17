@@ -4,7 +4,7 @@ import {
   GateResponse,
   GateState,
   OnboardingStatus,
-  RoundResponse,
+  QueueResponse,
 } from "@kuutti/schema";
 import { createApp } from "../app.ts";
 import { matchingOpen } from "../lib/matching-config.ts";
@@ -21,7 +21,7 @@ import {
 } from "../test/harness.ts";
 import { type PeopleOptions, people } from "../test/people.ts";
 import { isComplete, matchingStatusOf, subjectOf, subjectsOfPond } from "./pool.ts";
-import { fillQueue } from "./round-builder.ts";
+import { fillQueue } from "./queue-builder.ts";
 
 // features/pond/opening.feature (#500, ADR-060): who is complete, what a
 // person is told of their matching, and what an admin's switch does to the
@@ -42,14 +42,15 @@ async function statusOf(ctx: TestContext, accountId: string | undefined, query =
   return GateResponse.parse(await response.json()).state;
 }
 
-const roundCount = async (db: Queryable, accountId: string) =>
+const queueDayCount = async (db: Queryable, accountId: string) =>
   (
-    await db.query<{ n: number }>("SELECT count(*)::int AS n FROM rounds WHERE account_id = $1", [
-      accountId,
-    ])
+    await db.query<{ n: number }>(
+      "SELECT count(*)::int AS n FROM queue_day WHERE account_id = $1",
+      [accountId],
+    )
   ).rows[0]?.n;
 
-/** Each of them reads the queue, as far as who has a round goes; whether each read added anybody. */
+/** Each of them reads the queue, as far as who has a queue goes; whether each read added anybody. */
 async function reads(ctx: TestContext, ids: readonly string[], at = NOON) {
   const { logger } = await captureLogger();
   const added: boolean[] = [];
@@ -72,7 +73,7 @@ describe("the switch", () => {
     const ids = await people(ctx.client, 31, ALIKE);
 
     expect(await reads(ctx, ids)).toEqual(ids.map(() => false));
-    for (const id of ids) expect(await roundCount(ctx.client, id)).toBe(0);
+    for (const id of ids) expect(await queueDayCount(ctx.client, id)).toBe(0);
     expect(await statusOf(ctx, ids[0])).toBe("closed");
     expect(await statusOf(ctx, ids[30])).toBe("closed");
     expect(await matchingOpen(ctx.client)).toBe(false);
@@ -82,10 +83,10 @@ describe("the switch", () => {
     expect(await statusOf(ctx, ids[0])).toBe("open");
     expect(await statusOf(ctx, ids[30])).toBe("open");
     expect(await reads(ctx, ids)).toEqual(ids.map(() => true));
-    for (const id of ids) expect(await roundCount(ctx.client, id)).toBe(1);
+    for (const id of ids) expect(await queueDayCount(ctx.client, id)).toBe(1);
   });
 
-  test("Closing a pond opens no new round and ends no conversation", async ({ ctx }) => {
+  test("Closing a pond opens no new queue and ends no conversation", async ({ ctx }) => {
     await openMatchingHere(ctx.client);
     const [a, b] = await people(ctx.client, 2, ALIKE);
     if (!a || !b) throw new Error("people not written");
@@ -95,9 +96,9 @@ describe("the switch", () => {
     const { logger } = await captureLogger();
     const app = createApp({ config: testConfig(), logger, db: ctx.client, now: () => NOON });
     const read = async () => {
-      const response = await app.request("/rounds/today", { headers: who.headers });
+      const response = await app.request("/queue/today", { headers: who.headers });
       expect(response.status).toBe(200);
-      return RoundResponse.parse(await response.json());
+      return QueueResponse.parse(await response.json());
     };
     const before = await read();
     expect(before.entries).not.toBeNull();
@@ -111,7 +112,7 @@ describe("the switch", () => {
     expect(talk.status).toBe(200);
     expect(await statusOf(ctx, a)).toBe("closed");
     expect(await reads(ctx, [a], NEXT_NOON)).toEqual([false]);
-    expect(await roundCount(ctx.client, a)).toBe(1);
+    expect(await queueDayCount(ctx.client, a)).toBe(1);
   });
 });
 
@@ -215,19 +216,19 @@ describe("who is complete", () => {
     const cards = async (id: string) =>
       (
         await ctx.client.query<{ candidate_id: string }>(
-          `SELECT e.candidate_id FROM rounds r JOIN round_entries e ON e.round_id = r.id
+          `SELECT e.candidate_id FROM queue_day r JOIN queue_entry e ON e.queue_day_id = r.id
             WHERE r.account_id = $1`,
           [id],
         )
       ).rows.map((row) => row.candidate_id);
-    // Nobody else of them is a card; the shadow-banned person is in nobody's pool, and has a round.
+    // Nobody else of them is a card; the shadow-banned person is in nobody's pool, and has a queue.
     expect(await cards(she)).toEqual([]);
     expect(await cards(shadow)).toEqual([she]);
     expect(await statusOf(ctx, shadow)).toBe("open");
     expect(await statusOf(ctx, unfinished)).toBe("incomplete");
     expect(await statusOf(ctx, outdated)).toBe("incomplete");
     for (const id of [unfinished, outdated, paused, banned]) {
-      expect(await roundCount(ctx.client, id), id).toBe(0);
+      expect(await queueDayCount(ctx.client, id), id).toBe(0);
     }
   });
 

@@ -1,5 +1,5 @@
 import type { Queryable } from "@kuutti/db";
-import { AutomaticBanQueue, ErrorResponse, PhotoUrlResponse, RoundResponse } from "@kuutti/schema";
+import { AutomaticBanQueue, ErrorResponse, PhotoUrlResponse, QueueResponse } from "@kuutti/schema";
 import { vi } from "vitest";
 import { type App, createApp } from "../app.ts";
 import { lockAccountForSanction } from "../identity/index.ts";
@@ -24,17 +24,17 @@ import { completeProfiles, consentsOf, people } from "../test/people.ts";
 import { FITTING, fitIn, queued } from "../test/queue.ts";
 import { pidOf, waitsFor, watched, withTwoConnections } from "../test/races.ts";
 import { sanctionsOf } from "../test/reports.ts";
-import { checkPhotoFetches, roundReadRule } from "./automatic.ts";
+import { checkPhotoFetches, queueReadRule } from "./automatic.ts";
 
 // The velocity rules (#86, ADR-041, features/safety/velocity.feature): other
-// people's photos fetched, different people's cards served and the round
+// people's photos fetched, different people's cards served and the queue
 // read faster than a person does, each at its threshold and one below, what
 // counts and what does not, the window's edge, a read refused, the rule off,
 // two rules met at once, the person already out of sight and staff, two
 // checks at once, what the person still reads, a reversal, the moderators'
 // list, and a check that fails. The triggers go through the routes; what
 // came before is written straight into the test's transaction, except the
-// round's reads, which live in the app's memory and come through the route.
+// queue's reads, which live in the app's memory and come through the route.
 
 /** 12:00 in Finland, one Friday. */
 const SECOND = 1000;
@@ -109,7 +109,7 @@ async function fetched(app: App, who: SignedIn, photoId: string, variant = "card
 const RULE_NOTE: Record<string, string> = {
   photo_fetches: "Applied by the automatic rule on other people's photos fetched within the window",
   cards_served: "Applied by the automatic rule on cards served within the window",
-  round_reads: "Applied by the automatic rule on reads of the queue within the window",
+  queue_reads: "Applied by the automatic rule on reads of the queue within the window",
 };
 
 const byRule = (rule: string, count: number) => ({
@@ -123,7 +123,7 @@ const byRule = (rule: string, count: number) => ({
 });
 
 /** The viewer made complete, and one complete person who fits them in their queue today; that person's account id. */
-async function roundWithOne(db: Queryable, viewer: SignedIn): Promise<string> {
+async function queueWithOne(db: Queryable, viewer: SignedIn): Promise<string> {
   await fitIn(db, viewer.accountId);
   await consentsOf(db, [viewer.accountId]);
   await completeProfiles(db, [viewer.accountId], FITTING);
@@ -133,26 +133,26 @@ async function roundWithOne(db: Queryable, viewer: SignedIn): Promise<string> {
   return subject;
 }
 
-const readRound = (app: App, who: SignedIn) =>
-  app.request("/rounds/today", { headers: who.headers });
+const readQueueAs = (app: App, who: SignedIn) =>
+  app.request("/queue/today", { headers: who.headers });
 
-async function roundRead(app: App, who: SignedIn): Promise<RoundResponse> {
-  const answer = await readRound(app, who);
+async function queueRead(app: App, who: SignedIn): Promise<QueueResponse> {
+  const answer = await readQueueAs(app, who);
   expect(answer.status).toBe(200);
-  return RoundResponse.parse(await answer.json());
+  return QueueResponse.parse(await answer.json());
 }
 
-/** Reads of the round through the route, at the times given. */
+/** Reads of the queue through the route, at the times given. */
 async function readsAt(
   app: App,
   time: ReturnType<typeof clock>,
   who: SignedIn,
   times: Date[],
-): Promise<RoundResponse[]> {
-  const answers: RoundResponse[] = [];
+): Promise<QueueResponse[]> {
+  const answers: QueueResponse[] = [];
   for (const t of times) {
     time.set(t);
-    answers.push(await roundRead(app, who));
+    answers.push(await queueRead(app, who));
   }
   return answers;
 }
@@ -280,7 +280,7 @@ describe("the photo rule", () => {
     const deps = { db: ctx.client, logger, now: () => T };
     await checkPhotoFetches(deps, a.accountId);
     await checkPhotoFetches(deps, "00000000-0000-4000-8000-000000000000");
-    await roundReadRule(deps)("00000000-0000-4000-8000-000000000000");
+    await queueReadRule(deps)("00000000-0000-4000-8000-000000000000");
     expect(await sanctionsOf(ctx.client, a.accountId)).toEqual([]);
     expect(lines()).toEqual([]);
   });
@@ -309,7 +309,7 @@ describe("the photo rule", () => {
   describe("A velocity rule writes nothing on a person already out of sight, or on staff", () => {
     test.for([
       ["shadow-banned by a moderator"],
-      ["shadow-banned by the round reads rule"],
+      ["shadow-banned by the queue reads rule"],
       ["a moderator"],
     ] as const)("%s", async ([standing], { ctx, time }) => {
       const { app, lines } = await appOn(ctx.client, time.now);
@@ -325,12 +325,12 @@ describe("the photo rule", () => {
           [a.accountId, moderator.identityId, ago(HOUR)],
         );
       }
-      if (standing === "shadow-banned by the round reads rule") {
+      if (standing === "shadow-banned by the queue reads rule") {
         await ctx.client.query(
           `INSERT INTO sanction (identity_id, account_id, kind, reason, note, created_at,
                                  rule, rule_count, rule_first_at)
            SELECT identity_id, id, 'shadow_ban', 'scraping', 'Applied by the automatic rule.', $2,
-                  'round_reads', 30, $3
+                  'queue_reads', 30, $3
              FROM account WHERE id = $1`,
           [a.accountId, ago(HOUR), ago(HOUR + MINUTE)],
         );
@@ -392,7 +392,7 @@ describe("the photo rule", () => {
            FROM account WHERE id = $1`,
         [hidden.accountId, ago(MINUTE), ago(HOUR)],
       );
-      const rounds = roundReadRule(deps);
+      const reads = queueReadRule(deps);
       const firstPid = await pidOf(first);
       const secondPid = await pidOf(second);
       for (const who of [below, hidden]) {
@@ -401,7 +401,7 @@ describe("the photo rule", () => {
         await lockAccountForSanction(first, who.accountId);
         for (const work of [
           () => checkPhotoFetches(deps, who.accountId),
-          () => rounds(who.accountId),
+          () => reads(who.accountId),
         ]) {
           await second.query("BEGIN");
           const racing = watched(work());
@@ -422,14 +422,14 @@ describe("the photo rule", () => {
     app,
   }) => {
     const a = await signedInAccount(ctx.client);
-    await roundWithOne(ctx.client, a);
-    const round = await roundRead(app, a);
-    const photo = round.entries?.[0]?.card.photos[0]?.id as string;
+    await queueWithOne(ctx.client, a);
+    const read = await queueRead(app, a);
+    const photo = read.entries?.[0]?.card.photos[0]?.id as string;
     await handed(ctx.client, a.accountId, photo, spread(1499));
     const url = await fetched(app, a, photo);
     expect(await sanctionsOf(ctx.client, a.accountId)).toEqual([byRule("photo_fetches", 1500)]);
     expect(await fetched(app, a, photo)).toEqual(url);
-    expect(await roundRead(app, a)).toEqual(round);
+    expect(await queueRead(app, a)).toEqual(read);
   });
 
   test("After a reversal only the fetches that follow count", async ({ ctx, app, time }) => {
@@ -528,19 +528,19 @@ describe("values set in the panel", () => {
     expect(await sanctionsOf(ctx.client, a.accountId)).toEqual([byRule("photo_fetches", 5)]);
   });
 
-  test("a lower round-reads threshold set in the panel bans at it", async ({ ctx, app, time }) => {
-    await withMatchingConfig(ctx.client, { auto_shadow_ban_round_reads: 3 });
+  test("a lower queue-reads threshold set in the panel bans at it", async ({ ctx, app, time }) => {
+    await withMatchingConfig(ctx.client, { auto_shadow_ban_queue_reads: 3 });
     const a = await signedInAccount(ctx.client);
     await readsAt(app, time, a, [T, at(SECOND), at(2 * SECOND)]);
-    expect(await sanctionsOf(ctx.client, a.accountId)).toEqual([byRule("round_reads", 3)]);
+    expect(await sanctionsOf(ctx.client, a.accountId)).toEqual([byRule("queue_reads", 3)]);
   });
 
-  test("a longer round-reads window set in the panel counts what the default would forget", async ({
+  test("a longer queue-reads window set in the panel counts what the default would forget", async ({
     ctx,
     app,
     time,
   }) => {
-    await withMatchingConfig(ctx.client, { auto_shadow_ban_round_reads_minutes: 2 });
+    await withMatchingConfig(ctx.client, { auto_shadow_ban_queue_reads_minutes: 2 });
     const a = await signedInAccount(ctx.client);
     // Thirty reads over ninety seconds: never thirty within one minute.
     await readsAt(
@@ -549,7 +549,7 @@ describe("values set in the panel", () => {
       a,
       Array.from({ length: 30 }, (_, i) => at(i * 3 * SECOND)),
     );
-    expect(await sanctionsOf(ctx.client, a.accountId)).toEqual([byRule("round_reads", 30)]);
+    expect(await sanctionsOf(ctx.client, a.accountId)).toEqual([byRule("queue_reads", 30)]);
   });
 
   test("a shorter cards window set in the panel leaves out what the default would count", async ({
@@ -559,20 +559,20 @@ describe("values set in the panel", () => {
     await withMatchingConfig(ctx.client, { auto_shadow_ban_cards_served_minutes: 1 });
     const a = await signedInAccount(ctx.client);
     await servedCards(ctx.client, a, 299, ago(2 * MINUTE));
-    await roundWithOne(ctx.client, a);
-    await roundRead(app, a);
+    await queueWithOne(ctx.client, a);
+    await queueRead(app, a);
     expect(await sanctionsOf(ctx.client, a.accountId)).toEqual([]);
   });
 });
 
-describe("the round rules", () => {
-  describe("Reads of the round within a minute shadow-ban the reader at the threshold", () => {
+describe("the queue rules", () => {
+  describe("Reads of the queue within a minute shadow-ban the reader at the threshold", () => {
     test.for([
       [28, "not sanctioned"],
-      [29, "shadow-banned by nobody for the reason scraping, by the rule round_reads counting 30"],
+      [29, "shadow-banned by nobody for the reason scraping, by the rule queue_reads counting 30"],
     ] as const)("%i earlier: %s", async ([earlier], { ctx, app, time }) => {
       const a = await signedInAccount(ctx.client);
-      await roundWithOne(ctx.client, a);
+      await queueWithOne(ctx.client, a);
       const [first] = await readsAt(
         app,
         time,
@@ -582,14 +582,14 @@ describe("the round rules", () => {
       const [last] = await readsAt(app, time, a, [at(58 * SECOND)]);
       expect(last).toEqual(first);
       expect(await sanctionsOf(ctx.client, a.accountId)).toEqual(
-        earlier === 29 ? [byRule("round_reads", 30)] : [],
+        earlier === 29 ? [byRule("queue_reads", 30)] : [],
       );
     });
   });
 
-  test("A read of the round as old as the window is forgotten", async ({ ctx, app, time }) => {
+  test("A read of the queue as old as the window is forgotten", async ({ ctx, app, time }) => {
     const a = await signedInAccount(ctx.client);
-    await roundWithOne(ctx.client, a);
+    await queueWithOne(ctx.client, a);
     await readsAt(app, time, a, [T, ...Array.from({ length: 28 }, (_, i) => at((i + 1) * SECOND))]);
     await readsAt(app, time, a, [at(MINUTE)]);
     expect(await sanctionsOf(ctx.client, a.accountId)).toEqual([]);
@@ -601,7 +601,7 @@ describe("the round rules", () => {
     time,
   }) => {
     const a = await signedInAccount(ctx.client);
-    await roundWithOne(ctx.client, a);
+    await queueWithOne(ctx.client, a);
     await readsAt(
       app,
       time,
@@ -620,17 +620,17 @@ describe("the round rules", () => {
     await withMatchingConfig(ctx.client, { exposure_cards_per_day: 1 });
     const a = await signedInAccount(ctx.client);
     await servedCards(ctx.client, a, 1);
-    await roundWithOne(ctx.client, a);
+    await queueWithOne(ctx.client, a);
     for (let i = 0; i < 30; i++) {
       time.set(at(i * SECOND));
-      const answer = await readRound(app, a);
+      const answer = await readQueueAs(app, a);
       expect(answer.status).toBe(429);
       expect(ErrorResponse.parse(await answer.json()).error.code).toBe("card_budget_exceeded");
     }
     expect(await sanctionsOf(ctx.client, a.accountId)).toEqual([]);
   });
 
-  test("a read with no round yet is counted like any other", async ({ ctx, app, time }) => {
+  test("a read with no queue yet is counted like any other", async ({ ctx, app, time }) => {
     const a = await signedInAccount(ctx.client);
     const answers = await readsAt(
       app,
@@ -638,13 +638,13 @@ describe("the round rules", () => {
       a,
       Array.from({ length: 30 }, (_, i) => at(i * SECOND)),
     );
-    expect(answers.every((round) => round.entries === null)).toBe(true);
-    expect(await sanctionsOf(ctx.client, a.accountId)).toEqual([byRule("round_reads", 30)]);
+    expect(answers.every((read) => read.entries === null)).toBe(true);
+    expect(await sanctionsOf(ctx.client, a.accountId)).toEqual([byRule("queue_reads", 30)]);
   });
 
-  test("a restart forgets the round's reads", async ({ ctx, time }) => {
+  test("a restart forgets the queue's reads", async ({ ctx, time }) => {
     const a = await signedInAccount(ctx.client);
-    await roundWithOne(ctx.client, a);
+    await queueWithOne(ctx.client, a);
     const before = await appOn(ctx.client, time.now);
     await readsAt(
       before.app,
@@ -662,7 +662,7 @@ describe("the round rules", () => {
     app,
     time,
   }) => {
-    await withMatchingConfig(ctx.client, { auto_shadow_ban_round_reads: 2 });
+    await withMatchingConfig(ctx.client, { auto_shadow_ban_queue_reads: 2 });
     const a = await signedInAccount(ctx.client);
     const b = await signedInAccount(ctx.client);
     await readsAt(app, time, b, [T]);
@@ -673,24 +673,24 @@ describe("the round rules", () => {
     expect(await sanctionsOf(ctx.client, a.accountId)).toEqual([]);
   });
 
-  test("a round read's check that fails changes no answer, and says which check in its line", async ({
+  test("a queue read's check that fails changes no answer, and says which check in its line", async ({
     ctx,
     time,
   }) => {
     const { app, lines } = await appOn(ctx.client, time.now);
     const a = await signedInAccount(ctx.client);
     await ctx.client.query(
-      "DELETE FROM matching_config WHERE key = 'auto_shadow_ban_round_reads_minutes'",
+      "DELETE FROM matching_config WHERE key = 'auto_shadow_ban_queue_reads_minutes'",
     );
-    await roundRead(app, a);
+    await queueRead(app, a);
     expect(lines().find((line) => line.msg === "automatic rule check failed")).toMatchObject({
-      check: "round_read",
+      check: "queue_read",
       code: "internal_error",
     });
   });
 
   test("reads while the rule is off are not kept", async ({ ctx, app, time }) => {
-    await withMatchingConfig(ctx.client, { auto_shadow_ban_round_reads: 0 });
+    await withMatchingConfig(ctx.client, { auto_shadow_ban_queue_reads: 0 });
     const a = await signedInAccount(ctx.client);
     await readsAt(
       app,
@@ -698,7 +698,7 @@ describe("the round rules", () => {
       a,
       Array.from({ length: 5 }, (_, i) => at(i * SECOND)),
     );
-    await withMatchingConfig(ctx.client, { auto_shadow_ban_round_reads: 2 });
+    await withMatchingConfig(ctx.client, { auto_shadow_ban_queue_reads: 2 });
     await readsAt(app, time, a, [at(5 * SECOND)]);
     expect(await sanctionsOf(ctx.client, a.accountId)).toEqual([]);
   });
@@ -708,7 +708,7 @@ describe("the round rules", () => {
     app,
     time,
   }) => {
-    await withMatchingConfig(ctx.client, { auto_shadow_ban_round_reads: 2 });
+    await withMatchingConfig(ctx.client, { auto_shadow_ban_queue_reads: 2 });
     const a = await signedInAccount(ctx.client);
     const b = await signedInAccount(ctx.client);
     vi.useFakeTimers({ toFake: ["setTimeout"] });
@@ -720,22 +720,22 @@ describe("the round rules", () => {
       time.set(at(MINUTE + SECOND));
       vi.advanceTimersByTime(MINUTE);
       // A longer window would count B's read at T again, had it been kept.
-      await withMatchingConfig(ctx.client, { auto_shadow_ban_round_reads_minutes: 5 });
+      await withMatchingConfig(ctx.client, { auto_shadow_ban_queue_reads_minutes: 5 });
       await readsAt(app, time, b, [at(MINUTE + 2 * SECOND)]);
       await readsAt(app, time, a, [at(MINUTE + 3 * SECOND)]);
     } finally {
       vi.useRealTimers();
     }
     expect(await sanctionsOf(ctx.client, b.accountId)).toEqual([]);
-    expect(await sanctionsOf(ctx.client, a.accountId)).toEqual([byRule("round_reads", 2)]);
+    expect(await sanctionsOf(ctx.client, a.accountId)).toEqual([byRule("queue_reads", 2)]);
   });
 
   test("Cards served counts for nothing while its threshold is zero", async ({ ctx, app }) => {
     await withMatchingConfig(ctx.client, { auto_shadow_ban_cards_served: 0 });
     const a = await signedInAccount(ctx.client);
     await servedCards(ctx.client, a, 299, ago(MINUTE));
-    await roundWithOne(ctx.client, a);
-    await roundRead(app, a);
+    await queueWithOne(ctx.client, a);
+    await queueRead(app, a);
     expect(await sanctionsOf(ctx.client, a.accountId)).toEqual([]);
   });
 
@@ -749,8 +749,8 @@ describe("the round rules", () => {
     ] as const)("%i earlier: %s", async ([earlier], { ctx, app }) => {
       const a = await signedInAccount(ctx.client);
       await servedCards(ctx.client, a, earlier, ago(MINUTE));
-      await roundWithOne(ctx.client, a);
-      await roundRead(app, a);
+      await queueWithOne(ctx.client, a);
+      await queueRead(app, a);
       expect(await sanctionsOf(ctx.client, a.accountId)).toEqual(
         earlier === 299 ? [byRule("cards_served", 300)] : [],
       );
@@ -761,22 +761,22 @@ describe("the round rules", () => {
     const a = await signedInAccount(ctx.client);
     const b = await signedInAccount(ctx.client);
     await servedCards(ctx.client, b, 299, ago(MINUTE));
-    await roundWithOne(ctx.client, a);
-    await roundRead(app, a);
+    await queueWithOne(ctx.client, a);
+    await queueRead(app, a);
     expect(await sanctionsOf(ctx.client, a.accountId)).toEqual([]);
   });
 
   test("cards served not met leaves the reads to decide", async ({ ctx, app, time }) => {
     const a = await signedInAccount(ctx.client);
     await servedCards(ctx.client, a, 10, ago(MINUTE));
-    await roundWithOne(ctx.client, a);
+    await queueWithOne(ctx.client, a);
     await readsAt(
       app,
       time,
       a,
       Array.from({ length: 30 }, (_, i) => at(i * SECOND)),
     );
-    expect(await sanctionsOf(ctx.client, a.accountId)).toEqual([byRule("round_reads", 30)]);
+    expect(await sanctionsOf(ctx.client, a.accountId)).toEqual([byRule("queue_reads", 30)]);
   });
 
   test("a cards ban records its first card, and after a reversal only what follows counts", async ({
@@ -787,8 +787,8 @@ describe("the round rules", () => {
     const moderator = await staffSession(ctx.client);
     const a = await signedInAccount(ctx.client);
     await servedCards(ctx.client, a, 299, ago(MINUTE));
-    await roundWithOne(ctx.client, a);
-    await roundRead(app, a);
+    await queueWithOne(ctx.client, a);
+    await queueRead(app, a);
     const { rows } = await ctx.client.query<{ id: string; rule_first_at: Date }>(
       "SELECT id, rule_first_at FROM sanction WHERE account_id = $1 AND rule = 'cards_served'",
       [a.accountId],
@@ -798,11 +798,11 @@ describe("the round rules", () => {
     time.set(at(MINUTE));
     const reversed = await app.request(
       `/admin/sanctions/${rows[0]?.id}/review`,
-      json(moderator.headers, { outcome: "lift", note: "Two rounds read across midnight." }),
+      json(moderator.headers, { outcome: "lift", note: "Two queue days read across midnight." }),
     );
     expect(reversed.status).toBe(200);
     time.set(at(2 * MINUTE));
-    await roundRead(app, a);
+    await queueRead(app, a);
     expect((await sanctionsOf(ctx.client, a.accountId)).filter((s) => !s.lifted_at)).toEqual([]);
   });
 
@@ -811,8 +811,8 @@ describe("the round rules", () => {
     const [old] = await people(ctx.client, 1);
     await cardShown(ctx.client, a.accountId, old as string, ago(10 * MINUTE));
     await servedCards(ctx.client, a, 298, ago(MINUTE));
-    await roundWithOne(ctx.client, a);
-    await roundRead(app, a);
+    await queueWithOne(ctx.client, a);
+    await queueRead(app, a);
     expect(await sanctionsOf(ctx.client, a.accountId)).toEqual([]);
   });
 
@@ -824,8 +824,8 @@ describe("the round rules", () => {
     await withMatchingConfig(ctx.client, { auto_shadow_ban_cards_served: 0 });
     const a = await signedInAccount(ctx.client);
     await servedCards(ctx.client, a, 299, ago(MINUTE));
-    await roundWithOne(ctx.client, a);
-    // The first read serves the round's card, the three hundredth person's.
+    await queueWithOne(ctx.client, a);
+    // The first read serves the queue's card, the three hundredth person's.
     await readsAt(
       app,
       time,

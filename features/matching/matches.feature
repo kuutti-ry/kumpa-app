@@ -12,22 +12,22 @@ Feature: Two likes make a match, and the match is a conversation
   person makes no new match (ADR-062 §5, §7).
 
   Scenario: Two likes make a match, and the match is a conversation for both
-    Given "B" liked "A" yesterday, and "B" is in "A"'s round today
+    Given "B" liked "A" yesterday, and "B" is in "A"'s queue today
     When "A" likes "B"
     Then the answer names a conversation, and both "A" and "B" find it among their conversations
 
   Scenario: A like that meets no like makes no match, and says nothing of the other
-    Given "B" is in "A"'s round today, and "B" never liked "A"
+    Given "B" is in "A"'s queue today, and "B" never liked "A"
     When "A" likes "B"
     Then the answer has no match, and "B" has no conversation
 
   Scenario: Two likes of the same day make one match, whichever comes second
-    Given "A" and "B" are in each other's round today
+    Given "A" and "B" are in each other's queue today
     When "A" likes "B", then "B" likes "A"
     Then the second answer names the match, and the first like again names the same one
 
   Scenario: Two likes at the same moment make exactly one match
-    Given "A" and "B" are in each other's round today
+    Given "A" and "B" are in each other's queue today
     When both like each other at once
     Then one waits for the other, and there is exactly one conversation between them
 
@@ -37,12 +37,12 @@ Feature: Two likes make a match, and the match is a conversation
     Then it is refused as match_made, and the like and the conversation stay
 
   Scenario: A like taken back before the other's makes no match
-    Given "A" and "B" are in each other's round today
+    Given "A" and "B" are in each other's queue today
     When "A" likes "B" and takes it back, then "B" likes "A"
     Then no match is made
 
   Scenario Outline: A like makes a match with a like that has not expired
-    Given "B" liked "A" <days> days ago, and "B" is in "A"'s round today
+    Given "B" liked "A" <days> days ago, and "B" is in "A"'s queue today
     When "A" likes "B"
     Then <outcome>
 
@@ -92,7 +92,7 @@ Feature: Two likes make a match, and the match is a conversation
   # conversations count is features/chat's.
 
   Scenario Outline: A new like at the your-turn limit is refused, whatever the card
-    Given <waiting> conversations are on "A"'s turn, and "B" is in "A"'s round today on <card>
+    Given <waiting> conversations are on "A"'s turn, and "B" is in "A"'s queue today on <card>
     When "A" chooses <choice>
     Then the answer is <answer>
 
@@ -113,7 +113,7 @@ Feature: Two likes make a match, and the match is a conversation
     Then each answer is the same your_turn_limit, and nothing is written
 
   Scenario: Neither a pass nor a skip is refused at the your-turn limit
-    Given 8 conversations are on "A"'s turn, and "B" and "C" are in "A"'s round today
+    Given 8 conversations are on "A"'s turn, and "B" and "C" are in "A"'s queue today
     When "A" passes "B" and skips "C"
     Then both are recorded
 
@@ -128,16 +128,16 @@ Feature: Two likes make a match, and the match is a conversation
     Then the fish is recorded, and no conversation opens
 
   Scenario: A your_turn_limit of 0 is off
-    Given your_turn_limit is 0, 8 conversations are on "A"'s turn, and "B" is in "A"'s round today
+    Given your_turn_limit is 0, 8 conversations are on "A"'s turn, and "B" is in "A"'s queue today
     When "A" likes "B"
     Then the like is recorded
 
   Scenario: A liked-you card keeps its two weeks at the your-turn limit
-    Given 8 conversations are on "A"'s turn, and "B"'s like of yesterday is in "A"'s round today
+    Given 8 conversations are on "A"'s turn, and "B"'s like of yesterday is in "A"'s queue today
     When "A" is refused the like back, answers a conversation, and likes "B" again
     Then the like back makes the match
 
   Scenario: The read and every decision say how many conversations are on the person's turn
-    Given 2 conversations are on "A"'s turn, and "B" who liked "A" is in "A"'s round today
+    Given 2 conversations are on "A"'s turn, and "B" who liked "A" is in "A"'s queue today
     When "A" reads the queue and likes "B"
     Then the read says two, and the answer three, the new match being nobody's word yet

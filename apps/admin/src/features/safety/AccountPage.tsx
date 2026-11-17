@@ -194,7 +194,7 @@ function AccountContents({ id }: { id: string }) {
   }
   const { page, sanctions } = state;
   // A take-down that leaves fewer approved photos than a complete profile
-  // needs takes the person out of everyone's round, and their own (#477).
+  // needs takes the person out of everyone's queue, and their own (#477).
   const approved = page.photos.filter((photo) => photo.state === "approved").length;
   if (page.state === "deleted") {
     return (

@@ -336,7 +336,7 @@ describe("PII in logs", () => {
   });
 
   // The velocity rules (#86, ADR-041): other people's photos fetched and the
-  // round read until both rules are met, every request carrying the
+  // queue read until both rules are met, every request carrying the
   // fixtures. The checks' own lines carry the rule and its count, nothing
   // else; no line carries a fixture, nor the photos' owners, whose photos the
   // fetcher's lines name by id only.
@@ -366,20 +366,20 @@ describe("PII in logs", () => {
     const probe = `?${new URLSearchParams({ hetu: FIXTURES.hetu, email: FIXTURES.email, text: FIXTURES.message })}`;
     const headers = { ...a.headers, "x-probe": FIXTURES.email, cookie: `note=${FIXTURES.message}` };
     expect((await app.request(`/photos/${photo}/card${probe}`, { headers })).status).toBe(200);
-    // A second account whose reads meet the round's rule, so both checks write their line.
+    // A second account whose reads meet the queue's rule, so both checks write their line.
     // The rule's threshold lowered to 3, as velocity.test.ts does: thirty reads of the
     // queue, each walking the pool, outran the test's 15 s under CI's coverage (#693).
-    await withMatchingConfig(ctx.client, { auto_shadow_ban_round_reads: 3 });
+    await withMatchingConfig(ctx.client, { auto_shadow_ban_queue_reads: 3 });
     const b = await signedInAccount(ctx.client);
     const bHeaders = { ...b.headers, "x-probe": FIXTURES.email };
     for (let i = 0; i < 3; i++) {
       tick += 1000;
-      expect((await app.request(`/rounds/today${probe}`, { headers: bHeaders })).status).toBe(200);
+      expect((await app.request(`/queue/today${probe}`, { headers: bHeaders })).status).toBe(200);
     }
     const banned = lines().filter((line) => line.msg === "automatic shadow ban");
     expect(banned.map(({ rule, count }) => ({ rule, count }))).toEqual([
       { rule: "photo_fetches", count: 1500 },
-      { rule: "round_reads", count: 3 },
+      { rule: "queue_reads", count: 3 },
     ]);
     for (const line of banned) {
       expect(Object.keys(line).sort()).toEqual(

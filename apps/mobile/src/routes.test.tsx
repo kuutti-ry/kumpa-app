@@ -35,7 +35,7 @@ import SeekAgesRoute from "../app/profile/seek/ages";
 import SeekRoute from "../app/profile/seek/index";
 // biome-ignore lint/style/noRestrictedImports: a route file, not a slice internal
 import SeekWhomRoute from "../app/profile/seek/whom";
-import RoundRoute from "../app/round";
+import QueueRoute from "../app/queue";
 // biome-ignore lint/style/noRestrictedImports: a route file, not a slice internal
 import FoundThemRoute from "../app/settings/found-them";
 import SettingsRoute from "../app/settings/index";
@@ -108,8 +108,8 @@ jest.mock("@/features/matching", () => {
   const { createElement } = require("react") as typeof import("react");
   const { Text } = require("react-native") as typeof import("react-native");
   return {
-    RoundScreen: (props: object) =>
-      createElement(Text, { testID: "RoundScreen" }, JSON.stringify(props)),
+    QueueScreen: (props: object) =>
+      createElement(Text, { testID: "QueueScreen" }, JSON.stringify(props)),
   };
 });
 jest.mock("@/features/media", () => {
@@ -196,7 +196,7 @@ describe("the screens without params", () => {
     ["/profile/seek", SeekRoute, "SeekScreen"],
     ["/profile/seek/ages", SeekAgesRoute, "SeekAgesScreen"],
     ["/profile/seek/whom", SeekWhomRoute, "SeekWhomScreen"],
-    ["/round", RoundRoute, "RoundScreen"],
+    ["/queue", QueueRoute, "QueueScreen"],
     ["/settings", SettingsRoute, "SettingsScreen"],
     ["/settings/found-them", FoundThemRoute, "FoundThemScreen"],
     ["/settings/licenses", LicensesRoute, "LicensesScreen"],

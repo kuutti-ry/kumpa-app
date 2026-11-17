@@ -77,9 +77,9 @@ describe("NotificationChoices", () => {
       expect(checked(name)).toBe(true);
     }
     expect(checked("Matches")).toBe(false);
-    // The round's push went with the daily set (ADR-062 §12), and its switch with it.
+    // The queue's push went with the daily set (ADR-062 §12), and its switch with it.
     expect(screen.getAllByRole("switch")).toHaveLength(4);
-    expect(screen.queryByRole("switch", { name: "A new round" })).toBeNull();
+    expect(screen.queryByRole("switch", { name: "A new queue" })).toBeNull();
     noProblems();
     await act(async () =>
       fireEvent(screen.getByRole("switch", { name: "Messages" }), "onCheckedChange", false),

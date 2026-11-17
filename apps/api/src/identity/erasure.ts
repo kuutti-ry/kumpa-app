@@ -6,9 +6,9 @@ import { AppError } from "../lib/errors.ts";
 import type { Logger } from "../lib/logger.ts";
 import {
   deletePreferencesOfAccount,
-  eraseRoundsOf,
+  eraseQueueOf,
   eraseStarsOf,
-  exportRounds,
+  exportQueue,
   exportStars,
   readDealBreakers,
   readPreferences,
@@ -52,7 +52,7 @@ import { visibleState } from "./standing.ts";
 // attempts, photos with their review rows and objects, the fetch log, and the
 // age on the account row, which stays as an anonymised tombstone. Kept: the
 // identity row (with one more deletion and the cooldown), the audit log,
-// staff rows. The person's rounds go, and the entries in which they are
+// staff rows. The person's queue days go, and the entries in which they are
 // somebody's card, others' likes on them included (#96), and
 // TD-7's bookmarks are the stars (#575, ADR-064): those the person put and those
 // put on them go.
@@ -112,10 +112,10 @@ export type ErasureSummary = {
   profileRows: number;
   /** The hard preference rows (#46). */
   preferences: number;
-  /** The person's own rounds, their entries with them (#96). */
-  rounds: number;
+  /** The person's own queue days, their entries with them (#96). */
+  queueDays: number;
   /** The entries in which the person was somebody's card, decisions on them included (#96). */
-  roundEntriesAsCandidate: number;
+  queueEntriesAsCandidate: number;
   /** The stars the person put (#575). Those put on them go too, and are in no count (ADR-064 §8). */
   stars: number;
   /** The consent rows (ADR-010 §14). */
@@ -184,9 +184,9 @@ export async function eraseAccount(deps: ErasureDeps, accountId: string): Promis
     const profileRows = await eraseProfileOfAccount(tx, accountId);
     // The two hard rows go (TD-7), and the tombstone keeps neither gender nor home.
     const preferences = await deletePreferencesOfAccount(tx, accountId);
-    // The person's rounds, and the entries in which they are somebody's card,
+    // The person's queue days, and the entries in which they are somebody's card,
     // others' likes on them included (TD-7, #96).
-    const rounds = await eraseRoundsOf(tx, accountId);
+    const queue = await eraseQueueOf(tx, accountId);
     const stars = await eraseStarsOf(tx, accountId);
     // The consent rows go (ADR-010 §14): the terms were the condition of use,
     // and the sensitive answers they covered went just above; nothing is left
@@ -219,7 +219,7 @@ export async function eraseAccount(deps: ErasureDeps, accountId: string): Promis
       photos,
       profileRows,
       preferences,
-      rounds,
+      queue,
       stars,
       consents,
       exports,
@@ -245,8 +245,8 @@ export async function eraseAccount(deps: ErasureDeps, accountId: string): Promis
     authRequests: result.authRequests,
     profileRows: result.profileRows,
     preferences: result.preferences,
-    rounds: result.rounds.rounds,
-    roundEntriesAsCandidate: result.rounds.entriesAsCandidate,
+    queueDays: result.queue.days,
+    queueEntriesAsCandidate: result.queue.entriesAsCandidate,
     stars: result.stars,
     consents: result.consents,
     exports: result.exports,
@@ -340,7 +340,7 @@ export async function exportAccount(
     conversations,
     contacts,
     notifications,
-    rounds,
+    queue,
     stars,
     invitations,
   ] = await Promise.all([
@@ -365,7 +365,7 @@ export async function exportAccount(
     }),
     exportContacts(deps, accountId),
     exportNotifications(deps.db, accountId),
-    exportRounds(deps.db, accountId, EXPORT_HISTORY_LIMIT),
+    exportQueue(deps.db, accountId, EXPORT_HISTORY_LIMIT),
     exportStars(deps.db, accountId),
     exportInvitations(deps.db, accountId),
   ]);
@@ -453,31 +453,29 @@ export async function exportAccount(
     contacts,
     // What the person chose to be notified of, and the notices they were shown (#176).
     notifications,
-    // The person's own rounds (#96, ADR-034): places, reasons and decisions; never whom.
-    rounds: {
-      about: t("account.export.round.about"),
-      items: rounds.map((round) => ({
-        day: round.day,
-        builtAt: round.builtAt.toISOString(),
-        openedAt: round.openedAt?.toISOString() ?? null,
-        completedAt: round.completedAt?.toISOString() ?? null,
-        relaxations: round.relaxations.map((relaxation) => ({
+    // The person's own queue days (#96, ADR-034): places, reasons and decisions; never whom.
+    queue: {
+      about: t("account.export.queue.about"),
+      items: queue.map((day) => ({
+        day: day.day,
+        startedAt: day.startedAt.toISOString(),
+        relaxations: day.relaxations.map((relaxation) => ({
           field: relaxation.field,
           fieldInWords: t(`profile.field.${relaxation.field}`),
           kind: relaxation.kind,
-          kindInWords: t(`account.export.round.relaxation.${relaxation.kind}`),
+          kindInWords: t(`account.export.queue.relaxation.${relaxation.kind}`),
           at: relaxation.createdAt.toISOString(),
         })),
-        entries: round.entries.map((entry) => ({
+        entries: day.entries.map((entry) => ({
           position: entry.position,
           reason: entry.reason,
-          reasonInWords: t(`account.export.round.reason.${entry.reason}`),
+          reasonInWords: t(`account.export.queue.reason.${entry.reason}`),
           relaxedField: entry.relaxedField,
           relaxedFieldInWords: entry.relaxedField ? t(`profile.field.${entry.relaxedField}`) : null,
           seenAt: entry.seenAt?.toISOString() ?? null,
           decision: entry.decision,
           decisionInWords: entry.decision
-            ? t(`account.export.round.decision.${entry.decision}`)
+            ? t(`account.export.queue.decision.${entry.decision}`)
             : null,
           decidedAt: entry.decidedAt?.toISOString() ?? null,
           secondPass: entry.secondPass,

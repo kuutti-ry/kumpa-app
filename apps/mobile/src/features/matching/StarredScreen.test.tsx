@@ -14,7 +14,7 @@ import { StarsButton } from "./StarsButton";
 // and in its order, a row that opens the card and a star that takes the star off,
 // what it says while it loads, fails or holds nobody, and the home screen's line,
 // there only while the list shows somebody. A card opened from it is
-// RoundScreen.test.tsx's.
+// QueueScreen.test.tsx's.
 
 const { __router: router, __focus: focus } = jest.requireMock("expo-router") as {
   __router: { push: jest.Mock; back: jest.Mock };

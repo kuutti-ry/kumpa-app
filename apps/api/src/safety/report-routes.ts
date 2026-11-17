@@ -40,7 +40,7 @@ const blockRoute = createRoute({
   path: "/blocks",
   summary: "Block the person of a card one was shown",
   description:
-    "From then on neither is shown to the other, in either direction, in any round, card, photo or pool. Between the two identities, so it holds for a later account of either; final. Nobody is told.",
+    "From then on neither is shown to the other, in either direction, in any queue, card, photo or pool. Between the two identities, so it holds for a later account of either; final. Nobody is told.",
   ...bearer,
   request: { body: { required: true, ...json(BlockRequest) } },
   responses: {
