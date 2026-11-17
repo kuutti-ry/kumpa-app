@@ -43,8 +43,14 @@ describe("the tech config screen", () => {
   // The designers' try, on this screen alone, which production has not: a
   // style and a palette, each a group of radios that says and keeps its choice.
   it.each([
-    ["Style to try", ["Today's", "Neubrutalism"], "Neubrutalism", "look", "neubrutalism"],
-    ["Colours to try", ["Today's", "Ice", "Dusk", "Birch"], "Dusk", "palette", "dusk"],
+    ["Style to try", ["Today's", "Neubrutalism", "Organic Pop"], "Organic Pop", "look", "organic"],
+    [
+      "Colours to try",
+      ["Today's", "Ice", "Dusk", "Birch", "Lime", "Plum"],
+      "Plum",
+      "palette",
+      "plum",
+    ],
   ] as const)(
     "offers the try's %s as radios, today's first, and keeps the one chosen",
     async (title, options, pick, key, stored) => {

@@ -19,13 +19,13 @@ const isScheme = (value: string | null): value is SchemePreference =>
 /**
  * The designers' try of neubrutalism, chosen on the tech screen, which
  * production has not, so a released app always looks as today: the style,
- * today's or neubrutalism's outlines and hard shadows, and apart from it the
- * palette, today's colours (the base sets of tokens.css) or one of the try's
- * three, a class on the root view.
+ * today's, neubrutalism's outlines and hard shadows, or Organic Pop's soft
+ * shapes, and apart from it the palette, today's colours (the base sets of
+ * tokens.css) or one of the try's five, a class on the root view.
  */
-export const LOOKS = ["today", "neubrutalism"] as const;
+export const LOOKS = ["today", "neubrutalism", "organic"] as const;
 export type Look = (typeof LOOKS)[number];
-export const PALETTES = ["today", "ice", "dusk", "birch"] as const;
+export const PALETTES = ["today", "ice", "dusk", "birch", "lime", "plum"] as const;
 export type Palette = (typeof PALETTES)[number];
 
 const isLook = (value: string | null): value is Look =>
@@ -41,6 +41,8 @@ const PALETTE_CLASS: Record<Palette, { light?: string; dark?: string }> = {
   ice: { light: "palette-ice", dark: "palette-ice-dark" },
   dusk: { light: "palette-dusk", dark: "palette-dusk-dark" },
   birch: { light: "palette-birch", dark: "palette-birch-dark" },
+  lime: { light: "palette-lime", dark: "palette-lime-dark" },
+  plum: { light: "palette-plum", dark: "palette-plum-dark" },
 };
 
 type Theme = {

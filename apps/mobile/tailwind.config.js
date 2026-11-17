@@ -61,6 +61,9 @@ module.exports = {
       // Regular is as dark as the system font's Semibold, so the variants of
       // the Text primitive name Saiga's weight for each role.
       fontSize: {
+        // The headline in a slab of the designers' try (components/celebration.tsx):
+        // two or three short words, nowhere else.
+        display: ["54px", { lineHeight: "58px", letterSpacing: "-1px" }],
         h1: ["30px", { lineHeight: "36px", letterSpacing: "-0.3px" }],
         h2: ["24px", { lineHeight: "30px" }],
         // h3 and the title of a card or a dialog.

@@ -15,12 +15,14 @@ type InputProps = Omit<React.ComponentProps<typeof TextInput>, "accessibilityLab
 
 function Input({ className, ...props }: InputProps) {
   // Today's 1 px --input outline, or the neubrutalism try's stroke in the ink.
-  const neubrutalist = useLook() === "neubrutalism";
+  const look = useLook();
+  const neubrutalist = look === "neubrutalism";
   return (
     <TextInput
       className={cn(
         "min-h-touch w-full min-w-0 rounded-md border-solid px-3 py-2 font-system text-body text-foreground placeholder:text-muted-foreground",
         neubrutalist ? "border-2 border-stroke bg-card" : "border border-input bg-background",
+        look === "organic" && "rounded-2xl bg-card px-4",
         props.editable === false && "border-dashed border-input text-muted-foreground",
         Platform.select({
           web: "outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring",
