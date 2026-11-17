@@ -93,7 +93,7 @@ describe("the consent versions", () => {
     ...fields,
   });
 
-  it("name one version per kind, the languages each wording exists in, and a hash of its Finnish", () => {
+  it("name one version per kind, the languages each wording exists in, and a hash of its texts", () => {
     const out = compile({
       ...base,
       "legal.terms.title": legal({ fi: "Käyttöehdot", sv: "Villkor" }),
@@ -109,22 +109,33 @@ describe("the consent versions", () => {
     expect(out).toMatch(/"terms": "[0-9a-f]{16}",/);
   });
 
-  it("hash the Finnish wording, so the hash moves when the Finnish does and not when the order does", () => {
+  it("hash the wording in every language, so the hash moves when any of them does and not when the order does", () => {
     const hashOf = (messages: Messages) =>
       /CONSENT_TEXT_HASHES[^{]*\{\n {2}"terms": "([0-9a-f]{16})"/.exec(
         compile(messages)["consent.ts"] ?? "",
       )?.[1];
     const a = { "legal.terms.a": legal({ fi: "Yksi" }), "legal.terms.b": legal({ fi: "Kaksi" }) };
     const swapped = { "legal.terms.b": a["legal.terms.b"], "legal.terms.a": a["legal.terms.a"] };
-    const edited = { ...a, "legal.terms.b": legal({ fi: "Kolme" }) };
+    expect(hashOf(a)).toMatch(/^[0-9a-f]{16}$/);
     expect(hashOf(a)).toBe(hashOf(swapped));
-    expect(hashOf(a)).not.toBe(hashOf(edited));
+    // The English binds (#208) and the Finnish is what a Finnish phone shows:
+    // neither moves under a version, nor does a language come or go.
+    const moved: [string, Messages[string]][] = [
+      ["the Finnish", legal({ fi: "Kolme" })],
+      ["the English", legal({ en: "Other", fi: "Kaksi" })],
+      ["a Swedish that came", legal({ fi: "Kaksi", sv: "Två" })],
+      ["the Finnish gone", legal({})],
+      ["the two languages' texts changing places", legal({ en: "Kaksi", fi: "Text" })],
+    ];
+    for (const [what, text] of moved) {
+      expect(hashOf({ ...a, "legal.terms.b": text }), what).not.toBe(hashOf(a));
+    }
   });
 
-  it("count a wording without its Finnish yet, as an empty Finnish text", () => {
-    const out = compile({ "legal.research.title": legal({}) })["consent.ts"];
-    expect(out).toContain('"research": "2026-09-01",');
-    expect(out).toContain('"research": ["en"],');
+  it("count a wording without its Finnish yet, in English alone", () => {
+    const out = compile({ "legal.special_category.title": legal({}) })["consent.ts"];
+    expect(out).toContain('"special_category": "2026-09-01",');
+    expect(out).toContain('"special_category": ["en"],');
   });
 
   it("ignore keys outside legal.* and legal keys without a version", () => {

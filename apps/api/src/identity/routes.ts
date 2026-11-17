@@ -9,6 +9,7 @@ import {
   AuthExchangeResponse,
   AuthRefreshRequest,
   AuthStartQuery,
+  SanctionReason,
   SessionResponse,
   SessionTokens,
   USER_AGENT_MAX,
@@ -67,6 +68,12 @@ function untilOf(detail: unknown): string | undefined {
   return typeof until === "string" ? until : undefined;
 }
 
+/** A suspension's or a ban's reason, from the closed list, when the refusal carries one (#715). */
+function reasonOf(detail: unknown): string | undefined {
+  const reason = SanctionReason.safeParse((detail as { reason?: unknown } | undefined)?.reason);
+  return reason.success ? reason.data : undefined;
+}
+
 /** True when the refused attempt was a staff login (#49): the browser goes to the panel. */
 function isAdminAttempt(detail: unknown): boolean {
   return (detail as { platform?: unknown } | undefined)?.platform === ADMIN_PLATFORM;
@@ -82,10 +89,10 @@ const startRoute = createRoute({
   responses: {
     302: {
       description:
-        "Redirect to the broker; where none is configured (a pull-request preview, ADR-014 §1), to kuutti://auth?error=auth_unavailable; when this address has sent too many requests or started too many sign-ins, or too many are under way at once (ADR-026), to kuutti://auth?error=auth_rate_limited with Retry-After.",
+        "Redirect to the broker; when this address has sent too many requests or started too many sign-ins, or too many are under way at once (ADR-026), to kuutti://auth?error=auth_rate_limited with Retry-After.",
     },
     400: errorContent("Validation failed."),
-    503: errorContent("No identification broker is configured (anywhere but a preview)."),
+    503: errorContent("No identification broker is configured."),
   },
 });
 
@@ -99,7 +106,7 @@ const callbackRoute = createRoute({
   responses: {
     302: {
       description:
-        "Redirect to kuutti://auth?code=… on success, or to kuutti://auth?error=<code> (auth_state_mismatch, auth_cancelled, auth_under_18, auth_banned, auth_suspended with &until=<date> when the suspension has an end, auth_cooldown with &until=<date>, auth_provider_error) so the app shows the refusal.",
+        "Redirect to kuutti://auth?code=… on success, or to kuutti://auth?error=<code> (auth_state_mismatch, auth_cancelled, auth_under_18, auth_banned, auth_suspended with &until=<date> when the suspension has an end, auth_cooldown with &until=<date>, auth_provider_error; auth_banned and auth_suspended with &reason=<the sanction's reason> when a sanction is behind them) so the app shows the refusal.",
     },
   },
 });
@@ -331,12 +338,6 @@ export function authRoutes(
 
   app.openapi(startRoute, async (c) => {
     const query = c.req.valid("query");
-    // A pull-request preview has no bank (ADR-014 §1): the browser goes back
-    // to the app, which says so, rather than stopping on a JSON page. Anywhere
-    // else a missing broker stays a 503, which the 5xx alarm sees.
-    if (deps.config.preview && (!deps.broker || !hmacKey)) {
-      return c.redirect(appErrorUrl("auth_unavailable"), 302);
-    }
     try {
       const url = await startLogin(loginDeps(c.get("requestId")), {
         platform: query.platform,
@@ -368,7 +369,10 @@ export function authRoutes(
         if (isAdminAttempt(error.detail)) {
           return c.redirect(adminErrorUrl(adminAppUrl, error.code).toString(), 302);
         }
-        return c.redirect(appErrorUrl(error.code, untilOf(error.detail)), 302);
+        return c.redirect(
+          appErrorUrl(error.code, untilOf(error.detail), reasonOf(error.detail)),
+          302,
+        );
       }
       throw error;
     }

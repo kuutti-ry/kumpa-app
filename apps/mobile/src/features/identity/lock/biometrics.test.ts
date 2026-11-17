@@ -25,7 +25,7 @@ const defaults = Object.fromEntries(
   NATIVE.map((name) => [name, auth[name].getMockImplementation()]),
 );
 
-const WORDS = { prompt: "Unlock Kuutti", cancel: "Cancel" };
+const WORDS = { prompt: "Unlock Kumpa", cancel: "Cancel" };
 
 /** A phone with the hardware, something enrolled, and these kinds. */
 function phoneWith(types: number[]) {
@@ -112,7 +112,7 @@ describe("askBiometrics", () => {
     await askBiometrics(WORDS);
     expect(auth.authenticateAsync).toHaveBeenCalledTimes(1);
     expect(auth.authenticateAsync).toHaveBeenCalledWith({
-      promptMessage: "Unlock Kuutti",
+      promptMessage: "Unlock Kumpa",
       cancelLabel: "Cancel",
       // No "Enter Password" on iOS, no device credential on Android.
       disableDeviceFallback: true,
@@ -123,9 +123,9 @@ describe("askBiometrics", () => {
 
   it("asks in the words it is given", async () => {
     auth.authenticateAsync.mockResolvedValue({ success: true });
-    await askBiometrics({ prompt: "Avaa Kuutti", cancel: "Peruuta" });
+    await askBiometrics({ prompt: "Avaa Kumpa", cancel: "Peruuta" });
     expect(auth.authenticateAsync).toHaveBeenCalledWith(
-      expect.objectContaining({ promptMessage: "Avaa Kuutti", cancelLabel: "Peruuta" }),
+      expect.objectContaining({ promptMessage: "Avaa Kumpa", cancelLabel: "Peruuta" }),
     );
   });
 

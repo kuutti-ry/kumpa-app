@@ -29,7 +29,6 @@ import {
 } from "../notifications/index.ts";
 import { exportHome } from "../pond/index.ts";
 import { eraseProfileOfAccount, exportProfile } from "../profile/index.ts";
-import { exportResearch, removeResearchSubject } from "../research/index.ts";
 import { eraseInvitationsOf, exportInvitations } from "../rewards/index.ts";
 import {
   closerLookOf,
@@ -56,10 +55,10 @@ import { visibleState } from "./standing.ts";
 // staff rows. The person's rounds go, and the entries in which they are
 // somebody's card, others' likes on them included (#96), and
 // TD-7's bookmarks are the stars (#575, ADR-064): those the person put and those
-// put on them go. The research_id mapping goes (#50), the events keyed by it stay.
+// put on them go.
 // The photo check's notes (#253) go too, and are in the export in plain words.
 // The consent rows go (ADR-010 §14): what they proved goes in the same
-// transaction, and the research events carry their own consent_version.
+// transaction.
 // The export requests go (#237): the person's own trail, listed in the export.
 // The feedback goes (#171, ADR-023): the person's own words, listed in the export.
 // The sanctions go (#307, ADR-024 §8), except the open bans and suspensions,
@@ -127,8 +126,6 @@ export type ErasureSummary = {
   feedback: number;
   /** The sanction rows that went; the open bans and suspensions stay on the identity (ADR-024 §8). */
   sanctions: number;
-  /** 0 or 1: the research_id mapping (#50); the events stay, unlinkable. */
-  researchSubjects: number;
   /** The conversations whose link to the person was cut (#348); their messages stay for the counterpart. */
   conversations: number;
   /** The person's messages the counterpart never received, under a shadow ban that withholds them (#348, #470). */
@@ -192,8 +189,8 @@ export async function eraseAccount(deps: ErasureDeps, accountId: string): Promis
     const rounds = await eraseRoundsOf(tx, accountId);
     const stars = await eraseStarsOf(tx, accountId);
     // The consent rows go (ADR-010 §14): the terms were the condition of use,
-    // the sensitive answers they covered went just above, and the events keep
-    // the version they were written under; nothing is left to prove.
+    // and the sensitive answers they covered went just above; nothing is left
+    // to prove.
     const consents = await repo.deleteConsentsOfAccount(tx, accountId);
     const exports = await repo.deleteExportsOfAccount(tx, accountId);
     // The code waiting for the address and the day's sends (#385, ADR-043); the
@@ -201,17 +198,13 @@ export async function eraseAccount(deps: ErasureDeps, accountId: string): Promis
     await repo.deleteEmailRows(tx, accountId);
     const feedback = await deleteFeedbackOfAccount(tx, accountId);
     // Before the sanctions go: what a shadow ban withheld is known by it (ADR-031 §5).
-    const chat = await eraseConversationsOf(
-      { db: tx, logger: deps.logger, now: () => at },
-      accountId,
-    );
+    const chat = await eraseConversationsOf({ db: tx, now: () => at }, accountId);
     // Before the sanctions: a warning's notice points at its warning (#176).
     const notifications = await eraseNotificationsOf(tx, accountId);
     // After the notices, so the summary counts a counted invitation's notice there.
     const invitations = await eraseInvitationsOf(tx, accountId);
     const sanctions = await deleteSanctionsOfAccount(tx, accountId);
     // Kept: the reports either way and the blocks on the identity (ADR-030 §8).
-    const researchSubjects = await removeResearchSubject(tx, accountId);
     // A second deletion racing the first sees the live row above and the
     // tombstone here (READ COMMITTED re-evaluates after the other commit).
     if (!(await repo.tombstoneAccount(tx, accountId, at))) {
@@ -234,7 +227,6 @@ export async function eraseAccount(deps: ErasureDeps, accountId: string): Promis
       sanctions,
       notifications,
       invitations,
-      researchSubjects,
       chat,
       heldPhotos: held.length,
       reregisterAfter: deletion.reregisterAfter,
@@ -260,7 +252,6 @@ export async function eraseAccount(deps: ErasureDeps, accountId: string): Promis
     exports: result.exports,
     feedback: result.feedback,
     sanctions: result.sanctions,
-    researchSubjects: result.researchSubjects,
     conversations: result.chat.conversations,
     withheldMessages: result.chat.withheld,
     emptiedConversations: result.chat.emptied,
@@ -339,7 +330,6 @@ export async function exportAccount(
     home,
     preferences,
     consents,
-    research,
     dealBreakers,
     photoCheck,
     exports,
@@ -357,7 +347,6 @@ export async function exportAccount(
     exportHome(deps.db, accountId, locale),
     readPreferences(deps.db, accountId),
     exportConsents(deps.db, accountId),
-    exportResearch(deps.db, accountId),
     readDealBreakers(deps.db, accountId, profile?.fields ?? {}),
     exportPhotoCheck(deps, accountId, t),
     repo.listExportsOfAccount(deps.db, accountId, EXPORT_HISTORY_LIMIT),
@@ -431,7 +420,6 @@ export async function exportAccount(
     photoAccessLog: photos.accessLog,
     cardsShown: photos.cardsShown,
     photoCheck,
-    research,
     exports: exports.map((e) => ({ at: e.at.toISOString() })),
     feedback,
     // In words in the request's language too, as the photo check's notes are.

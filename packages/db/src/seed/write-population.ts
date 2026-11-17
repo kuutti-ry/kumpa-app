@@ -64,7 +64,6 @@ const ACCOUNT_TABLES = [
   "reward",
   "notification_preference",
   "photo",
-  "research_subject",
   "consent",
   "preferences",
   // A story's or the builder's rounds (#96), their entries by the cascade.

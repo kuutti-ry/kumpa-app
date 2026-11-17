@@ -19,12 +19,12 @@ import { type IdentityBroker, OidcBroker } from "./identity/index.ts";
 import { runNightly } from "./jobs/nightly.ts";
 import { CHALLENGE } from "./test/attempt.ts";
 import { MIGRATIONS } from "./test/global-setup.ts";
-import { captureLogger, type LogLine, TEST_DATABASE_URL, testConfig } from "./test/harness.ts";
+import { captureLogger, type LogLine, testConfig } from "./test/harness.ts";
 import { testSigningKeys } from "./test/media.ts";
 
 // The boot sequence (index.ts is only the process around it) against a
-// database of its own: a boot migrates, counts the counter and, for a
-// preview, creates and seeds a database, all of which commits. The shared
+// database of its own: a boot migrates and counts the counter, which
+// commits. The shared
 // test database stays as the transactional tests expect it. Nothing goes to
 // the network: discovery is a stub or the Telia double, Sentry is a fake.
 
@@ -65,12 +65,9 @@ const STEPS = new Set([
   "bank identification",
   "bank identification off: OIDC_ISSUER is not set",
   "bank identification unavailable; is the mock IdP running?",
-  "preview database",
   "migrations",
-  "research event partitions",
   "audit boundary",
   "audit boundary not enforced: run infra/scripts/db-audit-owner.sh",
-  "seed",
   "media",
   "photos off: media delivery is not configured (infra/modules/media)",
 ]);
@@ -180,13 +177,12 @@ const startLogin = (app: { request: (path: string) => Response | Promise<Respons
   app.request(`/auth/start?platform=ios&code_challenge=${CHALLENGE}`);
 
 describe("boot", () => {
-  it("migrates, partitions, checks the audit boundary and sets up media, in that order, and the app answers", async () => {
+  it("migrates, checks the audit boundary and sets up media, in that order, and the app answers", async () => {
     const { app, lines } = await booted();
     expect(steps(lines)).toEqual([
       "error reporting",
       "bank identification off: OIDC_ISSUER is not set",
       "migrations",
-      "research event partitions",
       "audit boundary",
       "media",
     ]);
@@ -226,14 +222,11 @@ describe("boot", () => {
     }
   });
 
-  // Without an object store there is no research copy either (#194).
   it("arms the nightly jobs, each of which runs against the database it was given", async () => {
     const { jobs } = await booted();
     expect(jobs.map((j) => j.name)).toEqual([
       "sweep-sessions",
       "sweep-admin-sessions",
-      "research-events-partitions",
-      "research-anonymity",
       "end-suspensions",
       "pond-counter",
       "invitation-count",
@@ -252,7 +245,7 @@ describe("boot", () => {
     expect(lines().filter((l) => l.msg === "nightly job failed")).toEqual([]);
   });
 
-  it("with an object store, photos the automatic check missed get a nightly look, and the research copy is written", async () => {
+  it("with an object store, photos the automatic check missed get a nightly look", async () => {
     const { jobs, lines } = await booted({
       S3_ENDPOINT: "http://127.0.0.1:9000",
       S3_FORCE_PATH_STYLE: "true",
@@ -263,15 +256,7 @@ describe("boot", () => {
       "moderate-pending-photos",
       "sweep-orphaned-objects",
     ]);
-    // And the research copy, to the same bucket, right before the prune that checks it (#194).
-    expect(jobs.map((j) => j.name).slice(2, 4)).toEqual([
-      "research-export",
-      "research-events-partitions",
-    ]);
-    expect(jobs).toHaveLength(16);
-    // The prune asks the copy first; tonight no month is due, so the bucket is asked nothing.
-    const partitions = jobs.find((j) => j.name === "research-events-partitions");
-    expect(await partitions?.run()).toMatchObject({ dropped: 0, uncopied: 0 });
+    expect(jobs).toHaveLength(13);
     // Nothing is pending in this database: the look finds nothing and asks the store nothing.
     // The sweep is not run here: the stand-in's bucket is shared with the developer's own
     // stack, whose rows are in another database, so it would take their photos for orphans.
@@ -663,7 +648,6 @@ describe("boot: a deployed box", () => {
         "error reporting",
         "bank identification off: OIDC_ISSUER is not set",
         "migrations",
-        "research event partitions",
         "audit boundary not enforced: run infra/scripts/db-audit-owner.sh",
         "photos off: media delivery is not configured (infra/modules/media)",
       ]);
@@ -677,7 +661,7 @@ describe("boot: a deployed box", () => {
     },
   );
 
-  it("with its photos on CloudFront, staging writes the research copy and production does not, and both prune the rounds", async () => {
+  it("with its photos on CloudFront, staging and production both prune the rounds", async () => {
     const media = {
       S3_BUCKET: "kuutti-media-test",
       MEDIA_URL_BASE: "https://api.test",
@@ -686,93 +670,14 @@ describe("boot: a deployed box", () => {
     };
     const staging = await booted({ APP_ENV: "staging", ...media });
     expect(line(staging.lines, "media")).toMatchObject({ mode: "cloudfront" });
-    expect(staging.jobs.map((j) => j.name)).toContain("research-export");
-
-    // Not before the maintainer has answered the ninety days of the research
-    // text (ADR-029, Open): no copy, and the prune is as it was without one.
     const production = await booted({
       APP_ENV: "production",
       ADMIN_APP_URL: "https://admin.kuutti.app",
       ...media,
     });
     expect(line(production.lines, "media")).toMatchObject({ mode: "cloudfront" });
-    expect(production.jobs.map((j) => j.name)).not.toContain("research-export");
     // Rounds are kept a year, so production keeps them as staging does (ADR-062 §13).
     expect(staging.jobs.map((j) => j.name)).toContain("prune-rounds");
     expect(production.jobs.map((j) => j.name)).toContain("prune-rounds");
-    const partitions = production.jobs.find((j) => j.name === "research-events-partitions");
-    expect(await partitions?.run()).not.toHaveProperty("uncopied");
   });
-});
-
-describe("boot: a pull-request preview (#9)", () => {
-  // Seven digits at most (the preview pattern); a 9 in front keeps it apart from preview-database.test.ts.
-  const prNumber = `9${String(process.pid % 1_000_000).padStart(6, "0")}`;
-  const database = `kuutti_pr_${prNumber}`;
-
-  afterAll(async () => {
-    const admin = createPool({ connectionString: TEST_DATABASE_URL, max: 1 });
-    try {
-      // The boots' pools are ended; wait for their sessions to leave before the drop.
-      for (let attempt = 0; attempt < 100; attempt += 1) {
-        const open = await admin.query<{ n: string }>(
-          "SELECT count(*) AS n FROM pg_stat_activity WHERE datname = $1",
-          [database],
-        );
-        if (Number(open.rows[0]?.n) === 0) break;
-        await new Promise((done) => setTimeout(done, 20));
-      }
-      await admin.query(`DROP DATABASE IF EXISTS ${database} WITH (FORCE)`);
-    } finally {
-      await admin.end();
-    }
-  });
-
-  it("creates its own database on first boot, migrates and seeds it, and finds it the second time", async () => {
-    const preview = {
-      APP_ENV: "preview",
-      PR_NUMBER: prNumber,
-      DATABASE_URL: TEST_DATABASE_URL,
-      // Staging's bucket and distribution, which a preview reads from the
-      // shared prefix and drops before media is set up (lib/config.ts).
-      S3_BUCKET: "kuutti-media-staging",
-      MEDIA_URL_BASE: "https://api.staging.kuutti.app",
-      CLOUDFRONT_KEY_PAIR_ID: "K2JCJMDEHXQW5F",
-      CLOUDFRONT_SIGNING_KEY: "staging's key, which a preview never holds",
-    };
-    const first = await booted(preview);
-    expect(steps(first.lines)).toEqual([
-      "error reporting",
-      "bank identification off: OIDC_ISSUER is not set",
-      "preview database",
-      "migrations",
-      "research event partitions",
-      // The preview role owns its throwaway database: no boundary there by design, and no warning.
-      "audit boundary",
-      "seed",
-      "photos off: media delivery is not configured (infra/modules/media)",
-    ]);
-    expect(line(first.lines, "preview database")).toMatchObject({ database, state: "created" });
-    // Nor a research copy, which would write into staging's bucket (ADR-029 §12).
-    expect(first.jobs.map((j) => j.name)).not.toContain("research-export");
-    expect(line(first.lines, "migrations")).toMatchObject({ state: "applied" });
-    const { rows } = await first.pool.query<{ db: string; open: boolean; config: string }>(
-      `SELECT current_database() AS db,
-              (SELECT value = 'true'::jsonb FROM matching_config
-                WHERE key = 'matching_open' ORDER BY version DESC LIMIT 1) AS open,
-              (SELECT count(*) FROM matching_config) AS config`,
-    );
-    expect(rows[0]?.db).toBe(database);
-    // The seed ran: it is what opens matching in a preview (ADR-060 §10).
-    expect(rows[0]?.open).toBe(true);
-    expect(Number(rows[0]?.config)).toBeGreaterThan(0);
-    // A preview has no bank: the login sends the app back with a reason, not a 503.
-    const res = await startLogin(first.app);
-    expect(res.status).toBe(302);
-    expect(res.headers.get("location")).toContain("error=auth_unavailable");
-
-    const second = await booted(preview);
-    expect(line(second.lines, "preview database")).toMatchObject({ database, state: "exists" });
-    expect(line(second.lines, "migrations")).toMatchObject({ state: "nothing-to-do" });
-  }, 120_000);
 });

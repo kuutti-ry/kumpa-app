@@ -4,6 +4,7 @@ import {
   OnboardingStatus,
   Sanction,
   type SanctionKind,
+  type SanctionRule,
   SessionResponse,
 } from "@kuutti/schema";
 import { generateHetu } from "@kuutti-ry/tunnistus-oidc/hetu";
@@ -155,7 +156,11 @@ async function bankLogin(app: App): Promise<BankSignIn> {
 async function refusedBankLogin(app: App) {
   const back = await bankCallback(app);
   expect(back.searchParams.get("code")).toBeNull();
-  return { error: back.searchParams.get("error"), until: back.searchParams.get("until") };
+  return {
+    error: back.searchParams.get("error"),
+    until: back.searchParams.get("until"),
+    reason: back.searchParams.get("reason"),
+  };
 }
 
 /** The bank's person, signed in once and through onboarding (active), or still registered. */
@@ -315,7 +320,7 @@ async function approvedPhoto(ctx: TestContext, accountId: string): Promise<strin
 const input = (
   accountId: string,
   kind: SanctionKind,
-  options: { actor?: string | null; at?: Date; endsOn?: string } = {},
+  options: { actor?: string | null; at?: Date; endsOn?: string; rule?: SanctionRule } = {},
 ) => ({
   accountId,
   kind,
@@ -324,7 +329,18 @@ const input = (
   actor: options.actor ?? null,
   at: options.at ?? T,
   ...(kind === "suspend" ? { endsOn: options.endsOn ?? "2026-10-22" } : {}),
+  ...(options.rule ? { rule: { rule: options.rule, count: 3, firstAt: options.at ?? T } } : {}),
 });
+
+/** The account's notices of a sanction, oldest first: their kind, their sanction and when they came. */
+async function sanctionNotices(ctx: TestContext, accountId: string) {
+  const { rows } = await ctx.client.query<{ kind: string; sanction_id: string; created_at: Date }>(
+    `SELECT kind, sanction_id, created_at FROM notice
+      WHERE account_id = $1 AND sanction_id IS NOT NULL ORDER BY created_at, id`,
+    [accountId],
+  );
+  return rows.map((r) => ({ kind: r.kind, sanctionId: r.sanction_id, at: r.created_at }));
+}
 
 /** The test's transaction with a look taken just before every statement matching `before`. */
 function probed(db: Queryable, before: RegExp, look: () => Promise<void>): Queryable {
@@ -378,7 +394,11 @@ describe("Sanctions", () => {
       standing: "banned",
       suspension_ends_at: null,
     });
-    expect(await refusedBankLogin(app)).toEqual({ error: "auth_banned", until: null });
+    expect(await refusedBankLogin(app)).toEqual({
+      error: "auth_banned",
+      until: null,
+      reason: "harassment",
+    });
   });
 
   test("A suspension refuses the login until its day and the night lifts it", async ({ ctx }) => {
@@ -395,7 +415,11 @@ describe("Sanctions", () => {
       standing: "suspended",
       suspension_ends_at: new Date(START_OF_22_10),
     });
-    expect(await refusedBankLogin(app)).toEqual({ error: "auth_suspended", until: START_OF_22_10 });
+    expect(await refusedBankLogin(app)).toEqual({
+      error: "auth_suspended",
+      until: START_OF_22_10,
+      reason: "harassment",
+    });
 
     // The night of 21.10 is a day early and changes nothing.
     expect(await endSuspensions(ctx.client, new Date("2026-10-21T01:00:00Z"))).toBe(0);
@@ -410,7 +434,9 @@ describe("Sanctions", () => {
     expect(await bankLogin(app)).toMatchObject({ outcome: "resumed", accountId: a.accountId });
   });
 
-  test("A shadow-banned person gets the same answers from every route", async ({ ctx }) => {
+  test("A shadow-banned person's state reads as active, and the export lists the shadow ban", async ({
+    ctx,
+  }) => {
     await withMatchingConfig(ctx.client, { exports_per_day: 5 });
     const { app } = await appFor(ctx);
     const a = await signedInAccount(ctx.client);
@@ -435,24 +461,25 @@ describe("Sanctions", () => {
       state: "active",
       stateChangedAt: changedAt.toISOString(),
     });
-    expect(document.sanctions).toEqual([]);
+    // The person is told of it (ADR-073 §2), so the export lists it while it is open.
+    const listed = {
+      kind: "shadow_ban",
+      kindInWords: expect.any(String),
+      reason: "scraping",
+      reasonInWords: expect.any(String),
+      appliedAt: T.toISOString(),
+      endsAt: null,
+      liftedAt: null,
+      lookedAtAgain: false,
+    };
+    expect(document.sanctions).toEqual([listed]);
+    expect(JSON.stringify(document)).not.toContain(TOKEN);
 
-    // Lifted, it is the person's to read, and still no date moved.
+    // Lifted, it says so, and still no date moved.
     expect((await liftOf(app, moderator, shadow.id)).status).toBe(200);
     const after = await exportOf(app, a.headers);
     expect(after.account.stateChangedAt).toBe(changedAt.toISOString());
-    expect(after.sanctions).toEqual([
-      {
-        kind: "shadow_ban",
-        kindInWords: expect.any(String),
-        reason: "scraping",
-        reasonInWords: expect.any(String),
-        appliedAt: T.toISOString(),
-        endsAt: null,
-        liftedAt: T.toISOString(),
-        lookedAtAgain: false,
-      },
-    ]);
+    expect(after.sanctions).toEqual([{ ...listed, liftedAt: T.toISOString() }]);
     expect(JSON.stringify(after)).not.toContain(TOKEN);
     expect(JSON.stringify(after)).not.toContain(moderator.identityId);
   });
@@ -974,7 +1001,7 @@ describe("applySanction", () => {
     ctx,
   }) => {
     const admin = await staffSession(ctx.client, "admin");
-    for (const role of ["moderator", "admin", "researcher"] as const) {
+    for (const role of ["moderator", "admin"] as const) {
       const target = await staffSession(ctx.client, role);
       const { rows } = await ctx.client.query<{ id: string }>(
         "INSERT INTO account (identity_id, state, birth_year, birth_month) VALUES ($1, 'active', 1990, 6) RETURNING id",
@@ -1146,6 +1173,35 @@ describe("applySanction", () => {
 });
 
 describe("liftSanction and reviewSanction", () => {
+  test.for([
+    ["a rule's, kept", "first_messages", "keep"],
+    ["the reports rule's, reversed", "reports", "lift"],
+    ["a moderator's, kept", null, "keep"],
+  ] as const)(
+    "a shadow ban is told only when a moderator applies it, never at its review: %s",
+    async ([, rule, outcome], { ctx }) => {
+      const a = await signedInAccount(ctx.client);
+      const m = await staffSession(ctx.client);
+      const n = await staffSession(ctx.client);
+      const shadow = await applySanction(
+        ctx.client,
+        input(a.accountId, "shadow_ban", rule ? { rule } : { actor: m.identityId }),
+      );
+      // A rule's is never told, kept or reversed (the maintainer, 17/11/2026).
+      const told = rule ? [] : [{ kind: "shadow_ban", sanctionId: shadow.id, at: T }];
+      expect(await sanctionNotices(ctx, a.accountId)).toEqual(told);
+      await reviewSanction(ctx.client, {
+        sanctionId: shadow.id,
+        scope: "other",
+        actor: n.identityId,
+        note: "Looked at.",
+        outcome,
+        at: new Date("2026-10-21T13:00:00Z"),
+      });
+      expect(await sanctionNotices(ctx, a.accountId)).toEqual(told);
+    },
+  );
+
   test("a second lift is refused with sanction_lifted and its audit row goes with it", async ({
     ctx,
   }) => {
@@ -1563,17 +1619,24 @@ describe("the lists and the erasure's half", () => {
     expect(await listSanctions(ctx.client, UNKNOWN_ID)).toBeNull();
   });
 
-  test("listSanctionsOfAccount leaves out an open shadow ban and lists a lifted one", async ({
+  test("listSanctionsOfAccount lists every sanction of the account newest first, a moderator's open shadow ban among them, a rule's once lifted, never the reports rule's", async ({
     ctx,
   }) => {
     const a = await signedInAccount(ctx.client);
     const m = await staffSession(ctx.client);
     const n = await staffSession(ctx.client);
+    // Another person's is never A's.
+    const b = await signedInAccount(ctx.client);
+    await applySanction(
+      ctx.client,
+      input(b.accountId, "shadow_ban", { at: new Date("2026-10-17T09:00:00Z") }),
+    );
     const at = (day: number) => new Date(`2026-10-${day}T09:00:00Z`);
     await applySanction(ctx.client, input(a.accountId, "warn", { at: at(11) }));
+    // A rule's is listed once lifted; while it lasts it is never told (ADR-033).
     const lifted = await applySanction(
       ctx.client,
-      input(a.accountId, "shadow_ban", { at: at(12) }),
+      input(a.accountId, "shadow_ban", { at: at(12), rule: "first_messages" }),
     );
     await liftSanction(ctx.client, {
       sanctionId: lifted.id,
@@ -1581,7 +1644,11 @@ describe("the lists and the erasure's half", () => {
       actor: m.identityId,
       at: at(13),
     });
-    await applySanction(ctx.client, input(a.accountId, "shadow_ban", { at: at(14) }));
+    // A moderator's is told at once (ADR-073 §2), so it is listed while open.
+    await applySanction(
+      ctx.client,
+      input(a.accountId, "shadow_ban", { at: at(14), actor: m.identityId }),
+    );
     const suspension = await applySanction(
       ctx.client,
       input(a.accountId, "suspend", { at: at(15), endsOn: "2026-10-22", actor: m.identityId }),
@@ -1594,6 +1661,24 @@ describe("the lists and the erasure's half", () => {
       outcome: "keep",
       at: at(16),
     });
+    // A rule's still open is not, nor the reports rule's even once reversed
+    // (ADR-030 §9, §12).
+    await applySanction(
+      ctx.client,
+      input(a.accountId, "shadow_ban", { at: at(17), rule: "first_messages" }),
+    );
+    const reversed = await applySanction(
+      ctx.client,
+      input(a.accountId, "shadow_ban", { at: at(18), rule: "reports" }),
+    );
+    await reviewSanction(ctx.client, {
+      sanctionId: reversed.id,
+      scope: "other",
+      actor: n.identityId,
+      note: "Friends reporting together.",
+      outcome: "lift",
+      at: at(19),
+    });
 
     const own = await listSanctionsOfAccount(ctx.client, a.accountId, 10);
     expect(own).toEqual([
@@ -1604,6 +1689,14 @@ describe("the lists and the erasure's half", () => {
         endsAt: START_OF_22_10,
         liftedAt: null,
         lookedAtAgain: true,
+      },
+      {
+        kind: "shadow_ban",
+        reason: "other",
+        appliedAt: at(14).toISOString(),
+        endsAt: null,
+        liftedAt: null,
+        lookedAtAgain: false,
       },
       {
         kind: "shadow_ban",

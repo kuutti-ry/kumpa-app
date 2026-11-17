@@ -131,7 +131,7 @@ describe("GET /admin/overview", () => {
     expect(await read(app, staff.headers)).toEqual({
       now: "2026-10-16T09:00:00.000Z",
       responseHours: 24,
-      reviewHours: 48,
+      reviewHours: 168,
       queues: [
         { queue: "reports", waiting: 0, oldestSince: null },
         { queue: "automatic_bans", waiting: 0, oldestSince: null },
@@ -204,7 +204,7 @@ describe("GET /admin/overview", () => {
     expect(await read(app, staff.headers)).toEqual({
       now: "2026-10-16T09:00:00.000Z",
       responseHours: 24,
-      reviewHours: 48,
+      reviewHours: 168,
       queues: [
         { queue: "reports", waiting: 0, oldestSince: null },
         { queue: "automatic_bans", waiting: 0, oldestSince: null },
@@ -390,12 +390,5 @@ describe("the moderators' guard on GET /admin/overview", () => {
       expect(await errorCode(response), what).toBe(code);
     }
     expect(await auditRows(ctx)).toEqual(before);
-  });
-
-  test("a researcher is refused with 403 admin_forbidden", async ({ ctx, app }) => {
-    const researcher = await staffSession(ctx.client, "researcher");
-    const response = await overview(app, researcher.headers);
-    expect(response.status).toBe(403);
-    expect(await errorCode(response)).toBe("admin_forbidden");
   });
 });

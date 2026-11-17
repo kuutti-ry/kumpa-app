@@ -3,9 +3,12 @@
 # of its own on admin.<env>.<domain>, not a path on the API's (the API serves
 # /admin/* itself, and the panel's CSP would cover its answers too). A path the
 # bucket has no object for is the app, whose router finds the page (#302).
+# While the hosts have two names, the distribution answers to the panel's name
+# under the second domain as well (extra_aliases, ADR-072): one bucket, one
+# build, the same API.
 # Every answer carries the panel's headers, whose CSP lets it talk to the API
-# and nothing else. A pull request's preview is the prefix pr-<n>/ of the same
-# bucket. TLS terminates at CloudFront with an ACM certificate from us-east-1.
+# and nothing else. TLS terminates at CloudFront with an ACM certificate from
+# us-east-1.
 
 data "aws_caller_identity" "current" {}
 
@@ -13,18 +16,14 @@ locals {
   name        = "${var.project}-${var.environment}"
   account_id  = data.aws_caller_identity.current.account_id
   bucket_name = "${var.project}-admin-${var.environment}-${local.account_id}"
-  # preview.yml writes the panel built under /pr-<n>/ here, and the plan role
-  # may write nothing else (infra/bootstrap, ci_plan_admin_previews).
-  preview_prefix = "pr-"
 }
 
 # ---------------------------------------------------------------------------
 # The bucket. Private; the only reader is the distribution (origin access
-# control). CI writes it: main's build at the root, a pull request's preview
-# under pr-<n>/ (ADR-025 §5-§7). The maintainer writes Saiga's faces under
-# fonts/ by hand, since no runner has them (ADR-052). Versioning stays off:
-# every object is the build of a commit, which CI rebuilds, or a face, which
-# the upload puts back.
+# control). CI writes main's build at its root (ADR-025 §5). The maintainer
+# writes Saiga's faces under fonts/ by hand, since no runner has them
+# (ADR-052). Versioning stays off: every object is the build of a commit,
+# which CI rebuilds, or a face, which the upload puts back.
 # ---------------------------------------------------------------------------
 
 resource "aws_s3_bucket" "admin" {
@@ -83,28 +82,11 @@ resource "aws_s3_bucket_lifecycle_configuration" "admin" {
       days_after_initiation = 1
     }
   }
-
-  # The backstop to the sweep (ADR-025 §8): preview-cleanup.yml removes pr-<n>/
-  # with the pull request's other previews, never waiting for a person, and
-  # never blocking the rest on a failure here (ADR-012 §4). What it leaves
-  # expires after the sweep's seven days, with room.
-  rule {
-    id     = "expire-previews"
-    status = "Enabled"
-
-    filter {
-      prefix = local.preview_prefix
-    }
-
-    expiration {
-      days = 14
-    }
-  }
 }
 
 # ---------------------------------------------------------------------------
 # How the distribution reads and answers: origin access control, the managed
-# cache policy, the panel's headers, and the previews' function.
+# cache policy and the panel's headers.
 # ---------------------------------------------------------------------------
 
 resource "aws_cloudfront_origin_access_control" "admin" {
@@ -123,7 +105,7 @@ data "aws_cloudfront_cache_policy" "caching_optimized" {
 }
 
 # The panel's headers (ADR-025 §3), on every behaviour: the website's house set
-# (kuutti-app-site) plus what a script needs. The API's origin is the only
+# (kumpa-app-site) plus what a script needs. The API's origin is the only
 # place the panel talks to and the name the signed photo URLs are on
 # (ADR-005); no third party, no inline script or style, and the panel's forms
 # all prevent their default. Override throughout, so this policy is the one
@@ -143,9 +125,9 @@ resource "aws_cloudfront_response_headers_policy" "admin" {
         "font-src 'self'",
         "img-src 'self' ${var.api_origin}",
         "connect-src ${var.api_origin}",
-        # No service worker: one registered from a preview's prefix could take
-        # the whole origin, the root's panel and its bank return included, and
-        # outlive the preview (ADR-025 §3).
+        # No service worker: the panel registers none, and one that did could
+        # hold the whole origin, its bank return included, past the next
+        # deploy (ADR-025 §3).
         "worker-src 'none'",
         "base-uri 'none'",
         "form-action 'none'",
@@ -204,28 +186,33 @@ resource "aws_cloudfront_response_headers_policy" "admin" {
   }
 }
 
-# Previews (ADR-025 §6): a page inside pr-<n>/ is that preview's index.html.
-# Without it every preview path would fall into the fallback below and get
-# main's panel. On the pr-* behaviour alone; the repository's first CloudFront
-# Function, and Lambda@Edge stays out (rules/infra.md).
-resource "aws_cloudfront_function" "previews" {
-  name    = "${local.name}-admin-previews"
-  runtime = "cloudfront-js-2.0"
-  comment = "A page inside a panel preview is that preview's index.html (ADR-025)"
-  publish = true
-  code    = file("${path.module}/previews.js")
+# The previews' CloudFront Function went with the previews (ADR-070). Destroying
+# it in the apply that detaches it fails: OpenTofu deletes it before it updates
+# the distribution, and CloudFront refuses a function still in use (409
+# FunctionInUse, staging's applies of #709 and #710). So the state forgets it,
+# the distribution is updated alone, and the maintainer deletes the function by
+# hand once the apply is done (ADR-070, Open 2).
+# shortcut: one block for both environments; delete it once production's next tag has applied it.
+removed {
+  from = aws_cloudfront_function.previews
+
+  lifecycle {
+    destroy = false
+  }
 }
 
 # ---------------------------------------------------------------------------
-# The certificate for the alias, in us-east-1 as CloudFront requires, validated
-# by a record in the project zone.
+# The certificate for the aliases, in us-east-1 as CloudFront requires, each
+# name validated by a record in its own zone: the project zone's for
+# admin_fqdn, the one extra_aliases gives for every other (ADR-072).
 # ---------------------------------------------------------------------------
 
 resource "aws_acm_certificate" "admin" {
   provider = aws.us_east_1
 
-  domain_name       = var.admin_fqdn
-  validation_method = "DNS"
+  domain_name               = var.admin_fqdn
+  subject_alternative_names = keys(var.extra_aliases)
+  validation_method         = "DNS"
 
   lifecycle {
     create_before_destroy = true
@@ -243,7 +230,7 @@ resource "aws_route53_record" "validation" {
     }
   }
 
-  zone_id         = var.zone_id
+  zone_id         = lookup(var.extra_aliases, each.key, var.zone_id)
   name            = each.value.name
   type            = each.value.type
   ttl             = 60
@@ -269,7 +256,7 @@ resource "aws_cloudfront_distribution" "this" {
   http_version    = "http2and3"
   # Europe and North America, as the API's distribution (modules/media).
   price_class         = "PriceClass_100"
-  aliases             = [var.admin_fqdn]
+  aliases             = concat([var.admin_fqdn], keys(var.extra_aliases))
   default_root_object = "index.html"
 
   origin {
@@ -288,27 +275,11 @@ resource "aws_cloudfront_distribution" "this" {
     compress                   = true
   }
 
-  ordered_cache_behavior {
-    path_pattern               = "${local.preview_prefix}*"
-    target_origin_id           = "panel"
-    viewer_protocol_policy     = "redirect-to-https"
-    allowed_methods            = ["GET", "HEAD"]
-    cached_methods             = ["GET", "HEAD"]
-    cache_policy_id            = data.aws_cloudfront_cache_policy.caching_optimized.id
-    response_headers_policy_id = aws_cloudfront_response_headers_policy.admin.id
-    compress                   = true
-
-    function_association {
-      event_type   = "viewer-request"
-      function_arn = aws_cloudfront_function.previews.arn
-    }
-  }
-
   # A path is the app (ADR-025 §2, #302): the bucket answers 403 for a key it
   # does not have, since CloudFront may not list it, so /accounts/<id> gets
   # index.html and the router finds the page; 404 the same, should it ever be
   # allowed to list. The answer is cached for ten seconds (CloudFront's default,
-  # stated because it matters): a preview published under a path asked for a
+  # stated because it matters): a file published under a path asked for a
   # moment earlier is seen within them.
   custom_error_response {
     error_code            = 403
@@ -374,6 +345,26 @@ resource "aws_route53_record" "admin" {
   zone_id = var.zone_id
   name    = var.admin_fqdn
   type    = each.key
+
+  alias {
+    name                   = aws_cloudfront_distribution.this.domain_name
+    zone_id                = aws_cloudfront_distribution.this.hosted_zone_id
+    evaluate_target_health = false
+  }
+}
+
+# And so is each extra alias, in its own zone (ADR-072).
+resource "aws_route53_record" "extra_alias" {
+  for_each = {
+    for pair in setproduct(keys(var.extra_aliases), ["A", "AAAA"]) : "${pair[0]} ${pair[1]}" => {
+      name = pair[0]
+      type = pair[1]
+    }
+  }
+
+  zone_id = var.extra_aliases[each.value.name]
+  name    = each.value.name
+  type    = each.value.type
 
   alias {
     name                   = aws_cloudfront_distribution.this.domain_name

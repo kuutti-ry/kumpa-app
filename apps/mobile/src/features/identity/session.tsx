@@ -35,7 +35,7 @@ export type SessionState =
 /** The export as the API answers it (#237): a zip, named by the API, nothing about the person in the name. */
 export type ExportFile = { name: string; bytes: Uint8Array };
 
-const DEFAULT_EXPORT_NAME = "kuutti-data.zip";
+const DEFAULT_EXPORT_NAME = "kumpa-data.zip";
 
 /** How long a logout waits for the API before the phone signs out anyway. */
 const LOGOUT_WAIT_MS = 5_000;

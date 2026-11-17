@@ -5,7 +5,7 @@ import {
   type Queryable,
   transaction,
 } from "@kuutti/db";
-import type { IdentityStanding, ModeratorRole } from "@kuutti/schema";
+import type { IdentityStanding, ModeratorRole, SanctionReason } from "@kuutti/schema";
 import type { SessionLookup, SessionStanding } from "../lib/auth-middleware.ts";
 import { advisoryLock, lockLiveAccount } from "../lib/db.ts";
 
@@ -368,6 +368,28 @@ export async function countRefusedAttempt(db: Queryable, identityId: string): Pr
   await db.query("UPDATE identity SET refused_attempts = refused_attempts + 1 WHERE id = $1", [
     identityId,
   ]);
+}
+
+/**
+ * The reason of the sanction that keeps the identity out, which the bank
+ * login's refusal tells the person (#715, ADR-073 §2): the newest open ban,
+ * or the open suspension that ends last, as `suspension_ends_at` is read
+ * (ADR-024 §2). Raw SQL on the safety slice's table, as the activation's read
+ * of a shadow ban is: the standing's two columns are this slice's, the rows
+ * behind them the safety slice's. Null for a standing with no row behind it.
+ */
+export async function standingReasonOf(
+  db: Queryable,
+  identityId: string,
+  kind: "ban" | "suspend",
+): Promise<SanctionReason | null> {
+  const { rows } = await db.query<{ reason: SanctionReason }>(
+    `SELECT reason FROM sanction
+      WHERE identity_id = $1 AND kind = $2 AND lifted_at IS NULL
+      ORDER BY ends_at DESC NULLS LAST, created_at DESC, id DESC LIMIT 1`,
+    [identityId, kind],
+  );
+  return rows[0]?.reason ?? null;
 }
 
 /**
@@ -1242,7 +1264,7 @@ export async function listConsents(
   return rows.map(consentFrom);
 }
 
-/** Erasure (#51, ADR-010 §14): the consent rows go with the account; the events keep their own consent_version. */
+/** Erasure (#51, ADR-010 §14): the consent rows go with the account. */
 export async function deleteConsentsOfAccount(db: Queryable, accountId: string): Promise<number> {
   const result = await db.query("DELETE FROM consent WHERE account_id = $1", [accountId]);
   return result.rowCount ?? 0;
@@ -1329,12 +1351,12 @@ export async function activeConsents(db: Queryable, accountId: string): Promise<
   return rows.map(consentFrom);
 }
 
-/** Research consents given within a day before the next is refused: the rows are kept for good, so churn is capped. */
+/** Consents of a kind given within a day before the next is refused: the rows are kept for good, so churn is capped. */
 export const CONSENT_CHURN_PER_DAY = 10;
 
 /**
  * One row per consent given: the same kind and version, still active, is
- * not written twice; a withdrawn research consent given again is a new row.
+ * not written twice; a withdrawn special-category consent given again is a new row.
  * A tombstone takes none (#51).
  */
 export async function recordConsent(

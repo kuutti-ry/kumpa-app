@@ -124,7 +124,6 @@ describe("sentry options", () => {
   it("maps the update channel to the environment", () => {
     expect(sentryEnvironment(null)).toBe("development");
     expect(sentryEnvironment("staging")).toBe("staging");
-    expect(sentryEnvironment("pr-42")).toBe("preview");
     expect(sentryEnvironment("production")).toBe("production");
   });
 

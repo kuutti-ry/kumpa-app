@@ -1116,9 +1116,7 @@ describe("DealBreakerFieldScreen", () => {
       const { server } = fakeApi(broken);
       await show(<DealBreakerFieldScreen field="smoking" />);
       await waitFor(() => expect(screen.getByText(LOAD_FAILED)).toBeTruthy());
-      expect(
-        screen.getByText("Kuutti's server had a problem. Try again in a moment."),
-      ).toBeTruthy();
+      expect(screen.getByText("Kumpa's server had a problem. Try again in a moment.")).toBeTruthy();
       expect(screen.queryByRole("checkbox")).toBeNull();
       checkA11y();
       server.failing = false;

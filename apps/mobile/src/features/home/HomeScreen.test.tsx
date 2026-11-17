@@ -75,9 +75,9 @@ beforeEach(async () => {
 describe("HomeScreen", () => {
   it("shows the pond, the gate and the profile, and the two buttons at the top", async () => {
     await renderWithTheme(<HomeScreen />);
-    expect(screen.getByRole("heading", { name: "Kuutti" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Kumpa" })).toBeTruthy();
     // Both cards have fetched and painted before anything is pressed.
-    expect(await screen.findByText("People on Kuutti")).toBeTruthy();
+    expect(await screen.findByText("People on Kumpa")).toBeTruthy();
     expect(await screen.findByText("150 people have completed their profiles.")).toBeTruthy();
     expect(
       await screen.findByText("Your profile is finished. Matching has not opened yet."),
@@ -121,7 +121,7 @@ describe("HomeScreen", () => {
     fireEvent.press(screen.getByRole("button", { name: "Try again" }));
     expect(mockRetry).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole("button", { name: "Your profile" })).toBeNull();
-    expect(screen.queryByText("People on Kuutti")).toBeNull();
+    expect(screen.queryByText("People on Kumpa")).toBeNull();
   });
 
   it("leaves the photos, the later questions and what one seeks to the profile, which holds them (#239, ADR-062 §11)", async () => {
@@ -184,7 +184,7 @@ describe("HomeScreen", () => {
 
   it("offers notifications in the gate card once matching is open, never before (#102)", async () => {
     // A phone never asked, an offer never answered: the jest.setup.js defaults.
-    const heading = "Shall Kuutti tell you?";
+    const heading = "Shall Kumpa tell you?";
     await renderWithTheme(<HomeScreen />);
     expect(
       await screen.findByText("Your profile is finished. Matching has not opened yet."),
@@ -204,7 +204,7 @@ describe("HomeScreen", () => {
     while (within(card).queryByRole("button", { name: "See people" }) === null && card.parent) {
       card = card.parent;
     }
-    expect(within(card).queryByText("People on Kuutti")).toBeNull();
+    expect(within(card).queryByText("People on Kumpa")).toBeNull();
     expect(within(card).getByRole("button", { name: "See people" })).toBeTruthy();
     expect(within(card).getByRole("button", { name: "Allow notifications" })).toBeTruthy();
     expect(within(card).getByRole("button", { name: "No thanks" })).toBeTruthy();
@@ -214,7 +214,7 @@ describe("HomeScreen", () => {
     /** Everything the screen draws, in the order it is read. */
     const said = (node: HostNode | string = screen.toJSON() as HostNode): string[] =>
       typeof node === "string" ? [node] : (node.children ?? []).flatMap((child) => said(child));
-    const COUNTER = "People on Kuutti";
+    const COUNTER = "People on Kumpa";
     const star = {
       id: "7a1c1c4e-9a8e-4a0b-9c3a-0c8d1e2f3a01",
       name: "Katja",
@@ -248,7 +248,7 @@ describe("HomeScreen", () => {
         "Matching is open for you.",
         "See people",
         "Starred",
-        "Shall Kuutti tell you?",
+        "Shall Kumpa tell you?",
         "Your profile",
         "Conversations",
         COUNTER,
@@ -305,7 +305,7 @@ describe("HomeRoute", () => {
     await renderWithTheme(<HomeRoute />);
     expect(await screen.findByRole("heading", { name: "Sign in" })).toBeTruthy();
     expect(await screen.findByRole("button", { name: "Sign in with your bank" })).toBeTruthy();
-    expect(screen.queryByRole("heading", { name: "Kuutti" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Kumpa" })).toBeNull();
   });
 
   it("is the screens before the bank for a signed-out person on a phone that never answered them", async () => {
@@ -313,13 +313,13 @@ describe("HomeRoute", () => {
     expect(await screen.findByRole("heading", { name: "How we do things here" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "I'm in, and I accept both" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Sign in with your bank" })).toBeNull();
-    expect(screen.queryByRole("heading", { name: "Kuutti" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Kumpa" })).toBeNull();
   });
 
   it("is the home screen for a signed-in person", async () => {
     await saveSession(tokens);
     await renderWithTheme(<HomeRoute />);
-    expect(await screen.findByRole("heading", { name: "Kuutti" })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "Kumpa" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Sign in with your bank" })).toBeNull();
   });
 
@@ -345,13 +345,13 @@ describe("HomeRoute", () => {
     const Returning = loginAnswering("unpaused");
     await renderWithTheme(<Returning />);
     expect(await screen.findByText("Welcome back. Your profile is visible again.")).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "Kuutti" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Kumpa" })).toBeTruthy();
   });
 
   it("says nothing of a break after an ordinary login", async () => {
     const Returning = loginAnswering("resumed");
     await renderWithTheme(<Returning />);
-    expect(await screen.findByRole("heading", { name: "Kuutti" })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "Kumpa" })).toBeTruthy();
     expect(screen.queryByText(/Welcome back/)).toBeNull();
   });
 

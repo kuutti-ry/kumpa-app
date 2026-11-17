@@ -16,15 +16,17 @@ import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { type ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Backdrop } from "@/components/backdrop";
 import { Choice } from "@/components/Choice";
 import { KeyboardScrollView } from "@/components/KeyboardScrollView";
 import { LoadFailedScreen, LoadingScreen } from "@/components/LoadFailed";
 import { useSpokenOnIos } from "@/components/Notice";
+import { StepProgress, StepTitle } from "@/components/step-heading";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Text } from "@/components/ui/text";
-import { PhotosScreen } from "@/features/media";
+import { OwnPhoto, PhotosScreen } from "@/features/media";
 import {
   AgeWindowSteppers,
   BioEditor,
@@ -46,10 +48,13 @@ import {
 import { fetchInvitations, InvitationStep } from "@/features/rewards";
 import { useT } from "@/lib/locale";
 import { useHapticTap } from "@/theme/haptics";
+import { useLookTraits } from "@/theme/ThemeProvider";
+import { useReducedMotion } from "@/theme/useReducedMotion";
 import { agreementsOf, giveAgreements } from "../agreements";
 import { NormsAndConsents } from "../BeforeSignIn";
 import { LegalTextLink } from "../LegalTextLink";
 import { bundledVersion, consentLocale, giveConsent } from "./client";
+import { ProfileReady } from "./ProfileReady";
 import { useOnboarding } from "./useOnboarding";
 
 type Step =
@@ -117,7 +122,7 @@ type LocalAnswers = {
  * and the welcome step is the fallback (ADR-010 §15); a friend's invitation
  * code once, before the name, never required (#107); then the name, the
  * gender, whom one seeks, the intent, the age window, the home, the photos,
- * the prompts. Research is not asked (#545, ADR-010 §19).
+ * the prompts.
  * A step of the contract this screen has no question for is "stuck".
  */
 function nextStep(status: OnboardingStatus, local: LocalAnswers): Step {
@@ -156,7 +161,9 @@ export function defaultAgeWindow(age: number): { min: number; max: number } {
  * whom one seeks, the photos step the photos screen itself. The API decides what
  * is still missing; this screen asks the next thing and leaves when nothing is.
  * The profile's own draft carries the name, the label, the intent and the
- * prompts (#47).
+ * prompts (#47). In the designers' try (the tech screen's neubrutalism, outside
+ * production) a walk that asked something ends on `ProfileReady`, which leaves
+ * for home from its one button.
  */
 export function OnboardingScreen() {
   const { t, locale } = useT();
@@ -194,9 +201,18 @@ export function OnboardingScreen() {
       live = false;
     };
   }, [current, invitation]);
+  // The designers' try (outside production): a walk that asked something ends on
+  // a celebration, and home waits for its button. Somebody sent here with
+  // nothing missing saw no step, and goes home at once, as today.
+  const [walked, setWalked] = useState(false);
   useEffect(() => {
-    if (current === "done") router.replace("/");
-  }, [current, router]);
+    if (current !== null && current !== "done") setWalked(true);
+  }, [current]);
+  const still = useReducedMotion();
+  const celebrate = useLookTraits().moment !== "plain" && walked;
+  useEffect(() => {
+    if (current === "done" && !celebrate) router.replace("/");
+  }, [current, celebrate, router]);
   // Each step starts at its top: the ScrollView kept the last step's offset,
   // so a new step's title began under the status bar (10/10/2026).
   const scroll = useRef<ScrollView>(null);
@@ -280,7 +296,17 @@ export function OnboardingScreen() {
     );
   }
   // Home takes over at once (the effect above), and says what comes next.
-  if (current === "done") return <SafeAreaView className="flex-1 bg-background" />;
+  if (current === "done") {
+    return celebrate ? (
+      <ProfileReady
+        still={still}
+        onContinue={() => router.replace("/")}
+        you={<OwnPhoto label={t("round.hello.you")} inReview />}
+      />
+    ) : (
+      <SafeAreaView className="flex-1 bg-background" />
+    );
+  }
   const { onboarding } = state;
   const { draft, update } = profile;
   const position = STEPS.indexOf(NUMBERED_AS[current] ?? current) + 1;
@@ -309,12 +335,11 @@ export function OnboardingScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-background">
+      <Backdrop />
       {/* The home's list lies under its field: a scroll reaches it past the keyboard. */}
       <KeyboardScrollView ref={scroll} contentContainerClassName="flex-grow gap-4 p-6">
         {current !== "welcome" && current !== "invitation" && (
-          <Text variant="muted" accessibilityLiveRegion="polite">
-            {t("onboarding.progress", { step: position, total: STEPS.length })}
-          </Text>
+          <StepProgress step={position} total={STEPS.length} />
         )}
         {failure !== null && <Text accessibilityLiveRegion="assertive">{failure}</Text>}
         {failed && failedCode === "change_too_soon" && changeFrom && (
@@ -350,11 +375,10 @@ export function OnboardingScreen() {
 
         {current === "name" && (
           <View className="gap-4">
-            <Text variant="h1" accessibilityRole="header">
-              {t("onboarding.name.title")}
-            </Text>
+            <StepTitle>{t("onboarding.name.title")}</StepTitle>
             <NameEditor draft={draft} update={update} />
             <Button
+              onward
               disabled={busy || profile.saving || draft.displayName.trim().length === 0}
               onPress={() => {
                 tap();
@@ -368,12 +392,11 @@ export function OnboardingScreen() {
 
         {current === "gender" && (
           <View className="gap-4">
-            <Text variant="h1" accessibilityRole="header">
-              {t("onboarding.gender.title")}
-            </Text>
+            <StepTitle>{t("onboarding.gender.title")}</StepTitle>
             <Text>{t("onboarding.gender.explain")}</Text>
             <GenderChips chosen={gender} onChoose={setGender} />
             <Button
+              onward
               disabled={busy || gender === null}
               onPress={() => {
                 tap();
@@ -390,15 +413,14 @@ export function OnboardingScreen() {
 
         {current === "identityLabel" && (
           <View className="gap-4">
-            <Text variant="h1" accessibilityRole="header">
-              {t("onboarding.identityLabel.title")}
-            </Text>
+            <StepTitle>{t("onboarding.identityLabel.title")}</StepTitle>
             <Text>{t("onboarding.identityLabel.explain")}</Text>
             <IdentityLabelChips
               chosen={draft.fields.identityLabel}
               onChange={(label) => setField("identityLabel", label)}
             />
             <Button
+              onward
               disabled={busy || profile.saving || draft.fields.identityLabel === undefined}
               onPress={() => {
                 tap();
@@ -424,9 +446,7 @@ export function OnboardingScreen() {
 
         {current === "seeks" && (
           <View className="gap-4">
-            <Text variant="h1" accessibilityRole="header">
-              {t("onboarding.seeks.title")}
-            </Text>
+            <StepTitle>{t("onboarding.seeks.title")}</StepTitle>
             <Text>{t("onboarding.seeks.explain")}</Text>
             <SeeksChips chosen={chosenSeeks} onChange={setSeeks} />
             {/* Article 9: the consent on the screen that collects the answer (ADR-019 §4). */}
@@ -436,7 +456,8 @@ export function OnboardingScreen() {
               </CardHeader>
               <CardContent className="gap-2">
                 <Text>{t("legal.special_category.summary")}</Text>
-                {realLocale(locale) !== "fi" && (
+                {/* The English binds, and only the Finnish is a translation of it (#208, ADR-010 §9). */}
+                {realLocale(locale) === "fi" && (
                   <Text variant="muted">{t("onboarding.consents.binding")}</Text>
                 )}
                 <LegalTextLink kind="special_category" />
@@ -473,6 +494,7 @@ export function OnboardingScreen() {
             </Card>
             {/* Saved on leaving the screen (ADR-010 §13): an app closed before the ages keeps it. */}
             <Button
+              onward
               disabled={busy || chosenSeeks.length === 0 || !specialConsented}
               onPress={() => {
                 tap();
@@ -489,9 +511,7 @@ export function OnboardingScreen() {
 
         {current === "intent" && (
           <View className="gap-4">
-            <Text variant="h1" accessibilityRole="header">
-              {t("onboarding.intent.title")}
-            </Text>
+            <StepTitle>{t("onboarding.intent.title")}</StepTitle>
             <Text>{t("onboarding.intent.explain")}</Text>
             <View
               accessibilityRole="radiogroup"
@@ -511,6 +531,7 @@ export function OnboardingScreen() {
               ))}
             </View>
             <Button
+              onward
               disabled={busy || profile.saving || draft.fields.intent === undefined}
               onPress={() => {
                 tap();
@@ -524,11 +545,10 @@ export function OnboardingScreen() {
 
         {current === "age" && ages && (
           <View className="gap-4">
-            <Text variant="h1" accessibilityRole="header">
-              {t("onboarding.age.title")}
-            </Text>
+            <StepTitle>{t("onboarding.age.title")}</StepTitle>
             <AgeWindowSteppers ages={ages} onChange={setAges} />
             <Button
+              onward
               disabled={busy}
               onPress={() => {
                 tap();
@@ -542,9 +562,7 @@ export function OnboardingScreen() {
 
         {current === "home" && (
           <View className="gap-4">
-            <Text variant="h1" accessibilityRole="header">
-              {t("onboarding.home.title")}
-            </Text>
+            <StepTitle>{t("onboarding.home.title")}</StepTitle>
             <Text>{t("profile.place.explain")}</Text>
             <PlacePicker
               busy={busy}
@@ -565,6 +583,7 @@ export function OnboardingScreen() {
             />
             {/* Through `step`, so that a choice that failed is not said on the step after. */}
             <Button
+              onward
               disabled={busy}
               onPress={() => {
                 tap();
@@ -578,9 +597,7 @@ export function OnboardingScreen() {
 
         {current === "prompts" && (
           <View className="gap-4">
-            <Text variant="h1" accessibilityRole="header">
-              {t("onboarding.prompts.title")}
-            </Text>
+            <StepTitle>{t("onboarding.prompts.title")}</StepTitle>
             <Text>{t("onboarding.prompts.explain", { min: BIO_MIN_FOR_COMPLETENESS })}</Text>
             {/* The bio or a ready line, as in the basics: either finishes this step (#239). */}
             <BioEditor draft={draft} update={update} />

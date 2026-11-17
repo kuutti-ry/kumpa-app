@@ -7,7 +7,7 @@ import { createApp } from "../app.ts";
 import { eraseAccount } from "../identity/index.ts";
 import { ageInYears } from "../profile/index.ts";
 import { applySanction } from "../safety/index.ts";
-import { joinStudy, signInAs, staffSession, withMatchingConfig } from "../test/account.ts";
+import { signInAs, staffSession, withMatchingConfig } from "../test/account.ts";
 import { errorCode } from "../test/answers.ts";
 import { cardShown } from "../test/cards.ts";
 import { block, conversationBetween, detailOf, interleaved, listOf } from "../test/chat.ts";
@@ -25,8 +25,8 @@ import { archiveSilentConversations } from "./archive.ts";
 
 // features/chat/conversations.feature (#348, ADR-031): the list, one
 // conversation, its pages, the send with every refusal, the resend, the read
-// mark, the block, the shadow ban, the ban, the limiter, the thumb, the
-// events, and the text's absence from every log line.
+// mark, the block, the shadow ban, the ban, the limiter, the thumb, and the
+// text's absence from every log line.
 
 // A marker of letters: a number can turn up in a log line's timestamp by chance.
 const MARK = "qzxvkw";
@@ -723,8 +723,6 @@ describe("who may reach a conversation", () => {
     const a = await person(ctx, "Aino");
     const b = await person(ctx, "Bea");
     const c = await person(ctx, "Cia");
-    // With the research consent, so an event would be written if a ban wrote one.
-    await joinStudy(ctx.app, b.headers);
     const withB = await conversationBetween(ctx.client, a.accountId, b.accountId);
     const withC = await conversationBetween(ctx.client, c.accountId, a.accountId);
     const sanction = (kind: "suspend" | "ban") =>
@@ -765,10 +763,6 @@ describe("who may reach a conversation", () => {
       ]);
       expect((await send(ctx.app, who, id, "Hei?")).status).toBe(409);
     }
-    // No research event says that a ban ended them (ADR-024).
-    expect(
-      await count(ctx, "SELECT count(*) AS n FROM events WHERE name = 'conversation_closed'"),
-    ).toBe(0);
   });
 
   test("a blocker never sees the conversation again, after a ban, a block and the other's erasure", async ({
@@ -833,7 +827,6 @@ describe("the night's archive", () => {
     const now = new Date();
     const [a, b, c, d, e] = await peopleNamed(ctx, ["Aino", "Bea", "Cia", "Dan", "Eli"]);
     if (!a || !b || !c || !d || !e) throw new Error("people");
-    await joinStudy(ctx.app, a.headers);
     const silentOne = await conversationBetween(ctx.client, a.accountId, b.accountId, {
       openedAt: new Date(now.getTime() - 20 * DAY),
       messages: [{ from: "a", body: "Hei", at: new Date(now.getTime() - 8 * DAY) }],
@@ -852,11 +845,6 @@ describe("the night's archive", () => {
       "UPDATE conversation SET closed_at = $2, closed_how = 'unmatch', closed_by = 'a' WHERE id = $1",
       [closed, new Date(now.getTime() - 30 * DAY)],
     );
-    const events = () =>
-      ctx.client.query<{ props: unknown }>(
-        "SELECT props FROM events WHERE name = 'conversation_archived' ORDER BY props->>'days'",
-      );
-    expect((await events()).rows).toEqual([]);
     const archived = await archiveSilentConversations({
       db: ctx.client,
       logger: await silent(),
@@ -872,11 +860,6 @@ describe("the night's archive", () => {
     expect(archivedAt[neverWritten]).toEqual(now);
     expect(archivedAt[recent]).toBeNull();
     expect(archivedAt[closed]).toBeNull();
-    // A's two archives; nobody else gave the consent.
-    expect((await events()).rows.map((r) => r.props)).toEqual([
-      { messages: "1-5", days: "14-29" },
-      { messages: "0", days: "7-13" },
-    ]);
     // A second night finds nothing more.
     expect(
       await archiveSilentConversations({ db: ctx.client, logger: await silent(), now: () => now }),
@@ -979,59 +962,6 @@ describe("the thumb", () => {
 });
 
 describe("what a message tells, and to whom", () => {
-  test("Each send, archive and close is a research event with no text", async ({ ctx }) => {
-    const a = await person(ctx, "Aino");
-    const b = await person(ctx, "Bea");
-    await joinStudy(ctx.app, a.headers);
-    await joinStudy(ctx.app, b.headers);
-    const opened = new Date(Date.now() - 2 * DAY);
-    const id = await conversationBetween(ctx.client, a.accountId, b.accountId, {
-      openedAt: opened,
-    });
-    expect((await send(ctx.app, a, id, `Hei ${MARK}`)).status).toBe(201);
-    expect((await send(ctx.app, a, id, `${"Pitkä viesti. ".repeat(10)}${MARK}`)).status).toBe(201);
-    await archiveSilentConversations({
-      db: ctx.client,
-      logger: await silent(),
-      now: () => new Date(Date.now() + 9 * DAY),
-    });
-    await eraseAccount(
-      { db: ctx.client, logger: await silent(), now: () => new Date() },
-      b.accountId,
-    );
-    const events = await ctx.client.query<{ name: string; props: unknown; snapshot: unknown }>(
-      `SELECT name, props, snapshot FROM events
-       WHERE name IN ('message_sent', 'conversation_archived', 'conversation_closed')
-       ORDER BY name, props->>'firstInConversation' DESC`,
-    );
-    expect(events.rows.map((r) => [r.name, r.props])).toEqual([
-      ["conversation_archived", { messages: "1-5", days: "7-13" }],
-      ["conversation_archived", { messages: "1-5", days: "7-13" }],
-      ["conversation_closed", { how: "erasure", messages: "1-5" }],
-      [
-        "message_sent",
-        {
-          kind: "text",
-          length: "1-20",
-          firstInConversation: true,
-          sinceOpened: "1d_7d",
-          sincePrevious: null,
-        },
-      ],
-      [
-        "message_sent",
-        {
-          kind: "text",
-          length: "81-280",
-          firstInConversation: false,
-          sinceOpened: "1d_7d",
-          sincePrevious: "under_1m",
-        },
-      ],
-    ]);
-    expect(JSON.stringify(events.rows)).not.toContain(MARK);
-  });
-
   test("no message text reaches a log line, an error detail or an error report", async ({
     ctx,
   }) => {

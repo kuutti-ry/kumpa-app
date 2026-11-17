@@ -1,6 +1,6 @@
 ---
 name: personal-data
-description: Walk a change that adds or moves a person's data through erasure, export, scoping, retention, logs, research events and the privacy notice. Use before any new table or column, any change to `packages/db/src/schema`, and any new place a person's data is kept or sent. A hook refuses edits to the schema until this skill has run in the session.
+description: Walk a change that adds or moves a person's data through erasure, export, scoping, retention, logs and the privacy notice. Use before any new table or column, any change to `packages/db/src/schema`, and any new place a person's data is kept or sent. A hook refuses edits to the schema until this skill has run in the session.
 argument-hint: [what is being added]
 ---
 
@@ -8,7 +8,7 @@ Kuutti is a dating app run by a registered association: erasure and export are l
 
 ## 1. Name the data
 
-What is it, whose, and why does the feature need it? The least that works: can it be computed, coarser, or not kept at all? Never a column for the hetu, legal sex, a full date of birth, the name from the bank, or message text or email in `events` (`pnpm check:schema-words`).
+What is it, whose, and why does the feature need it? The least that works: can it be computed, coarser, or not kept at all? Never a column for the hetu, legal sex, a full date of birth, or the name from the bank (`pnpm check:schema-words`).
 
 ## 2. Erasure
 
@@ -35,14 +35,13 @@ How long does it stay, and what removes it? A nightly job needs a test and a row
 ## 6. Where it travels
 
 - **Logs, errors, Sentry:** never the hetu, message text, email, `seeks`, a contact's value, a token or a client address. The structured log carries `account_id` and the request id. A test fails on a PII pattern in the output.
-- **Research events:** keyed by `research_id`, never `account_id`, and never message text (rule 5), through the registry in `packages/schema`. A new event or property goes through `change-rule` too.
 - **Push and mail:** one line of the app's words; no name, no text, no id.
 - **Outside services and LLMs:** never a person's data.
 - **Photos:** only through the API's pipeline (rule 4).
 
 ## 7. What people are told
 
-If the data is new to the person, the privacy notice on kuutti.app may need a change, and a consent may need a new version (`CONSENT_VERSIONS`, `pnpm check:legal-versions`; the site lives in `kuutti-ry/kuutti-app-site`). A sensitive answer needs its special-category consent. Legal wording is the maintainer's: name what changes and ask.
+If the data is new to the person, the privacy notice on kuutti.app may need a change, and a consent may need a new version (`CONSENT_VERSIONS`, `pnpm check:legal-versions`; the site lives in `kuutti-ry/kumpa-app-site`). A sensitive answer needs its special-category consent. Legal wording is the maintainer's: name what changes and ask.
 
 ## 8. Report
 

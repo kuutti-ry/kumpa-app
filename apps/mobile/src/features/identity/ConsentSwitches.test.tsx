@@ -2,6 +2,7 @@ import { CONSENT_VERSIONS } from "@kuutti/i18n";
 import { act, fireEvent, renderHook, screen, waitFor } from "@testing-library/react-native";
 import type * as React from "react";
 import { Linking } from "react-native";
+import { apiBaseUrl } from "@/lib/api-url";
 import { clearSession, saveSession } from "@/lib/session";
 import { a11yProblems, type HostNode, pressables } from "@/test/a11y";
 import { FAILED_TO_LOAD } from "@/test/failed";
@@ -12,7 +13,7 @@ import { ConsentSwitch, useConsentStates } from "./ConsentSwitches";
 // since #287 and #511: shown as the API holds it, given for the bundled wording,
 // withdrawn by a DELETE, a failure that leaves the switch as it was, and the
 // list's states for the rows that open them. The sensitive answers are the one
-// kind switched here: research is not asked (#545, ADR-010 §19).
+// withdrawable kind.
 
 const LABEL = "Store my sensitive answers";
 const FAILED = "That did not go through. Try again.";
@@ -55,7 +56,6 @@ const show = async (ui: React.ReactElement) => {
 const versions = (sensitive = SENSITIVE) => ({
   terms: CONSENT_VERSIONS.terms,
   privacy: CONSENT_VERSIONS.privacy,
-  research: CONSENT_VERSIONS.research,
   special_category: sensitive,
 });
 const record = (kind = "special_category", version = SENSITIVE) => ({
@@ -157,11 +157,11 @@ describe("ConsentSwitch", () => {
     await screen.findByLabelText(LABEL);
     await fireEvent.press(
       screen.getByRole("link", {
-        name: `Read the full text on kuutti.app (version ${SENSITIVE})`,
+        name: `Read the full text on the website (version ${SENSITIVE})`,
       }),
     );
     expect(open).toHaveBeenCalledWith(
-      `https://kuutti.app/legal/privacy/#special_category-${SENSITIVE}`,
+      `${apiBaseUrl()}/legal/privacy#special_category-${SENSITIVE}`,
     );
     open.mockRestore();
   });
@@ -221,7 +221,7 @@ describe("ConsentSwitch", () => {
     const calls = fetchMock([serverError]);
     await show(<ConsentSwitch kind="special_category" />);
     expect(screen.getByText(FAILED_TO_LOAD)).toBeTruthy();
-    expect(screen.getByText("Kuutti's server had a problem. Try again in a moment.")).toBeTruthy();
+    expect(screen.getByText("Kumpa's server had a problem. Try again in a moment.")).toBeTruthy();
     consentsApi({ given: true });
     await act(async () => {
       fireEvent.press(screen.getByRole("button", { name: "Try again" }));
@@ -270,8 +270,8 @@ describe("useConsentStates", () => {
     ],
     ["off for an older wording", [record("special_category", "2025-01-draft-1")], SENSITIVE, "off"],
     [
-      "off for a research consent, which is not this one",
-      [record("research", SENSITIVE)],
+      "off for a consent of another kind at the same version",
+      [record("privacy", SENSITIVE)],
       SENSITIVE,
       "off",
     ],
@@ -301,7 +301,6 @@ describe("useConsentStates", () => {
         currentVersions: {
           terms: CONSENT_VERSIONS.terms ?? "",
           privacy: CONSENT_VERSIONS.privacy ?? "",
-          research: CONSENT_VERSIONS.research ?? "",
           special_category: SENSITIVE,
         },
       });

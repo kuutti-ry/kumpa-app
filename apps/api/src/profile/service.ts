@@ -11,7 +11,6 @@ import {
 import { AppError, noLiveAccount } from "../lib/errors.ts";
 import { listApprovedPhotos } from "../media/index.ts";
 import { readHome } from "../pond/index.ts";
-import { track } from "../research/index.ts";
 import {
   type CardDeps,
   completenessOf,
@@ -156,15 +155,9 @@ export async function saveProfile(
   });
   const approved = await listApprovedPhotos(deps.db, accountId);
   deps.logger.info({ accountId, prompts: update.prompts.length }, "profile saved");
-  const completenessNow = await completenessOf(deps, accountId, row, approved.length);
-  // Research (#50): whether profiles get finished; nothing of the text, and nothing without the consent.
-  await track(deps, accountId, "profile_saved", {
-    complete: completenessNow.complete,
-    approvedPhotos: approved.length,
-  });
   return {
     profile: toDocument(row, consent),
-    completeness: completenessNow,
+    completeness: await completenessOf(deps, accountId, row, approved.length),
     home: await readHome(deps, accountId),
   };
 }

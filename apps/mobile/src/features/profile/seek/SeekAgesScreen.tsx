@@ -2,6 +2,7 @@ import type { AgeWindow } from "@kuutti/schema";
 import { useState } from "react";
 import { ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Backdrop } from "@/components/backdrop";
 import { LoadFailedScreen, LoadingScreen } from "@/components/LoadFailed";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { useT } from "@/lib/locale";
@@ -46,6 +47,7 @@ export function SeekAgesScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-background">
+      <Backdrop />
       <ScreenHeader title={t("onboarding.age.title")} backLabel={t("profile.seek.back")} />
       <ScrollView contentContainerClassName="flex-grow gap-6 p-6">
         <AgeWindowSteppers ages={ages} onChange={setDraft} />

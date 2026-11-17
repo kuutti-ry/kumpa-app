@@ -5,7 +5,12 @@ import { createApp } from "../app.ts";
 import { eraseAccount } from "../identity/index.ts";
 import { invitationCountJob } from "../jobs/invitation-count.ts";
 import { applySanction } from "../safety/index.ts";
-import { signedInAccount, withMatchingConfig } from "../test/account.ts";
+import {
+  confirmedAddress,
+  signedInAccount,
+  staffSession,
+  withMatchingConfig,
+} from "../test/account.ts";
 import { errorCode } from "../test/answers.ts";
 import { interleaved } from "../test/chat.ts";
 import { exportOf } from "../test/export.ts";
@@ -17,7 +22,7 @@ import {
   testConfig,
 } from "../test/harness.ts";
 import { completed, invitationOf } from "../test/invitations.ts";
-import { noticesOf } from "../test/push.ts";
+import { mailingApp, noticesOf } from "../test/push.ts";
 import { pidOf, waitsFor, watched, withTwoConnections } from "../test/races.ts";
 import { setChoice } from "./notifications.ts";
 
@@ -165,8 +170,6 @@ describe("the notices", () => {
     const b = await signedInAccount(ctx.client);
     expect(await noticesOf(ctx.app, a)).toEqual([]);
     const warning = await warn(ctx, a);
-    // A shadow ban tells nobody anything (ADR-024 §7).
-    await warn(ctx, a, "shadow_ban");
     const [notice, ...rest] = await noticesOf(ctx.app, a);
     expect(rest).toEqual([]);
     expect(notice).toMatchObject({ kind: "warning", reason: "harassment", readAt: null });
@@ -187,6 +190,46 @@ describe("the notices", () => {
     await ctx.client.query("UPDATE sanction SET lifted_at = now() WHERE id = $1", [second.id]);
     expect((await noticesOf(ctx.app, a)).map((n) => n.id)).toEqual([notice?.id]);
     expect(warning.kind).toBe("warn");
+  });
+
+  test("A shadow ban shows the person a notice at once, and none once lifted", async ({ ctx }) => {
+    const { app, sent, pusher, settled } = await mailingApp(ctx.client);
+    const a = await signedInAccount(ctx.client);
+    const b = await signedInAccount(ctx.client);
+    await confirmedAddress(ctx.client, a, "a@example.test", "en");
+    const moderator = await staffSession(ctx.client);
+    const applied = await app.request(`/admin/accounts/${a.accountId}/sanctions`, {
+      method: "POST",
+      headers: json(moderator.headers),
+      body: JSON.stringify({ kind: "shadow_ban", reason: "harassment", note: "Kept writing." }),
+    });
+    expect(applied.status).toBe(201);
+    const { id } = (await applied.json()) as { id: string };
+    await settled();
+    // Its reason, and never the note.
+    expect(await noticesOf(app, a)).toEqual([
+      {
+        id: expect.any(String),
+        kind: "shadow_ban",
+        at: expect.any(String),
+        readAt: null,
+        reason: "harassment",
+      },
+    ]);
+    expect(JSON.stringify(await noticesOf(app, a))).not.toContain("Kept writing");
+    expect(await noticesOf(app, b)).toEqual([]);
+    expect(sent).toHaveLength(1);
+
+    const lifted = await app.request(`/admin/sanctions/${id}/lift`, {
+      method: "POST",
+      headers: moderator.headers,
+    });
+    expect(lifted.status).toBe(200);
+    await settled();
+    expect(await noticesOf(app, a)).toEqual([]);
+    // The ban's own mail, and nothing for the lift; no push either.
+    expect(sent).toHaveLength(1);
+    expect(pusher.sent()).toEqual([]);
   });
 
   test("refuses a notice that is nobody's, an id that is no uuid, and nobody", async ({ ctx }) => {

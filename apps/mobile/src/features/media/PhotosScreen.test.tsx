@@ -447,7 +447,7 @@ describe("PhotosScreen", () => {
   describe("as onboarding's photos step (#581)", () => {
     const EXPLAIN =
       "Hold a photo and drag it to change the order. A new photo is checked before anyone else sees it.";
-    const REFUSED = "Not accepted. This photo does not fit Kuutti; try another one.";
+    const REFUSED = "Not accepted. This photo does not fit Kumpa; try another one.";
     const FAILED = "That did not go through. Try again.";
     const showStep = async () => {
       const onContinue = jest.fn();
@@ -1126,7 +1126,7 @@ describe("PhotosScreen", () => {
     await press(await screen.findByRole("button", { name: "Add a photo" }));
     expect(
       await screen.findByText(
-        "Kuutti could not open your photos. Allow access in the phone's settings and try again.",
+        "Kumpa could not open your photos. Allow access in the phone's settings and try again.",
       ),
     ).toBeTruthy();
   });
@@ -1427,10 +1427,16 @@ describe("PhotosScreen", () => {
   describe("dragging a tile (#179)", () => {
     /** A motion-off phone: the lift, the slides and the settling take no time, so a drop saves at once. */
     let motion: jest.SpyInstance;
+    let ownAnswer: ReturnType<jest.SpyInstance["getMockImplementation"]>;
     beforeEach(() => {
-      motion = jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(true);
+      motion = jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled");
+      ownAnswer = motion.getMockImplementation();
+      motion.mockResolvedValue(true);
     });
-    afterEach(() => motion.mockRestore());
+    // The question is jest-expo's own mock, so its answer is handed back: a
+    // restored spy on a mock answers nothing, and every screen that asks after
+    // this block, the Organic Pop try's below, failed on it.
+    afterEach(() => motion.mockImplementation(ownAnswer));
 
     const grid = () => {
       const orders: string[][] = [];
@@ -1607,5 +1613,69 @@ describe("PhotosScreen", () => {
       }
       await act(settle);
     });
+  });
+});
+
+// The Organic Pop try (outside production) draws the photo step as Sini's:
+// rounder tiles, the main photo's word as a tag, Add a photo as a soft button
+// with a plus, Continue with an arrow. What is said, in what order, is today's.
+describe("PhotosScreen in the Organic Pop try", () => {
+  const LOOK = "kuutti.preference.look";
+  beforeEach(() => store.set(LOOK, "organic"));
+  afterEach(() => store.delete(LOOK));
+
+  /** Whether any drawing under a node is one a screen reader would reach. */
+  const spokenDrawings = (node: unknown, hidden = false): number => {
+    if (Array.isArray(node))
+      return node.reduce((sum, each) => sum + spokenDrawings(each, hidden), 0);
+    if (!node || typeof node !== "object") return 0;
+    const host = node as { type?: unknown; props?: Record<string, unknown>; children?: unknown };
+    const props = host.props ?? {};
+    const under =
+      hidden ||
+      props.accessibilityElementsHidden === true ||
+      props.importantForAccessibility === "no-hide-descendants";
+    return (host.type === "RNSVGSvgView" && !under ? 1 : 0) + spokenDrawings(host.children, under);
+  };
+
+  it("says the step's words in today's order, every control labelled, and none of its drawings", async () => {
+    fetchMock([answersList(list(2)), answersUrls]);
+    await show(
+      <PhotosScreen step={{ position: 7, total: 8, reading: false, onContinue: jest.fn() }} />,
+    );
+    expect(await screen.findByText("Main photo")).toBeTruthy();
+    await waitFor(() =>
+      expect(
+        String(screen.getAllByRole("button", { name: /^Open photo/ })[0]?.props.className),
+      ).toMatch(/\brounded-3xl\b/),
+    );
+    expect(drawn().filter((each) => each !== "Main photo" && each !== "In review")).toEqual([
+      "Step 7 of 8",
+      "Two photos of you",
+      "Profiles with a face photo get seen.",
+      "Hold a photo and drag it to change the order. A new photo is checked before anyone else sees it.",
+      "Add a caption",
+      "Add a caption",
+      "Add a photo",
+      "Continue",
+    ]);
+    expect(screen.getByRole("heading", { name: "Two photos of you" }).props["aria-level"]).toBe(
+      "1",
+    );
+    expect(screen.getByRole("button", { name: "Add a photo" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Continue" })).toBeTruthy();
+    expect(spokenDrawings(screen.toJSON())).toBe(0);
+    expect(pressables(screen.toJSON() as HostNode).flatMap((node) => a11yProblems(node))).toEqual(
+      [],
+    );
+  });
+
+  it("still names the main photo in words, the first approved one", async () => {
+    fetchMock([answersList(list(2)), answersUrls]);
+    await show(<PhotosScreen />);
+    expect(await screen.findByText("Main photo")).toBeTruthy();
+    expect(
+      screen.getAllByText(/^(Main photo|In review)$/).map((node) => node.props.children),
+    ).toEqual(["Main photo", "In review"]);
   });
 });

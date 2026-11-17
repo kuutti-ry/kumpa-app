@@ -22,7 +22,7 @@ describe("LoadFailed in production", () => {
     });
     expect(
       await screen.findByText(
-        "No update is available for this app yet. Install the newest version of Kuutti.",
+        "No update is available for this app yet. Install the newest version of Kumpa.",
       ),
     ).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Open the install page" })).toBeNull();

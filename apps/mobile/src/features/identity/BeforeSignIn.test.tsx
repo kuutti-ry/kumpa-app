@@ -3,6 +3,7 @@ import { fireEvent, screen } from "@testing-library/react-native";
 import { useLocales } from "expo-localization";
 import * as SecureStore from "expo-secure-store";
 import { Linking } from "react-native";
+import { apiBaseUrl } from "@/lib/api-url";
 import { a11yProblems, type HostNode, pressables } from "@/test/a11y";
 import { renderWithTheme } from "@/test/render";
 import { BeforeSignIn, NormsAndConsents } from "./BeforeSignIn";
@@ -58,13 +59,12 @@ describe("BeforeSignIn: the terms and the privacy summary", () => {
     // Both wordings carry the same version today; each card has its own link.
     expect(
       screen.getAllByRole("link", {
-        name: `Read the full text on kuutti.app (version ${TERMS})`,
+        name: `Read the full text on the website (version ${TERMS})`,
       }),
     ).toHaveLength(TERMS === PRIVACY ? 2 : 1);
     expect(screen.getAllByRole("link")).toHaveLength(2);
-    // No bank button anywhere, and no third card (#545).
+    // No bank button anywhere: the one button accepts both.
     expect(screen.queryByRole("button", { name: "Sign in with your bank" })).toBeNull();
-    expect(screen.queryByText("Research")).toBeNull();
     expect(screen.getAllByRole("button")).toHaveLength(1);
     expect(screen.getByRole("button", { name: "I'm in, and I accept both" })).toBeTruthy();
     checkA11y();
@@ -77,28 +77,39 @@ describe("BeforeSignIn: the terms and the privacy summary", () => {
     await fireEvent.press(links[0] as (typeof links)[number]);
     await fireEvent.press(links[1] as (typeof links)[number]);
     expect(open.mock.calls.map((call) => call[0])).toEqual([
-      `https://kuutti.app/legal/terms/#terms-${TERMS}`,
-      `https://kuutti.app/legal/privacy/#privacy-${PRIVACY}`,
+      `${apiBaseUrl()}/legal/terms#terms-${TERMS}`,
+      `${apiBaseUrl()}/legal/privacy#privacy-${PRIVACY}`,
     ]);
     // Reading the full text is no answer: the screen stays where it was.
     expect(screen.getByRole("button", { name: "I'm in, and I accept both" })).toBeTruthy();
   });
 
-  it.each([
-    ["en-US", "The Finnish text is the one that counts; this is a translation."],
-    ["sv-FI", "Den finska texten är den som gäller; det här är en översättning."],
-  ])("says on a %s phone that the Finnish text is the binding one", async (languageTag, line) => {
-    onPhone(languageTag);
-    await renderWithTheme(<BeforeSignIn onAgreed={jest.fn()} />);
-    expect(screen.getByText(line)).toBeTruthy();
-  });
-
-  it("says nothing of a binding text on a Finnish phone, whose text is the binding one", async () => {
+  // The English binds (#208). The legal texts are written in English and
+  // Finnish, so the Finnish is the one translation a person can read here.
+  it("says on a Finnish phone, above its Finnish texts, that the English text is the binding one", async () => {
     onPhone("fi-FI");
     await renderWithTheme(<BeforeSignIn onAgreed={jest.fn()} />);
     expect(screen.getByRole("heading", { name: "Näin täällä toimitaan" })).toBeTruthy();
-    expect(screen.queryByText(/Suomenkielinen teksti on sitova/)).toBeNull();
+    expect(screen.getByText(/^Kumpa on Kuutti ry:n maksuton palvelu/)).toBeTruthy();
+    expect(
+      screen.getAllByText("Englanninkielinen teksti on sitova; tämä on käännös."),
+    ).toHaveLength(1);
   });
+
+  it.each([
+    ["en-US", "How we do things here"],
+    ["sv-FI", "Så här gör vi här"],
+  ])(
+    "says nothing of a binding text on a %s phone, which reads the English text itself",
+    async (languageTag, heading) => {
+      onPhone(languageTag);
+      await renderWithTheme(<BeforeSignIn onAgreed={jest.fn()} />);
+      expect(screen.getByRole("heading", { name: heading })).toBeTruthy();
+      expect(screen.getByText(/^Kumpa is a service of Kuutti ry/)).toBeTruthy();
+      expect(screen.getByText(/^Kuutti ry is the controller of the personal data/)).toBeTruthy();
+      expect(screen.queryByText(/one that counts|som gäller|on sitova/)).toBeNull();
+    },
+  );
 
   it.each([
     [
@@ -150,7 +161,7 @@ describe("BeforeSignIn: accepting both", () => {
     expect(onAgreed).toHaveBeenCalledWith(expect.objectContaining({ locale }));
   });
 
-  it("shows somebody who chose Stadi the Finnish texts, as Finnish: no binding line, and fi on the record (#521)", async () => {
+  it("shows somebody who chose Stadi the Finnish texts, as Finnish: the binding line in Finnish, and fi on the record (#521)", async () => {
     const store = (SecureStore as unknown as { __store: Map<string, string> }).__store;
     store.set("kuutti.preference.locale", "fi-x-stadi");
     try {
@@ -159,7 +170,7 @@ describe("BeforeSignIn: accepting both", () => {
       const accept = await screen.findByRole("button", {
         name: "Olen mukana ja hyväksyn molemmat",
       });
-      expect(screen.queryByText(/Suomenkielinen teksti on sitova/)).toBeNull();
+      expect(screen.getByText("Englanninkielinen teksti on sitova; tämä on käännös.")).toBeTruthy();
       await fireEvent.press(accept);
       expect(onAgreed).toHaveBeenCalledWith(expect.objectContaining({ locale: "fi" }));
     } finally {

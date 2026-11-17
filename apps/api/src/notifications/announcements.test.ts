@@ -8,7 +8,7 @@ import {
 import { it } from "vitest";
 import { type App, createApp } from "../app.ts";
 import { MailFailed, type MailMessage } from "../lib/mail.ts";
-import { type SignedIn, signedInAccount, staffSession } from "../test/account.ts";
+import { confirmedAddress, type SignedIn, signedInAccount, staffSession } from "../test/account.ts";
 import {
   captureLogger,
   describe,
@@ -139,19 +139,6 @@ async function switchOff(app: App, who: SignedIn) {
   expect(answer.status).toBe(200);
 }
 
-/** A confirmed address, and the terms read in `locale`. */
-async function confirmed(ctx: TestContext, who: SignedIn, address: string, locale: string) {
-  await ctx.client.query(
-    "UPDATE account SET email = $2, email_confirmed_at = now() WHERE id = $1",
-    [who.accountId, address],
-  );
-  await ctx.client.query(
-    `INSERT INTO consent (account_id, kind, version, locale_shown)
-     VALUES ($1, 'terms', 'test', $2)`,
-    [who.accountId, locale],
-  );
-}
-
 const auditOf = async (ctx: TestContext, id: string) =>
   (
     await ctx.client.query<{ actor_identity_id: string; action: string; detail: unknown }>(
@@ -177,7 +164,7 @@ describe("announcements", () => {
     const other = await staffSession(ctx.client, "admin");
     const person = await signedInAccount(ctx.client);
     await phoneOf(app, person);
-    await confirmed(ctx, person, "person@example.test", "en");
+    await confirmedAddress(ctx.client, person, "person@example.test", "en");
     const draft = await written(app, writer.headers);
     expect(draft).toMatchObject({ approvedAt: null, yours: true, sv: null });
 
@@ -297,7 +284,7 @@ describe("announcements", () => {
     expect(pusher.sent()).toEqual([
       expect.objectContaining({
         to: aPhone,
-        body: "Tiedote Kuutilta",
+        body: "Kumpa-tiedote",
         data: { kind: "announcement" },
       }),
     ]);
@@ -352,13 +339,13 @@ describe("announcements", () => {
     const b = await signedInAccount(ctx.client);
     const c = await signedInAccount(ctx.client);
     const d = await signedInAccount(ctx.client);
-    await confirmed(ctx, a, "a@example.test", "sv");
-    await confirmed(ctx, b, "b@example.test", "fi");
+    await confirmedAddress(ctx.client, a, "a@example.test", "sv");
+    await confirmedAddress(ctx.client, b, "b@example.test", "fi");
     await switchOff(app, b);
     await ctx.client.query("UPDATE account SET email = 'c@example.test' WHERE id = $1", [
       c.accountId,
     ]);
-    await confirmed(ctx, d, "d@example.test", "fi");
+    await confirmedAddress(ctx.client, d, "d@example.test", "fi");
     const { id } = await written(app, writer.headers);
     expect((await approve(app, other.headers, id)).status).toBe(200);
     await settled();
@@ -367,16 +354,16 @@ describe("announcements", () => {
     const toA = mine.find((message) => message.to === "a@example.test");
     expect(toA).toEqual({
       to: "a@example.test",
-      subject: `Kuutti: ${DRAFT.en.title}`,
+      subject: `Kumpa: ${DRAFT.en.title}`,
       text: [
         DRAFT.en.title,
         DRAFT.en.body,
-        "You get this because you confirmed this address in the Kuutti app. Announcements can be turned off in Settings, under Notifications.",
+        "You get this because you confirmed this address in the Kumpa app. Announcements can be turned off in Settings, under Notifications.",
         "Kuutti ry",
       ].join("\n\n"),
     });
     const toD = mine.find((message) => message.to === "d@example.test");
-    expect(toD?.subject).toBe(`Kuutti: ${DRAFT.fi.title}`);
+    expect(toD?.subject).toBe(`Kumpa: ${DRAFT.fi.title}`);
     expect(toD?.text.startsWith(`${DRAFT.fi.title}\n\n${DRAFT.fi.body}\n\nSaat tämän`)).toBe(true);
     for (const message of mine) expect(message.text).not.toMatch(/https?:|www\./);
     // No address and no words of it in a log line.
@@ -423,7 +410,7 @@ describe("the panel's announcements", () => {
     const writer = await staffSession(ctx.client, "admin");
     const other = await staffSession(ctx.client, "admin");
     const person = await signedInAccount(ctx.client);
-    await confirmed(ctx, person, "list@example.test", "fi");
+    await confirmedAddress(ctx.client, person, "list@example.test", "fi");
     const first = await written(ctx.app, writer.headers);
     const second = await written(ctx.app, other.headers, { ...DRAFT, sv: SWEDISH });
     const answer = await list(ctx.app, writer.headers);
@@ -502,22 +489,19 @@ describe("the panel's announcements", () => {
     },
   );
 
-  test.for([["moderator"], ["researcher"]] as const)(
-    "refuses a %s every route",
-    async ([role], { ctx }) => {
-      const staff = await staffSession(ctx.client, role);
-      const admin = await staffSession(ctx.client, "admin");
-      const { id } = await written(ctx.app, admin.headers);
-      const answers = [
-        await ctx.app.request("/admin/announcements", { headers: staff.headers }),
-        await write(ctx.app, staff.headers, DRAFT),
-        await approve(ctx.app, staff.headers, id),
-        await remove(ctx.app, staff.headers, id),
-      ];
-      expect(answers.map((answer) => answer.status)).toEqual([403, 403, 403, 403]);
-      expect(await noticeCount(ctx, id)).toBe(0);
-    },
-  );
+  test("refuses a moderator every route", async ({ ctx }) => {
+    const staff = await staffSession(ctx.client, "moderator");
+    const admin = await staffSession(ctx.client, "admin");
+    const { id } = await written(ctx.app, admin.headers);
+    const answers = [
+      await ctx.app.request("/admin/announcements", { headers: staff.headers }),
+      await write(ctx.app, staff.headers, DRAFT),
+      await approve(ctx.app, staff.headers, id),
+      await remove(ctx.app, staff.headers, id),
+    ];
+    expect(answers.map((answer) => answer.status)).toEqual([403, 403, 403, 403]);
+    expect(await noticeCount(ctx, id)).toBe(0);
+  });
 
   test("refuses every route without a staff session, a person's session among them", async ({
     ctx,
@@ -573,8 +557,8 @@ describe("the email of an announcement", () => {
     ];
     const first = await signedInAccount(ctx.client);
     const second = await signedInAccount(ctx.client);
-    await confirmed(ctx, first, "first@example.test", "en");
-    await confirmed(ctx, second, "second@example.test", "en");
+    await confirmedAddress(ctx.client, first, "first@example.test", "en");
+    await confirmedAddress(ctx.client, second, "second@example.test", "en");
     const { id } = await written(app, writer.headers);
     expect((await approve(app, other.headers, id)).status).toBe(200);
     await push.settled();

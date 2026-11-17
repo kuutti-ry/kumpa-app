@@ -486,7 +486,7 @@ describe("SessionProvider: the account", () => {
           status: 200,
           headers: {
             "content-type": "application/zip",
-            "content-disposition": 'attachment; filename="kuutti-tiedot-2026-10-13.zip"',
+            "content-disposition": 'attachment; filename="kumpa-tiedot-2026-10-13.zip"',
           },
         }),
     });
@@ -495,14 +495,14 @@ describe("SessionProvider: the account", () => {
     await act(async () => {
       exported = await result.current.exportData();
     });
-    expect(exported?.name).toBe("kuutti-tiedot-2026-10-13.zip");
+    expect(exported?.name).toBe("kumpa-tiedot-2026-10-13.zip");
     expect(Array.from(exported?.bytes ?? [])).toEqual(Array.from(bytes));
   });
 
   it.each([
-    [null, "kuutti-data.zip"],
-    ["inline", "kuutti-data.zip"],
-    ['attachment; filename="kuutti-data-2026-10-13.zip"', "kuutti-data-2026-10-13.zip"],
+    [null, "kumpa-data.zip"],
+    ["inline", "kumpa-data.zip"],
+    ['attachment; filename="kumpa-data-2026-10-13.zip"', "kumpa-data-2026-10-13.zip"],
     ['attachment; filename="../a b/kuutti.zip"', ".._a_b_kuutti.zip"],
   ])("names the file from the header %s as %s", (header, name) => {
     expect(exportFileName(header)).toBe(name);

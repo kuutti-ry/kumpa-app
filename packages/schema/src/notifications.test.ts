@@ -57,6 +57,7 @@ describe("the notices", () => {
       "invitation_counted",
       "invitation_friend",
       "announcement",
+      "shadow_ban",
     ]);
     expect(Notices.parse({ notices: [notice] }).notices).toEqual([notice]);
     expect(codes(Notices, { notices: [{ ...notice, reason: "rude" }] })).toEqual(["invalid_value"]);
@@ -64,6 +65,19 @@ describe("the notices", () => {
     expect(
       codes(Notices, { notices: Array.from({ length: NOTICES_MAX + 1 }, () => notice) }),
     ).toEqual(["too_big"]);
+  });
+
+  it("carry a moderator's shadow ban with its reason alone (#715)", () => {
+    const hidden = { id: notice.id, kind: "shadow_ban", at, readAt: null, reason: "harassment" };
+    expect(Notices.parse({ notices: [hidden] }).notices).toEqual([hidden]);
+    expect(codes(Notices, { notices: [{ ...hidden, reason: "rude" }] })).toEqual(["invalid_value"]);
+    const { reason: _gone, ...without } = hidden;
+    expect(Notices.safeParse({ notices: [without] }).success).toBe(false);
+    // Neither staff's note nor a rule is part of it (ADR-024 §8, ADR-033).
+    const noted = Notices.parse({
+      notices: [{ ...hidden, note: "Reported by Sanna", rule: "reports" }],
+    }).notices[0];
+    expect(noted).toEqual(hidden);
   });
 
   it("carry an announcement's own words, at most a title of 80 characters and a body of 1,000 (#573)", () => {

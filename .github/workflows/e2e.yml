@@ -19,8 +19,12 @@ name: E2E
 on:
   push:
     branches: [main]
+  # No opened: a label a pull request is opened with arrives as its own
+  # labeled event, so opened brought a second run of the same commit, which the
+  # dev client's concurrency group then cancelled, and every pull request
+  # opened with e2e carried a cancelled run (#708).
   pull_request:
-    types: [opened, synchronize, reopened, labeled]
+    types: [synchronize, reopened, labeled]
     paths:
       - "apps/mobile/**"
       - "apps/api/**"
@@ -42,7 +46,7 @@ permissions:
 
 jobs:
   # The dev client holds only the native side, which its fingerprint names (the
-  # one preview.yml and eas-build.yml compare; the commit in `extra` is left
+  # one eas-build.yml compares; the commit in `extra` is left
   # out, and Metro serves the config anyway). A pull request that leaves the
   # native side alone finds main's; one that changes it builds once, and its
   # later pushes find that. The key's tail names how it is built, so a change of

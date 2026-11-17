@@ -4,20 +4,15 @@ import { account } from "./identity.ts";
 /**
  * Proof of consent (#46, ADR-010, GDPR art. 7): one row per consent given,
  * naming the kind, the consent_version of the wording the person read and
- * the language it was shown in. Research and the special-category consent
- * are withdrawn (withdrawn_at); terms and privacy end with the account. The rows
- * are never rewritten while the account lives and go with it at erasure
- * (ADR-010 §14): what they covered goes in the same transaction, and the
- * research events carry their consent_version themselves.
+ * the language it was shown in. The special-category consent is withdrawn
+ * (withdrawn_at); terms and privacy end with the account. The rows are never
+ * rewritten while the account lives and go with it at erasure (ADR-010 §14):
+ * what they covered goes in the same transaction. The research kind went with
+ * research itself (ADR-071).
  */
 // special_category: the explicit consent of article 9 for whom one seeks, politics
-// and religion, one wording (ADR-019 §4, #146); withdrawn like research.
-export const consentKind = pgEnum("consent_kind", [
-  "terms",
-  "privacy",
-  "research",
-  "special_category",
-]);
+// and religion, one wording (ADR-019 §4, #146).
+export const consentKind = pgEnum("consent_kind", ["terms", "privacy", "special_category"]);
 
 export const consent = pgTable(
   "consent",

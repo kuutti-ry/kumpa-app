@@ -20,8 +20,7 @@ import { foundThemAnswered, foundThemCounts, tellFoundThem } from "./found-them.
 // "Löysin hänet" (#83, ADR-040, features/identity/found-them.feature): the
 // answer counted once per account by Finnish day and reason in a count that
 // names nobody; nothing else changing; a second answer refused; the count
-// outliving the person; the research event; the routes' edges; the export;
-// two devices at once.
+// outliving the person; the routes' edges; the export; two devices at once.
 
 /** 12:00 in Finland, one Tuesday. */
 const T = new Date("2026-10-20T09:00:00.000Z");
@@ -189,25 +188,6 @@ describe("Löysin hänet", () => {
       [a.accountId],
     );
     expect(rows).toEqual([{ state: "deleted", found_them_answered: false }]);
-  });
-
-  test("The research event carries the reason alone", async ({ ctx }) => {
-    const app = await appAt(ctx.client);
-    const a = await signedInAccount(ctx.client, "found-study");
-    await ctx.client.query(
-      "INSERT INTO research_subject (account_id, consent_version) VALUES ($1, 'v1')",
-      [a.accountId],
-    );
-
-    await tell(app, a.headers, { reason: "elsewhere" });
-
-    const { rows } = await ctx.client.query<{ name: string; props: Record<string, unknown> }>(
-      `SELECT e.name, e.props FROM events e
-         JOIN research_subject s ON s.research_id = e.research_id
-        WHERE s.account_id = $1`,
-      [a.accountId],
-    );
-    expect(rows).toEqual([{ name: "found_them", props: { reason: "elsewhere" } }]);
   });
 
   test("an answer on the next Finnish day is counted on that day", async ({ ctx }) => {

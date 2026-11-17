@@ -112,7 +112,7 @@ const foundThemRoute = createRoute({
   path: "/account/found-them",
   summary: "Tell Kuutti you found somebody",
   description:
-    '"Löysin hänet" (#83, ADR-040): the reason, from a closed list, counted once per account in an anonymous daily count that names nobody, and a research event for those who said yes to research. An indication only: nothing else changes, no state, no session, no round, no conversation.',
+    '"Löysin hänet" (#83, ADR-040): the reason, from a closed list, counted once per account in an anonymous daily count that names nobody. An indication only: nothing else changes, no state, no session, no round, no conversation.',
   ...bearer,
   request: { body: { required: true, ...json(FoundThemRequest) } },
   responses: {

@@ -151,6 +151,8 @@ export function sanctionAdminRoutes(
   deps: Deps,
   requireModerator: MiddlewareHandler<AppEnv>,
   requireAdministrator: MiddlewareHandler<AppEnv>,
+  /** Told of a sanction staff applied, once it has committed: its email (#715, ADR-073 §4). */
+  sanctioned: (input: { accountId: string; sanctionId: string }) => void,
 ) {
   const app = new OpenAPIHono<AppEnv>();
   const now = () => (deps.now ?? (() => new Date()))();
@@ -184,7 +186,8 @@ export function sanctionAdminRoutes(
     return c.json({ items }, 200);
   });
 
-  const applied = (staffIdentityId: string, item: Sanction) =>
+  // The log line, then the person's email after the commit (#715, ADR-073 §4).
+  const applied = (staffIdentityId: string, item: Sanction) => {
     deps.logger.info(
       {
         staffIdentityId,
@@ -195,6 +198,8 @@ export function sanctionAdminRoutes(
       },
       "sanction applied",
     );
+    sanctioned({ accountId: item.accountId, sanctionId: item.id });
+  };
 
   app.openapi(applyRoute, async (c) => {
     const staff = staffOf(c);

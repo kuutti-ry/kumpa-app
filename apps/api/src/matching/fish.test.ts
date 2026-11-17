@@ -1,7 +1,6 @@
 import type { Queryable } from "@kuutti/db";
 import { ErrorResponse, RoundDecisionAnswer, RoundResponse } from "@kuutti/schema";
 import type { App } from "../app.ts";
-import { CURRENT_CONSENT_VERSIONS } from "../identity/index.ts";
 import { finnishDay } from "../lib/finnish-day.ts";
 import { withMatchingConfig } from "../test/account.ts";
 import { errorCode as codeOf } from "../test/answers.ts";
@@ -380,36 +379,6 @@ describe("the fish", () => {
     await roundOf(ctx.client, a, [b]);
     const answer = await choose(await appAt(ctx.client), a, 1, "fish");
     expect(RoundDecisionAnswer.parse(await answer.json()).match).not.toBeNull();
-  });
-
-  test("a fish is a like event that says it was a fish", async ({ ctx }) => {
-    const [a, b, c] = await cast(ctx.client, 3);
-    if (!a || !b || !c) throw new Error("cast not written");
-    const consent = await (await appAt(ctx.client, new Date(T.getTime() - 60_000))).request(
-      "/consents",
-      {
-        method: "POST",
-        headers: { ...a.headers, "content-type": "application/json" },
-        body: JSON.stringify({
-          kind: "research",
-          version: CURRENT_CONSENT_VERSIONS.research,
-          locale: "fi",
-        }),
-      },
-    );
-    expect(consent.status).toBe(200);
-    await roundOf(ctx.client, a, [b, c]);
-    const app = await appAt(ctx.client);
-    await choose(app, a, 1, "fish");
-    await choose(app, a, 2, "like");
-
-    const { rows } = await ctx.client.query<{ props: { position: number; fish: boolean } }>(
-      "SELECT props FROM events WHERE name = 'like' ORDER BY (props->>'position')::int",
-    );
-    expect(rows.map((row) => [row.props.position, row.props.fish])).toEqual([
-      [1, true],
-      [2, false],
-    ]);
   });
 });
 

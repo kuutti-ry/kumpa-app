@@ -3,7 +3,7 @@ import { generateHetu } from "@kuutti-ry/tunnistus-oidc/hetu";
 import type { QueryResultRow } from "pg";
 import { afterAll, describe, expect, it } from "vitest";
 import { createApp } from "../app.ts";
-import { CURRENT_CONSENT_VERSIONS, type IdentityBroker } from "../identity/index.ts";
+import type { IdentityBroker } from "../identity/index.ts";
 import { type Mailer, type MailMessage, sesMailer } from "../lib/mail.ts";
 import { addressOf, TRUSTED_PROXIES, type TrustedProxy } from "../lib/rate-limit.ts";
 import { signedInAccount, staffSession, withMatchingConfig } from "./account.ts";
@@ -155,8 +155,8 @@ describe("PII in logs", () => {
   // A report from a conversation (#351, ADR-030 §12): a thread whose words are
   // the fixture, copied into the report with a note that quotes it, then the
   // same report again, one the contract refuses, one past the window and one
-  // over the day's cap. The words reach no log line, answer or research event.
-  test("No message text reaches a log line, an answer or an event through a report's frozen copy", async ({
+  // over the day's cap. The words reach no log line or answer.
+  test("No message text reaches a log line or an answer through a report's frozen copy", async ({
     ctx,
   }) => {
     const { logger, lines } = await captureLogger();
@@ -207,23 +207,18 @@ describe("PII in logs", () => {
     ).toBe(2);
     expect(lines().length).toBeGreaterThan(0);
     expect(leakedFixtures(lines())).toEqual([]);
-    const events = await ctx.client.query("SELECT props FROM events");
-    expect(JSON.stringify(events.rows)).not.toContain(FIXTURES.message);
   });
 
   // A report worked by the moderators (#312): opened with its note and copy,
   // its photo asked for and the report dismissed, by a moderator; the same by
-  // a member of staff who is a party and by a researcher. The moderator's
-  // opened report carries the words, on purpose; nothing else does.
-  test("No word of the note or the copy reaches a log line, an error answer or an event", async ({
-    ctx,
-  }) => {
+  // a member of staff who is a party. The moderator's opened report carries
+  // the words, on purpose; nothing else does.
+  test("No word of the note or the copy reaches a log line or an error answer", async ({ ctx }) => {
     const { logger, lines } = await captureLogger();
     const media = testMediaDeps();
     const app = createApp({ config: testConfig(), logger, db: ctx.client, media: media.deps });
     const moderator = await staffSession(ctx.client, "moderator");
     const party = await staffSession(ctx.client, "moderator");
-    const researcher = await staffSession(ctx.client, "researcher");
     const a = await signedInAccount(ctx.client);
     // The reported person is the party's own account.
     const b = await accountOf(ctx.client, party.identityId);
@@ -262,10 +257,8 @@ describe("PII in logs", () => {
         }),
     ];
     const refused: Response[] = [];
-    for (const who of [party, researcher]) {
-      for (const send of work(who.headers)) refused.push(await send());
-    }
-    expect(refused.map((answer) => answer.status)).toEqual([404, 404, 404, 403, 403, 403]);
+    for (const send of work(party.headers)) refused.push(await send());
+    expect(refused.map((answer) => answer.status)).toEqual([404, 404, 404]);
     for (const answer of refused) expect(await answer.text()).not.toContain(FIXTURES.message);
     const [openIt, photoIt, dismissIt] = work(moderator.headers);
     const opened = await (openIt as () => Promise<Response>)();
@@ -279,17 +272,13 @@ describe("PII in logs", () => {
     }
     expect(lines().length).toBeGreaterThan(0);
     expect(leakedFixtures(lines())).toEqual([]);
-    const events = await ctx.client.query("SELECT props FROM events");
-    expect(JSON.stringify(events.rows)).not.toContain(FIXTURES.message);
   });
 
   // The automatic rules (#105, ADR-033): five openers of the fixture, the
   // fifth through the send route, which meets the same-first-message rule;
   // a moderator confirms the ban. The words are compared in memory and reach
-  // no log line, answer, event, sanction column or audit detail.
-  test("No word of a first message reaches a log line, an event or the rule's record", async ({
-    ctx,
-  }) => {
+  // no log line, answer, sanction column or audit detail.
+  test("No word of a first message reaches a log line or the rule's record", async ({ ctx }) => {
     const { logger, lines } = await captureLogger();
     // A clock a second later at each reading, from a fixed instant.
     const start = Date.parse("2026-10-16T09:00:00.000Z");
@@ -344,8 +333,6 @@ describe("PII in logs", () => {
     expect(JSON.stringify(kept.rows)).not.toContain(FIXTURES.message);
     const audit = await ctx.client.query("SELECT detail FROM audit_log");
     expect(JSON.stringify(audit.rows)).not.toContain(FIXTURES.message);
-    const events = await ctx.client.query("SELECT props FROM events");
-    expect(JSON.stringify(events.rows)).not.toContain(FIXTURES.message);
   });
 
   // The velocity rules (#86, ADR-041): other people's photos fetched and the
@@ -670,7 +657,7 @@ describe("PII in logs", () => {
   // The sweep's fake session never reaches the home's handler (#514, ADR-061
   // §9): a code kept, one too small to keep, one the list lacks, something
   // that is no code, what the card shows, and the write interrupted by a fault.
-  test("A home reaches no log line, no error and no event", async ({ ctx }) => {
+  test("A home reaches no log line and no error", async ({ ctx }) => {
     const reports: unknown[] = [];
     const { logger, lines } = await captureLogger();
     let armed = false;
@@ -691,16 +678,6 @@ describe("PII in logs", () => {
     });
     const a = await signedInAccount(ctx.client);
     const json = { ...a.headers, "content-type": "application/json" };
-    const consent = await app.request("/consents", {
-      method: "POST",
-      headers: json,
-      body: JSON.stringify({
-        kind: "research",
-        version: CURRENT_CONSENT_VERSIONS.research,
-        locale: "fi",
-      }),
-    });
-    expect(consent.status).toBe(200);
     const put = (body: unknown) =>
       app.request("/account/home", { method: "PUT", headers: json, body: JSON.stringify(body) });
 
@@ -741,14 +718,7 @@ describe("PII in logs", () => {
     expect(lines().some((l) => l.msg === "unhandled error")).toBe(true);
     expect(reports).toHaveLength(1);
 
-    const { rows: events } = await ctx.client.query(
-      `SELECT e.name, e.props, e.snapshot, e.pond FROM events e
-         JOIN research_subject s ON s.research_id = e.research_id
-        WHERE s.account_id = $1`,
-      [a.accountId],
-    );
-    expect(events.length).toBeGreaterThan(0);
-    const everything = JSON.stringify([lines(), reports, events]);
+    const everything = JSON.stringify([lines(), reports]);
     for (const digits of ["00530", "83960", "99999", "0053A", "33100", "422"]) {
       // A quoted match, or one after a word: five digits can occur by chance in an id or a time.
       expect(everything).not.toContain(`"${digits}"`);

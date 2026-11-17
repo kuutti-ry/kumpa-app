@@ -4,6 +4,7 @@ import Info from "lucide-react-native/icons/info";
 import { useCallback, useRef, useState } from "react";
 import { ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Backdrop } from "@/components/backdrop";
 import { LoadFailedScreen, LoadingScreen } from "@/components/LoadFailed";
 import { RowGroup } from "@/components/RowGroup";
 import { ScreenHeader } from "@/components/ScreenHeader";
@@ -93,6 +94,7 @@ export function SeekScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-background">
+      <Backdrop />
       <ScreenHeader title={t("profile.seek.title")} backLabel={t("profile.back")} />
       <ScrollView contentContainerClassName="flex-grow gap-6 p-6">
         <Text>{t("profile.seek.explain")}</Text>

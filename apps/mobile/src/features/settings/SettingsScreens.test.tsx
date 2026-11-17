@@ -5,6 +5,7 @@ import { useLocales } from "expo-localization";
 import * as SecureStore from "expo-secure-store";
 import { DeviceEventEmitter, Linking, Platform, StyleSheet } from "react-native";
 import { LegalSummary } from "@/features/identity";
+import { apiBaseUrl } from "@/lib/api-url";
 import { clearSession, currentSession, saveSession } from "@/lib/session";
 import { noProblems } from "@/test/a11y";
 import { expectPinnedHeader } from "@/test/layout";
@@ -89,7 +90,7 @@ beforeEach(async () => {
     if (url.pathname === "/consents") {
       return json({
         consents: [],
-        currentVersions: { terms: "t", privacy: "p", research: "r", special_category: "s" },
+        currentVersions: { terms: "t", privacy: "p", special_category: "s" },
       });
     }
     return json({ error: { code: "not_found" } }, 404);
@@ -166,10 +167,10 @@ describe("the language's choices", () => {
 describe("the legal texts under their rows", () => {
   it("show the terms with their version, to anybody", async () => {
     await renderWithTheme(<LegalSummary kind="terms" />);
-    expect(screen.getByText(/^DRAFT: Kuutti is a free dating service/)).toBeTruthy();
+    expect(screen.getByText(/^Kumpa is a service of Kuutti ry/)).toBeTruthy();
     // The version, as the link to the full text on the website (#208).
     expect(
-      screen.getByRole("link", { name: /^Read the full text on kuutti\.app \(version \S+\)$/ }),
+      screen.getByRole("link", { name: /^Read the full text on the website \(version \S+\)$/ }),
     ).toBeTruthy();
     noProblems();
   });
@@ -177,19 +178,19 @@ describe("the legal texts under their rows", () => {
   it("show the privacy text, and lead to the full policy at its version", async () => {
     const open = jest.spyOn(Linking, "openURL").mockResolvedValue(true);
     await renderWithTheme(<LegalSummary kind="privacy" />);
-    expect(screen.getByText(/^DRAFT: Kuutti stores your year and month of birth/)).toBeTruthy();
+    expect(screen.getByText(/^Kuutti ry is the controller of the personal data/)).toBeTruthy();
     await fireEvent.press(screen.getByRole("link", { name: /^Read the full text/ }));
     expect(open).toHaveBeenCalledWith(
-      `https://kuutti.app/legal/privacy/#privacy-${CONSENT_VERSIONS.privacy}`,
+      `${apiBaseUrl()}/legal/privacy#privacy-${CONSENT_VERSIONS.privacy}`,
     );
     open.mockRestore();
   });
 
   it("open under their rows for a signed-out device too", async () => {
     await settingsWith("terms");
-    expect(screen.getByText(/^DRAFT: Kuutti is a free dating service/)).toBeTruthy();
+    expect(screen.getByText(/^Kumpa is a service of Kuutti ry/)).toBeTruthy();
     await settingsWith("privacy");
-    expect(screen.getByText(/^DRAFT: Kuutti stores your year and month of birth/)).toBeTruthy();
+    expect(screen.getByText(/^Kuutti ry is the controller of the personal data/)).toBeTruthy();
   });
 });
 
@@ -650,7 +651,7 @@ describe("the account's rows", () => {
     await settingsWith("email", tokens.sessionId);
     expect(await screen.findByRole("button", { name: "Send a confirmation code" })).toBeTruthy();
     expect(screen.queryByText("A way to stay in touch")).toBeNull();
-    expect(screen.getByText(/^Optional\. A way for Kuutti to reach you/)).toBeTruthy();
+    expect(screen.getByText(/^Optional\. A way for Kumpa to reach you/)).toBeTruthy();
     // The field's name is in sight, not only for a screen reader.
     expect(screen.getByText("E-mail address")).toBeTruthy();
     noProblems();

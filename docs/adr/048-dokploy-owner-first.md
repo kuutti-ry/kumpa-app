@@ -1,6 +1,6 @@
 # ADR-048: Nothing public reaches Dokploy before it has its owner
 
-- Status: proposed (#437, built as written here and verified at production's first boot on 2026-10-24, #25: the two checks of `infra/README.md`, After the first apply, step 2, answered 404; accepting it is the maintainer's), amended 2026-11-06 (§4: where 443 admits CloudFront alone, the HTTPS check is asked on the box, #198; see History)
+- Status: proposed (#437, built as written here and verified at production's first boot on 2026-10-24, #25: the two checks of `infra/README.md`, After the first apply, step 2, answered 404; accepting it is the maintainer's), amended 2026-11-06 (§4: where 443 admits CloudFront alone, the HTTPS check is asked on the box, #198; see History) and 2026-11-17 by ADR-072 (§3: a pair of routers for every name of `dokploy` and of `api`, #703; see History)
 - Date: 2026-10-24
 - Follows: ADR-001 (`user_data` installs Dokploy, whose configuration is the one manual island, and a change to user data never reaches a running box), ADR-005 §7 (the box admits 80 and 443 from anywhere until the ingress switch), TD-19 (one staging box with the previews on it); the control-plane pin of #9 (`infra/README.md`, Previews, Trust); issues #437, #25
 
@@ -45,3 +45,4 @@ No box was open when this was found: staging's Dokploy has had its owner since S
 ## History
 
 - 2026-11-06 (#198): staging's box admits 443 from CloudFront alone (ADR-005 §7, History), so §4's HTTPS `curl` to the Elastic IP gets no answer from outside there. On such an environment it is asked on the box, in a Session Manager session, against `127.0.0.1` with the Dokploy host's name; the HTTP check on port 80 still runs from outside. Production's 443 stays open until its cutover, so its check runs as before.
+- 2026-11-17 (#703, ADR-072 §3): §3 amended. The hosts get a second name under `kumpa.fi`, and the pin takes them in: `dokploy-setup.sh` writes a pair of routers, `web` with the redirect and `websecure`, for every name of `dokploy` and of `api`, each named after its host, so each name has its own certificate and a name that stops answering Let's Encrypt holds up no other's renewal. The two services are unchanged. Dokploy's own domain takes one host and stays `dokploy.<env>.kuutti.app`.

@@ -43,7 +43,7 @@ const phoneAnswers = (answer: ReturnType<typeof status>) =>
 
 const token = (seed: string) => (seed + "x".repeat(43)).slice(0, 43);
 const settle = () => act(() => new Promise<void>((resolve) => setTimeout(resolve, 20)));
-const HEADING = "Shall Kuutti tell you?";
+const HEADING = "Shall Kumpa tell you?";
 
 function api(): unknown[] {
   const seen: unknown[] = [];
@@ -81,7 +81,7 @@ describe("PushOffer", () => {
     // What a lock screen shows, in true words, and that the kinds are separate (#581).
     expect(
       screen.getByText(
-        "Kuutti can tell this phone when someone likes you back and when a message arrives. A notification says that there is a new message, a new match or an announcement, never what it says or from whom. You choose which kinds in Settings.",
+        "Kumpa can tell this phone when someone likes you back and when a message arrives. A notification says that there is a new message, a new match or an announcement, never what it says or from whom. You choose which kinds in Settings.",
       ),
     ).toBeTruthy();
     const allow = screen.getByRole("button", { name: "Allow notifications" });

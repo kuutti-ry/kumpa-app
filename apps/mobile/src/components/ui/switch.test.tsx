@@ -62,9 +62,9 @@ describe("Switch", () => {
 
   it("keeps an off thumb at the off side when disabled, muted the same", async () => {
     await renderWithTheme(
-      <Switch accessibilityLabel="Research" checked={false} disabled onCheckedChange={jest.fn()} />,
+      <Switch accessibilityLabel="Messages" checked={false} disabled onCheckedChange={jest.fn()} />,
     );
-    const toggle = screen.getByRole("switch", { name: "Research" });
+    const toggle = screen.getByRole("switch", { name: "Messages" });
     expect(toggle.props.className).toMatch(/\bjustify-start\b/);
     expect(toggle.props.className).not.toMatch(/\bbg-background\b/);
     expect(JSON.stringify(screen.toJSON())).toMatch(/size-6 rounded-full bg-muted-foreground/);
@@ -73,14 +73,14 @@ describe("Switch", () => {
   // Android keeps a border's dash when its style goes away (#548).
   it("says solid when it is enabled again, so Android drops the dash", async () => {
     const { rerender } = await renderWithTheme(
-      <Switch accessibilityLabel="Research" checked={false} disabled onCheckedChange={jest.fn()} />,
+      <Switch accessibilityLabel="Messages" checked={false} disabled onCheckedChange={jest.fn()} />,
     );
     await rerender(
       underProviders(
-        <Switch accessibilityLabel="Research" checked={false} onCheckedChange={jest.fn()} />,
+        <Switch accessibilityLabel="Messages" checked={false} onCheckedChange={jest.fn()} />,
       ),
     );
-    const toggle = screen.getByRole("switch", { name: "Research" });
+    const toggle = screen.getByRole("switch", { name: "Messages" });
     expect(toggle.props.className).toMatch(/\bborder-solid\b/);
     expect(toggle.props.className).not.toMatch(/\bborder-dashed\b/);
   });

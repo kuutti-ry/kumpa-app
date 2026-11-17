@@ -2,6 +2,7 @@ import type { CardPreviewResponse } from "@kuutti/schema";
 import { useEffect, useState } from "react";
 import { ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Backdrop } from "@/components/backdrop";
 import { LoadFailed } from "@/components/LoadFailed";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { Text } from "@/components/ui/text";
@@ -43,6 +44,7 @@ export function CardPreviewScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-background">
+      <Backdrop />
       <ScreenHeader title={t("profile.card.title")} backLabel={t("profile.card.back")} />
       <ScrollView contentContainerClassName="flex-grow gap-4 p-6">
         {state.status === "loading" && (

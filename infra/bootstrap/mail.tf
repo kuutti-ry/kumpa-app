@@ -1,14 +1,16 @@
 # ---------------------------------------------------------------------------
 # Mail (#385, ADR-043 §5). Kuutti sends one kind of message, the code that
 # confirms an address, from noreply@kuutti.app through SES, and receives none.
-# The identity is the whole domain and belongs to no environment, like the
-# zone's DMARC (dns.tf); each environment's instance role may send through it
-# from that one address (modules/compute). SES identities are regional: this
-# one lives in var.region, which must stay the region the API's SES client
-# uses (S3_REGION, eu-central-1 by default, TD-4). Staging and production are
-# one account in that region, so they share the identity, the suppression
-# list and the sandbox; production access is the maintainer's request, once
-# for both (README, Mail).
+# kumpa.fi is a second identity of the same shape, below, so that the sender
+# can move to noreply@kumpa.fi once its Workspace alias exists (#703,
+# ADR-072). Each identity is the whole domain and belongs to no environment,
+# like the zone's DMARC (dns.tf); each environment's instance role may send
+# through it from its noreply@ alone (modules/compute). SES identities are
+# regional: these live in var.region, which must stay the region the API's
+# SES client uses (S3_REGION, eu-central-1 by default, TD-4). Staging and
+# production are one account in that region, so they share the identities,
+# the suppression list and the sandbox; production access is the
+# maintainer's request, once for both (README, Mail).
 # ---------------------------------------------------------------------------
 
 locals {
@@ -80,4 +82,58 @@ resource "aws_route53_record" "mail_from_spf" {
 # #196 extends it with the events and Kuutti's own list.
 resource "aws_sesv2_account_suppression_attributes" "main" {
   suppressed_reasons = ["BOUNCE", "COMPLAINT"]
+}
+
+# ---------------------------------------------------------------------------
+# The second identity (#703, ADR-072): kumpa.fi, the app's name, in the same
+# shape as kuutti.app's above, its records in its own zone (dns.tf). The API
+# sends from it once MAIL_FROM says Kumpa <noreply@kumpa.fi>, after the
+# maintainer has made that address an alias at the Workspace, so that a reply
+# reaches a person; until then nothing sends through it. The suppression list
+# above is the account's and covers both.
+# ---------------------------------------------------------------------------
+
+locals {
+  kumpa_mail_from_domain = "mail.${aws_route53_zone.kumpa.name}"
+}
+
+resource "aws_sesv2_email_identity" "kumpa" {
+  email_identity = aws_route53_zone.kumpa.name
+
+  dkim_signing_attributes {
+    next_signing_key_length = "RSA_2048_BIT"
+  }
+}
+
+resource "aws_route53_record" "kumpa_dkim" {
+  count = 3 # Easy DKIM always issues three tokens
+
+  zone_id = aws_route53_zone.kumpa.zone_id
+  name    = "${aws_sesv2_email_identity.kumpa.dkim_signing_attributes[0].tokens[count.index]}._domainkey.${aws_route53_zone.kumpa.name}"
+  type    = "CNAME"
+  ttl     = 3600
+  records = ["${aws_sesv2_email_identity.kumpa.dkim_signing_attributes[0].tokens[count.index]}.dkim.amazonses.com"]
+}
+
+# REJECT_MESSAGE for the reason kuutti.app's has it.
+resource "aws_sesv2_email_identity_mail_from_attributes" "kumpa" {
+  email_identity         = aws_sesv2_email_identity.kumpa.email_identity
+  mail_from_domain       = local.kumpa_mail_from_domain
+  behavior_on_mx_failure = "REJECT_MESSAGE"
+}
+
+resource "aws_route53_record" "kumpa_mail_from_mx" {
+  zone_id = aws_route53_zone.kumpa.zone_id
+  name    = local.kumpa_mail_from_domain
+  type    = "MX"
+  ttl     = 3600
+  records = ["10 feedback-smtp.${var.region}.amazonses.com"]
+}
+
+resource "aws_route53_record" "kumpa_mail_from_spf" {
+  zone_id = aws_route53_zone.kumpa.zone_id
+  name    = local.kumpa_mail_from_domain
+  type    = "TXT"
+  ttl     = 3600
+  records = ["v=spf1 include:amazonses.com -all"]
 }

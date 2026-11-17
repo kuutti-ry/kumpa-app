@@ -161,8 +161,8 @@ describe("photo review queue", () => {
     expect(
       (await app.request("/admin/photos/queue?limit=0", { headers: staff.headers })).status,
     ).toBe(400);
-    // Nothing the queue returns names hetu_hmac or research_id.
-    expect(JSON.stringify(queue)).not.toMatch(/hetu|research/);
+    // Nothing the queue returns names hetu_hmac.
+    expect(JSON.stringify(queue)).not.toMatch(/hetu/);
   });
 
   test("Staff view a card through a signed URL and every view is audited", async ({ ctx }) => {
@@ -325,39 +325,6 @@ describe("photo review queue", () => {
     expect(Number((await ctx.client.query("SELECT count(*) AS n FROM audit_log")).rows[0]?.n)).toBe(
       0,
     );
-  });
-
-  test("A researcher may not touch the photo queue", async ({ ctx }) => {
-    const { app } = await appWith(ctx);
-    const researcher = await staffSession(ctx.client, "researcher");
-    const owner = await signedInAccount(ctx.client);
-    const id = await photoIn(ctx, owner.accountId, "queued");
-    const approved = await photoIn(ctx, owner.accountId, "approved");
-    for (const res of [
-      await app.request("/admin/photos/queue", { headers: researcher.headers }),
-      await app.request(`/admin/photos/${id}/card`, { headers: researcher.headers }),
-      await decide(app, researcher.headers, id, { decision: "approve" }),
-      // Nor take an approved photo down (#477).
-      await decide(app, researcher.headers, approved, { decision: "take_down", reason: "other" }),
-    ]) {
-      expect(res.status).toBe(403);
-      expect(await errorCode(res)).toBe("admin_forbidden");
-    }
-    expect(Number((await ctx.client.query("SELECT count(*) AS n FROM audit_log")).rows[0]?.n)).toBe(
-      0,
-    );
-    const states = await ctx.client.query<{ id: string; state: string }>(
-      "SELECT id, state FROM photo WHERE id = ANY($1::uuid[])",
-      [[id, approved]],
-    );
-    expect(Object.fromEntries(states.rows.map((r) => [r.id, r.state]))).toEqual({
-      [id]: "queued",
-      [approved]: "approved",
-    });
-    // whoami answers every role.
-    const me = await app.request("/admin/whoami", { headers: researcher.headers });
-    expect(me.status).toBe(200);
-    expect((await me.json()).role).toBe("researcher");
   });
 
   test("The photo routes for staff refuse a product session and no session", async ({ ctx }) => {

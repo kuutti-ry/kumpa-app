@@ -26,7 +26,7 @@ const READY = ["Sign in", "Sign in with your bank"];
 const REFUSED = "Sign-in did not complete";
 const BARE_REFUSAL = ["Sign in", REFUSED, "Try again"];
 const NOT_REQUESTED = "This sign-in link was not requested from this phone.";
-const UNDER_18 = "Kuutti is for adults. You are welcome once you are 18.";
+const UNDER_18 = "Kumpa is for adults. You are welcome once you are 18.";
 /** The heading of the screen before the bank. */
 const NORMS = "How we do things here";
 
@@ -69,7 +69,6 @@ const { __store: store } = jest.requireMock("expo-secure-store") as {
 const AGREED = "kuutti.preference.agreedVersions";
 const TERMS = String(CONSENT_VERSIONS.terms);
 const PRIVACY = String(CONSENT_VERSIONS.privacy);
-const RESEARCH = String(CONSENT_VERSIONS.research);
 /** This phone recorded the wordings it carries after an earlier bank login (#418): straight to the bank. */
 const remember = () => store.set(AGREED, JSON.stringify({ terms: TERMS, privacy: PRIVACY }));
 
@@ -364,20 +363,21 @@ describe("SignInScreen", () => {
       code: undefined,
       error: undefined,
       until: undefined,
+      reason: undefined,
     });
     await view.rerender(underProviders(<SignInScreen />));
     expect(drawn()).toEqual(READY);
 
     // The link comes back to the same screen with another refusal.
     await view.rerender(underProviders(<SignInScreen error="auth_banned" />));
-    expect(await screen.findByText("This person may not use Kuutti.")).toBeTruthy();
+    expect(await screen.findByText("This person may not use Kumpa.")).toBeTruthy();
 
     // And with the same one again, after one more try.
     await fireEvent.press(screen.getByRole("button", { name: "Sign in with your bank" }));
     await view.rerender(underProviders(<SignInScreen />));
     await waitFor(() => expect(drawn()).toEqual(READY));
     await view.rerender(underProviders(<SignInScreen error="auth_banned" />));
-    expect(await screen.findByText("This person may not use Kuutti.")).toBeTruthy();
+    expect(await screen.findByText("This person may not use Kumpa.")).toBeTruthy();
   });
 
   describe("the refusals with no fact of their own (#581)", () => {
@@ -477,7 +477,6 @@ describe("SignInScreen", () => {
       ["auth_cancelled"],
       ["auth_rate_limited"],
       ["rate_limited"],
-      ["auth_unavailable"],
       ["unexpected_link"],
       ["attestation_refused"],
       ["something_else"],
@@ -588,13 +587,132 @@ describe("SignInScreen", () => {
 
   it("names no day for a ban, whatever day its link carries", async () => {
     await renderWithTheme(<SignInScreen error="auth_banned" until="2026-10-21T21:00:00.000Z" />);
-    expect(await screen.findByText("This person may not use Kuutti.")).toBeTruthy();
+    expect(await screen.findByText("This person may not use Kumpa.")).toBeTruthy();
     expect(screen.queryByText(/22\.10\.2026/)).toBeNull();
   });
 
-  it("says so when the API has no bank, as a pull-request preview has none", async () => {
-    await renderWithTheme(<SignInScreen error="auth_unavailable" />);
-    expect(await screen.findByText(/There is no bank sign-in here/)).toBeTruthy();
+  describe("the reason of a suspension or a ban (#715, ADR-073 §1)", () => {
+    const BANNED = "This person may not use Kumpa.";
+    const SUSPENDED = "This account is suspended. You can sign in again from: 22.10.2026";
+    const CONTEST =
+      "If you think we got this wrong, write to hello@kuutti.app. Someone other than the person who decided will look at it again.";
+    const HARASSMENT = [
+      "Why: Harassment.",
+      "The terms of use, section 4: you must not threaten, harass or pressure anyone, or ask anyone for money.",
+      "A moderator decided this.",
+      CONTEST,
+    ];
+    const SCRAPING = [
+      "Why: Copying or collecting other people's profiles.",
+      "The terms of use, section 4: you must not use Kumpa by automated means, or copy, store or pass on another user's photos or profile.",
+      "A moderator decided this.",
+      CONTEST,
+    ];
+    const lines = (fact: string, statement: readonly string[] = []) => [
+      "Sign in",
+      REFUSED,
+      fact,
+      ...statement,
+      "Sign in with your bank",
+    ];
+
+    it.each([
+      ["auth_banned", undefined, BANNED],
+      ["auth_suspended", "2026-10-21T21:00:00.000Z", SUSPENDED],
+    ])(
+      "says why under %s, the terms' rule, that a moderator decided, and how to contest it",
+      async (error, until, fact) => {
+        await renderWithTheme(<SignInScreen error={error} until={until} reason="harassment" />);
+        expect(await screen.findByText("Why: Harassment.")).toBeTruthy();
+        expect(drawn()).toEqual(lines(fact, HARASSMENT));
+        const found = pressables(screen.toJSON() as HostNode);
+        expect(found.flatMap((node) => a11yProblems(node))).toEqual([]);
+      },
+    );
+
+    it.each([
+      [
+        "fi-FI",
+        [
+          "Kirjaudu sisään",
+          "Kirjautuminen ei onnistunut",
+          "Tämä tili on jäädytetty. Voit kirjautua taas sisään alkaen: 22.10.2026",
+          "Syy: Muiden profiilien kopiointi tai kerääminen.",
+          "Käyttöehdot, kohta 4: et saa käyttää Kumpa-sovellusta automaattisin keinoin etkä kopioida, tallentaa tai välittää toisen käyttäjän kuvia tai profiilia.",
+          "Tämän päätti moderaattori.",
+          "Jos olemme mielestäsi erehtyneet, kirjoita osoitteeseen hello@kuutti.app. Asian katsoo uudelleen joku muu kuin päätöksen tehnyt.",
+        ],
+      ],
+      [
+        "sv-FI",
+        [
+          "Logga in",
+          "Inloggningen slutfördes inte",
+          "Det här kontot är avstängt. Du kan logga in igen från och med: 22.10.2026",
+          "Skäl: Kopiering eller insamling av andras profiler.",
+          "Användarvillkoren, punkt 4: du får inte använda Kumpa automatiserat eller kopiera, spara eller sprida en annan användares bilder eller profil.",
+          "Det här beslutade en moderator.",
+          "Om du tycker att vi har gjort fel, skriv till hello@kuutti.app. Någon annan än den som beslutade går igenom det på nytt.",
+        ],
+      ],
+    ])("says a suspension's reason on a %s phone in its language", async (languageTag, words) => {
+      (useLocales as jest.Mock).mockReturnValue([{ languageTag }]);
+      try {
+        await renderWithTheme(
+          <SignInScreen
+            error="auth_suspended"
+            until="2026-10-21T21:00:00.000Z"
+            reason="scraping"
+          />,
+        );
+        expect(await screen.findByText(words[3] as string)).toBeTruthy();
+        // The screen's own button follows, in the phone's language.
+        expect(drawn().slice(0, words.length)).toEqual(words);
+        expect(drawn()).toHaveLength(words.length + 1);
+      } finally {
+        (useLocales as jest.Mock).mockReturnValue([{ languageTag: "en-US" }]);
+      }
+    });
+
+    it.each([
+      // A crafted link: only a reason of the closed list says anything.
+      ["a word of none", "nope"],
+      ["a reason's words, not its key", "Harassment"],
+      ["an empty one", ""],
+      ["a prototype member", "toString"],
+      ["the prototype", "__proto__"],
+      ["a reason with more after it", `harassment${"x".repeat(500)}`],
+    ])("says nothing more than the ban for a reason off the list: %s", async (_, reason) => {
+      await renderWithTheme(<SignInScreen error="auth_banned" reason={reason} />);
+      expect(await screen.findByText(BANNED)).toBeTruthy();
+      expect(drawn()).toEqual(lines(BANNED));
+    });
+
+    it.each([
+      ["auth_under_18", UNDER_18, "Sign in with your bank"],
+      ["auth_code_used", null, "Try again"],
+    ])("says no reason under %s, which no sanction explains", async (error, fact, button) => {
+      await renderWithTheme(<SignInScreen error={error} reason="harassment" />);
+      expect(await screen.findByRole("button", { name: button })).toBeTruthy();
+      expect(drawn()).toEqual(["Sign in", REFUSED, ...(fact ? [fact] : []), button]);
+    });
+
+    it("says no reason under a cooldown, which no sanction explains", async () => {
+      await renderWithTheme(
+        <SignInScreen error="auth_cooldown" until="2026-10-22T10:00:00.000Z" reason="harassment" />,
+      );
+      expect(await screen.findByText(/The earliest day for a new one/)).toBeTruthy();
+      expect(screen.queryByText(/Harassment|hello@kuutti\.app/)).toBeNull();
+    });
+
+    it("follows a new link's reason, and the plain ban once a link carries none", async () => {
+      const view = await renderWithTheme(<SignInScreen error="auth_banned" reason="harassment" />);
+      expect(await screen.findByText("Why: Harassment.")).toBeTruthy();
+      await view.rerender(underProviders(<SignInScreen error="auth_banned" reason="scraping" />));
+      await waitFor(() => expect(drawn()).toEqual(lines(BANNED, SCRAPING)));
+      await view.rerender(underProviders(<SignInScreen error="auth_banned" />));
+      await waitFor(() => expect(drawn()).toEqual(lines(BANNED)));
+    });
   });
 
   it("on the web, says there is no bank sign-in instead of offering a button", async () => {
@@ -609,7 +727,7 @@ describe("SignInScreen", () => {
           </SessionProvider>
         </LocaleProvider>,
       );
-      expect(await screen.findByText(/There is no bank sign-in here/)).toBeTruthy();
+      expect(await screen.findByText(/There is no bank sign-in in the web version/)).toBeTruthy();
       expect(screen.queryByRole("button")).toBeNull();
       // The web preview keeps nothing of this phone's store: no screens before a bank it cannot reach.
       expect(screen.queryByText(NORMS)).toBeNull();
@@ -708,7 +826,6 @@ describe("SignInScreen: the screens before the bank (#418, ADR-010 §15)", () =>
       currentVersions: {
         terms: TERMS,
         privacy: PRIVACY,
-        research: RESEARCH,
         special_category: String(CONSENT_VERSIONS.special_category),
       },
     });
@@ -791,27 +908,6 @@ describe("SignInScreen: the screens before the bank (#418, ADR-010 §15)", () =>
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("Nothing is asked about research before the bank", async () => {
-    const nothingOfResearch = () => {
-      for (const words of [
-        "Help us learn how matching works",
-        "Research",
-        "Yes, I take part",
-        "Not now",
-      ]) {
-        expect(screen.queryByText(words)).toBeNull();
-      }
-    };
-    await renderWithTheme(<SignInScreen />);
-    expect(await screen.findByRole("heading", { name: NORMS })).toBeTruthy();
-    nothingOfResearch();
-    // One press and the bank button is there: no step on the way.
-    await fireEvent.press(screen.getByRole("button", { name: "I'm in, and I accept both" }));
-    expect(await screen.findByRole("button", { name: "Sign in with your bank" })).toBeTruthy();
-    nothingOfResearch();
-    expect(heldAgreements()).not.toHaveProperty("research");
-  });
-
   it("shows no button while the phone is asked whether it agreed before, then the screens before the bank", async () => {
     const read = holdTheRead();
     try {
@@ -891,7 +987,6 @@ describe("SignInScreen: the screens before the bank (#418, ADR-010 §15)", () =>
     await throughTheBank(view);
     await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/"));
     // In order, all before the screen goes home: onboarding then finds them given.
-    // Nothing about research, so a research consent the account already has stays.
     expect(order).toEqual(["exchange", "consent terms", "consent privacy", "replace /"]);
     // Bound to the account the exchange made, in the language the texts were shown in.
     expect(posted(calls)).toEqual(

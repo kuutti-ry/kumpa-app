@@ -135,7 +135,7 @@ describe("a slangi text", () => {
   it.each([
     // Outside the four namespaces.
     ["legal.terms.title"],
-    ["legal.research.summary"],
+    ["legal.special_category.summary"],
     ["errors.rate_limited"],
     ["safety.block.title"],
     ["notices.suspended"],
@@ -160,7 +160,6 @@ describe("a slangi text", () => {
     ["settings.contacts.invalid"],
     ["settings.contacts.phoneInvalid"],
     // Consent and a person's data.
-    ["settings.research.title"],
     ["settings.sensitive.title"],
     ["settings.export.label"],
     // The way out of danger or of a session.

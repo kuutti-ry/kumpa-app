@@ -10,8 +10,7 @@ import {
 import { type App, createApp } from "../app.ts";
 import { eraseAccount, exportAccount } from "../identity/index.ts";
 import { addDays, finnishDay } from "../lib/finnish-day.ts";
-import { ensureEventPartitions } from "../research/index.ts";
-import { joinStudy, signInAs, withMatchingConfig } from "../test/account.ts";
+import { signInAs, withMatchingConfig } from "../test/account.ts";
 import { errorCode } from "../test/answers.ts";
 import { interleaved } from "../test/chat.ts";
 import { STOPPED_CLOCK as T } from "../test/global-setup.ts";
@@ -49,8 +48,8 @@ import {
 // features/matching/decisions.feature): the read, seen and decided, a decision
 // changed and the day's end, a skip and a second pass, a card that can no longer
 // be shown, completion, two devices at once, the caller's own round only,
-// erasure of both sides, the export, the research events, the year they are
-// kept, and the log's one writer. Who comes next is jobs/round-builder.test.ts;
+// erasure of both sides, the export, the year the log is kept, and the log's
+// one writer. Who comes next is jobs/round-builder.test.ts;
 // the people here are in a pond nobody has opened, so a read serves what a test
 // wrote and adds nobody.
 
@@ -141,15 +140,6 @@ async function entriesOf(db: Queryable, roundId: string) {
       [roundId],
     )
   ).rows;
-}
-
-async function eventsOf(db: Queryable, name: string) {
-  return (
-    await db.query<{ props: Record<string, unknown> }>(
-      "SELECT props FROM events WHERE name = $1 ORDER BY at, id",
-      [name],
-    )
-  ).rows.map((row) => row.props);
 }
 
 describe("reading the queue", () => {
@@ -340,25 +330,20 @@ describe("reading the queue", () => {
 });
 
 describe("seen and decided", () => {
-  test("A card seen is recorded once, as profile_viewed", async ({ ctx, app }) => {
+  test("A card seen is recorded once", async ({ ctx, app }) => {
     const [a, b] = await cast(ctx, 2);
     if (!a || !b) throw new Error("cast not written");
-    await joinStudy(app, a.headers);
     const roundId = await roundFor(ctx.client, a, [{ person: b, reason: "liked_you" }]);
     expect((await seen(app, a, TODAY, 1)).status).toBe(204);
     const first = (await entriesOf(ctx.client, roundId))[0]?.seen_at;
     expect(first).not.toBeNull();
     expect((await seen(app, a, TODAY, 1)).status).toBe(204);
     expect((await entriesOf(ctx.client, roundId))[0]?.seen_at).toEqual(first);
-    expect(await eventsOf(ctx.client, "profile_viewed")).toEqual([
-      { position: 1, reason: "liked_you" },
-    ]);
   });
 
   test("A like is recorded, and the same decision again writes nothing", async ({ ctx, app }) => {
     const [a, b] = await cast(ctx, 2);
     if (!a || !b) throw new Error("cast not written");
-    await joinStudy(app, a.headers);
     const roundId = await roundFor(ctx.client, a, [b]);
     expect((await seen(app, a, TODAY, 1)).status).toBe(204);
     expect((await decideBy(app, a, TODAY, 1, "like")).status).toBe(200);
@@ -366,24 +351,11 @@ describe("seen and decided", () => {
     expect(first?.decision).toBe("like");
     expect((await decideBy(app, a, TODAY, 1, "like")).status).toBe(200);
     expect((await entriesOf(ctx.client, roundId))[0]?.decided_at).toEqual(first?.decided_at);
-    expect(await eventsOf(ctx.client, "like")).toEqual([
-      {
-        position: 1,
-        reason: "matches_filters",
-        sinceSeen: "under_3s",
-        revised: false,
-        fish: false,
-      },
-    ]);
   });
 
-  test("A decision may change until the day ends, and the change says it was revised", async ({
-    ctx,
-    app,
-  }) => {
+  test("A decision may change until the day ends", async ({ ctx, app }) => {
     const [a, b] = await cast(ctx, 2);
     if (!a || !b) throw new Error("cast not written");
-    await joinStudy(app, a.headers);
     const roundId = await roundFor(ctx.client, a, [b]);
     const times: (Date | null | undefined)[] = [];
     for (const decision of ["like", "pass", "like"]) {
@@ -393,18 +365,6 @@ describe("seen and decided", () => {
     const [entry] = await entriesOf(ctx.client, roundId);
     expect(entry?.decision).toBe("like");
     expect(new Set(times.map(Number)).size).toBe(3);
-    const events = await ctx.client.query<{
-      name: string;
-      props: { revised: boolean; sinceSeen: unknown };
-    }>("SELECT name, props FROM events WHERE name IN ('like', 'pass') ORDER BY at, id");
-    // An event's time is cut to the hour, so the three are compared as a set.
-    expect(events.rows.map((e) => `${e.name}:${e.props.revised}`).sort()).toEqual([
-      "like:false",
-      "like:true",
-      "pass:true",
-    ]);
-    // Never seen: the band since seen is null.
-    expect(events.rows.every((e) => e.props.sinceSeen === null)).toBe(true);
   });
 
   test("A card of a day that has ended cannot be seen or decided", async ({ ctx, app }) => {
@@ -573,11 +533,6 @@ describe("seen and decided", () => {
       const ids = await peopleWhoFit(pool, 2);
       const [a, b] = ids;
       if (!a || !b) throw new Error("cast not written");
-      // A in the study, so each decision is an event that says whether it revised another;
-      // a database of its own has no month of events until the night makes one.
-      await ensureEventPartitions(pool, T);
-      await joinStudy(await appOn(pool), (await signInAs(pool, a)).headers);
-      // Both decisions after the consent, which the ticking clock stamped a second after T.
       const later = (seconds: number) => new Date(T.getTime() + seconds * SECOND);
       const deps = await depsOn(pool, () => later(10));
       await logged(pool, a, TODAY, [b]);
@@ -609,15 +564,6 @@ describe("seen and decided", () => {
         [a],
       );
       expect(rows).toEqual([{ decision: "pass", decided_at: later(11) }]);
-      // The second read the first's like only because it waited on the round:
-      // without the lock it would have read no decision and said it revised none.
-      const events = await pool.query<{ name: string; props: { revised: boolean } }>(
-        "SELECT name, props FROM events WHERE name IN ('like', 'pass')",
-      );
-      expect(events.rows.map((e) => `${e.name}:${e.props.revised}`).sort()).toEqual([
-        "like:false",
-        "pass:true",
-      ]);
     });
   });
 });
@@ -666,7 +612,6 @@ describe("the day's likes (#98, ADR-036)", () => {
     await likeBudget(ctx.client, 2);
     const [a, b, c, d] = await cast(ctx, 4);
     if (!a || !b || !c || !d) throw new Error("cast not written");
-    await joinStudy(app, a.headers);
     const roundId = await roundFor(ctx.client, a, [b, c, d]);
 
     expect((await decideBy(app, a, TODAY, 1, "like")).status).toBe(200);
@@ -681,7 +626,6 @@ describe("the day's likes (#98, ADR-036)", () => {
       "like",
       null,
     ]);
-    expect(await eventsOf(ctx.client, "like")).toHaveLength(2);
   });
 
   test("the refusal is said in the request's language", async ({ ctx, app }) => {
@@ -726,7 +670,6 @@ describe("the day's likes (#98, ADR-036)", () => {
     await likeBudget(ctx.client, 1);
     const [a, b, c] = await cast(ctx, 3);
     if (!a || !b || !c) throw new Error("cast not written");
-    await joinStudy(app, a.headers);
     const ofB = await likedYesterday(ctx.client, b, a);
     const roundId = await roundFor(ctx.client, a, [{ person: b, reason: "liked_you" }, c]);
 
@@ -736,7 +679,7 @@ describe("the day's likes (#98, ADR-036)", () => {
     expect(refused.status).toBe(429);
     expect(await errorCode(refused)).toBe("like_budget_exceeded");
     expectWaitUntilMidnight(refused);
-    // Nothing of it written: the card undecided, no conversation, no event of it.
+    // Nothing of it written: the card undecided, no conversation.
     expect(
       (await entriesOf(ctx.client, roundId)).map((e) => [e.decision, e.decided_at !== null]),
     ).toEqual([
@@ -744,8 +687,6 @@ describe("the day's likes (#98, ADR-036)", () => {
       ["like", true],
     ]);
     expect(await participantsOf(ctx.client, a, b)).toEqual([]);
-    expect(await eventsOf(ctx.client, "like")).toHaveLength(1);
-    expect(await eventsOf(ctx.client, "match")).toEqual([]);
     // B's like stands as it was, and a like given back answers it.
     expect((await entriesOf(ctx.client, ofB)).map((e) => [e.candidate_id, e.decision])).toEqual([
       [a.accountId, "like"],
@@ -947,7 +888,7 @@ describe("the likes left (#524, ADR-036 §6)", () => {
   });
 });
 
-describe("erasure, the export and the events", () => {
+describe("erasure and the export", () => {
   test("Erasure removes the person's rounds and every entry in which they are somebody's card", async ({
     ctx,
   }) => {
@@ -1193,11 +1134,10 @@ describe("the log's one writer (ADR-062 §1)", () => {
 });
 
 describe("a skip (ADR-062 §3)", () => {
-  test("A skip moves on, spends nothing, and is no event", async ({ ctx, app }) => {
+  test("A skip moves on and spends nothing", async ({ ctx, app }) => {
     await likeBudget(ctx.client, 1);
     const [a, b, c] = await cast(ctx, 3);
     if (!a || !b || !c) throw new Error("cast not written");
-    await joinStudy(app, a.headers);
     const roundId = await roundFor(ctx.client, a, [b, c]);
 
     expect(await likesLeftAfter(await decideBy(app, a, TODAY, 1, "skip"))).toBe(1);
@@ -1205,8 +1145,6 @@ describe("a skip (ADR-062 §3)", () => {
 
     expect((await entriesOf(ctx.client, roundId)).map((e) => e.decision)).toEqual(["skip", "like"]);
     expect((await readToday(app, a)).entries).toEqual([]);
-    expect(await eventsOf(ctx.client, "pass")).toEqual([]);
-    expect(await eventsOf(ctx.client, "like")).toHaveLength(1);
   });
 
   test("the same skip again writes nothing", async ({ ctx, app }) => {

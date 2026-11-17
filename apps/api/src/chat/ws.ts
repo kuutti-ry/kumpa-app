@@ -49,8 +49,8 @@ const AUTH_CODES: Record<string, FrameErrorCode> = {
 /**
  * A browser's socket comes only from an origin the API admits (rule 8): the
  * API's own host (React Native names its own URL's origin) or one on the CORS
- * allowlist (the admin panel, a preview's web origin). No Origin at all is a
- * native client or a test, admitted.
+ * allowlist (the admin panel, Metro's web target in development). No Origin
+ * at all is a native client or a test, admitted.
  */
 function originCheck(allowed: ReadonlySet<string>): MiddlewareHandler<AppEnv> {
   return async (c, next) => {

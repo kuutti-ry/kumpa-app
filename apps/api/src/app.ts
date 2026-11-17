@@ -24,6 +24,7 @@ import {
   currentConsent,
   type IdentityBroker,
   isSignInStart,
+  legalTextRoutes,
   onboardingRoutes,
   refuseSignInStart,
   sessionStore,
@@ -148,6 +149,9 @@ export const PUBLIC_ROUTES = new Set([
   // The one link (#574, ADR-044 §13): a redirect to a store, no page, no lookup.
   "GET /i",
   "GET /i/:code",
+  // The app's links to the legal texts (#208, ADR-010 §4): a redirect to the website, no page.
+  "GET /legal/terms",
+  "GET /legal/privacy",
   "GET /admin/auth/start",
   "POST /admin/auth/exchange",
   // The chat's socket (#349): its first frame carries the session's token, checked
@@ -166,8 +170,8 @@ export function createApp(deps: Deps) {
   app.use("*", requestLocale(servedLocales(deps.config.APP_ENV)));
   app.use("*", requestLogger(deps.logger, { trustedProxy: deps.config.TRUSTED_PROXY }));
   app.use("*", secureHeaders());
-  // No environment of this API is a web surface (rule 8); previews have public
-  // URLs that a crawler may still find (#9).
+  // No environment of this API is a web surface (rule 8), yet each deployed
+  // one has a public URL that a crawler may still find.
   app.use("*", async (c, next) => {
     await next();
     c.header("X-Robots-Tag", "noindex, nofollow");
@@ -229,7 +233,8 @@ export function createApp(deps: Deps) {
   // The staff guards differ in their roles alone (ADR-024 §3), each under the person's budget.
   const staff = (roles: readonly ModeratorRole[]) =>
     requireAdmin({ db: deps.db, store: adminSessionStore, roles, limit: perPerson });
-  const anyStaff = staff(["moderator", "admin", "researcher"]);
+  // Every member of staff is a moderator or an admin, so the staff session's
+  // own routes take the moderators' guard.
   const moderators = staff(["moderator", "admin"]);
   // A ban and its lift and review (#307, ADR-024 §3).
   const admins = staff(["admin"]);
@@ -240,9 +245,10 @@ export function createApp(deps: Deps) {
   const roundRead = roundReadRule(ruleDeps);
 
   app.route("/", healthRoutes(deps));
-  app.route("/", authRoutes(deps, guard, anyStaff));
+  app.route("/", authRoutes(deps, guard, moderators));
   app.route("/", accountRoutes(deps, guard));
   app.route("/", wellKnownRoutes(deps));
+  app.route("/", legalTextRoutes());
   app.route("/", invitationLinkRoutes(deps));
   // A URL of somebody else's photo is checked by the velocity rule (#86,
   // ADR-041): the safety slice decides, the media slice only issues.
@@ -274,7 +280,8 @@ export function createApp(deps: Deps) {
       socketsPerAccount: deps.config.WS_SOCKETS_PER_ACCOUNT,
     });
   // The pushes (#102, ADR-055): the notifications slice decides whom to tell,
-  // the chat and the round's routes only say when.
+  // the chat, the round's and the sanctions' routes only say when; a
+  // sanction staff applied is mailed to its person (#715, ADR-073 §4).
   const push =
     deps.push ??
     createPush({
@@ -320,7 +327,7 @@ export function createApp(deps: Deps) {
       },
     }),
   );
-  app.route("/", sanctionAdminRoutes(deps, moderators, admins));
+  app.route("/", sanctionAdminRoutes(deps, moderators, admins, push.sanction));
   app.route("/", configAdminRoutes(deps, admins));
   app.route("/", overviewAdminRoutes(deps, moderators));
   app.route("/", reportAdminRoutes(deps, moderators));
@@ -439,7 +446,7 @@ export function createApp(deps: Deps) {
   }
   // Swagger UI over the same document, on a developer's machine only: the page
   // pulls swagger-ui-dist from jsDelivr, and no deployed environment of this
-  // API is a web surface (rule 8). Staging and previews keep /openapi.json alone.
+  // API is a web surface (rule 8). Staging keeps /openapi.json alone.
   if (developmentOrTest(deps.config.APP_ENV)) {
     app.get("/docs", swaggerUI({ url: "/openapi.json", version: "5.33.1", title: "Kuutti API" }));
   }

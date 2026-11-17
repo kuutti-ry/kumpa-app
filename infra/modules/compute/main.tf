@@ -25,13 +25,15 @@ locals {
   log_group_name    = "/${var.project}/${var.environment}/api"
   session_log_group = "/${var.project}/ssm-sessions"
   backup_prefix     = "dokploy-backup/${var.environment}/"
-  # The API's MAIL_FROM default (apps/api/src/lib/config.ts) without its
-  # display name, which ses:FromAddress does not include.
-  mail_from = "noreply@${var.domain}"
+  # The API's MAIL_FROM (apps/api/src/lib/config.ts) without its display
+  # name, which ses:FromAddress does not include: noreply@ of each mail
+  # domain, so that the sender can move from one to the other with a
+  # parameter while both may send (ADR-072).
+  mail_from = [for d in var.mail_domains : "noreply@${d}"]
   # Where the box's free memory goes, which modules/observability's
   # memory-low alarm reads (#77). A namespace of its own, not Kuutti/<env>:
-  # the box may write here and nowhere else, so nothing on it (the API, a
-  # preview) can push into the log filters' metrics and quiet their alarms.
+  # the box may write here and nowhere else, so nothing on it (the API) can
+  # push into the log filters' metrics and quiet their alarms.
   metric_namespace = "Kuutti/${var.environment}/box"
   # One text for first boot (user_data) and for a running box (the Run
   # Command document below), #77, ADR-046.
@@ -137,10 +139,12 @@ data "aws_iam_policy_document" "api" {
   # Mail (#385, ADR-043 §5): the code that confirms an address. SESv2
   # SendEmail with simple content is authorised as ses:SendEmail against the
   # sending identity, so neither ses:SendRawEmail nor a configuration set is
-  # granted. The identity is the domain's (infra/bootstrap/mail.tf, in this
-  # region, the API's S3_REGION), and the From address is pinned to noreply@:
-  # a MAIL_FROM of any other address is refused here, and the API answers 503.
-  # On staging a pull request's preview runs under this role too (ADR-004 §3).
+  # granted. The identities are the domains' (infra/bootstrap/mail.tf, in this
+  # region, the API's S3_REGION), and the From address is pinned to noreply@
+  # of one of them: a MAIL_FROM of any other address is refused here, and the
+  # API answers 503. SES checks a send against the identity of the From
+  # address's own domain, so naming both pairs in one statement lets no
+  # address send through the other's identity.
   # Staging also names whom it may mail (#385, ADR-043 §6): every account there
   # is one of Telia's test persons, whose credentials are published, so without
   # the list anyone could have codes sent to addresses of their choosing once
@@ -152,12 +156,12 @@ data "aws_iam_policy_document" "api" {
     sid       = "SesSendAsNoreply"
     effect    = "Allow"
     actions   = ["ses:SendEmail"]
-    resources = ["arn:aws:ses:${local.region}:${local.account_id}:identity/${var.domain}"]
+    resources = [for d in var.mail_domains : "arn:aws:ses:${local.region}:${local.account_id}:identity/${d}"]
 
     condition {
       test     = "StringEquals"
       variable = "ses:FromAddress"
-      values   = [local.mail_from]
+      values   = local.mail_from
     }
 
     dynamic "condition" {
@@ -211,10 +215,9 @@ data "aws_iam_policy_document" "api" {
   # Nightly Dokploy backup, write only. SSE-KMS is required so the objects stay
   # unreadable to the plan role, which may read the state bucket but is
   # explicitly denied kms:Decrypt (bootstrap). The box never reads them back:
-  # on staging a preview holds this role, and a backup carries every
-  # certificate key on the box, so a rebuild fetches it through a link the
-  # maintainer presigns (README, ADR-054). It can never delete them or touch
-  # state.
+  # a backup carries every certificate key on the box, so a rebuild fetches it
+  # through a link the maintainer presigns (README, ADR-054). It can never
+  # delete them or touch state.
   statement {
     sid       = "DokployBackupWrite"
     effect    = "Allow"
@@ -294,64 +297,12 @@ resource "aws_ssm_document" "session_preferences" {
 }
 
 # ---------------------------------------------------------------------------
-# Pull-request preview databases (#9, TD-19), staging only. The preview API
-# creates kuutti_pr_<n> itself at boot; dropping it when the pull request
-# closes is this Run Command document, sent by preview-cleanup.yml through the
-# plan role, which the bootstrap allows to send exactly this document to
-# exactly this box. The one parameter is validated here, so the most a pull
-# request can do is drop another pull request's preview database. Runs as root
-# on the box with the instance role, which reads only its own SSM prefix, and
-# connects as the preview role, which owns every kuutti_pr_<n> and nothing else.
-# ---------------------------------------------------------------------------
-
-resource "aws_ssm_document" "preview_database" {
-  count = var.preview_databases ? 1 : 0
-
-  name            = "${local.name}-preview-database"
-  document_type   = "Command"
-  document_format = "JSON"
-
-  content = jsonencode({
-    schemaVersion = "2.2"
-    description   = "Drops the pull-request preview database ${var.project}_pr_<prNumber> on ${local.name} (#9). Sent by preview-cleanup.yml."
-    parameters = {
-      prNumber = {
-        type           = "String"
-        description    = "Pull request number"
-        allowedPattern = "^[0-9]{1,7}$"
-      }
-    }
-    mainSteps = [{
-      action = "aws:runShellScript"
-      name   = "dropPreviewDatabase"
-      inputs = {
-        timeoutSeconds = "120"
-        # The password stays in the shell: nothing here echoes it, and the
-        # invocation output that CI prints is psql's one line.
-        runCommand = [
-          # The agent runs these lines with sh (dash), which has no pipefail; nothing here pipes.
-          "set -eu",
-          "export PATH=\"$PATH:/snap/bin\"",
-          "n='{{ prNumber }}'",
-          "host=$(aws ssm get-parameter --region ${local.region} --name ${local.ssm_prefix}db-host --query Parameter.Value --output text)",
-          # Two lines: `export X=$(cmd)` returns export's status and would hide a failed fetch from set -e.
-          "PGPASSWORD=$(aws ssm get-parameter --region ${local.region} --name ${local.ssm_prefix}db-preview-password --with-decryption --query Parameter.Value --output text)",
-          "export PGPASSWORD",
-          "psql \"host=$host dbname=postgres user=${var.project}_preview sslmode=verify-full sslrootcert=/etc/kuutti/rds-ca.pem\" -v ON_ERROR_STOP=1 -c \"DROP DATABASE IF EXISTS ${var.project}_pr_$n WITH (FORCE)\"",
-          "echo \"dropped ${var.project}_pr_$n\"",
-        ]
-      }
-    }]
-  })
-}
-
-# ---------------------------------------------------------------------------
 # The demo's reset (#613, ADR-018 §8). The personas are returned to where they
 # begin by the reset that lives inside the API's container and nowhere else
 # (ADR-018 §2 to §4); this document is how demo-reset.yml says "now" from
 # GitHub, without a terminal on the box. Sent by the plan role, which the
-# bootstrap allows to send exactly this document to exactly this box, as it
-# sends the preview database's. It takes no parameter. Runs as root on the box:
+# bootstrap allows to send exactly this document to exactly this box. It
+# takes no parameter. Runs as root on the box:
 # finds the task of Dokploy's api application (<environment>-api-<id>.1.<task>,
 # infra/README.md), fetches the pictures' release into the container's cache
 # (the cache is the container's own, and a new container starts without it),
@@ -476,7 +427,8 @@ resource "aws_instance" "api" {
     dokploy_installer        = base64gzip(file("${path.module}/installer/dokploy-install.sh"))
     dokploy_installer_sha256 = filesha256("${path.module}/installer/dokploy-install.sh")
     # The same RDS bundle the API image carries (apps/api/certs); the box's own
-    # psql (preview cleanup) verifies the database with it.
+    # psql (the restore drill, docs/runbooks/incident.md) verifies the database
+    # with it.
     rds_ca_sha256 = filesha256("${path.module}/../../../apps/api/certs/rds-eu-central-1-bundle.pem")
     headroom      = base64gzip(local.headroom)
   })

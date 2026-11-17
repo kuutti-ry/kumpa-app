@@ -1,7 +1,7 @@
 import Constants from "expo-constants";
 
 /**
- * API base URL. EXPO_PUBLIC_API_URL wins (set per EAS profile and per preview);
+ * API base URL. EXPO_PUBLIC_API_URL wins (set per EAS profile and environment);
  * in local dev it is derived from the Metro host so a phone on the same network
  * reaches the API on the developer's machine. Never a secret: EXPO_PUBLIC_* is
  * public by definition.

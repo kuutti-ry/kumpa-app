@@ -3,7 +3,6 @@ import type { FoundReason } from "@kuutti/schema";
 import { AppError, noLiveAccount } from "../lib/errors.ts";
 import { finnishDay } from "../lib/finnish-day.ts";
 import type { Logger } from "../lib/logger.ts";
-import { track } from "../research/index.ts";
 
 // "Löysin hänet" (#83, ADR-040): a person tells Kuutti they found somebody,
 // and why, from a closed list. It is an indication and nothing more, the
@@ -30,7 +29,7 @@ export async function foundThemAnswered(db: Queryable, accountId: string): Promi
  * The answer, once per account, in one transaction under the account row's
  * lock: the flag set and the day's count moved together, so two devices at
  * once count one answer, and an erasure that took the row first leaves
- * nothing counted. Then the research event, for those who said yes to it.
+ * nothing counted.
  */
 export async function tellFoundThem(
   deps: FoundThemDeps,
@@ -56,7 +55,6 @@ export async function tellFoundThem(
       [finnishDay(at), reason],
     );
   });
-  await track({ ...deps, now: () => at }, accountId, "found_them", { reason });
 }
 
 export type FoundThemCounts = { here: number; elsewhere: number; other: number };

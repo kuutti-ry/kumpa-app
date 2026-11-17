@@ -2,7 +2,7 @@ import { z } from "zod";
 import { TRUSTED_PROXIES, type TrustedProxy } from "./rate-limit.ts";
 import { loadSsmParameters } from "./ssm.ts";
 
-const AppEnv = z.enum(["development", "test", "preview", "staging", "production"]);
+const AppEnv = z.enum(["development", "test", "staging", "production"]);
 
 /**
  * Every configuration value the process reads, validated once at boot. A
@@ -26,10 +26,6 @@ const Env = z.object({
   DB_NAME: z.string().min(1).optional(),
   DB_USER: z.string().min(1).optional(),
   DB_APP_PASSWORD: z.string().min(1).optional(),
-  // The preview role (#9): CREATEDB, owner of every kuutti_pr_<n>, no
-  // CONNECT on the environment's own database. Staging parameters only.
-  DB_PREVIEW_USER: z.string().min(1).optional(),
-  DB_PREVIEW_PASSWORD: z.string().min(1).optional(),
   DB_POOL_MAX: z.coerce.number().int().min(1).max(50).default(10),
   // RDS certificates chain to Amazon's private RDS roots, which no system
   // store carries; the image ships the eu-central-1 bundle (certs/) and sets
@@ -77,7 +73,7 @@ const Env = z.object({
   // it is log in development and test and off everywhere else.
   MAIL: z.enum(["ses", "log", "off"]).optional(),
   // The sender of every message: the SES identity kuutti.app (infra/bootstrap/mail.tf).
-  MAIL_FROM: z.string().min(1).default("Kuutti <noreply@kuutti.app>"),
+  MAIL_FROM: z.string().min(1).default("Kumpa <noreply@kuutti.app>"),
   // Push (#102, ADR-055 §8): expo through Expo's push service (the SSM
   // parameter `push`); log on a developer's machine and in tests, which writes
   // the kind of each push to the log and sends nothing; off sends nothing.
@@ -160,7 +156,7 @@ const Env = z.object({
   // commit, and the app and the admin panel show both. A fork that deploys
   // changes sets it to its own repository; https only, because it is a link
   // people are asked to follow.
-  SOURCE_URL: z.url({ protocol: /^https$/ }).default("https://github.com/kuutti-ry/kuutti-app"),
+  SOURCE_URL: z.url({ protocol: /^https$/ }).default("https://github.com/kuutti-ry/kumpa-app"),
   BODY_LIMIT_BYTES: z.coerce.number().int().min(1024).default(1_048_576),
   // Requests a minute per client address, and per person once a guard has
   // admitted the request (ADR-026 §5); SSM rate-limit-per-minute.
@@ -190,18 +186,10 @@ const Env = z.object({
   // the other. Required with TRUSTED_PROXY=cloudfront (parseConfig).
   ORIGIN_SECRET: z.string().trim().optional(),
   SSM_PARAMETER_PREFIX: z.string().min(1).optional(),
-
-  // Pull-request preview (#9): the process creates and seeds kuutti_pr_<n>
-  // on the staging instance and serves from it. Set only by the preview
-  // deployment; refused outside APP_ENV=preview.
-  PR_NUMBER: z
-    .string()
-    .regex(/^[0-9]{1,7}$/, "a pull request number")
-    .optional(),
 });
 
-/** Previews throttle harder than staging: nothing real runs there (#9). */
-const RATE_LIMIT_DEFAULT = { preview: 30, other: 120 } as const;
+/** Requests a minute per address and per person where SSM says nothing (ADR-026 §5). */
+const RATE_LIMIT_DEFAULT = 120;
 /**
  * Production's doors are tight; elsewhere looser (ADR-026 §5): a laptop's demo
  * reset signs many personas in from one address, and staging keeps sixty on
@@ -215,14 +203,6 @@ export type AppEnv = z.infer<typeof AppEnv>;
 export function developmentOrTest(appEnv: AppEnv): boolean {
   return appEnv === "development" || appEnv === "test";
 }
-
-export type PreviewConfig = {
-  prNumber: string;
-  /** kuutti_pr_<n>: the database this process serves from, created on first boot. */
-  database: string;
-  /** The instance's maintenance database (postgres), used only to CREATE DATABASE. */
-  adminDatabaseUrl: string;
-};
 
 export type Config = Omit<
   z.infer<typeof Env>,
@@ -244,7 +224,6 @@ export type Config = Omit<
   IOS_ATTESTATION: "off" | "optional" | "required";
   databaseUrl: string;
   corsAllowedOrigins: ReadonlySet<string>;
-  preview?: PreviewConfig;
 };
 
 export class ConfigError extends Error {
@@ -267,16 +246,11 @@ export function parseConfig(raw: Record<string, string | undefined>): Config {
     throw new ConfigError(missing, issues);
   }
   const env = result.data;
-  const preview = previewConfig(env);
-  const baseUrl = env.DATABASE_URL ?? composeDatabaseUrl(env, preview !== undefined);
-  if (!baseUrl) {
+  const databaseUrl = env.DATABASE_URL ?? composeDatabaseUrl(env);
+  if (!databaseUrl) {
     throw new ConfigError(
       ["DATABASE_URL"],
-      [
-        preview
-          ? "DATABASE_URL: set it, or set DB_HOST, DB_NAME, DB_PREVIEW_USER and DB_PREVIEW_PASSWORD"
-          : "DATABASE_URL: set it, or set DB_HOST, DB_NAME, DB_USER and DB_APP_PASSWORD",
-      ],
+      ["DATABASE_URL: set it, or set DB_HOST, DB_NAME, DB_USER and DB_APP_PASSWORD"],
     );
   }
   // env.example's all-zero key is for the mock IdP only; a deployed process
@@ -304,42 +278,12 @@ export function parseConfig(raw: Record<string, string | undefined>): Config {
       throw new ConfigError([], ["CORS_ALLOWED_ORIGINS: production allows https origins only"]);
     }
   }
-  const rateLimit =
-    env.RATE_LIMIT_PER_MINUTE ??
-    (env.APP_ENV === "preview" ? RATE_LIMIT_DEFAULT.preview : RATE_LIMIT_DEFAULT.other);
+  const rateLimit = env.RATE_LIMIT_PER_MINUTE ?? RATE_LIMIT_DEFAULT;
   const signInRateLimit =
     env.SIGN_IN_RATE_LIMIT_PER_MINUTE ??
     (env.APP_ENV === "production"
       ? SIGN_IN_RATE_LIMIT_DEFAULT.production
       : SIGN_IN_RATE_LIMIT_DEFAULT.other);
-  // A preview reads the whole /kuutti/staging/* prefix through the shared
-  // instance role; what it must never hold in memory is dropped here, so a
-  // preview process cannot reach the environment's own database even by
-  // accident. The preview role from db-app-role.sh is the real boundary.
-  // The same for photos (#48, ADR-005): staging's bucket and signing key
-  // would make a preview a writer of staging's objects, refcounted against
-  // the wrong database; a preview has no media and its photo routes answer 503.
-  // And for the bank login (ADR-014 §1, docs/vendors/telia.md): a preview may
-  // never use the real broker, and no mock bank is deployed beside it, so the
-  // Telia client and both private keys stay out of its memory: its login
-  // sends the app back with auth_unavailable, the other auth routes answer
-  // 503. The HMAC key goes with them: with no login there is nothing to derive.
-  if (preview) {
-    env.DB_APP_PASSWORD = undefined;
-    env.MEDIA_URL_BASE = undefined;
-    env.CLOUDFRONT_KEY_PAIR_ID = undefined;
-    env.CLOUDFRONT_SIGNING_KEY = undefined;
-    env.OIDC_ISSUER = undefined;
-    env.OIDC_CLIENT_ID = undefined;
-    env.OIDC_REDIRECT_URI = undefined;
-    env.OIDC_ACR_VALUES = undefined;
-    env.TELIA_SIGNING_KEY = undefined;
-    env.TELIA_ENCRYPTION_KEY = undefined;
-    env.HETU_HMAC_KEY = undefined;
-    // And what staging asks of an iPhone (ADR-069 §5): a preview has no bank
-    // login to ask it at, and must still start on the day staging requires it.
-    env.IOS_ATTESTATION = undefined;
-  }
   // Development and test never ask for an attestation: simulators, the demo
   // tools and the flows sign in there with none. And an environment that asks
   // for one must be able to hold it to the team's App ID (ADR-069 §5).
@@ -404,68 +348,27 @@ export function parseConfig(raw: Record<string, string | undefined>): Config {
     MAIL: mail,
     PUSH: push,
     IOS_ATTESTATION: env.IOS_ATTESTATION ?? "optional",
-    databaseUrl: preview ? withDatabase(baseUrl, preview.database) : baseUrl,
+    databaseUrl,
     corsAllowedOrigins: allowedOrigins(env),
-    ...(preview
-      ? { preview: { ...preview, adminDatabaseUrl: withDatabase(baseUrl, "postgres") } }
-      : {}),
   };
 }
 
-/**
- * A preview is a pull request number on APP_ENV=preview, nothing else: the
- * number names the database, and a staging or production process that
- * received one by mistake must not start against kuutti_pr_<n>.
- */
-function previewConfig(
-  env: z.infer<typeof Env>,
-): Omit<PreviewConfig, "adminDatabaseUrl"> | undefined {
-  if (env.PR_NUMBER === undefined) {
-    if (env.APP_ENV === "preview") {
-      throw new ConfigError(["PR_NUMBER"], ["PR_NUMBER: required when APP_ENV is preview"]);
-    }
-    return undefined;
-  }
-  if (env.APP_ENV !== "preview") {
-    throw new ConfigError([], [`PR_NUMBER: only valid with APP_ENV=preview, not ${env.APP_ENV}`]);
-  }
-  return { prNumber: env.PR_NUMBER, database: `kuutti_pr_${env.PR_NUMBER}` };
-}
-
-/** Same host and options, another database; a URL that does not parse never reaches a log line. */
-function withDatabase(url: string, database: string): string {
-  let parsed: URL;
-  try {
-    parsed = new URL(url);
-  } catch {
-    throw new ConfigError(["DATABASE_URL"], ["DATABASE_URL: not a URL"]);
-  }
-  parsed.pathname = `/${database}`;
-  return parsed.toString();
-}
-
-/**
- * From the SSM-shaped parts. A preview connects as the preview role, never as
- * the environment's application role: the preview role owns kuutti_pr_<n> and
- * cannot connect to the environment's own database (#9).
- */
-function composeDatabaseUrl(env: z.infer<typeof Env>, preview: boolean): string | undefined {
-  const user = preview ? env.DB_PREVIEW_USER : env.DB_USER;
-  const password = preview ? env.DB_PREVIEW_PASSWORD : env.DB_APP_PASSWORD;
-  if (!env.DB_HOST || !env.DB_NAME || !user || !password) return undefined;
+/** From the SSM-shaped parts (#7). */
+function composeDatabaseUrl(env: z.infer<typeof Env>): string | undefined {
+  if (!env.DB_HOST || !env.DB_NAME || !env.DB_USER || !env.DB_APP_PASSWORD) return undefined;
   // pg treats sslmode=require as encrypt-and-verify since 8.16; with the RDS
   // bundle that verification can succeed, and verify-full also pins the host.
   const ssl = env.DB_SSL_ROOT_CERT
     ? `sslmode=verify-full&sslrootcert=${encodeURIComponent(env.DB_SSL_ROOT_CERT)}`
     : "sslmode=require";
-  return `postgres://${encodeURIComponent(user)}:${encodeURIComponent(password)}@${env.DB_HOST}:${env.DB_PORT}/${env.DB_NAME}?${ssl}`;
+  return `postgres://${encodeURIComponent(env.DB_USER)}:${encodeURIComponent(env.DB_APP_PASSWORD)}@${env.DB_HOST}:${env.DB_PORT}/${env.DB_NAME}?${ssl}`;
 }
 
 /**
  * Browser origins are refused unless named here (rule 8: no product web
  * surface). Development allows the Metro web target and the admin SPA's Vite
- * server; deployed environments name exactly the admin SPA, the public site,
- * or the preview's own origin.
+ * server; deployed environments name exactly the admin SPA and the public
+ * site.
  */
 function allowedOrigins(env: z.infer<typeof Env>): ReadonlySet<string> {
   if (env.CORS_ALLOWED_ORIGINS !== undefined) {
@@ -485,7 +388,7 @@ export async function loadConfig(
   raw: Record<string, string | undefined> = process.env,
 ): Promise<Config> {
   const appEnv = raw.APP_ENV ?? "development";
-  const deployed = appEnv === "staging" || appEnv === "production" || appEnv === "preview";
+  const deployed = appEnv === "staging" || appEnv === "production";
   const prefix = raw.SSM_PARAMETER_PREFIX ?? (deployed ? ssmPrefix(appEnv) : undefined);
   const fromSsm = prefix ? await loadSsmParameters(prefix) : {};
   return parseConfig({ ...fromSsm, ...raw });
@@ -493,10 +396,8 @@ export async function loadConfig(
 
 /**
  * Parameter prefix for a deployed environment. The infrastructure names its
- * environments staging and prod (#7), so production reads /kuutti/prod/;
- * previews run on the staging instance and read staging parameters (#9).
+ * environments staging and prod (#7), so production reads /kuutti/prod/.
  */
 export function ssmPrefix(appEnv: string): string {
-  const env = appEnv === "preview" ? "staging" : appEnv === "production" ? "prod" : appEnv;
-  return `/kuutti/${env}/`;
+  return `/kuutti/${appEnv === "production" ? "prod" : appEnv}/`;
 }

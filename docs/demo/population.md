@@ -21,16 +21,15 @@ After a write or a removal the public counter (#54) is counted anew over what is
 | `-- --photos` | faces of the release for the people, drawn by seed (none, a few or the whole grid), through the upload pipeline like anybody's; `pnpm demo:assets` fetches the release first. Locally the faces are approved as a moderator would (the local check queues everything); on staging Rekognition decides. With them come the cast (below), each with faces of their own |
 | `-- --dry-run` | prints the counts of the people who onboard, by gender, and writes nothing; it does not connect |
 | `-- --remove` | removes the synthetic population and writes nobody |
-| `-- --env preview` | for a pull request's own database, `kuutti_pr_<n>` |
 | `--env staging` | on staging, from inside the API's container only (`--remove` there reports the personas' rows as `spared`: they carry the mark but not a label's hash, ADR-014 §9, and the reset is what forgets them): `node dist/demo-population.js --env staging` (ADR-018; `infra/README.md` says how to reach the container). The database is read from staging's own parameter store, never given |
 
 ## Where it refuses to write
 
 Three hundred accounts that look bank-verified, among real people, would enter the public counter and appear on people's cards. So:
 
-- it goes ahead only when the environment is `development`, `test` or `preview`, by `--env` and by `APP_ENV`, both when both are given;
+- it goes ahead only when the environment is `development` or `test`, by `--env` and by `APP_ENV`, both when both are given;
 - it refuses an argument it does not know, so a mistyped `--dryrun` is not a write, and an argument given twice, so `--env production --env development` does not talk its own first word away;
-- after connecting and before writing or removing anything it prints where it is connected (database, user, host, port; never a password) and asks the server what it is. A managed server (RDS) is refused unless the database is a pull request's own and the environment is `preview`, or the environment is `staging` and the command runs inside staging's container. Staging and production are reached through a tunnel on 127.0.0.1 under the same database name as the local one, so neither the host nor the name tells them apart, and neither does the server: what does, for staging, is that the command was given nothing by hand (`APP_ENV` is staging, and no `DATABASE_URL`, no key, no parameter prefix in its environment), so its database can only be the one staging's own parameter store names (ADR-018 §3).
+- after connecting and before writing or removing anything it prints where it is connected (database, user, host, port; never a password) and asks the server what it is. A managed server (RDS) is refused unless the environment is `staging` and the command runs inside staging's container. Staging and production are reached through a tunnel on 127.0.0.1 under the same database name as the local one, so neither the host nor the name tells them apart, and neither does the server: what does, for staging, is that the command was given nothing by hand (`APP_ENV` is staging, and no `DATABASE_URL`, no key, no parameter prefix in its environment), so its database can only be the one staging's own parameter store names (ADR-018 §3).
 
 ## Who lives where, and why
 
@@ -74,7 +73,7 @@ The homes are drawn last, from a stream of their own: a test holds that a person
 | seeks | by own gender. Women: men 78 %, women 8 %, several 14 %. Men: women 82 %, men 7 %, several 11 %. Non-binary people: all three 50 %, two of them 40 %, non-binary only 10 % |
 | age window | from 2 to 8 years under the person's age (never under 18) to 2 to 10 years over it (never over 99) |
 | home | a kept place by the people behind it, as above; of those who keep an area, 20 % show its name on the card, and the rest the town, where a home starts |
-| consents | terms, privacy and the special-category consent of the seek screen for everybody who onboarded (#146); the profile's own record of that consent, the one politics and religion need (ADR-019 §4), for 35 % of those with a profile, given with the others. No research consent: the product writes it together with its mapping row, synthetic people emit no events, and theirs would muddy the first real numbers. After a new version of a wording the reset gives each of them the new one beside the old, in the language the old was shown in, as a person who accepts it gets one (#560, ADR-014 §12): the population is not written again for it, and the terms of an older wording below stay older |
+| consents | terms, privacy and the special-category consent of the seek screen for everybody who onboarded (#146); the profile's own record of that consent, the one politics and religion need (ADR-019 §4), for 35 % of those with a profile, given with the others. After a new version of a wording the reset gives each of them the new one beside the old, in the language the old was shown in, as a person who accepts it gets one (#560, ADR-014 §12): the population is not written again for it, and the terms of an older wording below stay older |
 | profile | 88 % of those who onboarded have one |
 | display name | a given name from the list of the person's gender; the lists hold names with å, ä and ö and one in another script (Юлия) |
 | bio | a bio 65 % (a few of the bios are too short to count for completeness, on purpose), a canned line 12 %, nothing 23 % |

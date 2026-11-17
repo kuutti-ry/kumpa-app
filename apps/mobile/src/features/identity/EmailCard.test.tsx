@@ -84,7 +84,7 @@ const RIGHT_CODE = "123456";
 /** The card's words in every state: its title, why it is there, and the field's name. */
 const CARD = [
   "A way to stay in touch",
-  "Optional. A way for Kuutti to reach you. Never shown to anyone and never a login. A code confirms the address; nothing else is sent to it without asking you first.",
+  "Optional. A way for Kumpa to reach you. Never shown to anyone and never a login. A code confirms the address; nothing else is sent to it without asking you first.",
   "E-mail address",
 ];
 const TEXT = {
@@ -961,7 +961,7 @@ describe("EmailScreen", () => {
       );
       fakeApi();
       await show(<EmailScreen />);
-      expect(screen.queryByText("Kuutti is locked")).toBeNull();
+      expect(screen.queryByText("Kumpa is locked")).toBeNull();
       await press(button("Done"));
       expect(router.replace).toHaveBeenCalledWith("/");
       expect(store.has("kuutti.preference.lockOffered")).toBe(false);

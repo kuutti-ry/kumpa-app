@@ -1,6 +1,6 @@
 # Attack testing: completion of #380
 
-This is the coverage inventory and disposition record for [#380](https://github.com/kuutti-ry/kuutti-app/issues/380), following [ADR-021](adr/021-tests-at-every-level.md), [ADR-002](adr/002-gherkin-spec-vitest-runner.md) and [ADR-020](adr/020-end-to-end-flows-with-maestro.md).
+This is the coverage inventory and disposition record for [#380](https://github.com/kuutti-ry/kumpa-app/issues/380), following [ADR-021](adr/021-tests-at-every-level.md), [ADR-002](adr/002-gherkin-spec-vitest-runner.md) and [ADR-020](adr/020-end-to-end-flows-with-maestro.md).
 
 The maintainer asked on 13 November 2026 for one final completion PR, with findings fixed in that PR and no new tracking issues. This record replaces the original issue's separate-ticket step for this work. A retained limitation below is an explicit scope decision, not a promised future fix. New testing can still discover new bugs; completion does not claim exhaustive proof.
 
@@ -8,7 +8,7 @@ The maintainer asked on 13 November 2026 for one final completion PR, with findi
 
 Attacks remain beside their slice as `*.attack.test.ts(x)`. Vitest and jest-expo bind the shared helper in `scripts/lib/attack.ts`. Setup and observation run outside the inversion; only a synchronous assertion of the forbidden outcome may be inverted. Controls run ordinarily. Unexpected exceptions, rejected asynchronous observations and fixtures that never reach the boundary fail the suite. The Jest binding has its own real-matcher tests.
 
-Seeded properties use the API's `property-attack.ts`: 100 examples per fixed seed, shrinking retained, and unexpected errors propagated even when a different shrunk counterexample is found. Rules-specification rows come directly from nine feature tables; malformed, duplicate or unbound rows fail instead of silently reducing the pile.
+Seeded properties use the API's `property-attack.ts`: 100 examples per fixed seed, shrinking retained, and unexpected errors propagated even when a different shrunk counterexample is found. Rules-specification rows come directly from eight feature tables; malformed, duplicate or unbound rows fail instead of silently reducing the pile.
 
 Maestro and Playwright use ordinary refusal assertions. They never invert an entire flow: a crash or an absent server must not be evidence that a rule held. The new signed-out-link flow first proves the same card, photos and conversations load with a session, performs and verifies logout, then proves those links cannot restore the data.
 
@@ -20,12 +20,12 @@ These are distinct new attack cases in this completion, each with an ordinary po
 |---|---:|---:|---|
 | Mobile unit/component | 24 | 24 | `apps/mobile/src/{lib,features,components,theme}/*.attack.test.*` |
 | Route integration, real PostgreSQL | 24 | 24 | `apps/api/src/test/ownership.attack.test.ts` |
-| Request, response and event contracts | 27 | 27 | `packages/schema/src/contracts.attack.test.ts` |
-| Seeded properties: identity, matching and research | 20 | 20 | `apps/api/src/{identity,matching,research}/*.property.attack.test.ts` |
-| Rules specifications, nine slices | 27 | 27 | `features/*/attacks.feature`, bound by `apps/api/src/test/rules.attack.test.ts` |
+| Request and response contracts | 25 | 25 | `packages/schema/src/contracts.attack.test.ts` |
+| Seeded properties: identity and matching | 14 | 14 | `apps/api/src/{identity,matching}/*.property.attack.test.ts` |
+| Rules specifications, eight slices | 24 | 24 | `features/*/attacks.feature`, bound by `apps/api/src/test/rules.attack.test.ts` |
 | Native end-to-end | 3 | 3 | `apps/mobile/e2e/flows/signed-out-links.yaml`; the broader refusal inventory below reuses existing flows |
 
-The five new runner-bound piles contain **122 attacks and 122 controls**. Helper/parser tests are additional ordinary tests. Contract tests complement the existing `identity/oidc-broker.test.ts` and demo/mock-bank contract tests; this completion does not replace the separately maintained OIDC kit's cryptographic tests with mocks of those tests.
+The five new runner-bound piles contain **111 attacks and 111 controls**: the research piles' eleven left with research on 2026-11-16 (#208, ADR-071). Helper/parser tests are additional ordinary tests. Contract tests complement the existing `identity/oidc-broker.test.ts` and demo/mock-bank contract tests; this completion does not replace the separately maintained OIDC kit's cryptographic tests with mocks of those tests.
 
 Unit, contract, property, rules and route piles run through the existing package/Jest CI jobs. Script self-tests run in their existing CI jobs. Native flows keep ADR-020's existing scheduling: main, a PR with the `e2e` label, or manual dispatch. The final completion PR carries that label. Admin browser flows run through the existing admin E2E workflow. This is an additional regression net, not a new nightly-only suite.
 
@@ -66,7 +66,7 @@ The IDs below preserve the order of the four original findings comments: tools (
 
 ### CLI and local tools
 
-[Original findings](https://github.com/kuutti-ry/kuutti-app/issues/380#issuecomment-6847576395).
+[Original findings](https://github.com/kuutti-ry/kumpa-app/issues/380#issuecomment-6847576395).
 
 | ID | Finding | Disposition and evidence |
 |---|---|---|
@@ -93,7 +93,7 @@ The IDs below preserve the order of the four original findings comments: tools (
 
 ### Checks and translation tooling
 
-[Original findings](https://github.com/kuutti-ry/kuutti-app/issues/380#issuecomment-6847576840).
+[Original findings](https://github.com/kuutti-ry/kumpa-app/issues/380#issuecomment-6847576840).
 
 | ID | Finding | Disposition and evidence |
 |---|---|---|
@@ -129,7 +129,7 @@ The IDs below preserve the order of the four original findings comments: tools (
 
 ### Moderation panel
 
-[Original findings](https://github.com/kuutti-ry/kuutti-app/issues/380#issuecomment-6847577285).
+[Original findings](https://github.com/kuutti-ry/kumpa-app/issues/380#issuecomment-6847577285).
 
 | ID | Finding | Disposition and evidence |
 |---|---|---|
@@ -153,7 +153,7 @@ The IDs below preserve the order of the four original findings comments: tools (
 
 ### Nightly jobs
 
-[Original findings](https://github.com/kuutti-ry/kuutti-app/issues/380#issuecomment-6847577715).
+[Original findings](https://github.com/kuutti-ry/kumpa-app/issues/380#issuecomment-6847577715).
 
 | ID | Finding | Disposition and evidence |
 |---|---|---|
@@ -161,7 +161,7 @@ The IDs below preserve the order of the four original findings comments: tools (
 | 4-02 | Fifty photos it cannot finish block every newer one, for good. | **fixed.** The cursor advances past missing cards and failed checks, so they cannot starve newer photos. Two-night missing-card attack and tied-microsecond page regression; old implementation fails the former. |
 | 4-03 | One person whose suspension cannot be settled keeps everybody after them suspended past their day, every night. | **fixed.** Each account settles in its own transaction; failures are collected and thrown after every account has had its turn, preserving runner logging. Two-night injected settlement failure attack; old implementation causes named rule failure. |
 | 4-04 | The sweep of orphaned objects deletes any file under `media/<key>/` | **fixed.** Orphan sweep recognizes only thumb.webp, card.webp and full.webp; other shapes remain counted and warned about. Unknown original.webp attack; old implementation causes named rule failure. |
-| 4-05 | A research event can be kept 90 days and an hour, or two in winter. | **fixed.** Nightly partition pruning looks ahead to the next existing scheduled Finnish 04:00, removing a month before its oldest row exceeds the existing 90-day legal bound. The exact pruning primitive retains its boundary semantics. Spring clock-change attack, exact 90-day boundary attacks; old implementation causes named rule failure. |
+| 4-05 | A research event can be kept 90 days and an hour, or two in winter. | **fixed.** Nightly partition pruning looks ahead to the next existing scheduled Finnish 04:00, removing a month before its oldest row exceeds the existing 90-day legal bound. The exact pruning primitive retains its boundary semantics. Spring clock-change attack, exact 90-day boundary attacks; old implementation causes named rule failure. The partitions went with research on 2026-11-16 (#208, ADR-071). |
 | 4-06 | A photo check's note is pruned ten hours early across a leap day. | **fixed.** Photo-check notes use twelve calendar months in UTC instead of 365 fixed days. Leap-day attack plus exact calendar-year boundary regression; old implementation causes named rule failure. |
 | 4-07 | A job that never finishes stops every job after it. | **retained.** Nightly jobs remain sequential and awaited. A never-settling operation can hold later work; a Promise.race deadline cannot cancel its database/object writes and would overlap dependent jobs or later runs. The header now explicitly describes this limitation; operation-level cancellability is required before a safe deadline. Existing runner failure-continuation/order/timer tests retained; no invented timeout parameter. |
 

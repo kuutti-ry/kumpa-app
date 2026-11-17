@@ -68,21 +68,12 @@ const press = (element: ReturnType<typeof screen.getByRole>) =>
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
-/** A research yes from before #545, which no row says; the sensitive answers' wording newer than the app's. */
+/** No consent given, and the sensitive answers' wording newer than the app's. */
 const consentsAnswer = {
-  consents: [
-    {
-      kind: "research",
-      version: CONSENT_VERSIONS.research,
-      locale: "en",
-      givenAt: "2026-09-26T10:00:00.000Z",
-      withdrawnAt: null,
-    },
-  ],
+  consents: [],
   currentVersions: {
     terms: CONSENT_VERSIONS.terms,
     privacy: CONSENT_VERSIONS.privacy,
-    research: CONSENT_VERSIONS.research,
     special_category: "2099-01-newer-than-this-app",
   },
 };
@@ -157,7 +148,7 @@ describe("the settings screen", () => {
 
   it("lists the sections for a signed-out device, with no accessibility problems", async () => {
     await renderWithTheme(<SettingsScreen />);
-    const headings = ["Appearance and language", "About Kuutti"];
+    const headings = ["Appearance and language", "About Kumpa"];
     for (const name of headings) expect(screen.getByRole("heading", { name })).toBeTruthy();
     // A section with no row for a device without a person is not drawn (#511), the account's too (#581).
     for (const name of ["Notifications and contacts", "Privacy and security", "Account"]) {
@@ -220,7 +211,7 @@ describe("the settings screen", () => {
       "Support when it's hard",
       "Invitations",
       "Give feedback",
-      "About Kuutti",
+      "About Kumpa",
       "Version",
       "Terms of use",
       "Privacy",
@@ -332,8 +323,8 @@ describe("the settings screen", () => {
       ["A copy of your data", () => screen.queryByRole("button", { name: "Download my data" })],
       ["Invitations", () => screen.queryByRole("button", { name: "Create an invitation" })],
       ["Give feedback", () => screen.queryByRole("radio", { name: "A bug" })],
-      ["Terms of use", () => screen.queryByText(/^DRAFT: Kuutti is a free dating service/)],
-      ["Privacy", () => screen.queryByText(/^DRAFT: Kuutti stores your year and month/)],
+      ["Terms of use", () => screen.queryByText(/^Kumpa is a service of Kuutti ry/)],
+      ["Privacy", () => screen.queryByText(/^Kuutti ry is the controller of the personal data/)],
       ["Source code", () => screen.queryByText("https://github.com/kuutti-ry/kuutti-app")],
       ["Logging out", () => screen.queryByRole("button", { name: "Log out everywhere" })],
       ["Your account", () => screen.queryByRole("button", { name: "Delete my account" })],
@@ -587,35 +578,6 @@ describe("the settings screen", () => {
     expect(
       screen.getByRole("switch", { name: "Store my sensitive answers" }).props.accessibilityState,
     ).toMatchObject({ checked: false });
-  });
-
-  it("Settings has no research switch, whatever the account said before", async () => {
-    const nothingOfResearch = () => {
-      expect(JSON.stringify(screen.toJSON())).not.toMatch(/research/i);
-    };
-    await saveSession(tokens);
-    // The list's rows closed, then the one that holds a consent open: the account said yes
-    // before #545 in this answer, and in the next it never answered.
-    for (const consents of [consentsAnswer.consents, []]) {
-      const written: string[] = [];
-      globalThis.fetch = jest.fn(async (input: Request | string) => {
-        const request = input instanceof Request ? input : new Request(input);
-        const url = new URL(request.url);
-        if (request.method !== "GET") written.push(`${request.method} ${url.pathname}`);
-        if (url.pathname === "/consents") return json({ ...consentsAnswer, consents });
-        return json({ error: { code: "not_found", message: "no", requestId: "r" } }, 404);
-      }) as unknown as typeof fetch;
-      rememberOpenRow(null, null);
-      const view = await renderWithTheme(<SettingsScreen />);
-      await screen.findByRole("button", { name: "Your account" });
-      nothingOfResearch();
-      await press(row("Sensitive answers"));
-      await screen.findByRole("switch", { name: "Store my sensitive answers" });
-      nothingOfResearch();
-      // Reading the list gives nothing and withdraws nothing.
-      expect(written).toEqual([]);
-      await view.unmount();
-    }
   });
 
   it("says what the e-mail, the contacts, the notifications and the invitations hold, as their rows' values (#511)", async () => {
@@ -1005,7 +967,7 @@ describe("the lock's row (#418)", () => {
     await screen.findByRole("button", { name: "Your account" });
     await act(() => new Promise<void>((resolve) => setTimeout(resolve, 20)));
     expect(auth.authenticateAsync).toHaveBeenCalledTimes(1);
-    expect(screen.queryByText("Kuutti is locked")).toBeNull();
+    expect(screen.queryByText("Kumpa is locked")).toBeNull();
     expect(row("Lock").props.accessibilityValue).toEqual({ text: "On, closed" });
     expect(within(row("Lock")).getByText("On")).toBeTruthy();
   });

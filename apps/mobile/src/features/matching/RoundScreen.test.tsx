@@ -887,13 +887,13 @@ describe("the queue", () => {
   );
 
   it.each([
-    ["the API failed", () => refusal("internal", 500), "Kuutti's server had a problem."],
+    ["the API failed", () => refusal("internal", 500), "Kumpa's server had a problem."],
     [
       "the network",
       () => {
         throw new TypeError("Network request failed");
       },
-      "Kuutti could not be reached.",
+      "Kumpa could not be reached.",
     ],
   ])(
     "says why the queue did not load (%s), and reads it again on Try again",
@@ -1352,13 +1352,13 @@ describe("reading on past the last card (ADR-062 §1)", () => {
   });
 
   it.each([
-    ["the API failed", () => refusal("internal", 500), "Kuutti's server had a problem."],
+    ["the API failed", () => refusal("internal", 500), "Kumpa's server had a problem."],
     [
       "the network",
       () => {
         throw new TypeError("Network request failed");
       },
-      "Kuutti could not be reached.",
+      "Kumpa could not be reached.",
     ],
   ])(
     "says a read that failed (%s), asks again on Try again, and keeps Undo's card",
@@ -1399,7 +1399,7 @@ describe("reading on past the last card (ADR-062 §1)", () => {
   );
 
   it.each([
-    ["ios", ["Loading…"], ["Kuutti's server had a problem. Try again in a moment."]],
+    ["ios", ["Loading…"], ["Kumpa's server had a problem. Try again in a moment."]],
     ["android", [], []],
   ] as const)(
     "says a read that failed aloud on %s, where the button the focus was on has gone",
@@ -3478,5 +3478,334 @@ describe("a card opened from the Starred list (#575, ADR-064 §2)", () => {
     expect(
       screen.getByText("You have seen many profiles today. New ones come after midnight."),
     ).toBeTruthy();
+  });
+});
+
+// The designers' try (the tech screen's neubrutalism, outside production): a
+// match is a hello, MatchHello, with the same two ways on. Today's look keeps
+// "It's a match", which the tests above hold.
+describe("a match as a hello, in the designers' try", () => {
+  const OWN = "1b1c1c4e-9a8e-4a0b-9c3a-0c8d1e2f3a02";
+  const WAITING = "1b1c1c4e-9a8e-4a0b-9c3a-0c8d1e2f3a03";
+  const matchOn = (position: number) => (call: Call) =>
+    call.path === `/rounds/${DAY}/entries/${position}/decision`
+      ? json({
+          match: { conversationId: CONVERSATION },
+          fishToSend: true,
+          likesLeft: 10,
+          yourTurn: 0,
+        })
+      : undefined;
+  const hidden = { includeHiddenElements: true };
+  beforeEach(() => store.set("kuutti.preference.look", "neubrutalism"));
+
+  it("greets instead of naming a match, says what happened, and leads to the conversation", async () => {
+    const sent = api(matchOn(1));
+    await show();
+    await press("Like");
+    expect(heading("Well, hello!")).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "It's a match" })).toBeNull();
+    expect(screen.getByText("You would both like to hear more about each other.")).toBeTruthy();
+    expect(takenTo()).toEqual({ event: "focus", words: ["Well, hello!"] });
+    // The two photos are one image, named in words; what is inside it is not walked.
+    expect(screen.getByRole("image", { name: "You and Henna" })).toBeTruthy();
+    expect(screen.queryByText("Henna")).toBeNull();
+    expect(screen.getByText("Henna", hidden)).toBeTruthy();
+    // The reader's photos could not be read here: the frame keeps its fill, and nothing says so.
+    expect(screen.queryByLabelText("You", hidden)).toBeNull();
+    // The next card waits behind the hello, as behind a match.
+    expect(screen.queryByRole("heading", { name: "Katja, 32" })).toBeNull();
+    expect(sent.seen()).toEqual([1]);
+    expect(screen.queryByRole("button", { name: "Undo your last decision" })).toBeNull();
+    noProblems();
+
+    await press("Say hello");
+    expect(router.push).toHaveBeenCalledWith(`/chats/${CONVERSATION}`);
+  });
+
+  it("goes on with the queue from the hello", async () => {
+    const sent = api(matchOn(1));
+    await show();
+    await press("Like");
+    await press("Back to people");
+    expect(heading("Katja, 32")).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "Well, hello!" })).toBeNull();
+    expect(sent.seen()).toEqual([1, 2]);
+  });
+
+  it("greets after a fish that made a match, with that card's person", async () => {
+    api(matchOn(2));
+    await show();
+    await press("Pass");
+    await press("Send a fish");
+    expect(heading("Well, hello!")).toBeTruthy();
+    expect(screen.getByRole("image", { name: "You and Katja" })).toBeTruthy();
+  });
+
+  it("shows the other's photo from the phone's cache alone, and the reader's own first photo that others see", async () => {
+    const liked = entry(1, "Henna", "liked_you");
+    const photo = { id: PHOTO, blurhash: "LEHV6nWB2yk8pyo0adR*.7kCMdnj", width: 800, height: 1067 };
+    const mine = (id: string, state: string, position: number) => ({
+      id,
+      blurhash: "LEHV6nWB2yk8pyo0adR*.7kCMdnj",
+      width: 1600,
+      height: 2133,
+      state,
+      rejectionReason: null,
+      appealable: false,
+      position,
+      createdAt: "2026-10-01T10:00:00.000Z",
+    });
+    const sent = api(
+      (call) =>
+        matchOn(1)(call) ??
+        (call.path === "/photos"
+          ? json({
+              photos: [mine(WAITING, "pending", 0), mine(OWN, "approved", 1)],
+              maxPhotos: 6,
+              tips: [],
+              fishSpecies: null,
+            })
+          : call.path === `/photos/${OWN}/card`
+            ? json({
+                url: "https://media.kuutti.test/own.webp",
+                variant: "card",
+                expiresAt: "2026-10-20T09:15:00.000Z",
+              })
+            : undefined),
+      {
+        ...ROUND,
+        entries: [
+          { ...liked, card: { ...liked.card, photos: [photo] as ProfileCard["photos"] } },
+          entry(2, "Katja"),
+        ],
+      },
+    );
+    await show();
+    const before = sent.calls.filter((call) => call.path.startsWith("/photos/")).length;
+    await press("Like");
+    // Hers again from the cache, under the key the card painted it by: no URL is signed for it.
+    expect(screen.getByTestId(`cached-${PHOTO}`, hidden)).toBeTruthy();
+    await waitFor(() => expect(screen.getByLabelText("You", hidden)).toBeTruthy());
+    const asked = sent.calls.filter((call) => call.path.startsWith("/photos/")).slice(before);
+    // One URL, for the reader's approved photo: never for one still waiting for its check.
+    expect(asked.map((call) => call.path)).toEqual([`/photos/${OWN}/card`]);
+  });
+
+  const waiting = {
+    id: WAITING,
+    blurhash: "LEHV6nWB2yk8pyo0adR*.7kCMdnj",
+    width: 1600,
+    height: 2133,
+    state: "pending",
+    rejectionReason: null,
+    appealable: false,
+    position: 0,
+    createdAt: "2026-10-01T10:00:00.000Z",
+  };
+  const onlyWaiting = () => json({ photos: [waiting], maxPhotos: 6, tips: [], fishSpecies: null });
+
+  it("shows no photo of the reader's while none of theirs has passed the check, and asks for no URL", async () => {
+    const sent = api((call) => (call.path === "/photos" ? onlyWaiting() : matchOn(1)(call)));
+    await show();
+    await press("Like");
+    await settle();
+    expect(heading("Well, hello!")).toBeTruthy();
+    expect(screen.queryByLabelText("You", hidden)).toBeNull();
+    expect(sent.calls.filter((call) => call.path.startsWith("/photos/"))).toEqual([]);
+  });
+
+  it("lets the reader's photos arrive after the hello was left, and shows nothing of them", async () => {
+    let arrive = (_: Response) => undefined as undefined;
+    const held = new Promise<Response>((resolve) => {
+      arrive = resolve as typeof arrive;
+    });
+    const sent = api((call) => (call.path === "/photos" ? held : matchOn(1)(call)));
+    await show();
+    await press("Like");
+    await press("Back to people");
+    expect(heading("Katja, 32")).toBeTruthy();
+    await act(async () => {
+      arrive(onlyWaiting());
+    });
+    await settle();
+    expect(screen.queryByLabelText("You", hidden)).toBeNull();
+    expect(sent.calls.filter((call) => call.path.startsWith("/photos/"))).toEqual([]);
+  });
+
+  /** Every rotation drawn on the screen, as the views carry it now. */
+  const rotations = () => {
+    const found: string[] = [];
+    const walk = (node: unknown): void => {
+      if (Array.isArray(node)) {
+        node.forEach(walk);
+        return;
+      }
+      if (!node || typeof node !== "object") return;
+      const { props, children } = node as { props?: { style?: unknown }; children?: unknown };
+      const style = StyleSheet.flatten(props?.style as never) as
+        | { transform?: { rotate?: unknown }[] }
+        | undefined;
+      for (const part of style?.transform ?? []) {
+        if (typeof part.rotate === "string") found.push(part.rotate);
+      }
+      walk(children);
+    };
+    walk(screen.toJSON());
+    return found;
+  };
+
+  it("stands as it ends when reduce motion is on: the slab tilted, the two leaning in", async () => {
+    jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(true);
+    api(matchOn(1));
+    await show();
+    await press("Like");
+    expect(rotations()).toEqual(expect.arrayContaining(["-6deg", "-7deg", "6deg"]));
+    expect(rotations()).not.toContain("0deg");
+  });
+
+  it("begins with the two apart and upright when motion is allowed", async () => {
+    jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(false);
+    api(matchOn(1));
+    await show();
+    await press("Like");
+    // Within the first moments the two have not begun to lean: they wait 0.18 s.
+    expect(rotations().filter((rotation) => rotation === "0deg")).toHaveLength(2);
+    expect(rotations()).not.toContain("-7deg");
+  });
+
+  // Organic Pop's hello is MatchPop: the same words, image and ways on, on a
+  // soft shape instead of a slab.
+  describe("in the Organic Pop try", () => {
+    beforeEach(() => store.set("kuutti.preference.look", "organic"));
+
+    /** The width of every drawing, the hidden too: a shape is as wide as its words. */
+    const drawnWidths = () => {
+      const found: number[] = [];
+      const walk = (node: unknown): void => {
+        if (Array.isArray(node)) {
+          node.forEach(walk);
+          return;
+        }
+        if (!node || typeof node !== "object") return;
+        const { type, props, children } = node as {
+          type?: unknown;
+          props?: { width?: unknown };
+          children?: unknown;
+        };
+        if (type === "RNSVGSvgView" && typeof props?.width === "number") found.push(props.width);
+        walk(children);
+      };
+      walk(screen.toJSON());
+      return found;
+    };
+    /** The headline as wide as `width` points, as the layout measures it on a phone. */
+    const measure = (headline: string, width: number) =>
+      fireEvent(screen.getByRole("heading", { name: headline }), "layout", {
+        nativeEvent: { layout: { x: 0, y: 0, width, height: 80 } },
+      });
+
+    it("widens the shape under the words when they are wider than the room", async () => {
+      api(matchOn(1));
+      await show();
+      await press("Like");
+      expect(drawnWidths()).toContain(408);
+      await measure("Well, hello!", 300);
+      expect(drawnWidths()).toContain(408);
+      await measure("Well, hello!", 400);
+      expect(drawnWidths()).toContain(488);
+      expect(drawnWidths()).not.toContain(408);
+    });
+
+    it("greets with the same words and photos, and leads to the conversation", async () => {
+      api(matchOn(1));
+      await show();
+      await press("Like");
+      expect(heading("Well, hello!")).toBeTruthy();
+      expect(screen.queryByRole("heading", { name: "It's a match" })).toBeNull();
+      expect(screen.getByText("You would both like to hear more about each other.")).toBeTruthy();
+      expect(takenTo()).toEqual({ event: "focus", words: ["Well, hello!"] });
+      expect(screen.getByRole("image", { name: "You and Henna" })).toBeTruthy();
+      expect(screen.queryByText("Henna")).toBeNull();
+      noProblems();
+
+      await press("Say hello");
+      expect(router.push).toHaveBeenCalledWith(`/chats/${CONVERSATION}`);
+    });
+
+    it("leads on with the plain button in high contrast, where the accent is the background", async () => {
+      store.set("kuutti.preference.highContrast", "true");
+      api(matchOn(1));
+      await show();
+      await press("Like");
+      const way = String(screen.getByRole("button", { name: "Say hello" }).props.className).split(
+        " ",
+      );
+      expect(way).toContain("bg-primary");
+      expect(way).not.toContain("bg-accent");
+      noProblems();
+      await press("Say hello");
+      expect(router.push).toHaveBeenCalledWith(`/chats/${CONVERSATION}`);
+    });
+
+    it("leads on with Sini's pill of the accent colour outside high contrast", async () => {
+      api(matchOn(1));
+      await show();
+      await press("Like");
+      const way = String(screen.getByRole("button", { name: "Say hello" }).props.className).split(
+        " ",
+      );
+      expect(way).toContain("bg-accent");
+    });
+
+    it("goes on with the queue from the hello", async () => {
+      const sent = api(matchOn(1));
+      await show();
+      await press("Like");
+      await press("Back to people");
+      expect(heading("Katja, 32")).toBeTruthy();
+      expect(sent.seen()).toEqual([1, 2]);
+    });
+
+    it("stands as it ends when reduce motion is on: the shape upright", async () => {
+      jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(true);
+      api(matchOn(1));
+      await show();
+      await press("Like");
+      expect(rotations()).toContain("0deg");
+      expect(rotations()).not.toContain("-10deg");
+    });
+
+    it("begins with the shape turned when motion is allowed", async () => {
+      jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(false);
+      api(matchOn(1));
+      await show();
+      await press("Like");
+      expect(rotations()).toContain("-10deg");
+    });
+  });
+
+  // Glass's and Bold Contrast's hello is MatchPop too, on their own ground: a
+  // frosted pane on bubbles, a block of the accent on one of the flourish; the
+  // greeting in the colour its ground is paired with.
+  describe.each([
+    ["glass", "text-card-foreground"],
+    ["bold", "text-accent-foreground"],
+  ] as const)("in the %s try", (look, ink) => {
+    beforeEach(() => store.set("kuutti.preference.look", look));
+
+    it("greets with the same words and photos in its ground's ink, and leads to the conversation", async () => {
+      api(matchOn(1));
+      await show();
+      await press("Like");
+      expect(String(heading("Well, hello!").props.className).split(" ")).toContain(ink);
+      expect(screen.getByText("You would both like to hear more about each other.")).toBeTruthy();
+      expect(takenTo()).toEqual({ event: "focus", words: ["Well, hello!"] });
+      expect(screen.getByRole("image", { name: "You and Henna" })).toBeTruthy();
+      noProblems();
+
+      await press("Say hello");
+      expect(router.push).toHaveBeenCalledWith(`/chats/${CONVERSATION}`);
+    });
   });
 });

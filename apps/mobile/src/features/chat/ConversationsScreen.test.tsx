@@ -1,5 +1,5 @@
 import type { ConversationList, ConversationSummary } from "@kuutti/schema";
-import { act, fireEvent, screen, userEvent, within } from "@testing-library/react-native";
+import { act, fireEvent, screen, userEvent, waitFor, within } from "@testing-library/react-native";
 import { useLocales } from "expo-localization";
 import * as SecureStore from "expo-secure-store";
 import { AccessibilityInfo, AppState, PixelRatio, Platform, StyleSheet } from "react-native";
@@ -357,6 +357,24 @@ describe("the list of conversations", () => {
     await settle();
     expect(asked.length).toBe(4);
     expect(screen.getByRole("button", { name: /^Mikko/ })).toBeTruthy();
+  });
+});
+
+// Pressed, a row keeps its words' colour on a ground they are paired with:
+// today's --accent, or the ink's tint in a try style, whose --accent is loud.
+describe("a row pressed (#408)", () => {
+  it.each([
+    ["today", "active:bg-accent", "active:bg-foreground/10"],
+    ["bold", "active:bg-foreground/10", "active:bg-accent"],
+  ] as const)("fills in the %s style's way", async (look, fill, not) => {
+    if (look !== "today") store.set("kuutti.preference.look", look);
+    api(() => json(LIST));
+    await renderWithTheme(<ConversationsScreen />);
+    await screen.findByRole("heading", { name: "Your turn: 2" });
+    const classes = () =>
+      String(screen.getByRole("button", { name: /^Sanna/ }).props.className).split(" ");
+    await waitFor(() => expect(classes()).toContain(fill));
+    expect(classes()).not.toContain(not);
   });
 });
 

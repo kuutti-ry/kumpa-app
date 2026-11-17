@@ -3,6 +3,7 @@ import type { Gender, ProfileFields } from "@kuutti/schema";
 import { useState } from "react";
 import { ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Backdrop } from "@/components/backdrop";
 import { LoadFailedScreen, LoadingScreen } from "@/components/LoadFailed";
 import { Notice } from "@/components/Notice";
 import { ScreenHeader } from "@/components/ScreenHeader";
@@ -105,6 +106,7 @@ export function GenderScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-background">
+      <Backdrop />
       <ScreenHeader title={t("profile.gender.title")} backLabel={t("profile.section.back")} />
       <ScrollView contentContainerClassName="flex-grow gap-6 p-6">
         <Text>{t("profile.gender.explain")}</Text>

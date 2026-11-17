@@ -682,19 +682,18 @@ describe("GET /admin/accounts/{id}/sanctions: who did what, by their role now (#
     });
   });
 
-  test.for([["admin"], ["researcher"]] as const)(
-    "a moderator whose role is %s now is listed by it: the role now, not then",
-    async ([role], { ctx, api }) => {
-      const { staff, done, listed } = await story(ctx, api);
-      await ctx.client.query("UPDATE moderator_roles SET role = $2 WHERE identity_id = $1", [
-        staff.moderator.identityId,
-        role,
-      ]);
-      expect(await listed()).toEqual([
-        entry(done, { createdByRole: role, liftedByRole: "admin", reviewedByRole: "moderator" }),
-      ]);
-    },
-  );
+  test("a moderator who is an admin now is listed as one: the role now, not then", async ({
+    ctx,
+    api,
+  }) => {
+    const { staff, done, listed } = await story(ctx, api);
+    await ctx.client.query("UPDATE moderator_roles SET role = 'admin' WHERE identity_id = $1", [
+      staff.moderator.identityId,
+    ]);
+    expect(await listed()).toEqual([
+      entry(done, { createdByRole: "admin", liftedByRole: "admin", reviewedByRole: "moderator" }),
+    ]);
+  });
 
   test("a ban no person applied, as the demo's story writes it, lists no role until an admin lifts it", async ({
     ctx,
@@ -1213,21 +1212,6 @@ describe("the staff guard on the seven routes", () => {
     await refused(await review(api, {}, "not-a-uuid", {}, "bans"), 401, "unauthenticated");
   });
 
-  test("a researcher is refused all seven with admin_forbidden, and nothing is written", async ({
-    ctx,
-    api,
-  }) => {
-    const { person, routes } = await sevenRoutes(ctx, api);
-    const researcher = await staffSession(ctx.client, "researcher");
-    const before = await footprint(ctx, person.accountId);
-    for (const [route, call] of routes) {
-      const response = await call(researcher.headers);
-      expect(response.status, route).toBe(403);
-      expect(await errorCode(response), route).toBe("admin_forbidden");
-    }
-    expect(await footprint(ctx, person.accountId)).toEqual(before);
-  });
-
   test("a moderator is refused the three ban routes with admin_forbidden, and nothing is written", async ({
     ctx,
     api,
@@ -1267,7 +1251,7 @@ describe("the staff guard on the seven routes", () => {
 
 describe("a member of staff as the target or the actor's own sanction (ADR-024 §3)", () => {
   /** A live account on a member of staff's identity, as a person of the panel's own would have. */
-  async function staffAccount(ctx: TestContext, role: "moderator" | "admin" | "researcher") {
+  async function staffAccount(ctx: TestContext, role: "moderator" | "admin") {
     const staff = await staffSession(ctx.client, role);
     const { rows } = await ctx.client.query<{ id: string }>(
       "INSERT INTO account (identity_id, state, birth_year, birth_month) VALUES ($1, 'active', 1990, 6) RETURNING id",

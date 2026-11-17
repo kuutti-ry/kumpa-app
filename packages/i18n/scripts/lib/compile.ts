@@ -45,16 +45,25 @@ function keysModule(messages: Messages): string {
 function consentModule(messages: Messages): string {
   const versions = new Map<string, Set<string>>();
   const locales = new Map<string, Set<string>>();
-  const finnish = new Map<string, string[]>();
+  const wordings = new Map<string, string[]>();
   for (const [key, message] of Object.entries(messages)) {
     const kind = key.split(".")[1];
     if (!key.startsWith("legal.") || !message.consent_version || !kind) continue;
     versions.set(kind, (versions.get(kind) ?? new Set()).add(message.consent_version));
     const present = locales.get(kind) ?? new Set<string>();
-    for (const locale of ["fi", "sv", "en"] as const) if (message[locale]) present.add(locale);
+    const texts = wordings.get(kind) ?? [];
+    for (const locale of ["fi", "sv", "en"] as const) {
+      const text = message[locale];
+      if (!text) continue;
+      present.add(locale);
+      // Every language a person can accept the wording in (#208): the English
+      // binds and the Finnish is what a Finnish phone shows, so neither moves
+      // without the version. Text by text, so the hash names the texts and not
+      // their order in the file.
+      texts.push(`${key}.${locale}=${text}`);
+    }
     locales.set(kind, present);
-    // The binding Finnish wording, key by key, so the hash names the text and not its order in the file.
-    finnish.set(kind, [...(finnish.get(kind) ?? []), `${key}=${message.fi ?? ""}`].sort());
+    wordings.set(kind, texts.sort());
   }
   const kinds = [...versions.keys()].sort((a, b) => a.localeCompare(b));
   const versionLines = kinds
@@ -79,7 +88,7 @@ function consentModule(messages: Messages): string {
       (kind) =>
         `  ${JSON.stringify(kind)}: ${JSON.stringify(
           createHash("sha256")
-            .update((finnish.get(kind) ?? []).join("\n"))
+            .update((wordings.get(kind) ?? []).join("\n"))
             .digest("hex")
             .slice(0, 16),
         )},`,
@@ -90,7 +99,7 @@ function consentModule(messages: Messages): string {
     `export const CONSENT_VERSIONS: Readonly<Record<string, string>> = {\n${versionLines}\n};\n\n` +
     `/** The languages each wording exists in; a consent names one of these as the language it was shown in. */\n` +
     `export const CONSENT_TEXT_LOCALES: Readonly<Record<string, readonly string[]>> = {\n${localeLines}\n};\n\n` +
-    `/** A fingerprint of the binding Finnish wording per kind: a golden test ties it to the version. */\n` +
+    `/** A fingerprint of the wording per kind, in every language it exists in: a golden test ties it to the version. */\n` +
     `export const CONSENT_TEXT_HASHES: Readonly<Record<string, string>> = {\n${hashLines}\n};\n`
   );
 }

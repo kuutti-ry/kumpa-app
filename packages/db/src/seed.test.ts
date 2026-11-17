@@ -10,7 +10,7 @@ import { withTemporaryDatabase } from "./test/temporary-database.ts";
 const MIGRATIONS = resolve(import.meta.dirname, "..", "drizzle");
 
 describe("seed", () => {
-  it("is idempotent and writes matching_config's version 1, and no later version but the switch's", async () => {
+  it("is idempotent and writes matching_config's version 1, and no later version but the switch's and the migrations'", async () => {
     await withTemporaryDatabase(async (url) => {
       const pool = createPool({ connectionString: url, max: 2 });
       try {
@@ -122,6 +122,8 @@ describe("seed", () => {
         });
         expect(byKey).toEqual(MATCHING_CONFIG_V1);
         expect(config.rows.filter((r) => r.version > 1)).toEqual([
+          // Migration 0011's (ADR-033 History), whatever the seed's version 1 says.
+          { key: "auto_shadow_ban_review_hours", value: 168, version: 2 },
           { key: "matching_open", value: true, version: 2 },
         ]);
       } finally {
@@ -164,7 +166,7 @@ describe("seed", () => {
         // A reason is the panel's: neither the seed's rows nor the migrations' carry one.
         expect(await withReason()).toEqual([]);
 
-        // Two changes from the panel, then a preview's next boot seeds again.
+        // Two changes from the panel, then the seed runs again.
         await pool.query(
           `INSERT INTO matching_config (version, key, value, valid_from, created_by, reason) VALUES
              (2, 'deal_breakers_max', '5'::jsonb, '2026-10-16T09:00:00Z', 'admin', 'Fewer at first'),
@@ -209,7 +211,7 @@ describe("seed", () => {
         await seed(pool);
         expect(await versions()).toEqual([born, opened]);
 
-        // An admin closes it; a preview's next boot seeds again.
+        // An admin closes it; the seed runs again.
         const closed = { version: 3, value: false, created_by: "an admin" };
         await pool.query(
           `INSERT INTO matching_config (version, key, value, created_by)

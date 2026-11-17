@@ -220,7 +220,6 @@ describe("the profile field registry (ADR-019)", () => {
         role: "info",
         preferenceAbout: "none",
         specialCategory: false,
-        research: false,
         alone: [],
       });
       expect(CARD_FIELD_KEYS, key).toContain(key);

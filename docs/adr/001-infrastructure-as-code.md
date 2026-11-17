@@ -1,6 +1,6 @@
 # ADR-001: Infrastructure as code with OpenTofu
 
-- Status: proposed (built in `infra/` and applied to staging, and to production on 2026-10-24, ADR-049; accepting it is the maintainer's), amended 2026-09-13 (#6: admin access through IAM Identity Center), 2026-09-17 and 2026-09-18 (the domain; the placeholder page), 2026-09-28 (the site moved to a repository of its own) and 2026-10-03 (#110: the organisation renamed)
+- Status: proposed (built in `infra/` and applied to staging, and to production on 2026-10-24, ADR-049; accepting it is the maintainer's), amended 2026-09-13 (#6: admin access through IAM Identity Center), 2026-09-17 and 2026-09-18 (the domain; the placeholder page), 2026-09-28 (the site moved to a repository of its own) 2026-10-03 (#110: the organisation renamed) and 2026-11-16 (#697: the second domain `kumpa.fi`, its zone adopted; see History)
 - Date: 2026-09-12
 - Follows: TD-4 (single-vendor AWS, eu-central-1), TD-19 (RDS, SSM, instance role)
 
@@ -66,6 +66,8 @@ Added 2026-09-18. The placeholder page for `kuutti.app` (`site/`, no build step)
 
 Retired 2026-09-28: the site has a repository of its own, `kuutti-ry/kuutti-app-site`, and the Amplify app serving `kuutti.app` is connected to that one under the same exception (`infra/README.md`, "The website"); `site/` and `amplify.yml` are gone from this repository.
 
+Added 2026-11-16 (#697). A second domain, `kumpa.fi`, is registered through Route 53 in this account in the same way, and the bootstrap adopts the zone its registration created, also with an import block. That makes it the second sanctioned import of a zone. The same site is served there by the Amplify app under the same exception, and Amplify's records in that zone stay unmanaged. The domain is a secondary domain of the association's Google Workspace. On 2026-11-16 its MX, Google's verification and its SPF were made with the CLI for Gmail's activation and then imported, as kuutti.app's Google records were by #450 (ADR-043 §5). From then on they change in code, and a record that comes from outside, like Google's DKIM key, is declared and never clicked. The zone's DMARC and CAA were declared in code from the start.
+
 ### GitHub OIDC trust, specific to this repository
 
 `kuutti-app` was created after 15 July 2026, so it uses GitHub's immutable subject claims. The subject is `repo:kuutti-ry@<owner_id>/kuutti-app@<repo_id>:...`, not the name-based form shown in most documentation and examples. Trust policies therefore condition on the `repository_id` and `repository_owner_id` claims, which are stable and survive renames, rather than pattern-matching the name inside `sub`. A policy copied from an older example will fail to assume with an unhelpful error.
@@ -91,4 +93,5 @@ Added 2026-10-03. The organisation was renamed from `kuutti-fi` to `kuutti-ry` o
 
 ## History
 
+- 2026-11-16 (#697): the zone of `kumpa.fi` and its Google Workspace records adopted in `infra/bootstrap/dns.tf` (The domain, the paragraph of that day). The records were made with the CLI that morning, ahead of the code, for Gmail's activation.
 - 2026-10-24 (#397): the layout's `email/` module was never built. Mail's SES identity belongs to the domain, so it went to `bootstrap/mail.tf` with #385 (ADR-043 §5). The modules that came later, `admin` (ADR-025) and `research` (ADR-029), and the deployment they make are in `infra/README.md`'s layout and in `docs/architecture/`.

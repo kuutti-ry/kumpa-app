@@ -3,8 +3,8 @@
 # person back to whom they seek, which waits for the consent again on the same
 # screen. The age window is no sensitive answer and stays, so the ages are not
 # asked again (ADR-010 §13, #219). Noa seeks everyone; she answers the same
-# again, which is no change (#147). Research is not offered (#545). The flow
-# ends where it began: consent given, everyone sought, the consent's row closed.
+# again, which is no change (#147). The flow ends where it began: consent
+# given, everyone sought, the consent's row closed.
 appId: fi.kuutti.app
 name: Withdrawing the sensitive-answers consent asks whom one seeks again with the consent, and keeps the age window
 ---
@@ -54,7 +54,7 @@ name: Withdrawing the sensitive-answers consent asks whom one seeks again with t
 - assertVisible: "✓ Men|✓ Miehiä|✓ Män"
 - assertVisible: "✓ Non-binary people|✓ Muunsukupuolisia|✓ Icke-binära personer"
 - scrollUntilVisible:
-    element: "I consent to Kuutti storing whom I seek|Annan Kuutille luvan tallentaa, kenen seuraa etsin|Jag samtycker till att Kuutti lagrar vem jag söker"
+    element: "I consent to Kuutti ry storing whom I seek|Annan Kuutti ry:lle luvan tallentaa, kenen seuraa etsin|Jag samtycker till att Kuutti ry lagrar vem jag söker"
     direction: DOWN
     centerElement: true
     timeout: 60000
@@ -62,8 +62,8 @@ name: Withdrawing the sensitive-answers consent asks whom one seeks again with t
     text: "Continue|Jatka|Fortsätt"
     enabled: false
 - tapOn:
-    text: "0|(I consent to Kuutti storing whom I seek|Annan Kuutille luvan tallentaa, kenen seuraa etsin|Jag samtycker till att Kuutti lagrar vem jag söker), off"
-    rightOf: "I consent to Kuutti storing whom I seek|Annan Kuutille luvan tallentaa, kenen seuraa etsin|Jag samtycker till att Kuutti lagrar vem jag söker"
+    text: "0|(I consent to Kuutti ry storing whom I seek|Annan Kuutti ry:lle luvan tallentaa, kenen seuraa etsin|Jag samtycker till att Kuutti ry lagrar vem jag söker), off"
+    rightOf: "I consent to Kuutti ry storing whom I seek|Annan Kuutti ry:lle luvan tallentaa, kenen seuraa etsin|Jag samtycker till att Kuutti ry lagrar vem jag söker"
 - extendedWaitUntil:
     visible:
       text: "Continue|Jatka|Fortsätt"

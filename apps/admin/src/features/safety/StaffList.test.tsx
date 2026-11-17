@@ -14,7 +14,7 @@ import { StaffList } from "./StaffList.tsx";
 
 const ADMIN = "3c9d0f5e-1a2b-4c3d-8e9f-0a1b2c3d4e5f";
 const MODERATOR = "7a2d2d5f-0b9f-4b1c-8d4b-1d9e2f3a4b5c";
-const RESEARCHER = "9e8d7c6b-5a49-4382-9716-05f4e3d2c1b0";
+const SECOND_ADMIN = "9e8d7c6b-5a49-4382-9716-05f4e3d2c1b0";
 
 const member = (identityId: string, extra: Record<string, unknown> = {}) => ({
   identityId,
@@ -105,7 +105,7 @@ describe("the staff list", () => {
           lastSignInAt: "2026-10-15T07:30:00.000Z",
         }),
         member(MODERATOR, { grantedBy: ADMIN }),
-        member(RESEARCHER, { role: "researcher", grantedAt: "2026-10-01T12:00:00.000Z" }),
+        member(SECOND_ADMIN, { role: "admin", grantedAt: "2026-10-01T12:00:00.000Z" }),
       ),
     ]);
     show();
@@ -131,8 +131,8 @@ describe("the staff list", () => {
         "Never",
       ],
       [
-        RESEARCHER,
-        "researcher",
+        SECOND_ADMIN,
+        "admin",
         formatDateTime("en", new Date("2026-10-01T12:00:00.000Z")),
         "maintainer",
         "Never",

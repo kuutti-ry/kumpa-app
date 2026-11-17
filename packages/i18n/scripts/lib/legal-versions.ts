@@ -48,14 +48,19 @@ export function parsePublished(text: string): Published {
 
 /**
  * The kinds whose text on the site is this app's own wording, verbatim
- * (kuutti-app-site src/content/consents): the research opt-in and the
- * sensitive answers have no longer text than legal.<kind>.title and summary.
+ * (kumpa-app-site src/content/consents): the sensitive answers have no
+ * longer text than legal.<kind>.title and summary.
+ * The site says which language's wording counts, and its fingerprint is of
+ * that one.
  */
-const VERBATIM_KINDS: readonly string[] = ["research", "special_category"];
+const VERBATIM_KINDS: readonly string[] = ["special_category"];
+
+/** The app's texts by language, key by key: the generated catalogues the legal texts are written in. */
+export type LegalTexts = Readonly<Record<string, Readonly<Record<string, string>>>>;
 
 /**
  * The site's fingerprint of a consent's wording (`pinnedText` and
- * `fingerprint` in kuutti-app-site src/lib/consent.ts): the first 16 hex
+ * `fingerprint` in kumpa-app-site src/lib/consent.ts): the first 16 hex
  * digits of the SHA-256 of `# <heading>`, a blank line and the body, with LF
  * line ends and no blank edges. Not CONSENT_TEXT_HASHES, which hashes the
  * keys too: the two values are not comparable.
@@ -106,16 +111,17 @@ export async function fetchPublished(
 /**
  * The app's versions against the site's, kind by kind: the same version, the
  * app's link to it (`legalPageUrl`) the address the site publishes, and for
- * the research opt-in and the sensitive answers, whose text on the site is
- * this app's Finnish legal.<kind>.title and summary, the same fingerprint, so
- * the two copies cannot part under one version. The site leads, since its
- * Finnish text is the one that binds: a new version is published there
- * first, and this fails until the app carries it too.
+ * the sensitive answers, whose text on the site is
+ * this app's legal.<kind>.title and summary, the same fingerprint in the
+ * language the site says counts, so the two copies cannot part under one
+ * version. A language the app has no such text in is a problem too, never a
+ * pass. The site leads, since its text is the one that binds: a new version
+ * is published there first, and this fails until the app carries it too.
  */
 export function legalVersionProblems(
   app: Readonly<Record<string, string>>,
   published: Published,
-  finnish: Readonly<Record<string, string>>,
+  texts: LegalTexts,
 ): string[] {
   const problems: string[] = [];
   if (Object.keys(app).length === 0 && Object.keys(published).length === 0) {
@@ -140,16 +146,23 @@ export function legalVersionProblems(
           `${kind}: the app links to ${legalPageUrl(kind, version)}, the site publishes the text at ${site.url}`,
         );
       }
-      const ours = siteFingerprint(
-        finnish[`legal.${kind}.title`] ?? "",
-        finnish[`legal.${kind}.summary`] ?? "",
-      );
-      if (VERBATIM_KINDS.includes(kind) && (site.language !== "fi" || site.hash !== ours)) {
-        problems.push(
-          `${kind}: the site's text of ${version} (${site.language}, ${site.hash}) is not this app's ` +
-            `Finnish legal.${kind}.title and summary (fi, ${ours}). The site carries this wording ` +
-            `as the app has it, so one of the two changed without the other: one version, one text`,
-        );
+      if (VERBATIM_KINDS.includes(kind)) {
+        const title = texts[site.language]?.[`legal.${kind}.title`];
+        const summary = texts[site.language]?.[`legal.${kind}.summary`];
+        if (typeof title !== "string" || typeof summary !== "string") {
+          problems.push(
+            `${kind}: the site's text of ${version} is in "${site.language}" (${site.hash}), and this ` +
+              `app has no legal.${kind}.title and summary in that language. The site carries this ` +
+              `wording as the app has it: one version, one text`,
+          );
+        } else if (siteFingerprint(title, summary) !== site.hash) {
+          problems.push(
+            `${kind}: the site's text of ${version} (${site.language}, ${site.hash}) is not this app's ` +
+              `legal.${kind}.title and summary in that language (${siteFingerprint(title, summary)}). ` +
+              `The site carries this wording as the app has it, so one of the two changed without ` +
+              `the other: one version, one text`,
+          );
+        }
       }
     }
   }

@@ -1,7 +1,6 @@
 import { createPool, migrate, withTemporaryDatabase } from "@kuutti/db";
 import { GateResponse, REPORT_NOTE_MAX } from "@kuutti/schema";
 import { describe, expect, it } from "vitest";
-import { CURRENT_CONSENT_VERSIONS } from "../identity/index.ts";
 import { dayWindow } from "../media/index.ts";
 import {
   openMatchingHere,
@@ -165,23 +164,10 @@ describe("a report from a card that points at one photo (#476)", () => {
 });
 
 describe("what a report tells, and to whom", () => {
-  test("The note reaches no log line, no error detail and no event", async ({ ctx }) => {
+  test("The note reaches no log line and no error detail", async ({ ctx }) => {
     await withMatchingConfig(ctx.client, { reports_per_day: 1 });
     const { viewer, subjects } = await viewerOf(ctx, 2);
     const [b, c] = subjects as [string, string];
-    // With the research consent, so that an event would be recorded if one were sent.
-    const consent = await ctx.app.request("/consents", {
-      method: "POST",
-      headers: json(viewer.headers),
-      body: JSON.stringify({
-        kind: "research",
-        version: CURRENT_CONSENT_VERSIONS.research,
-        locale: "fi",
-      }),
-    });
-    expect(consent.status).toBe(200);
-    const events = await count(ctx, "SELECT count(*) AS n FROM events");
-
     // Filed; refused for its length; refused by the day's cap.
     expect(
       (await report(ctx, viewer.headers, { accountId: b, reason: "harassment", note: NOTE }))
@@ -202,7 +188,6 @@ describe("what a report tells, and to whom", () => {
     expect(lines).not.toContain(b);
     expect(lines).not.toContain(c);
     expect(lines).not.toContain("harassment");
-    expect(await count(ctx, "SELECT count(*) AS n FROM events")).toBe(events);
     // The note is the moderators' to read, and it is stored as written.
     expect((await reportsOf(ctx, viewer.accountId)).map((row) => row.note)).toEqual([NOTE]);
   });

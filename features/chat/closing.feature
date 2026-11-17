@@ -36,15 +36,15 @@ Feature: Ending a conversation
     When "A" ends theirs and "C" blocks "D" from theirs
     Then both shares are ended as by a close
 
-  Scenario: An unmatch is a research event for the other person, and a block is none
-    Given "A" and "B" gave the research consent, in two conversations
-    When "A" ends one and blocks "B" from the other
-    Then "B" has one conversation_closed event, how unmatch, and nobody has another
+  Scenario: An unmatch where a block already stands is written as the block's, on the blocker's side
+    Given "C" blocked "A" before any close of their conversation was written
+    When "A" ends it
+    Then the conversation is closed as the block's, on "C"'s side
 
   Scenario: Ending a conversation that has ended answers the same and changes nothing
     Given "B" ended the conversation with "A", "C" blocked "A" from theirs, and "D" was banned
     When "A" ends each of the three
-    Then each answer is 204, each close stays as it was, and no research event more is written
+    Then each answer is 204 and each close stays as it was
 
   Scenario: The report window in the detail runs while the conversation is open or archived, and to the millisecond after a close
     Given report_after_close_days is thirty, and "A" has an open, an archived and an ended conversation with "B"

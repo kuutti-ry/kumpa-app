@@ -7,6 +7,7 @@ import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
 import { cn } from "@/lib/utils";
 import { useHapticTap } from "@/theme/haptics";
+import { useLookTraits } from "@/theme/ThemeProvider";
 
 /**
  * The top of a screen that is not home: the way back and the screen's title,
@@ -44,10 +45,14 @@ export function ScreenHeader({
 }) {
   const tap = useHapticTap();
   const router = useRouter();
+  // On a style's backdrop (the designers' try) the header lets it through, a
+  // fainter line under it.
+  const open = useLookTraits().backdrop !== "none";
   return (
     <View
       className={cn(
-        "flex-row items-center gap-2 border-b border-border bg-background px-6 py-2",
+        "flex-row items-center gap-2 border-b px-6 py-2",
+        open ? "border-border/50 bg-transparent" : "border-border bg-background",
         className,
       )}
     >

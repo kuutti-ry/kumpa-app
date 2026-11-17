@@ -15,7 +15,7 @@ import { createRandom } from "./rng.ts";
  * file whose checksum differs, and the loaders push every picture through
  * the real upload pipeline (rule 4).
  */
-export const PHOTOS_REPO = "kuutti-ry/kuutti-app-demo-photos";
+export const PHOTOS_REPO = "kuutti-ry/kumpa-app-demo-photos";
 export const PHOTOS_RELEASE = "v4";
 
 /** `persona:<key>` the persona's own set, `cast:<key>` the set of somebody nobody signs in as (#560), `pool` a face of the population, `negative:<name>` a picture the check refuses. */

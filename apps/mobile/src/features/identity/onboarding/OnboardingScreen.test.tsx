@@ -4,7 +4,7 @@ import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
 import * as ImagePicker from "expo-image-picker";
 import { useLocales } from "expo-localization";
 import type * as React from "react";
-import { AccessibilityInfo, PixelRatio, Platform } from "react-native";
+import { AccessibilityInfo, PixelRatio, Platform, StyleSheet } from "react-native";
 import { saveSession } from "@/lib/session";
 import { a11yProblems, type HostNode, pressables } from "@/test/a11y";
 import { FAILED_TO_LOAD } from "@/test/failed";
@@ -57,7 +57,6 @@ const versionOf = (kind: string): string => {
 };
 const TERMS = versionOf("terms");
 const PRIVACY = versionOf("privacy");
-const RESEARCH = versionOf("research");
 const SPECIAL = versionOf("special_category");
 /** The answers of the fake home route, by code: an area kept, and one too small to keep. */
 const HOMES: Readonly<Record<string, HomeSummary>> = {
@@ -157,7 +156,6 @@ function fakeApi(
       // A ready line counts like a bio (#239), as the API's completeness has it.
       ...(bio.length >= 50 || server.profile?.bioPreset || prompts >= 2 ? [] : ["prompts_or_bio"]),
     ];
-    const research = server.consents.find((c) => c.kind === "research" && !c.withdrawnAt);
     return {
       state: missing.some((step) => ACTIVATION.includes(step)) ? "registered" : "active",
       age: options.age ?? 36,
@@ -168,12 +166,10 @@ function fakeApi(
         terms: has("terms", TERMS) ? TERMS : null,
         privacy: has("privacy", PRIVACY) ? PRIVACY : null,
         specialCategory: has("special_category", SPECIAL) ? SPECIAL : null,
-        research: research ? { version: RESEARCH, givenAt: "2026-09-26T10:00:00.000Z" } : null,
       },
       currentVersions: {
         terms: current(TERMS),
         privacy: current(PRIVACY),
-        research: current(RESEARCH),
         special_category: SPECIAL,
       },
       nextChange: { gender: server.genderFrom },
@@ -332,8 +328,8 @@ const row = (name: string) =>
 const checked = (name: string) => row(name).props.accessibilityState?.checked;
 const consented = (kind: string) => ({
   kind,
-  version: { terms: TERMS, privacy: PRIVACY, research: RESEARCH, special_category: SPECIAL }[
-    kind as "terms" | "privacy" | "research" | "special_category"
+  version: { terms: TERMS, privacy: PRIVACY, special_category: SPECIAL }[
+    kind as "terms" | "privacy" | "special_category"
   ],
   locale: "en",
 });
@@ -392,9 +388,9 @@ describe("OnboardingScreen", () => {
     ).toBe(true);
     expect(screen.getByText(/special categories of personal data/)).toBeTruthy();
     expect(
-      screen.getByRole("link", { name: `Read the full text on kuutti.app (version ${SPECIAL})` }),
+      screen.getByRole("link", { name: `Read the full text on the website (version ${SPECIAL})` }),
     ).toBeTruthy();
-    await press(screen.getByLabelText("I consent to Kuutti storing whom I seek"));
+    await press(screen.getByLabelText("I consent to Kuutti ry storing whom I seek"));
     await flush();
     expect(server.consents.at(-1)).toEqual(consented("special_category"));
     await press(screen.getByRole("button", { name: "Continue" }));
@@ -454,7 +450,6 @@ describe("OnboardingScreen", () => {
     await press(screen.getByRole("button", { name: "Save and continue" }));
     await flush();
     await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/"));
-    expect(screen.queryByText("Help us learn how matching works")).toBeNull();
     expect(server.consents.map((c) => c.kind)).toEqual(["terms", "privacy", "special_category"]);
     expect(calls.filter((c) => c.method !== "GET").map((c) => c.path)).toEqual([
       "/profile",
@@ -768,21 +763,21 @@ describe("OnboardingScreen", () => {
         "home",
         "Step 6 of 8",
         "Where do you live?",
-        "Your postal code tells Kuutti how far people are. Others see a town or your area by name, never the digits.",
+        "Your postal code tells Kumpa how far people are. Others see a town or your area by name, never the digits.",
       ],
       [
         "fi-FI",
         "home",
         "Vaihe 6 / 8",
         "Missä asut?",
-        "Postinumerosi kertoo Kuutille, kuinka kaukana ihmiset ovat. Muut näkevät kaupungin tai alueesi nimen, eivät koskaan numeroita.",
+        "Postinumerostasi Kumpa tietää, kuinka kaukana ihmiset ovat. Muut näkevät kaupungin tai alueesi nimen, eivät koskaan numeroita.",
       ],
       [
         "sv-FI",
         "home",
         "Steg 6 av 8",
         "Var bor du?",
-        "Ditt postnummer berättar för Kuutti hur långt bort folk är. Andra ser en stad eller ditt område med namn, aldrig siffrorna.",
+        "Ditt postnummer berättar för Kumpa hur långt bort folk är. Andra ser en stad eller ditt område med namn, aldrig siffrorna.",
       ],
       [
         "en-US",
@@ -1004,7 +999,7 @@ describe("OnboardingScreen", () => {
       await flush();
       expect(screen.getByText("Two photos of you")).toBeTruthy();
       expect(
-        screen.getByText("Not accepted. This photo does not fit Kuutti; try another one."),
+        screen.getByText("Not accepted. This photo does not fit Kumpa; try another one."),
       ).toBeTruthy();
       expect(readOnly()).toBe(true);
       await addPhoto(server);
@@ -1303,7 +1298,7 @@ describe("OnboardingScreen", () => {
     await show(<OnboardingScreen />);
     await waitFor(() => expect(screen.getByText("Whom are you looking for?")).toBeTruthy());
     await press(row("Anyone"));
-    await press(screen.getByLabelText("I consent to Kuutti storing whom I seek"));
+    await press(screen.getByLabelText("I consent to Kuutti ry storing whom I seek"));
     await press(screen.getByRole("button", { name: "Continue" }));
     await waitFor(() => expect(screen.getByText("Two photos of you")).toBeTruthy());
     expect(screen.queryByText("What ages?")).toBeNull();
@@ -1327,19 +1322,18 @@ describe("OnboardingScreen", () => {
     ]);
     expect(screen.getByText("Terms of use")).toBeTruthy();
     expect(screen.getByText("Privacy")).toBeTruthy();
-    // English is a translation: the Finnish text is the binding one.
-    expect(screen.getByText(/The Finnish text is the one that counts/)).toBeTruthy();
+    // English is the binding text (#208): nothing calls it a translation.
+    expect(screen.queryByText(/is the one that counts/)).toBeNull();
     // Each summary's version links to the full text on the website (#208).
     for (const version of new Set([TERMS, PRIVACY])) {
       expect(
         screen.getAllByRole("link", {
-          name: `Read the full text on kuutti.app (version ${version})`,
+          name: `Read the full text on the website (version ${version})`,
         }),
       ).toHaveLength([TERMS, PRIVACY].filter((v) => v === version).length);
     }
     // A step outside the count: nothing personal is numbered before the name.
     expect(screen.queryByText(/^Step \d+ of \d+$/)).toBeNull();
-    expect(screen.queryByText("Help us learn how matching works")).toBeNull();
     checkA11y();
     await press(screen.getByRole("button", { name: "I'm in, and I accept both" }));
     await flush();
@@ -1360,13 +1354,13 @@ describe("OnboardingScreen", () => {
     });
   });
 
-  it("gives the welcome step's consents in Finnish on a Finnish phone, with no line about a binding text", async () => {
+  it("gives the welcome step's consents in Finnish on a Finnish phone, under the line that the English text binds", async () => {
     (useLocales as jest.Mock).mockReturnValue([{ languageTag: "fi-FI" }]);
     try {
       const { server } = fakeApi();
       await show(<OnboardingScreen />);
       await waitFor(() => expect(screen.getByText("Näin täällä toimitaan")).toBeTruthy());
-      expect(screen.queryByText(/Suomenkielinen teksti on sitova/)).toBeNull();
+      expect(screen.getByText("Englanninkielinen teksti on sitova; tämä on käännös.")).toBeTruthy();
       await press(screen.getByRole("button", { name: "Olen mukana ja hyväksyn molemmat" }));
       await flush();
       expect(server.consents.map((c) => [c.kind, c.locale])).toEqual([
@@ -1379,7 +1373,7 @@ describe("OnboardingScreen", () => {
     }
   });
 
-  it("asks somebody who chose Stadi for the sensitive answers' consent as Finnish: no line about a binding text, and fi on the record (#521)", async () => {
+  it("asks somebody who chose Stadi for the sensitive answers' consent as Finnish: the binding line in Finnish, and fi on the record (#521)", async () => {
     store.set("kuutti.preference.locale", "fi-x-stadi");
     try {
       const { server } = fakeApi();
@@ -1389,14 +1383,51 @@ describe("OnboardingScreen", () => {
       await show(<OnboardingScreen />);
       await waitFor(() => expect(screen.getByText("Ketä etsit?")).toBeTruthy());
       expect(screen.getByText("Arkaluonteiset tiedot")).toBeTruthy();
-      expect(screen.queryByText(/Suomenkielinen teksti on sitova/)).toBeNull();
-      await press(screen.getByLabelText("Annan Kuutille luvan tallentaa, kenen seuraa etsin"));
+      expect(screen.getByText("Englanninkielinen teksti on sitova; tämä on käännös.")).toBeTruthy();
+      await press(screen.getByLabelText("Annan Kuutti ry:lle luvan tallentaa, kenen seuraa etsin"));
       await flush();
       expect(server.consents.at(-1)).toEqual({ ...consented("special_category"), locale: "fi" });
     } finally {
       store.delete("kuutti.preference.locale");
     }
   });
+
+  // The legal texts are written in English and Finnish: a Swedish phone reads
+  // the English, which binds, so nothing there is a translation (#208).
+  it.each([
+    ["en-US", "Whom are you looking for?", "I consent to Kuutti ry storing whom I seek"],
+    ["sv-FI", "Vem söker du?", "Jag samtycker till att Kuutti ry lagrar vem jag söker"],
+  ])(
+    "asks a %s phone for the sensitive answers' consent in the English text itself, and calls nothing a translation",
+    async (tag, question, allow) => {
+      (useLocales as jest.Mock).mockReturnValue([{ languageTag: tag }]);
+      try {
+        const { server } = fakeApi();
+        server.consents.push(consented("terms"), consented("privacy"));
+        server.profile = {
+          displayName: "Onni",
+          bio: null,
+          bioPreset: null,
+          fields: {},
+          prompts: [],
+        };
+        server.gender = "non_binary";
+        await show(<OnboardingScreen />);
+        await waitFor(() => expect(screen.getByText(question)).toBeTruthy());
+        expect(screen.getByText("Sensitive answers")).toBeTruthy();
+        expect(screen.getByText(/^Whom you seek, the political parties/)).toBeTruthy();
+        expect(screen.queryByText(/one that counts|som gäller|on sitova/)).toBeNull();
+        await press(screen.getByLabelText(allow));
+        await flush();
+        expect(server.consents.at(-1)).toMatchObject({
+          kind: "special_category",
+          version: SPECIAL,
+        });
+      } finally {
+        (useLocales as jest.Mock).mockReturnValue([{ languageTag: "en-US" }]);
+      }
+    },
+  );
 
   it("stays at the welcome step, remembering nothing, when a consent there is refused", async () => {
     const { server } = fakeApi();
@@ -1430,7 +1461,7 @@ describe("OnboardingScreen", () => {
     expect(store.has(AGREED)).toBe(false);
   });
 
-  /** Everything answered: nothing is missing, and research is no step of onboarding (#418). */
+  /** Everything answered: nothing is missing. */
   function allAnswered(server: ReturnType<typeof fakeApi>["server"]) {
     server.consents.push(consented("terms"), consented("privacy"), consented("special_category"));
     server.gender = "woman";
@@ -1477,11 +1508,10 @@ describe("OnboardingScreen", () => {
     await show(<OnboardingScreen />);
     await waitFor(() => expect(screen.getByText("Whom are you looking for?")).toBeTruthy());
     await press(row("Men"));
-    await press(screen.getByLabelText("I consent to Kuutti storing whom I seek"));
+    await press(screen.getByLabelText("I consent to Kuutti ry storing whom I seek"));
     await press(screen.getByRole("button", { name: "Continue" }));
     await flush();
     await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/"));
-    expect(screen.queryByText("Help us learn how matching works")).toBeNull();
     expect(server.seeks).toEqual(["man"]);
   });
 
@@ -1504,16 +1534,235 @@ describe("OnboardingScreen", () => {
     expect(server.seeks).toBeNull();
     // The status was read again, so the switch can be given once more.
     server.seeksRefused = false;
-    await press(screen.getByLabelText("I consent to Kuutti storing whom I seek"));
+    await press(screen.getByLabelText("I consent to Kuutti ry storing whom I seek"));
     await press(screen.getByRole("button", { name: "Continue" }));
     await flush();
     await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/"));
     expect(server.seeks).toEqual(["man"]);
   });
 
+  // The designers' try (the tech screen's neubrutalism, outside production): a
+  // walk that asked something ends on ProfileReady. Today's look goes home at
+  // once, which the tests above hold.
+  describe("the end of the walk in the designers' try", () => {
+    const LOOK = "kuutti.preference.look";
+    beforeEach(() => store.set(LOOK, "neubrutalism"));
+    afterEach(() => store.delete(LOOK));
+
+    it("celebrates a walk that asked something, and goes home from its one button", async () => {
+      const { server } = fakeApi();
+      allAnswered(server);
+      server.consents = server.consents.map((c) =>
+        c.kind === "special_category" ? { ...c, withdrawnAt: "2026-10-01T10:00:00.000Z" } : c,
+      );
+      server.seeks = null;
+      await show(<OnboardingScreen />);
+      await waitFor(() => expect(screen.getByText("Whom are you looking for?")).toBeTruthy());
+      await press(row("Men"));
+      await press(screen.getByLabelText("I consent to Kuutti ry storing whom I seek"));
+      await press(screen.getByRole("button", { name: "Continue" }));
+      await flush();
+      await waitFor(() =>
+        expect(screen.getByRole("heading", { name: "Profile ready!" })).toBeTruthy(),
+      );
+      expect(screen.getByText("Nicely done. That was the hard part.")).toBeTruthy();
+      // Home waits for the button, and nothing else is offered.
+      expect(router.replace).not.toHaveBeenCalled();
+      expect(screen.getAllByRole("button").map((b) => b.props.accessibilityLabel)).toEqual([
+        "Continue",
+      ]);
+      checkA11y();
+      await press(screen.getByRole("button", { name: "Continue" }));
+      expect(router.replace).toHaveBeenCalledWith("/");
+    });
+
+    it("celebrates without motion when reduce motion is on, the same words and button", async () => {
+      jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(true);
+      const { server } = fakeApi();
+      allAnswered(server);
+      server.consents = server.consents.map((c) =>
+        c.kind === "special_category" ? { ...c, withdrawnAt: "2026-10-01T10:00:00.000Z" } : c,
+      );
+      server.seeks = null;
+      await show(<OnboardingScreen />);
+      await waitFor(() => expect(screen.getByText("Whom are you looking for?")).toBeTruthy());
+      await press(row("Men"));
+      await press(screen.getByLabelText("I consent to Kuutti ry storing whom I seek"));
+      await press(screen.getByRole("button", { name: "Continue" }));
+      await flush();
+      await waitFor(() =>
+        expect(screen.getByRole("heading", { name: "Profile ready!" })).toBeTruthy(),
+      );
+      await press(screen.getByRole("button", { name: "Continue" }));
+      expect(router.replace).toHaveBeenCalledWith("/");
+    });
+
+    it("goes home at once when nothing was asked, with no celebration", async () => {
+      const { server } = fakeApi();
+      allAnswered(server);
+      await show(<OnboardingScreen />);
+      await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/"));
+      expect(screen.queryByRole("heading", { name: "Profile ready!" })).toBeNull();
+    });
+  });
+
+  // Organic Pop (outside production) ends the same walk on its own Profile
+  // ready: the same words and one way on, the person's own photo, still in
+  // review, in a circle among the shapes, drawn and never read.
+  describe("the end of the walk in the Organic Pop try", () => {
+    const LOOK = "kuutti.preference.look";
+    beforeEach(() => store.set(LOOK, "organic"));
+    afterEach(() => store.delete(LOOK));
+
+    const toTheEnd = async () => {
+      const { server } = fakeApi();
+      allAnswered(server);
+      server.consents = server.consents.map((c) =>
+        c.kind === "special_category" ? { ...c, withdrawnAt: "2026-10-01T10:00:00.000Z" } : c,
+      );
+      server.seeks = null;
+      await show(<OnboardingScreen />);
+      await waitFor(() => expect(screen.getByText("Whom are you looking for?")).toBeTruthy());
+      await press(row("Men"));
+      await press(screen.getByLabelText("I consent to Kuutti ry storing whom I seek"));
+      await press(screen.getByRole("button", { name: "Continue" }));
+      await flush();
+      await waitFor(() =>
+        expect(screen.getByRole("heading", { name: "Profile ready!" })).toBeTruthy(),
+      );
+    };
+
+    it("celebrates with the same words and button, the photo in review drawn and unheard", async () => {
+      await toTheEnd();
+      expect(screen.getByText("Nicely done. That was the hard part.")).toBeTruthy();
+      expect(router.replace).not.toHaveBeenCalled();
+      // One way on, named by its words.
+      expect(screen.getAllByRole("button")).toEqual([
+        screen.getByRole("button", { name: "Continue" }),
+      ]);
+      // The photo is the person's own, pending, on the screen but kept from the reader.
+      await waitFor(() =>
+        expect(screen.getByLabelText("You", { includeHiddenElements: true })).toBeTruthy(),
+      );
+      expect(screen.queryByLabelText("You")).toBeNull();
+      checkA11y();
+      await press(screen.getByRole("button", { name: "Continue" }));
+      expect(router.replace).toHaveBeenCalledWith("/");
+    });
+
+    /** Every rotation drawn, the hidden too: the shape's turn is where the motion shows. */
+    const rotations = () => {
+      const found: string[] = [];
+      const walk = (node: unknown): void => {
+        if (Array.isArray(node)) {
+          node.forEach(walk);
+          return;
+        }
+        if (!node || typeof node !== "object") return;
+        const { props, children } = node as { props?: { style?: unknown }; children?: unknown };
+        const style = StyleSheet.flatten(props?.style as never) as
+          | { transform?: { rotate?: unknown }[] }
+          | undefined;
+        for (const part of style?.transform ?? []) {
+          if (typeof part.rotate === "string") found.push(part.rotate);
+        }
+        walk(children);
+      };
+      walk(screen.toJSON());
+      return found;
+    };
+
+    it("celebrates without motion when reduce motion is on: the shape upright, the same words and button", async () => {
+      jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(true);
+      await toTheEnd();
+      expect(rotations()).toContain("0deg");
+      expect(rotations()).not.toContain("12deg");
+      expect(screen.getByText("Nicely done. That was the hard part.")).toBeTruthy();
+      await press(screen.getByRole("button", { name: "Continue" }));
+      expect(router.replace).toHaveBeenCalledWith("/");
+    });
+
+    it("begins with the shape turned when motion is allowed", async () => {
+      jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(false);
+      await toTheEnd();
+      expect(rotations()).toContain("12deg");
+    });
+
+    /** The width of every drawing, the hidden too: a shape is as wide as its words. */
+    const drawnWidths = () => {
+      const found: number[] = [];
+      const walk = (node: unknown): void => {
+        if (Array.isArray(node)) {
+          node.forEach(walk);
+          return;
+        }
+        if (!node || typeof node !== "object") return;
+        const { type, props, children } = node as {
+          type?: unknown;
+          props?: { width?: unknown };
+          children?: unknown;
+        };
+        if (type === "RNSVGSvgView" && typeof props?.width === "number") found.push(props.width);
+        walk(children);
+      };
+      walk(screen.toJSON());
+      return found;
+    };
+    /** The headline as wide as `width` points, as the layout measures it on a phone. */
+    const measure = (headline: string, width: number) =>
+      fireEvent(screen.getByRole("heading", { name: headline }), "layout", {
+        nativeEvent: { layout: { x: 0, y: 0, width, height: 80 } },
+      });
+
+    it("widens the shape under the words when they are wider than the room", async () => {
+      await toTheEnd();
+      expect(drawnWidths()).toContain(400);
+      await measure("Profile ready!", 300);
+      expect(drawnWidths()).toContain(400);
+      await measure("Profile ready!", 400);
+      expect(drawnWidths()).toContain(480);
+      expect(drawnWidths()).not.toContain(400);
+    });
+  });
+
+  // Glass and Bold Contrast end the walk on the same Profile ready, on their
+  // own ground, the headline in the colour that ground is paired with.
+  describe.each([
+    ["glass", "text-card-foreground"],
+    ["bold", "text-accent-foreground"],
+  ] as const)("the end of the walk in the %s try", (look, ink) => {
+    const LOOK = "kuutti.preference.look";
+    beforeEach(() => store.set(LOOK, look));
+    afterEach(() => store.delete(LOOK));
+
+    it("celebrates with the same words and button, the headline in its ground's ink", async () => {
+      const { server } = fakeApi();
+      allAnswered(server);
+      server.consents = server.consents.map((c) =>
+        c.kind === "special_category" ? { ...c, withdrawnAt: "2026-10-01T10:00:00.000Z" } : c,
+      );
+      server.seeks = null;
+      await show(<OnboardingScreen />);
+      await waitFor(() => expect(screen.getByText("Whom are you looking for?")).toBeTruthy());
+      await press(row("Men"));
+      await press(screen.getByLabelText("I consent to Kuutti ry storing whom I seek"));
+      await press(screen.getByRole("button", { name: "Continue" }));
+      await flush();
+      const headline = await waitFor(() => screen.getByRole("heading", { name: "Profile ready!" }));
+      expect(String(headline.props.className).split(" ")).toContain(ink);
+      expect(screen.getByText("Nicely done. That was the hard part.")).toBeTruthy();
+      expect(screen.getAllByRole("button")).toEqual([
+        screen.getByRole("button", { name: "Continue" }),
+      ]);
+      checkA11y();
+      await press(screen.getByRole("button", { name: "Continue" }));
+      expect(router.replace).toHaveBeenCalledWith("/");
+    });
+  });
+
   describe("the seeks step and a stored answer (#542)", () => {
     const TITLE = "Whom are you looking for?";
-    const CONSENT = "I consent to Kuutti storing whom I seek";
+    const CONSENT = "I consent to Kuutti ry storing whom I seek";
     const selected = checked;
     const continueDisabled = () =>
       screen.getByRole("button", { name: "Continue" }).props.accessibilityState?.disabled;
@@ -1671,8 +1920,7 @@ describe("OnboardingScreen", () => {
     });
   });
 
-  it("Onboarding leaves after the last profile step without asking about research", async () => {
-    // A first walk with no research answer at all: the status says none was given.
+  it("goes home after the last profile step, the words the last thing saved", async () => {
     const { server, calls } = fakeApi();
     atWords(server);
     await show(<OnboardingScreen />);
@@ -1682,31 +1930,10 @@ describe("OnboardingScreen", () => {
     await press(screen.getByRole("button", { name: "Save and continue" }));
     await flush();
     await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/"));
-    expect(screen.queryByText("Help us learn how matching works")).toBeNull();
-    expect(screen.queryByRole("button", { name: "Yes, I take part" })).toBeNull();
     // Home takes over at once and says what comes next: nothing is drawn for the moment before it (#581).
     expect(drawn()).toEqual([]);
-    // The words are the last thing saved, and nothing asks about research (#545).
+    // The words are the last thing saved.
     expect(calls.filter((c) => c.method !== "GET").map((c) => c.path)).toEqual(["/profile"]);
-    expect(server.consents.some((c) => c.kind === "research")).toBe(false);
-  });
-
-  it("is not held up by a research wording newer than the app's, since it asks none", async () => {
-    const { server, calls } = fakeApi();
-    allAnswered(server);
-    const answers = globalThis.fetch;
-    globalThis.fetch = jest.fn(async (input: Request | string, init?: RequestInit) => {
-      const response = await answers(input, init);
-      const request = input instanceof Request ? input : new Request(input, init);
-      if (new URL(request.url).pathname !== "/onboarding") return response;
-      const body = await response.json();
-      return json({ ...body, currentVersions: { ...body.currentVersions, research: "2027-01" } });
-    }) as unknown as typeof fetch;
-    await show(<OnboardingScreen />);
-    await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/"));
-    expect(screen.queryByText(/Update the app to continue/)).toBeNull();
-    expect(screen.queryByText("Help us learn how matching works")).toBeNull();
-    expect(calls.filter((c) => c.method !== "GET")).toEqual([]);
   });
 
   it("says the status could not be read, and reads it again on request", async () => {
@@ -1714,7 +1941,7 @@ describe("OnboardingScreen", () => {
     const api = failingUntilOk("/onboarding");
     await show(<OnboardingScreen />);
     await waitFor(() => expect(screen.getByText(FAILED_TO_LOAD)).toBeTruthy());
-    expect(screen.getByText("Kuutti's server had a problem. Try again in a moment.")).toBeTruthy();
+    expect(screen.getByText("Kumpa's server had a problem. Try again in a moment.")).toBeTruthy();
     api.ok();
     await press(screen.getByRole("button", { name: "Try again" }));
     await flush();
@@ -1740,7 +1967,7 @@ describe("OnboardingScreen", () => {
 
   describe("the home (#514, ADR-061)", () => {
     const EXPLAIN =
-      "Your postal code tells Kuutti how far people are. Others see a town or your area by name, never the digits.";
+      "Your postal code tells Kumpa how far people are. Others see a town or your area by name, never the digits.";
     const NOT_FOUND = "We can't find that code. Choose the nearest area from the list.";
     const homeCalls = (calls: ReturnType<typeof fakeApi>["calls"]) =>
       calls.filter((c) => c.path === "/account/home");
@@ -2118,7 +2345,7 @@ describe("OnboardingScreen", () => {
     await show(<OnboardingScreen />);
     await waitFor(() => expect(screen.getByText("Whom are you looking for?")).toBeTruthy());
     expect(screen.getByText(/Update the app to continue/)).toBeTruthy();
-    expect(screen.queryByLabelText("I consent to Kuutti storing whom I seek")).toBeNull();
+    expect(screen.queryByLabelText("I consent to Kuutti ry storing whom I seek")).toBeNull();
     await press(row("Women"));
     expect(
       screen.getByRole("button", { name: "Continue" }).props.accessibilityState?.disabled,

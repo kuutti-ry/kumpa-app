@@ -1,5 +1,5 @@
 import { resolve } from "node:path";
-import { createPool, migrate, type Pool, seed } from "@kuutti/db";
+import { createPool, migrate, type Pool } from "@kuutti/db";
 import { discoverProvider, type ProviderMetadata } from "@kuutti-ry/tunnistus-oidc";
 import { type App, createApp } from "./app.ts";
 import { archiveJob, createLive, type Live } from "./chat/index.ts";
@@ -17,9 +17,7 @@ import { ensureFirstSnapshot, pondCounterJob } from "./jobs/pond-counter.ts";
 import { type Config, developmentOrTest } from "./lib/config.ts";
 import type { Logger } from "./lib/logger.ts";
 import { mailerFor } from "./lib/mail.ts";
-import { ensurePreviewDatabase } from "./lib/preview-database.ts";
 import { pusherFor } from "./lib/push.ts";
-import { createS3Client } from "./lib/s3.ts";
 import { initSentry, sentryReporter } from "./lib/sentry.ts";
 import { pruneRounds } from "./matching/index.ts";
 import {
@@ -30,14 +28,6 @@ import {
   sweepPendingPhotos,
 } from "./media/index.ts";
 import { createPush, type Push } from "./notifications/index.ts";
-import {
-  copiedBeforeDrop,
-  ensureEventPartitions,
-  researchAnonymityJob,
-  researchCopyJob,
-  researchEventsJob,
-  s3CopyStore,
-} from "./research/index.ts";
 import {
   auditBoundary,
   endSuspensions,
@@ -65,8 +55,8 @@ export type Booted = {
 
 /**
  * Everything between a validated configuration and a server that may listen:
- * error reporting, the bank's discovery, the preview's database, the pool and
- * its migrations, media, the app and the nightly jobs. index.ts is the
+ * error reporting, the bank's discovery, the pool and its migrations, media,
+ * the app and the nightly jobs. index.ts is the
  * process around it (the configuration's exit, the server, the signals), so
  * every step here runs in a test against a real database.
  */
@@ -144,23 +134,6 @@ export async function boot({
     logger.warn("bank identification off: OIDC_ISSUER is not set");
   }
 
-  // A pull-request preview serves from its own kuutti_pr_<n> on the staging
-  // instance, created here on first boot and dropped by preview-cleanup.yml
-  // when the pull request closes (#9, TD-19). Never a copy of anything.
-  if (config.preview) {
-    const admin = createPool({
-      connectionString: config.preview.adminDatabaseUrl,
-      max: 1,
-      applicationName: `kuutti-api-preview-${config.preview.prNumber}-setup`,
-    });
-    try {
-      const state = await ensurePreviewDatabase(admin, config.preview.database);
-      logger.info({ database: config.preview.database, state }, "preview database");
-    } finally {
-      await admin.end();
-    }
-  }
-
   const pool = createPool({
     connectionString: config.databaseUrl,
     max: config.DB_POOL_MAX,
@@ -183,23 +156,13 @@ export async function boot({
   // Migrations run before the server listens, under the advisory lock (rule 10).
   const migration = await migrate(pool, resolve(config.MIGRATIONS_DIR));
   logger.info(migration, "migrations");
-  // The events table's partitions for this month and the next (#50, ADR-011), before anything can track.
-  logger.info(await ensureEventPartitions(pool, new Date()), "research event partitions");
   // The audit table's role boundary (#49, ADR-006) is set by the maintainer,
   // not by a migration: a deployed box says so at every boot until it is.
   const audit = await auditBoundary(pool);
-  // A preview runs as kuutti_preview, owner of its own throwaway database: no boundary there by design.
   if (!audit.enforced && (config.APP_ENV === "staging" || config.APP_ENV === "production")) {
     logger.warn(audit, "audit boundary not enforced: run infra/scripts/db-audit-owner.sh");
   } else {
     logger.info(audit, "audit boundary");
-  }
-
-  // Previews are always seeded (rules/db.md); the seed is idempotent, so every
-  // boot converges on the same matching_config, with matching open (ADR-060 §10).
-  if (config.preview) {
-    const seeded = await seed(pool, `preview-pr-${config.preview.prNumber}`);
-    logger.info(seeded, "seed");
   }
 
   // Photos (#48): the bucket and the URL signer, or nothing and the photo
@@ -254,32 +217,10 @@ export async function boot({
   // Nightly housekeeping inside the process (rules/api.md): ended sessions and
   // stale login attempts (#35).
   const now = () => new Date();
-  // The research copy (#194, ADR-029) goes to the bucket the photos use, under
-  // research/, wherever media has one: on staging and beside a developer's
-  // stand-in, never in a preview, whose media is off (lib/config.ts), and
-  // never where nothing is configured.
-  // shortcut: none in production either. The copy keeps the research_id past
-  // the ninety days the research text promises, and whether the text or the
-  // copy changes is the maintainer's (ADR-029, Open); his answer lifts this.
-  const copy =
-    media.setup.mode === "off" || config.APP_ENV === "production"
-      ? undefined
-      : { db: pool, now, store: s3CopyStore(createS3Client(config), config.S3_BUCKET) };
   const counter = { db: pool, logger, now };
   const jobs: NightlyJob[] = [
     { name: "sweep-sessions", run: () => sweepSessions({ db: pool, now }) },
     { name: "sweep-admin-sessions", run: () => sweepAdminSessions({ db: pool, now }) },
-    // Yesterday's research events to the copy, before the prune can drop a month of them (#194).
-    ...(copy ? [researchCopyJob(copy)] : []),
-    // Next month's events partition ready, months past retention dropped (#50),
-    // a month's copy checked first where there is one (ADR-029 §6).
-    researchEventsJob({
-      db: pool,
-      now,
-      ...(copy ? { beforeDrop: (months) => copiedBeforeDrop({ ...copy, logger }, months) } : {}),
-    }),
-    // The census of the research block: a cell under k is a warning (ADR-011 §9).
-    researchAnonymityJob({ db: pool, logger }),
     // Suspensions past their day end (#307, ADR-024 §5), before the counter,
     // so a person let back in is counted the same night.
     { name: "end-suspensions", run: async () => ({ ended: await endSuspensions(pool, now()) }) },
@@ -314,6 +255,9 @@ export async function boot({
     },
     // Conversations silent for silent_match_archive_days are put away (#348, TD-13).
     archiveJob({ db: pool, logger, now }),
+    // shortcut: nothing prunes audit_log, which the privacy policy keeps five years
+    // (ADR-006 §6, TD-7) and its triggers keep for good; no row is five years old
+    // before October 2031, and #714 builds the prune that lifts this before then.
   ];
   // Photos the automatic check missed get one more look (#49); none without a moderator.
   const mediaDeps = media.deps;

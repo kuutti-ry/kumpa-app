@@ -36,7 +36,7 @@ Stage 1 also pays for setting up the connections: the runner's TLS handshakes to
 
 1. **#77's alarm is in OK.** The box pushes its free memory every minute, and `kuutti-staging-memory-low` mails under 200 MB (ADR-046; its row in `alerts.md`). `aws cloudwatch describe-alarms --alarm-names kuutti-staging-memory-low --query 'MetricAlarms[0].StateValue'` says `OK`, which it does once the headroom document has run on the box (`infra/README.md`, The box's headroom). On 2026-09-27 the box ran out of memory with Dokploy, the API and three previews on it. A load run is how that would happen again, so nobody runs one without that alarm.
 2. **The release to measure is on staging.** `curl -sS https://api.staging.kuutti.app/health` shows its version and commit, and the script prints them too.
-3. **The box is quiet.** No preview is building or deploying: the previews share the box (ADR-012). The burst credits of the box and of the database are not low (the two `cpu-credits-low` rows of `alerts.md`). Staging runs `cpu_credits = standard`, so a box out of credits slows to its baseline, and the run would measure the baseline rather than the box.
+3. **The box is quiet.** No deploy is under way. The burst credits of the box and of the database are not low (the two `cpu-credits-low` rows of `alerts.md`). Staging runs `cpu_credits = standard`, so a box out of credits slows to its baseline, and the run would measure the baseline rather than the box.
 4. **The team knows.** On staging the API's address limit counts each viewer's address since 2026-11-06 (ADR-066), so a run from one laptop spends that laptop's window, not the team's. Before that it counted the CloudFront edge, which every phone near it shared (ADR-008 History). Its last stage may also set off `kuutti-staging-api-5xx` (below), so the team expects that mail.
 5. **Matching is open for the test persons.** The demo commands open it on staging (ADR-060 Open 1). A person whose matching is not open, or whose profile is not complete, is answered before the pool is read, so their reads say nothing of the queue.
 6. **The sessions file** is made (below).
@@ -127,7 +127,7 @@ The recipe's 24 sockets are four for each of the six accounts, the most the scri
 
 What it refuses before any load:
 
-- Production, by name (`api.kuutti.app`), and any other host but these two. That includes the previews: they share staging's box, and have no bank.
+- Production, by name (`api.kuutti.app`), and any other host but these two.
 - `APP_ENV=production` in its own environment, and an `APP_ENV` that disagrees with the target.
 - A sessions file it must not take (above).
 - `--sockets` without `--sessions`, and more sockets than four for each account the sessions are of. The API holds five an account and closes the oldest for a sixth (`too_many_sockets`), which must never be a persona's own phone.
@@ -167,7 +167,7 @@ The script measures from outside: its p95 includes the network from the runner t
 
 - **The box's own p95 per route:** the Logs Insights saved query `kuutti-staging/p95-duration-by-route` over the run's window. Its `durationMs` starts when Hono takes the request, so it leaves out the time a request waited for the event loop.
 - **The event loop.** The API is one Node process (`CMD ["node", "dist/index.js"]`, no cluster), so its JavaScript runs on one core: JSON and zod, the logger, the URL signatures. On the two-core box, one core flat out shows as about 50 % `CPUUtilization`, not 100 %. When the event loop is what bends, the box sits near 50 %, the database's connections stay under the pool's size, the log's p95 stays flat, and the script's p95 climbs. The gap between the two p95s is the time spent waiting for the loop.
-- **Postgres connections:** RDS `DatabaseConnections`. The API's pool is `DB_POOL_MAX` (10 unless set), and each preview has its own. When the pool is what bends, the connections sit at the pool's size while p95 climbs and the database's CPU does not.
+- **Postgres connections:** RDS `DatabaseConnections`. The API's pool is `DB_POOL_MAX` (10 unless set). When the pool is what bends, the connections sit at the pool's size while p95 climbs and the database's CPU does not.
 - **The database:** RDS `CPUUtilization` and `CPUCreditBalance`. Staging's database is a db.t4g.micro and production's a db.t4g.small, so staging's ceiling there is a lower bound for production's.
 - **The box:** EC2 `CPUUtilization` and `CPUCreditBalance` (a t4g.small, two cores; see the event loop above), and the free memory of #77's metric. EC2 sends staging's every five minutes (basic monitoring), one or two points for a whole run, so read the box from inside as well, every ten seconds through the run: the api container's CPU, where 100 % is one core flat out (the event loop), and each core's busy share. The command below prints both, through Run Command, the way the headroom document reaches the box (`infra/README.md`), with nothing to type on it. It follows the container it finds at its start, so start it after any restart of the API.
 - **The sockets:** they open just before the first stage. Each holds some memory on the box, and the API checks its session at every ping, every 30 s, so 24 sockets add about one session read a second to every stage.

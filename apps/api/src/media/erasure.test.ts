@@ -498,11 +498,7 @@ describe("the night's sweep of orphaned objects", () => {
     await storedVariants(store, "k-kept");
     await storedVariants(store, "k-orphan");
     await store.put("media/strange", new Uint8Array([1]), "image/webp");
-    await store.put(
-      "research/2026/11/2026-11-05.parquet",
-      new Uint8Array([1]),
-      "application/octet-stream",
-    );
+    await store.put("elsewhere/2026-11-05.bin", new Uint8Array([1]), "application/octet-stream");
     clock = new Date(NIGHT.getTime() - 3_600_000);
     await storedVariants(store, "k-fresh");
     const { logger, lines } = await captureLogger();
@@ -516,7 +512,7 @@ describe("the night's sweep of orphaned objects", () => {
         ...PHOTO_VARIANTS.map((v) => objectKey("k-kept", v)),
         ...PHOTO_VARIANTS.map((v) => objectKey("k-fresh", v)),
         "media/strange",
-        "research/2026/11/2026-11-05.parquet",
+        "elsewhere/2026-11-05.bin",
       ].sort(),
     );
     const warning = lines().find(
@@ -546,11 +542,7 @@ describe("the night's sweep of orphaned objects", () => {
     ctx,
   }) => {
     const store = memoryMediaStore(() => new Date(0));
-    await store.put(
-      "research/2026/11/2026-11-05.parquet",
-      new Uint8Array([1]),
-      "application/octet-stream",
-    );
+    await store.put("elsewhere/2026-11-05.bin", new Uint8Array([1]), "application/octet-stream");
     const deletes: string[][] = [];
     const watched: MediaStore = {
       ...store,

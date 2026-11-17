@@ -8,9 +8,10 @@
 # whose certificate Traefik holds.
 #
 # The same distribution fronts the rest of what the box serves on 443, under
-# extra_aliases: Dokploy's control plane and, on staging, the previews
-# (ADR-005 §7, #198), so that the box can admit CloudFront alone. Traefik routes
-# them by the forwarded Host, as it routes the API. Let's Encrypt's HTTP-01
+# extra_aliases: Dokploy's control plane (ADR-005 §7, #198), so that the box
+# can admit CloudFront alone, and the API's and Dokploy's names under the
+# second domain while the hosts have two (ADR-072). Traefik routes each by the
+# forwarded Host, as it routes the API. Let's Encrypt's HTTP-01
 # challenge for a name behind the distribution reaches Traefik over plain HTTP,
 # through a third origin (below).
 
@@ -23,17 +24,13 @@ locals {
   bucket_name = "${var.project}-media-${var.environment}-${local.account_id}"
   # The API writes media/<sha256 of the full variant>/<variant>.webp (apps/api/src/media/store.ts).
   media_prefix = "media/"
-  # The research copy, research/YYYY/MM/YYYY-MM-DD.parquet (#194, ADR-029;
-  # COPY_PREFIX in apps/api/src/research/copy-store.ts). modules/research holds
-  # who may read and write it; the lifecycle rule is here, since a bucket has one.
-  research_prefix = "research/"
 }
 
 # ---------------------------------------------------------------------------
-# The bucket. Private; the only readers are the API (instance role), the
-# distribution (origin access control, media/ only) and the researcher's
-# role (research/ only, modules/research). Versioning stays off on purpose: a
-# deleted photo must be gone (TD-7 erasure), not retained as a version.
+# The bucket. Private; the only readers are the API (instance role) and the
+# distribution (origin access control, media/ only). Versioning stays off on
+# purpose: a deleted photo must be gone (TD-7 erasure), not retained as a
+# version.
 # ---------------------------------------------------------------------------
 
 resource "aws_s3_bucket" "media" {
@@ -81,14 +78,6 @@ resource "aws_s3_bucket_versioning" "media" {
 resource "aws_s3_bucket_lifecycle_configuration" "media" {
   bucket = aws_s3_bucket.media.id
 
-  # S3's default since September 2024, spelled out for the research rule
-  # below: an object under 128 KB transitions nowhere. Glacier Instant
-  # Retrieval bills every object as at least 128 KB and each transition is a
-  # request, so a small day file costs more there than it does in Standard.
-  # ("varies_by_storage_class" would not change that: it lets small objects
-  # reach Glacier Flexible Retrieval and Deep Archive only.)
-  transition_default_minimum_object_size = "all_storage_classes_128K"
-
   # The API uploads whole objects; a multipart upload left behind by a crash is garbage after a day.
   rule {
     id     = "abort-incomplete-multipart"
@@ -102,29 +91,10 @@ resource "aws_s3_bucket_lifecycle_configuration" "media" {
       days_after_initiation = 1
     }
   }
-
-  # The research copy (#194, ADR-029 §8): a day's file of 128 KB or more
-  # moves to Glacier Instant Retrieval after a year, read the same way and at
-  # once, cheaper to keep and dearer to read. No expiry: how long the copy
-  # lives is the maintainer's decision, not a default.
-  rule {
-    id     = "research-to-glacier-ir"
-    status = "Enabled"
-
-    filter {
-      prefix = local.research_prefix
-    }
-
-    transition {
-      days          = 365
-      storage_class = "GLACIER_IR"
-    }
-  }
 }
 
 # The instance role writes and removes variants under media/ (rules/infra.md:
-# the role is scoped to its bucket); its rights under research/, write once
-# and never remove, are modules/research's.
+# the role is scoped to its bucket).
 data "aws_iam_policy_document" "api_media" {
   statement {
     sid       = "MediaObjects"
@@ -285,15 +255,16 @@ resource "aws_cloudfront_origin_request_policy" "acme" {
 }
 
 # ---------------------------------------------------------------------------
-# The certificate for the alias, in us-east-1 as CloudFront requires, validated
-# by a record in the project zone.
+# The certificate for the aliases, in us-east-1 as CloudFront requires, each
+# name validated by a record in its own zone: the project zone's for api_fqdn,
+# the one extra_aliases gives for every other (ADR-072).
 # ---------------------------------------------------------------------------
 
 resource "aws_acm_certificate" "api" {
   provider = aws.us_east_1
 
   domain_name               = var.api_fqdn
-  subject_alternative_names = var.extra_aliases
+  subject_alternative_names = keys(var.extra_aliases)
   validation_method         = "DNS"
 
   lifecycle {
@@ -312,7 +283,7 @@ resource "aws_route53_record" "validation" {
     }
   }
 
-  zone_id         = var.zone_id
+  zone_id         = lookup(var.extra_aliases, each.key, var.zone_id)
   name            = each.value.name
   type            = each.value.type
   ttl             = 60
@@ -339,7 +310,7 @@ resource "aws_cloudfront_distribution" "this" {
   # Europe and North America: Finland is served from Europe, and the rest of
   # the classes add edges nobody here reaches.
   price_class = "PriceClass_100"
-  aliases     = concat([var.api_fqdn], var.extra_aliases)
+  aliases     = concat([var.api_fqdn], keys(var.extra_aliases))
   # The edge's rate rule (edge.tf, #41, ADR-067).
   web_acl_id = aws_wafv2_web_acl.edge.arn
 
@@ -384,9 +355,8 @@ resource "aws_cloudfront_distribution" "this" {
     }
   }
 
-  # Nothing may be cached here: the API, Dokploy and the previews share this
-  # behaviour, and a cache key without the Host would hand one host's answer
-  # to another, a preview's to the API's callers among them.
+  # Nothing may be cached here: the API and Dokploy share this behaviour, and
+  # a cache key without the Host would hand one host's answer to the other.
   default_cache_behavior {
     target_origin_id         = "api"
     viewer_protocol_policy   = "redirect-to-https"

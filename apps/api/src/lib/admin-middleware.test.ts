@@ -153,25 +153,25 @@ describe("requireAdmin", () => {
   });
 
   it("a role the route does not admit is forbidden, by the role held now, not the one signed in with", async () => {
-    // Signed in as an admin, a researcher now: the moderation queue is closed to them.
-    const demoted = await guarded(
-      { ...live, role: "admin", currentRole: "researcher" },
-      ["moderator", "admin"],
-      { now: () => NOW },
-    );
+    // Signed in as an admin, a moderator now: the admins' routes are closed to them.
+    const demoted = await guarded({ ...live, role: "admin", currentRole: "moderator" }, ["admin"], {
+      now: () => NOW,
+    });
     const answer = await demoted.call(`Bearer ${TOKEN}`);
     expect(answer.status).toBe(403);
     expect(demoted.code(answer.body)).toBe("admin_forbidden");
     expect(demoted.touched).toEqual([]);
     expect(demoted.lines().find((l) => l.msg === "This role does not allow that")).toMatchObject({
-      detail: { role: "researcher" },
+      detail: { role: "moderator" },
     });
 
-    // Signed in as a researcher, promoted since: let in as what they are now.
+    // Signed in as a moderator, promoted since: let in as what they are now.
     const promoted = await guarded(
-      { ...live, role: "researcher", currentRole: "admin" },
+      { ...live, role: "moderator", currentRole: "admin" },
       ["admin"],
-      { now: () => NOW },
+      {
+        now: () => NOW,
+      },
     );
     expect(await promoted.call(`Bearer ${TOKEN}`)).toMatchObject({
       status: 200,

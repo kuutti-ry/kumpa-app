@@ -1,26 +1,32 @@
 import type { PlainMessageKey } from "@kuutti/i18n";
 import type { RoundChoice, RoundReason } from "@kuutti/schema";
 import { useFocusEffect, useRouter } from "expo-router";
+import ArrowRight from "lucide-react-native/icons/arrow-right";
 import Fish from "lucide-react-native/icons/fish";
 import Star from "lucide-react-native/icons/star";
 import Undo2 from "lucide-react-native/icons/undo-2";
 import { type ReactNode, type Ref, useCallback, useRef, useState } from "react";
 import { ScrollView, useWindowDimensions, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Backdrop } from "@/components/backdrop";
 import { LoadFailed } from "@/components/LoadFailed";
 import { useSpokenOnIos } from "@/components/Notice";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
-import { photoRefusalKey } from "@/features/media";
+import { CachedPhoto, OwnPhoto, photoRefusalKey } from "@/features/media";
 import { fieldLabelKey, ProfileCardView, SEEK_PATH } from "@/features/profile";
 import { useDecisionButtons } from "@/lib/decision-buttons";
 import { useT } from "@/lib/locale";
 import { cn } from "@/lib/utils";
 import { focusOnMount } from "@/theme/a11y";
 import { useHapticTap } from "@/theme/haptics";
+import { useLookTraits, useTheme } from "@/theme/ThemeProvider";
+import { useReducedMotion } from "@/theme/useReducedMotion";
 import { DECISION_ICONS, type DecisionIcons } from "./faceButtons";
+import { MatchHello } from "./MatchHello";
+import { MatchPop } from "./MatchPop";
 import { ShortPool } from "./ShortPool";
 import { type RoundCard, useRound } from "./useRound";
 
@@ -75,7 +81,9 @@ const WORDLESS_UNDO_FONT_SCALE = 1.3;
  * Later, Pass and Like in one column at the bottom on that side, Undo brought
  * down from the header, within a thumb's reach. A like that makes a match says
  * so and leads to the conversation; one refused over the conversations waiting
- * says how many, and the card stays (ADR-062 §5). The queue's end says so, with
+ * says how many, and the card stays (ADR-062 §5). In the designers' try (the tech
+ * screen's neubrutalism or Organic Pop, outside production) the match is a hello
+ * instead, `MatchHello` or `MatchPop`, with the same two ways on. The queue's end says so, with
  * no count and nothing about tomorrow, which in a thin set would be false for a
  * month; then what may be relaxed for today (#99, ADR-042), and one plain way
  * into What you seek, the same words for everybody (ADR-062 §11). Each relaxed
@@ -131,10 +139,27 @@ export function RoundScreen({ star }: { star?: string }) {
 
   const entries = view.status === "ready" ? view.round.entries : undefined;
   const entry = current?.entry;
+  // The card the last like or fish went to: the one a match is with, for the
+  // try's hello, which shows its person beside the reader.
+  const [liked, setLiked] = useState<RoundCard | null>(null);
   const choose = (card: RoundCard, decision: RoundChoice) => {
     tap();
+    if (decision === "like" || decision === "fish") setLiked(card);
     void round.choose(card, decision);
   };
+  // The designers' try (outside production): a match is a hello. Read here, long
+  // before a match, so the setting is known when the hello mounts.
+  const still = useReducedMotion();
+  const { moment } = useLookTraits();
+  const { highContrast } = useTheme();
+  const hello = moment !== "plain" && match !== null ? liked?.entry.card : undefined;
+  const helloPhoto = hello?.photos[0];
+  // The pill styles' hello is Sini's, its way on a pill of the accent colour.
+  // High contrast makes the accent the background's colour, which would leave
+  // the way on as bare words, so there it is the plain button.
+  const pop = hello !== undefined && moment === "pop";
+  const lime = pop && !highContrast;
+  const Hello = pop ? MatchPop : MatchHello;
 
   // Where the decision buttons sit (#82): for the right hand or the left,
   // and one-handed in a column on that side with Undo among them.
@@ -190,6 +215,7 @@ export function RoundScreen({ star }: { star?: string }) {
 
   return (
     <SafeAreaView className="flex-1 bg-background">
+      <Backdrop />
       <ScreenHeader
         title={t(star ? "stars.title" : "round.title")}
         backLabel={t(star ? "stars.card.back" : "round.back")}
@@ -226,17 +252,43 @@ export function RoundScreen({ star }: { star?: string }) {
         {entries === null && <Text ref={focusOnMount}>{t("round.none")}</Text>}
         {match !== null && (
           <View className="gap-4">
-            <Text ref={focusOnMount} variant="h2" accessibilityLiveRegion="polite">
-              {t("round.match.title")}
-            </Text>
+            {hello ? (
+              <Hello
+                name={hello.displayName}
+                still={still}
+                you={<OwnPhoto label={t("round.hello.you")} />}
+                them={
+                  helloPhoto && (
+                    <CachedPhoto
+                      id={helloPhoto.id}
+                      variant="card"
+                      blurhash={helloPhoto.blurhash}
+                      style={{ width: "100%", height: "100%" }}
+                    />
+                  )
+                }
+              />
+            ) : (
+              <Text ref={focusOnMount} variant="h2" accessibilityLiveRegion="polite">
+                {t("round.match.title")}
+              </Text>
+            )}
             <Button
+              size={hello ? "lg" : "default"}
+              className={lime ? "bg-accent active:bg-accent/85 web:hover:bg-accent/90" : undefined}
+              accessibilityLabel={t(hello ? "round.hello.open" : "round.match.open")}
               onPress={() => {
                 tap();
                 away.current = true;
                 router.push(`/chats/${match}`);
               }}
             >
-              {t("round.match.open")}
+              <Text className={lime ? "text-accent-foreground" : undefined}>
+                {t(hello ? "round.hello.open" : "round.match.open")}
+              </Text>
+              {hello && (
+                <Icon as={ArrowRight} className={lime ? "text-accent-foreground" : undefined} />
+              )}
             </Button>
             {star ? (
               backToStars()

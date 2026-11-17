@@ -12,36 +12,42 @@ import {
 // missing and that reads as agreement (.claude/rules/i18n.md, the bullet on
 // one version per kind; the header of legal-versions.ts).
 
-const APP = { research: "2026-09-draft-1", terms: "2026-09-draft-1" };
+const APP = { special_category: "2026-10-draft-2", terms: "2026-09-draft-1" };
 const FI = {
-  "legal.research.title": "Tutkimus",
-  "legal.research.summary": "LUONNOS: tutkimus.",
+  "legal.special_category.title": "Arkaluonteiset tiedot",
+  "legal.special_category.summary": "Arkaluonteiset vastaukset, kokonaan.",
 };
+const EN = {
+  "legal.special_category.title": "Sensitive answers",
+  "legal.special_category.summary": "The sensitive answers, in full.",
+};
+/** The app's texts by language: the site says which one its fingerprint is of. */
+const TEXTS = { en: EN, fi: FI };
 const SITE: Published = {
   terms: {
     version: "2026-09-draft-1",
     hash: "65b7fa7d00ed9290",
     language: "en",
-    url: "https://kuutti.app/legal/terms/#terms-2026-09-draft-1",
+    url: "https://kumpa.fi/legal/terms/#terms-2026-09-draft-1",
   },
-  research: {
-    version: "2026-09-draft-1",
-    hash: siteFingerprint(FI["legal.research.title"], FI["legal.research.summary"]),
+  special_category: {
+    version: "2026-10-draft-2",
+    hash: siteFingerprint(FI["legal.special_category.title"], FI["legal.special_category.summary"]),
     language: "fi",
-    url: "https://kuutti.app/legal/privacy/#research-2026-09-draft-1",
+    url: "https://kumpa.fi/legal/privacy/#special_category-2026-10-draft-2",
   },
 };
-const research = SITE.research as Published[string];
+const sensitive = SITE.special_category as Published[string];
 const terms = SITE.terms as Published[string];
 
 const silent = (seen: string[]) => expect(seen).toEqual([]);
-const agreed = () => legalVersionProblems(APP, SITE, FI);
+const agreed = () => legalVersionProblems(APP, SITE, TEXTS);
 
 /** What is tried, and the two sides as they then stand. */
 const PARTED: [string, () => string[]][] = [
   [
     "a kind the site names with a capital",
-    () => legalVersionProblems(APP, { terms, Research: research }, FI),
+    () => legalVersionProblems(APP, { terms, Special_category: sensitive }, TEXTS),
   ],
   [
     "an address that differs from the app's link by one slash",
@@ -49,21 +55,61 @@ const PARTED: [string, () => string[]][] = [
       legalVersionProblems(
         APP,
         { ...SITE, terms: { ...terms, url: terms.url.replace("/#", "#") } },
-        FI,
+        TEXTS,
       ),
   ],
   [
-    "a research text the site calls Finnish of Finland, not Finnish",
-    () => legalVersionProblems(APP, { ...SITE, research: { ...research, language: "fi-FI" } }, FI),
+    "a sensitive-answers text the site calls Finnish of Finland, not Finnish",
+    () =>
+      legalVersionProblems(
+        APP,
+        { ...SITE, special_category: { ...sensitive, language: "fi-FI" } },
+        TEXTS,
+      ),
   ],
   [
-    "a Finnish research title that changed only in its capitals",
-    () => legalVersionProblems(APP, SITE, { ...FI, "legal.research.title": "TUTKIMUS" }),
+    "a sensitive-answers text the site calls English, with the fingerprint of the app's Finnish",
+    () =>
+      legalVersionProblems(
+        APP,
+        { ...SITE, special_category: { ...sensitive, language: "en" } },
+        TEXTS,
+      ),
   ],
-  ["a Finnish research wording the app no longer has", () => legalVersionProblems(APP, SITE, {})],
+  [
+    "a sensitive-answers text in a language the app has no legal text in, with the fingerprint of its Finnish",
+    () =>
+      legalVersionProblems(
+        APP,
+        { ...SITE, special_category: { ...sensitive, language: "sv" } },
+        TEXTS,
+      ),
+  ],
+  [
+    "a sensitive-answers text in a language named as every object's own maker is",
+    () =>
+      legalVersionProblems(
+        APP,
+        { ...SITE, special_category: { ...sensitive, language: "constructor" } },
+        TEXTS,
+      ),
+  ],
+  [
+    "a Finnish sensitive-answers title that changed only in its capitals",
+    () =>
+      legalVersionProblems(APP, SITE, {
+        en: EN,
+        fi: { ...FI, "legal.special_category.title": "TUTKIMUS" },
+      }),
+  ],
+  [
+    "a Finnish sensitive-answers wording the app no longer has",
+    () => legalVersionProblems(APP, SITE, { en: EN, fi: {} }),
+  ],
+  ["an app with no legal text in any language", () => legalVersionProblems(APP, SITE, {})],
   [
     "a version the app carries with a space after it",
-    () => legalVersionProblems({ ...APP, terms: `${APP.terms} ` }, SITE, FI),
+    () => legalVersionProblems({ ...APP, terms: `${APP.terms} ` }, SITE, TEXTS),
   ],
 ];
 
@@ -78,7 +124,7 @@ for (const [name, parted] of PARTED) {
 // "Nothing found, read as nothing wrong": neither side names a kind. The
 // comparison goes kind by kind, and with no kind on either side asks nothing.
 attack("check:legal-versions: an app and a site that both name no kind at all agree", {
-  attempt: () => legalVersionProblems({}, {}, FI),
+  attempt: () => legalVersionProblems({}, {}, TEXTS),
   control: agreed,
   succeeds: silent,
 });

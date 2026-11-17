@@ -10,7 +10,7 @@ const twMerge = extendTailwindMerge({
   extend: {
     theme: {
       spacing: ["touch"],
-      text: ["h1", "h2", "title", "body", "control", "label", "small", "caption"],
+      text: ["display", "h1", "h2", "title", "body", "control", "label", "small", "caption"],
     },
   },
 });

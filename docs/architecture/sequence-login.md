@@ -56,7 +56,7 @@ sequenceDiagram
 1. The person chooses "Sign in with your bank". The button stands only once this phone has recorded the terms and the privacy summary, or holds the answers to them for this attempt (ADR-010 §15).
 2. The app makes a new verifier for this attempt alone, 64 lowercase hex characters, and keeps it with the pending mark in the phone's secure store, readable on this device only. A second tap writes a new verifier, so a code that belongs to the first tap is refused later (ADR-027 §1). The verifier is two native UUIDs until #184 brings `expo-crypto`, a `shortcut:` (ADR-027 §5).
 3. The app opens the API's sign-in start in the phone's own browser, never a WebView, so the bank's cookies stay out of the app.
-4. The browser asks `GET /auth/start` with the platform (`ios` or `android`), the bank chooser's language (`fi`, `sv` or `en`) and `code_challenge`, the verifier's SHA-256 as lowercase hex. Without a well-formed challenge the API answers 400 before anything is written (ADR-027 §2). A pull-request preview has no bank and sends the browser straight back to the app with `auth_unavailable` (ADR-014 §1).
+4. The browser asks `GET /auth/start` with the platform (`ios` or `android`), the bank chooser's language (`fi`, `sv` or `en`) and `code_challenge`, the verifier's SHA-256 as lowercase hex. Without a well-formed challenge the API answers 400 before anything is written (ADR-027 §2). An API with no broker answers 503, which the 5xx alarm sees (ADR-070 §4).
 5. The sign-in doors run first. Too many starts from this network within the minute (an IPv6 client is counted by its /56), or an attempts table whose every row the bank has answered: the browser goes back to the app with `auth_rate_limited` and `Retry-After`, nothing is written and nothing is signed (ADR-026 §4, §6). The app says the refusal.
 6. Otherwise the API writes the attempt: a random state and nonce, the platform, the language, the challenge, and ten minutes to live. At the table's ceiling the expired attempts go first, then the two oldest the bank has not answered yet.
 7. The API sends the browser to Telia's authorization endpoint with a request object signed with our `sig` key (RS256): the client id, the registered redirect URI, `scope=openid`, the state, the nonce, `acr_values`, `ui_locales` and `prompt=login`, so the bank is asked every time and a web session left in the browser is never reused (ADR-016 §1). Nothing of Telia's PKCE is sent (ADR-027 §6).
@@ -88,7 +88,7 @@ sequenceDiagram
     api-->>browser: 302 to kuutti://auth?code=…
   else Refused from step 12 on, a state the claim did not take spends nothing
     api->>db: Spends the attempt, and counts a banned, suspended or cooldown refusal on the identity
-    api-->>browser: 302 to kuutti://auth?error= with the refusal's code
+    api-->>browser: 302 to kuutti://auth?error= with the refusal's code, and a ban's or a suspension's reason
   end
 ```
 
@@ -105,7 +105,7 @@ sequenceDiagram
 19. The API stores the SHA-256 of a new one-time code, 32 random bytes, on the attempt, with 60 seconds to live, and logs one line: the level, the method and the outcome, nothing of the person.
 20. The browser is sent to `kuutti://auth?code=…`: part 3.
 21. A refusal after the claim spends the attempt, so a replay is refused too, and a banned, suspended or cooldown refusal is counted on the identity.
-22. The browser is sent to `kuutti://auth?error=` with the refusal's code (`auth_state_mismatch`, `auth_cancelled`, `auth_provider_error`, `auth_under_18`, `auth_banned`, `auth_suspended`, `auth_cooldown`), and `&until=` for a cooldown and for a suspension with an end day. The app says each on its card: `auth_state_mismatch` and `auth_provider_error` by the card's title alone, over Try again, since nobody acts on which of them it was, and the others with a sentence of their own (#581).
+22. The browser is sent to `kuutti://auth?error=` with the refusal's code (`auth_state_mismatch`, `auth_cancelled`, `auth_provider_error`, `auth_under_18`, `auth_banned`, `auth_suspended`, `auth_cooldown`), and `&until=` for a cooldown and for a suspension with an end day, and `&reason=` for a ban and a suspension: the reason of the newest one open on the identity, a value of the closed list (ADR-073 §2), which the refusal's log line carries as a code. The app shows a reason only of that list. The app says each on its card: `auth_state_mismatch` and `auth_provider_error` by the card's title alone, over Try again, since nobody acts on which of them it was, and the others with a sentence of their own (#581).
 
 ## Part 3: back in the app
 
@@ -199,7 +199,7 @@ sequenceDiagram
 - Configuration: the `oidc-*` parameters in [infra/envs/staging/main.tf](../../infra/envs/staging/main.tf); the two Telia keys and the HMAC key in SSM ([infra/README.md](../../infra/README.md), Secrets)
 - Locally: the mock bank in [services/mock-idp](../../services/mock-idp), the plain dialect of the same kit
 - Specs: [bank-login.feature](../../features/identity/bank-login.feature), [re-registration.feature](../../features/identity/re-registration.feature), [sessions.feature](../../features/identity/sessions.feature)
-- ADRs: [ADR-006](../adr/006-photo-moderation.md) §5, [ADR-010](../adr/010-onboarding-and-consents.md) §15, [ADR-014](../adr/014-demo-mode.md) §1, [ADR-016](../adr/016-fresh-bank-login.md), [ADR-017](../adr/017-tunnistus-oidc-package.md), [ADR-022](../adr/022-taking-a-break.md), [ADR-024](../adr/024-sanctions.md) §5, [ADR-025](../adr/025-admin-host.md), [ADR-026](../adr/026-limits-per-person-and-sign-in-doors.md) §4, §6, §8, [ADR-027](../adr/027-sign-in-code-bound-to-the-device.md), [ADR-058](../adr/058-sessions-end-after-ninety-idle-days.md), [ADR-059](../adr/059-refresh-token-carries-its-session.md)
+- ADRs: [ADR-006](../adr/006-photo-moderation.md) §5, [ADR-010](../adr/010-onboarding-and-consents.md) §15, [ADR-014](../adr/014-demo-mode.md) §1, [ADR-016](../adr/016-fresh-bank-login.md), [ADR-017](../adr/017-tunnistus-oidc-package.md), [ADR-022](../adr/022-taking-a-break.md), [ADR-024](../adr/024-sanctions.md) §5, [ADR-073](../adr/073-telling-a-sanction.md) §2, [ADR-025](../adr/025-admin-host.md), [ADR-026](../adr/026-limits-per-person-and-sign-in-doors.md) §4, §6, §8, [ADR-027](../adr/027-sign-in-code-bound-to-the-device.md), [ADR-058](../adr/058-sessions-end-after-ninety-idle-days.md), [ADR-059](../adr/059-refresh-token-carries-its-session.md)
 - Issues: #32, #33 (the bank login), #35 (sessions), #36 (the app's side), #49 (staff), #186 (the bound code), #324 (a state answered once), #41 (the doors), #472 (the session's end), #490 (the refresh token's secret)
 
 ## Open

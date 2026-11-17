@@ -1,5 +1,6 @@
-import { fireEvent, screen } from "@testing-library/react-native";
-import { AccessibilityInfo, Platform } from "react-native";
+import { fireEvent, screen, waitFor } from "@testing-library/react-native";
+import * as SecureStore from "expo-secure-store";
+import { AccessibilityInfo, Platform, StyleSheet } from "react-native";
 import { a11yProblems, type HostNode, pressables } from "@/test/a11y";
 import { hasCutText } from "@/test/layout";
 import { renderWithTheme, underProviders } from "@/test/render";
@@ -171,5 +172,119 @@ describe("Stepper", () => {
       expect(said).not.toHaveBeenCalled();
       expect(screen.getByText("171 cm").props.accessibilityLiveRegion).toBe("polite");
     });
+  });
+});
+
+// The designers' tries of the tech screen (outside production) draw the stepper
+// as Sini's age screen: a card with a tab for its label in neubrutalism, a pill
+// on a soft shape in Organic Pop. What it says and does is today's.
+describe.each([
+  ["neubrutalism", "rounded-2xl border-solid border-stroke"],
+  ["organic", "rounded-[32px]"],
+  ["glass", "rounded-[32px]"],
+  ["bold", "rounded-[32px]"],
+] as const)("Stepper in the %s try", (look, drawnBy) => {
+  const store = (SecureStore as unknown as { __store: Map<string, string> }).__store;
+  beforeEach(() => store.set("kuutti.preference.look", look));
+  afterEach(() => store.delete("kuutti.preference.look"));
+
+  const drawn = async (props: Partial<React.ComponentProps<typeof Stepper>> = {}) => {
+    const onChange = await show(props);
+    await waitFor(() => expect(JSON.stringify(screen.toJSON())).toContain(drawnBy));
+    return onChange;
+  };
+
+  it("names the number, says it as it changes, and steps it down and up by one", async () => {
+    const onChange = await drawn();
+    expect(screen.getByText("Height")).toBeTruthy();
+    expect(screen.getByText("170 cm").props.accessibilityLiveRegion).toBe("polite");
+    expect(screen.queryByRole("heading")).toBeNull();
+    await fireEvent.press(screen.getByRole("button", { name: "One centimetre less" }));
+    await fireEvent.press(screen.getByRole("button", { name: "One centimetre more" }));
+    expect(onChange.mock.calls).toEqual([[169], [171]]);
+    expect(pressables(screen.toJSON() as HostNode).flatMap((n) => a11yProblems(n))).toEqual([]);
+  });
+
+  it.each([
+    ["below the lower end", { canDown: false }, "One centimetre less"],
+    ["above the upper end", { canUp: false }, "One centimetre more"],
+  ] as const)("does not step %s", async (_where, props, name) => {
+    const onChange = await drawn(props);
+    const button = screen.getByRole("button", { name });
+    expect(button.props.accessibilityState?.disabled).toBe(true);
+    await fireEvent.press(button);
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("draws no label of its own where the field above names the number", async () => {
+    await drawn({ label: undefined });
+    expect(screen.queryByText("Height")).toBeNull();
+    expect(screen.getByText("170 cm")).toBeTruthy();
+  });
+});
+
+describe("Stepper's tone in the neubrutalism try", () => {
+  const store = (SecureStore as unknown as { __store: Map<string, string> }).__store;
+  beforeEach(() => store.set("kuutti.preference.look", "neubrutalism"));
+  afterEach(() => store.delete("kuutti.preference.look"));
+
+  it.each([
+    ["the card's", "card", "bg-card", "text-card-foreground"],
+    ["the secondary colour's", "secondary", "bg-secondary", "text-secondary-foreground"],
+  ] as const)(
+    "fills its card with %s and writes the number in its ink",
+    async (_what, tone, fill, ink) => {
+      await show({ tone });
+      await waitFor(() => expect(JSON.stringify(screen.toJSON())).toContain("border-stroke"));
+      expect(JSON.stringify(screen.toJSON())).toMatch(
+        new RegExp(`border-stroke[^"]*\\b${fill}\\b`),
+      );
+      expect(screen.getByText("170 cm").props.className).toMatch(new RegExp(`\\b${ink}\\b`));
+    },
+  );
+});
+
+// The pill styles write the number as their headline: Organic Pop's slanted
+// Saiga Extrabold, Glass's and Bold Contrast's Saiga italic; Glass's pill and
+// tab are frosted panes over the backdrop, solid again in high contrast.
+describe.each([
+  ["organic", "font-extrabold", [{ skewX: "-9deg" }], "bg-card"],
+  ["glass", "italic", undefined, "bg-card/70"],
+  ["bold", "italic", undefined, "bg-card"],
+] as const)("Stepper's number and pane in the %s try", (look, face, transform, pane) => {
+  const store = (SecureStore as unknown as { __store: Map<string, string> }).__store;
+  beforeEach(() => store.set("kuutti.preference.look", look));
+  afterEach(() => {
+    store.delete("kuutti.preference.look");
+    store.delete("kuutti.preference.highContrast");
+  });
+
+  /** The classes of the pill and of the tab above it. */
+  const panes = () =>
+    JSON.stringify(screen.toJSON()).match(/"className":"[^"]*rounded-(\[32px\]|t-2xl)[^"]*"/g) ??
+    [];
+
+  it("writes the number in the style's face", async () => {
+    await show();
+    await waitFor(() => expect(JSON.stringify(screen.toJSON())).toContain("rounded-[32px]"));
+    const number = screen.getByText("170 cm");
+    expect(String(number.props.className).split(" ")).toContain(face);
+    expect(StyleSheet.flatten(number.props.style).transform).toEqual(transform);
+  });
+
+  it("draws its pill and tab on the style's pane", async () => {
+    await show();
+    await waitFor(() => expect(panes()).toHaveLength(2));
+    for (const each of panes()) expect(each.split(/[\s"]/)).toContain(pane);
+  });
+
+  it("draws them solid with high contrast on", async () => {
+    store.set("kuutti.preference.highContrast", "true");
+    await show();
+    await waitFor(() => expect(panes()).toHaveLength(2));
+    for (const each of panes()) {
+      expect(each.split(/[\s"]/)).toContain("bg-card");
+      expect(each).not.toContain("bg-card/70");
+    }
   });
 });

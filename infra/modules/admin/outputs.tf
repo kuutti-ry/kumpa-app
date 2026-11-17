@@ -1,5 +1,5 @@
 output "bucket" {
-  description = "GitHub environment variable ADMIN_BUCKET: CI syncs main's build to its root and a pull request's preview to pr-<n>/ (ADR-025 §5, §6)."
+  description = "GitHub environment variable ADMIN_BUCKET: CI syncs main's build to its root (ADR-025 §5)."
   value       = aws_s3_bucket.admin.bucket
 }
 

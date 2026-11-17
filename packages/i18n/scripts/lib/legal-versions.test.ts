@@ -13,18 +13,32 @@ import {
 
 const APP = {
   privacy: "2026-09-draft-1",
-  research: "2026-09-draft-1",
   special_category: "2026-10-draft-2",
   terms: "2026-09-draft-1",
 };
 
-/** The Finnish wordings the site carries as the app has them (stand-ins). */
-const FI = {
-  "legal.research.title": "Tutkimus",
-  "legal.research.summary": "LUONNOS: tutkimus.",
-  "legal.special_category.title": "Arkaluonteiset tiedot",
-  "legal.special_category.summary": "LUONNOS: arkaluonteiset vastaukset.",
+/**
+ * The wordings the site carries as the app has them, by language (stand-ins).
+ * The site says which of a consent's wordings counts: the English of the
+ * sensitive answers, unless the site says another.
+ */
+const EN = {
+  "legal.special_category.title": "Sensitive answers",
+  "legal.special_category.summary": "The sensitive answers, in full.",
 };
+const FI = {
+  "legal.special_category.title": "Arkaluonteiset tiedot",
+  "legal.special_category.summary": "Arkaluonteiset vastaukset, kokonaan.",
+};
+const TEXTS = { en: EN, fi: FI };
+const SENSITIVE_EN = siteFingerprint(
+  EN["legal.special_category.title"],
+  EN["legal.special_category.summary"],
+);
+const SENSITIVE_FI = siteFingerprint(
+  FI["legal.special_category.title"],
+  FI["legal.special_category.summary"],
+);
 
 /** The document as the site's build writes it, its own fields included. */
 const SITE = {
@@ -32,28 +46,21 @@ const SITE = {
     version: "2026-09-draft-1",
     hash: "65b7fa7d00ed9290",
     language: "en",
-    url: "https://kuutti.app/legal/terms/#terms-2026-09-draft-1",
+    url: "https://kumpa.fi/legal/terms/#terms-2026-09-draft-1",
     dated: "2026-10-01",
   },
   privacy: {
     version: "2026-09-draft-1",
     hash: "422ac16a1df3d859",
     language: "en",
-    url: "https://kuutti.app/legal/privacy/#privacy-2026-09-draft-1",
+    url: "https://kumpa.fi/legal/privacy/#privacy-2026-09-draft-1",
     dated: "2026-10-06",
-  },
-  research: {
-    version: "2026-09-draft-1",
-    hash: siteFingerprint("Tutkimus", "LUONNOS: tutkimus."),
-    language: "fi",
-    url: "https://kuutti.app/legal/privacy/#research-2026-09-draft-1",
-    dated: "2026-09-26",
   },
   special_category: {
     version: "2026-10-draft-2",
-    hash: siteFingerprint("Arkaluonteiset tiedot", "LUONNOS: arkaluonteiset vastaukset."),
-    language: "fi",
-    url: "https://kuutti.app/legal/privacy/#special_category-2026-10-draft-2",
+    hash: SENSITIVE_EN,
+    language: "en",
+    url: "https://kumpa.fi/legal/privacy/#special_category-2026-10-draft-2",
     dated: "2026-10-08",
   },
 };
@@ -70,11 +77,11 @@ describe("siteFingerprint", () => {
 
 describe("parsePublished", () => {
   it("reads the version, the address and the fingerprint of each kind and leaves the day", () => {
-    expect(published().research).toEqual({
-      version: "2026-09-draft-1",
-      hash: SITE.research.hash,
-      language: "fi",
-      url: "https://kuutti.app/legal/privacy/#research-2026-09-draft-1",
+    expect(published().special_category).toEqual({
+      version: "2026-10-draft-2",
+      hash: SENSITIVE_EN,
+      language: "en",
+      url: "https://kumpa.fi/legal/privacy/#special_category-2026-10-draft-2",
     });
   });
 
@@ -102,13 +109,13 @@ describe("fetchPublished", () => {
     const fetchImpl = vi.fn(async () => new Response(JSON.stringify(SITE)));
     await expect(fetchPublished(fetchImpl)).resolves.toEqual(published());
     expect(fetchImpl).toHaveBeenCalledWith(
-      "https://kuutti.app/legal/versions.json",
+      "https://kumpa.fi/legal/versions.json",
       expect.objectContaining({
         headers: { accept: "application/json" },
         signal: expect.any(AbortSignal),
       }),
     );
-    expect(VERSIONS_URL).toBe("https://kuutti.app/legal/versions.json");
+    expect(VERSIONS_URL).toBe("https://kumpa.fi/legal/versions.json");
   });
 
   it("fails on a 404, so a site that has not published the file is never a pass", async () => {
@@ -189,8 +196,8 @@ describe("fetchPublished", () => {
 });
 
 describe("legalVersionProblems", () => {
-  it("finds nothing when every kind has the site's version and the site's address", () => {
-    expect(legalVersionProblems(APP, published(), FI)).toEqual([]);
+  it("finds nothing when every kind has the site's version, address and counted wording", () => {
+    expect(legalVersionProblems(APP, published(), TEXTS)).toEqual([]);
   });
 
   it("fails when the site published a new version the app does not carry yet", () => {
@@ -198,17 +205,17 @@ describe("legalVersionProblems", () => {
     site.privacy = {
       ...SITE.privacy,
       version: "2026-11-1",
-      url: "https://kuutti.app/legal/privacy/#privacy-2026-11-1",
+      url: "https://kumpa.fi/legal/privacy/#privacy-2026-11-1",
     };
-    expect(legalVersionProblems(APP, site, FI)).toEqual([
+    expect(legalVersionProblems(APP, site, TEXTS)).toEqual([
       expect.stringMatching(
-        /^privacy: the app carries 2026-09-draft-1, the site publishes 2026-11-1 \(https:\/\/kuutti\.app\/legal\/privacy\/#privacy-2026-11-1\)\. The site's text leads/,
+        /^privacy: the app carries 2026-09-draft-1, the site publishes 2026-11-1 \(https:\/\/kumpa\.fi\/legal\/privacy\/#privacy-2026-11-1\)\. The site's text leads/,
       ),
     ]);
   });
 
   it("fails when the app moved a version the site has not published", () => {
-    expect(legalVersionProblems({ ...APP, terms: "2026-11-1" }, published(), FI)).toEqual([
+    expect(legalVersionProblems({ ...APP, terms: "2026-11-1" }, published(), TEXTS)).toEqual([
       expect.stringMatching(
         /^terms: the app carries 2026-11-1, the site publishes 2026-09-draft-1/,
       ),
@@ -216,13 +223,15 @@ describe("legalVersionProblems", () => {
   });
 
   it("fails on a kind either side lacks", () => {
-    const { research: _, ...withoutResearch } = SITE;
-    expect(legalVersionProblems(APP, parsePublished(JSON.stringify(withoutResearch)), FI)).toEqual([
-      "research: the site publishes no version of it (the app carries 2026-09-draft-1)",
+    const { special_category: _, ...withoutSensitive } = SITE;
+    expect(
+      legalVersionProblems(APP, parsePublished(JSON.stringify(withoutSensitive)), TEXTS),
+    ).toEqual([
+      "special_category: the site publishes no version of it (the app carries 2026-10-draft-2)",
     ]);
-    const { research: __, ...appWithout } = APP;
-    expect(legalVersionProblems(appWithout, published(), FI)).toEqual([
-      "research: the site publishes a version of a kind the app does not know",
+    const { special_category: __, ...appWithout } = APP;
+    expect(legalVersionProblems(appWithout, published(), TEXTS)).toEqual([
+      "special_category: the site publishes a version of a kind the app does not know",
     ]);
   });
 
@@ -231,57 +240,106 @@ describe("legalVersionProblems", () => {
     site.terms = {
       ...SITE.terms,
       version: "2026-09-draft-1",
-      url: "https://kuutti.app/fi/legal/terms/#terms-2026-09-draft-1",
+      url: "https://kumpa.fi/fi/legal/terms/#terms-2026-09-draft-1",
     };
-    expect(legalVersionProblems(APP, site, FI)).toEqual([
-      "terms: the app links to https://kuutti.app/legal/terms/#terms-2026-09-draft-1, the site publishes the text at https://kuutti.app/fi/legal/terms/#terms-2026-09-draft-1",
+    expect(legalVersionProblems(APP, site, TEXTS)).toEqual([
+      "terms: the app links to https://kumpa.fi/legal/terms/#terms-2026-09-draft-1, the site publishes the text at https://kumpa.fi/fi/legal/terms/#terms-2026-09-draft-1",
     ]);
   });
 
   it("fails on a kind both carry that the app has no page for", () => {
-    const police = { ...SITE.terms, version: "1", url: "https://kuutti.app/x" };
+    const police = { ...SITE.terms, version: "1", url: "https://kumpa.fi/x" };
     const site = { ...published(), police };
-    expect(legalVersionProblems({ ...APP, police: "1" }, site, FI)).toEqual([
+    expect(legalVersionProblems({ ...APP, police: "1" }, site, TEXTS)).toEqual([
       "police: the app has no page for it to link to (src/legal.ts)",
     ]);
   });
 
-  it("fails when the site's research text is not this app's Finnish wording, under the same version", () => {
+  it("fails when the site's text of a consent is not this app's wording in the language the site names, under the same version", () => {
     // The site bumped the version with its old text, or edited its text in
-    // place, or the app's summary moved: either way two texts, one version.
+    // place, or the app's wording moved: either way two texts, one version.
     const site = published();
-    site.research = { ...SITE.research, hash: "72a206b59f5659c5" };
-    expect(legalVersionProblems(APP, site, FI)).toEqual([
-      `research: the site's text of 2026-09-draft-1 (fi, 72a206b59f5659c5) is not this app's Finnish legal.research.title and summary (fi, ${SITE.research.hash}). The site carries this wording as the app has it, so one of the two changed without the other: one version, one text`,
+    site.special_category = { ...SITE.special_category, hash: "72a206b59f5659c5" };
+    expect(legalVersionProblems(APP, site, TEXTS)).toEqual([
+      `special_category: the site's text of 2026-10-draft-2 (en, 72a206b59f5659c5) is not this app's legal.special_category.title and summary in that language (${SENSITIVE_EN}). The site carries this wording as the app has it, so one of the two changed without the other: one version, one text`,
     ]);
-    const retitled = { ...FI, "legal.special_category.title": "Erityiset tiedot" };
-    expect(legalVersionProblems(APP, published(), retitled)).toEqual([
-      expect.stringMatching(/^special_category: the site's text of 2026-10-draft-2 \(fi, /),
+    // The English is the one the site holds here.
+    const retitled = { ...EN, "legal.special_category.title": "Special answers" };
+    expect(legalVersionProblems(APP, published(), { en: retitled, fi: FI })).toEqual([
+      expect.stringMatching(
+        new RegExp(
+          `^special_category: the site's text of 2026-10-draft-2 \\(en, ${SENSITIVE_EN}\\) is not this app's legal\\.special_category\\.title and summary in that language`,
+        ),
+      ),
+    ]);
+    const reworded = { ...EN, "legal.special_category.summary": "The sensitive answers." };
+    expect(legalVersionProblems(APP, published(), { en: reworded, fi: FI })).toHaveLength(1);
+  });
+
+  it("holds the wording the site says counts and no other: the translation beside it is the golden row's", () => {
+    // The Finnish of the sensitive answers is not in the site's document
+    // (src/consent.test.ts ties it to its version in this repository).
+    const moved = {
+      en: EN,
+      fi: { ...FI, "legal.special_category.summary": "Jotain muuta." },
+    };
+    expect(legalVersionProblems(APP, published(), moved)).toEqual([]);
+  });
+
+  it("follows the language the site names for a consent, whichever of the app's it is", () => {
+    const finnish = published();
+    finnish.special_category = { ...SITE.special_category, language: "fi", hash: SENSITIVE_FI };
+    expect(legalVersionProblems(APP, finnish, TEXTS)).toEqual([]);
+    // The language changed and the fingerprint did not: the English text, called Finnish.
+    const renamed = published();
+    renamed.special_category = { ...SITE.special_category, language: "fi" };
+    expect(legalVersionProblems(APP, renamed, TEXTS)).toEqual([
+      `special_category: the site's text of 2026-10-draft-2 (fi, ${SENSITIVE_EN}) is not this app's legal.special_category.title and summary in that language (${SENSITIVE_FI}). The site carries this wording as the app has it, so one of the two changed without the other: one version, one text`,
     ]);
   });
 
-  it("fails when the site's research text is not the Finnish one, and holds no fingerprint of the terms or the privacy policy", () => {
-    const site = published();
-    site.special_category = { ...SITE.special_category, language: "en" };
-    expect(legalVersionProblems(APP, site, FI)).toEqual([
-      expect.stringMatching(/^special_category: the site's text of 2026-10-draft-2 \(en, /),
-    ]);
-    // The terms and the privacy policy: the site's full text, the app's summary.
+  it.each<[string, string, Record<string, Record<string, string>>]>([
+    ["a language the app has no catalogue of", "sv", TEXTS],
+    ["a language whose catalogue was not handed over", "en", { fi: FI }],
+    [
+      "a catalogue without the title",
+      "en",
+      { en: { "legal.special_category.summary": EN["legal.special_category.summary"] }, fi: FI },
+    ],
+    [
+      "a catalogue without the summary",
+      "en",
+      { en: { "legal.special_category.title": EN["legal.special_category.title"] }, fi: FI },
+    ],
+    ["a name every object answers to", "constructor", TEXTS],
+  ])(
+    "fails when the site's consent is in %s, never passing on a text it cannot read",
+    (_, language, texts) => {
+      const site = published();
+      site.special_category = { ...SITE.special_category, language };
+      expect(legalVersionProblems(APP, site, texts)).toEqual([
+        `special_category: the site's text of 2026-10-draft-2 is in "${language}" (${SENSITIVE_EN}), and this app has no legal.special_category.title and summary in that language. The site carries this wording as the app has it: one version, one text`,
+      ]);
+    },
+  );
+
+  it("holds no fingerprint of the terms or the privacy policy: the site's full text, the app's summary", () => {
     const full = published();
     full.terms = { ...SITE.terms, hash: "0123456789abcdef", language: "fi" };
-    expect(legalVersionProblems(APP, full, FI)).toEqual([]);
+    full.privacy = { ...SITE.privacy, hash: "fedcba9876543210", language: "sv" };
+    expect(legalVersionProblems(APP, full, TEXTS)).toEqual([]);
   });
 
   it("reports a wrong link and a parted wording of one kind together", () => {
     const site = published();
-    site.research = {
-      ...SITE.research,
+    site.special_category = {
+      ...SITE.special_category,
       hash: "72a206b59f5659c5",
-      url: "https://kuutti.app/legal/research/",
+      url: "https://kumpa.fi/legal/special_category/",
     };
-    expect(legalVersionProblems(APP, site, FI)).toEqual([
-      expect.stringMatching(/^research: the app links to /),
-      expect.stringMatching(/^research: the site's text of /),
+    expect(legalVersionProblems(APP, site, TEXTS)).toEqual([
+      expect.stringMatching(/^special_category: the app links to /),
+      expect.stringMatching(/^special_category: the site's text of /),
     ]);
   });
 });

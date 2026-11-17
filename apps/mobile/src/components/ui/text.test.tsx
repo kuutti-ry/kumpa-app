@@ -1,4 +1,5 @@
-import { screen } from "@testing-library/react-native";
+import { screen, waitFor } from "@testing-library/react-native";
+import * as SecureStore from "expo-secure-store";
 import { renderWithTheme } from "@/test/render";
 import { HEADING_FONT_SCALE, MAX_FONT_SCALE } from "@/theme/a11y";
 import { Text, TextClassContext } from "./text";
@@ -153,5 +154,58 @@ describe("Text", () => {
     expect(screen.getByText("Inside a button").props.className).toMatch(
       /text-primary-foreground underline$/,
     );
+  });
+});
+
+// Organic Pop (outside production) reads what is read light, as Sini's
+// "Inter Light": the phone's own font at its light weight. A heading, a label
+// and a parent's own weight keep theirs, and today's look draws none light.
+describe("Text in the Organic Pop try", () => {
+  const store = (SecureStore as unknown as { __store: Map<string, string> }).__store;
+  afterEach(() => store.delete("kuutti.preference.look"));
+
+  /** Renders with a heading beside it, and waits until the stored look has drawn the body light. */
+  const inOrganic = async (ui: React.ReactElement) => {
+    store.set("kuutti.preference.look", "organic");
+    await renderWithTheme(
+      <>
+        {ui}
+        <Text>Marker</Text>
+      </>,
+    );
+    await waitFor(() =>
+      expect(String(screen.getByText("Marker").props.className).split(" ")).toContain("font-light"),
+    );
+  };
+  const weightOf = (words: string) =>
+    String(screen.getByText(words).props.className)
+      .split(" ")
+      .filter((each) => /^font-(light|normal|medium|semibold|bold)$/.test(each));
+
+  it.each(["default", "muted"] as const)("draws %s light", async (variant) => {
+    await inOrganic(<Text variant={variant}>Words</Text>);
+    expect(weightOf("Words")).toEqual(["font-light"]);
+  });
+
+  it.each(["h1", "h2", "h3", "h4", "title", "group", "small"] as const)(
+    "leaves %s at its own weight",
+    async (variant) => {
+      await inOrganic(<Text variant={variant}>Words</Text>);
+      expect(weightOf("Words")).not.toContain("font-light");
+    },
+  );
+
+  it("gives way to the weight its parent hands down, as a button's words", async () => {
+    await inOrganic(
+      <TextClassContext.Provider value="font-normal">
+        <Text>Inside a button</Text>
+      </TextClassContext.Provider>,
+    );
+    expect(weightOf("Inside a button")).toEqual(["font-normal"]);
+  });
+
+  it("draws nothing light in today's look", async () => {
+    await renderWithTheme(<Text variant="muted">Words</Text>);
+    expect(weightOf("Words")).not.toContain("font-light");
   });
 });

@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-
 import * as SecureStore from "expo-secure-store";
 import * as ReactNative from "react-native";
 import { AccessibilityInfo, Animated, Platform, Pressable, Text } from "react-native";
-import { ThemeProvider, useTheme } from "./ThemeProvider";
+import { ThemeProvider, useLookTraits, useTheme } from "./ThemeProvider";
 
 // The theme (#12, #143): light and dark through NativeWind, high contrast as a
 // second token set that follows the OS until the person chooses, both choices
@@ -55,13 +55,14 @@ function osSettings({
 
 function Probe() {
   const theme = useTheme();
+  const traits = useLookTraits();
   return (
     <>
       <Text testID="scheme">{theme.scheme}</Text>
       <Text testID="preference">{theme.preference}</Text>
       <Text testID="contrast">{String(theme.highContrast)}</Text>
-      <Text testID="palette">{theme.palette}</Text>
       <Text testID="look">{theme.look}</Text>
+      <Text testID="traits">{JSON.stringify(traits)}</Text>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="dark"
@@ -84,13 +85,8 @@ function Probe() {
       />
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="dusk"
-        onPress={() => theme.setPalette("dusk")}
-      />
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="today's colours"
-        onPress={() => theme.setPalette("today")}
+        accessibilityLabel="glass"
+        onPress={() => theme.setLook("glass")}
       />
       <Pressable
         accessibilityRole="button"
@@ -233,81 +229,77 @@ describe("ThemeProvider", () => {
     await waitFor(() => expect(store.get("kuutti.preference.highContrast")).toBe("false"));
   });
 
-  // The designers' try (tokens.css): today's colours are the base sets, the
-  // try's palettes a class on the root view in the scheme's set, high contrast
-  // wins; and the style, today's or neubrutalism's, is apart from the palette.
-  it.each([
-    ["light", "palette-dusk"],
-    ["dark", "palette-dusk-dark"],
-  ] as const)(
-    "puts Dusk's %s set on the root view, keeps it, and forgets it for today's colours",
-    async (scheme, set) => {
-      mockColorScheme = scheme;
-      osSettings();
-      await show();
-      expect(textOf("palette")).toBe("today");
-      expect(rootClass()).not.toMatch(/palette-/);
-      await fireEvent.press(screen.getByLabelText("dusk"));
-      expect(textOf("palette")).toBe("dusk");
-      expect(rootClass().split(" ")).toContain(set);
-      await waitFor(() => expect(store.get("kuutti.preference.palette")).toBe("dusk"));
-      await fireEvent.press(screen.getByLabelText("today's colours"));
-      expect(rootClass()).not.toMatch(/palette-/);
-      await waitFor(() => expect(store.has("kuutti.preference.palette")).toBe(false));
-    },
-  );
-
-  it("takes the palette chosen last time", async () => {
-    osSettings();
-    store.set("kuutti.preference.palette", "birch");
-    await show();
-    expect(textOf("palette")).toBe("birch");
-    expect(rootClass().split(" ")).toContain("palette-birch");
-  });
-
-  it("keeps today's colours for a stored palette it does not know", async () => {
-    osSettings();
-    store.set("kuutti.preference.palette", "neon");
-    await show();
-    expect(textOf("palette")).toBe("today");
-    expect(rootClass()).not.toMatch(/palette-/);
-  });
-
-  it("draws today's style until neubrutalism is chosen, keeps that, and forgets it again", async () => {
+  // The designers' try (looks.ts, tokens.css): today's colours are the base
+  // sets, each style's its own class on the root view in the scheme's set, and
+  // high contrast wins over them.
+  it("draws today's style until one is chosen, keeps that, and forgets it again", async () => {
     osSettings();
     await show();
     expect(textOf("look")).toBe("today");
+    expect(rootClass()).not.toMatch(/look-/);
+    await fireEvent.press(screen.getByLabelText("glass"));
+    expect(textOf("look")).toBe("glass");
+    expect(rootClass().split(" ")).toContain("look-glass");
+    await waitFor(() => expect(store.get("kuutti.preference.look")).toBe("glass"));
     await fireEvent.press(screen.getByLabelText("neubrutalism"));
-    expect(textOf("look")).toBe("neubrutalism");
-    await waitFor(() => expect(store.get("kuutti.preference.look")).toBe("neubrutalism"));
-    // The style is no token set: the root view's class stays the palette's.
-    expect(rootClass()).not.toMatch(/palette-/);
+    expect(rootClass().split(" ")).toContain("look-neubrutalism");
+    expect(rootClass()).not.toMatch(/look-glass/);
     await fireEvent.press(screen.getByLabelText("today's style"));
     expect(textOf("look")).toBe("today");
+    expect(rootClass()).not.toMatch(/look-/);
     await waitFor(() => expect(store.has("kuutti.preference.look")).toBe(false));
   });
 
-  it("takes the style chosen last time", async () => {
-    osSettings();
-    store.set("kuutti.preference.look", "neubrutalism");
-    await show();
-    expect(textOf("look")).toBe("neubrutalism");
-  });
+  it.each([
+    ["neubrutalism", "light", "look-neubrutalism"],
+    ["neubrutalism", "dark", "look-neubrutalism-dark"],
+    ["organic", "light", "look-organic"],
+    ["organic", "dark", "look-organic-dark"],
+    ["glass", "light", "look-glass"],
+    ["glass", "dark", "look-glass-dark"],
+    ["bold", "light", "look-bold"],
+    ["bold", "dark", "look-bold-dark"],
+  ] as const)(
+    "puts %s's %s set on the root view when it was chosen last time",
+    async (look, scheme, set) => {
+      mockColorScheme = scheme;
+      osSettings();
+      store.set("kuutti.preference.look", look);
+      await show();
+      expect(textOf("look")).toBe(look);
+      expect(rootClass().split(" ")).toContain(set);
+      expect(
+        rootClass()
+          .split(" ")
+          .filter((name) => name.startsWith("look-")),
+      ).toEqual([set]);
+    },
+  );
 
   it("keeps today's style for a stored one it does not know", async () => {
     osSettings();
     store.set("kuutti.preference.look", "memphis");
     await show();
     expect(textOf("look")).toBe("today");
+    expect(rootClass()).not.toMatch(/look-/);
   });
 
-  it("lets high contrast win over a palette", async () => {
+  it("lets high contrast win over a style's colours, and takes its glass and backdrop away", async () => {
     osSettings({ darker: true });
-    store.set("kuutti.preference.palette", "dusk");
+    store.set("kuutti.preference.look", "glass");
     await show();
-    expect(textOf("palette")).toBe("dusk");
+    expect(textOf("look")).toBe("glass");
     expect(rootClass()).toMatch(/\bhigh-contrast\b/);
-    expect(rootClass()).not.toMatch(/palette-/);
+    expect(rootClass()).not.toMatch(/look-/);
+    expect(JSON.parse(textOf("traits"))).toMatchObject({
+      pill: true,
+      glass: false,
+      headline: "italic",
+      backdrop: "none",
+    });
+    await fireEvent.press(screen.getByLabelText("contrast off"));
+    expect(rootClass().split(" ")).toContain("look-glass");
+    expect(JSON.parse(textOf("traits"))).toMatchObject({ glass: true, backdrop: "bubbles" });
   });
 
   it("fades a change of appearance in, briefly", async () => {

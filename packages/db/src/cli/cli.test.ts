@@ -58,12 +58,12 @@ describe("pnpm --filter @kuutti/db seed", () => {
     expect(await run("seed", args, { APP_ENV: appEnv })).toEqual({
       code: 2,
       out: [],
-      err: ["refusing to seed production: previews and local databases only (TD-19)"],
+      err: ["refusing to seed production: local databases only"],
     });
   });
 
   it("needs DATABASE_URL outside production", async () => {
-    expect(await run("seed", ["--env", "preview"], {})).toMatchObject({
+    expect(await run("seed", ["--env", "test"], {})).toMatchObject({
       code: 1,
       err: ["DATABASE_URL is not set"],
     });
@@ -77,7 +77,7 @@ describe("pnpm --filter @kuutti/db seed", () => {
         await pool.query("CREATE VIEW public.pg_roles AS SELECT 'rdsadmin'::name AS rolname");
         const managed = new URL(url);
         managed.searchParams.set("options", "-c search_path=public,pg_catalog");
-        for (const args of [[], ["--env", "preview"], ["--env", "staging"]]) {
+        for (const args of [[], ["--env", "test"], ["--env", "staging"]]) {
           const result = await run("seed", args, { DATABASE_URL: managed.toString() });
           expect(result.code).toBe(1);
           expect(result.out).toEqual([]);
@@ -99,7 +99,7 @@ describe("pnpm --filter @kuutti/db seed", () => {
         await pool.end();
       }
       for (const [args, appEnv, env] of [
-        [["--env", "preview"], undefined, "preview"],
+        [["--env", "development"], "test", "development"],
         [[], "test", "test"],
         [[], undefined, "development"],
       ] as const) {
@@ -309,12 +309,16 @@ describe("pnpm --filter @kuutti/db moderator", () => {
     ["no role", ["grant", "HMAC", "--by", "Maintainer"]],
     ["a role that does not exist", ["grant", "HMAC", "owner", "--by", "Maintainer"]],
     ["no name of who grants it", ["grant", "HMAC", "moderator"]],
+    [
+      "the researcher's role, gone with research (ADR-071)",
+      ["grant", "HMAC", "researcher", "--by", "Maintainer"],
+    ],
   ])("refuses a grant with %s", async (_, args) => {
     await identity(1);
     const result = await moderator(args.map((arg) => (arg === "HMAC" ? hmac(1) : arg)));
     expect(result).toMatchObject({
       code: 2,
-      err: ["usage: moderator grant <hetu_hmac> <moderator|admin|researcher> --by <name>"],
+      err: ["usage: moderator grant <hetu_hmac> <moderator|admin> --by <name>"],
     });
     expect((await pool.query("SELECT 1 FROM moderator_roles")).rowCount).toBe(0);
   });
@@ -360,8 +364,8 @@ describe("pnpm --filter @kuutti/db moderator", () => {
 
   it("takes an upper-case hetu_hmac as given", async () => {
     await pool.query("INSERT INTO identity (hetu_hmac) VALUES ($1)", ["F".repeat(64)]);
-    expect((await moderator(["grant", "F".repeat(64), "researcher", "--by", "M"])).out).toEqual([
-      "granted researcher",
+    expect((await moderator(["grant", "F".repeat(64), "admin", "--by", "M"])).out).toEqual([
+      "granted admin",
     ]);
   });
 

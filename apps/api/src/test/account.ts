@@ -1,9 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import type { Queryable } from "@kuutti/db";
 import type { ModeratorRole } from "@kuutti/schema";
-import { expect } from "vitest";
-import type { App } from "../app.ts";
-import { CURRENT_CONSENT_VERSIONS } from "../identity/index.ts";
 import { hashToken } from "../lib/auth-middleware.ts";
 import { SPECIAL_CATEGORY_CONSENT_VERSION } from "../profile/index.ts";
 
@@ -153,6 +150,27 @@ export type Staff = {
 };
 
 /**
+ * A confirmed address, and the terms read in `locale`: what a mail to the
+ * person needs (ADR-043), in the language it goes in (ADR-068 §5, ADR-073 §4).
+ */
+export async function confirmedAddress(
+  db: Queryable,
+  who: { accountId: string },
+  address: string,
+  locale: string,
+): Promise<void> {
+  await db.query("UPDATE account SET email = $2, email_confirmed_at = now() WHERE id = $1", [
+    who.accountId,
+    address,
+  ]);
+  await db.query(
+    `INSERT INTO consent (account_id, kind, version, locale_shown)
+     VALUES ($1, 'terms', 'test', $2)`,
+    [who.accountId, locale],
+  );
+}
+
+/**
  * A member of staff (#49): an identity with a moderator_roles row and one
  * admin session, written straight into the test transaction. Plain SQL for
  * the same reason as signedInAccount.
@@ -189,18 +207,4 @@ export async function staffSession(
     role,
     headers: { authorization: `Bearer ${accessToken}` },
   };
-}
-
-/** The research consent of the current wording, through the route as the app gives it (#50). */
-export async function joinStudy(app: App, headers: Record<string, string>): Promise<void> {
-  const answer = await app.request("/consents", {
-    method: "POST",
-    headers: { ...headers, "content-type": "application/json" },
-    body: JSON.stringify({
-      kind: "research",
-      version: CURRENT_CONSENT_VERSIONS.research,
-      locale: "fi",
-    }),
-  });
-  expect(answer.status).toBe(200);
 }

@@ -23,7 +23,7 @@ import { contactProven, insertBlock } from "./blocks.ts";
  * of a conversation with a frozen copy of it (#351, ADR-030 §12), with a reason of
  * #106's list and, if they like, a few lines; the report blocks both ways in
  * the same transaction. The reported person learns nothing. The note reaches
- * no log line, error detail or research event (rule 5). At most
+ * no log line or error detail. At most
  * matching_config reports_per_day per account and Finnish day, counted under
  * an advisory lock per account (the feedback's lock); one open report per
  * pair. Both are asked before the card is, so neither answer tells whether

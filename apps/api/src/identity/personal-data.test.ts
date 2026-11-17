@@ -110,12 +110,6 @@ const REGISTER: Record<string, Entry> = {
     by: "deleteEmailRows",
     exported: { not: "The day's sends, counted against the limit and pruned." },
   },
-  events: {
-    erasure: "stays",
-    why: "Keyed by research_id: the mapping row goes, and they cannot be joined back (rule 5, TD-5).",
-    stays: "age_band at consent_version id name pond props research_id snapshot",
-    exported: ["research"],
-  },
   feedback: { erasure: "goes", by: "deleteFeedbackOfAccount", exported: ["feedback"] },
   found_them_count: { erasure: "nobody", why: "A count by day and reason (#83, ADR-040)." },
   identity: {
@@ -196,7 +190,6 @@ const REGISTER: Record<string, Entry> = {
     stays: "body created_at id kind photo_id report_id seq side",
     exported: { not: "In nobody's export, the reporter's included (ADR-030 §12)." },
   },
-  research_subject: { erasure: "goes", by: "removeResearchSubject", exported: ["research"] },
   reward: { erasure: "goes", by: "eraseInvitationsOf", exported: ["invitations"] },
   round_entries: { erasure: "goes", by: "eraseRoundsOf", exported: ["rounds"] },
   round_relaxation: { erasure: "goes", by: "eraseRoundsOf", exported: ["rounds"] },

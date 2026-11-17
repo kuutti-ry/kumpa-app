@@ -27,18 +27,20 @@ describe("contrast", () => {
     expect(hslChannelsToRgb("8px")).toBeNull();
   });
 
-  it("finds the token sets of tokens.css: the base four and the try's palettes", () => {
+  it("finds the token sets of tokens.css: the base four and the try's styles", () => {
     expect(Object.keys(parseTokenSets(TOKENS))).toEqual([
       ":root",
       ".dark:root",
       ".high-contrast",
       ".high-contrast-dark",
-      ".palette-ice",
-      ".palette-ice-dark",
-      ".palette-dusk",
-      ".palette-dusk-dark",
-      ".palette-birch",
-      ".palette-birch-dark",
+      ".look-neubrutalism",
+      ".look-neubrutalism-dark",
+      ".look-organic",
+      ".look-organic-dark",
+      ".look-glass",
+      ".look-glass-dark",
+      ".look-bold",
+      ".look-bold-dark",
     ]);
   });
 

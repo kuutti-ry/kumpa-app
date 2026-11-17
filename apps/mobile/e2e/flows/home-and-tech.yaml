@@ -41,7 +41,7 @@ name: Home says how many people have completed their profiles and the gate in wo
     direction: DOWN
     timeout: 60000
 - assertVisible:
-    text: "People on Kuutti|Ihmiset Kuutissa|Människor på Kuutti"
+    text: "People on Kumpa|Ihmiset Kumpa-sovelluksessa|Människor på Kumpa"
     below: "(Conversations|Keskustelut|Samtal)(, .*)?"
 # The bar is one element, read as a screen reader hears it. The percentages under
 # it are drawn inside that element, so only Android reads them as text of their

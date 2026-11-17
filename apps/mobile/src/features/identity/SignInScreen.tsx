@@ -1,8 +1,10 @@
-import { formatDate, type PlainMessageKey, realLocale } from "@kuutti/i18n";
+import { formatDate, type PlainMessageKey, realLocale, sanctionStatement } from "@kuutti/i18n";
+import { SanctionReason } from "@kuutti/schema";
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { AppState, Linking, Platform, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Backdrop } from "@/components/backdrop";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
@@ -24,13 +26,18 @@ import { BeforeSignIn } from "./BeforeSignIn";
 import { useSession } from "./session";
 import { challengeOf, newVerifier } from "./verifier";
 
-/** What the deep link `kuutti://auth` may carry: a one-time code, or the refusal's code and date. */
-export type SignInParams = { code?: string; error?: string; until?: string };
+/**
+ * What the deep link `kuutti://auth` may carry: a one-time code, or the
+ * refusal's code, its date, and a suspension's or a ban's reason (#715).
+ */
+export type SignInParams = { code?: string; error?: string; until?: string; reason?: string };
 
-type Phase =
-  | { kind: "idle" }
-  | { kind: "exchanging" }
-  | { kind: "error"; code: string; until?: string };
+type Failure = { code: string; until?: string; reason?: string };
+
+type Phase = { kind: "idle" } | { kind: "exchanging" } | ({ kind: "error" } & Failure);
+
+/** The refusals a sanction explains (#715, ADR-073 §1): their reason, when the link carries one. */
+const SANCTIONED = new Set(["auth_suspended", "auth_banned"]);
 
 /**
  * The refusals with a fact of their own, the API's through the deep link and
@@ -48,7 +55,6 @@ const REFUSALS: ReadonlyMap<string, PlainMessageKey> = new Map([
   ["auth_cancelled", "signIn.error.auth_cancelled"],
   ["auth_rate_limited", "signIn.error.auth_rate_limited"],
   ["rate_limited", "signIn.error.auth_rate_limited"],
-  ["auth_unavailable", "signIn.unavailable"],
   ["unexpected_link", "signIn.error.unexpected_link"],
   ["attestation_refused", "signIn.error.attestation_refused"],
 ]);
@@ -82,13 +88,13 @@ const LASTING_REFUSALS: ReadonlySet<string> = new Set([
  * screens before the bank stand where the button would, and their answers
  * become the account's rows right after the exchange.
  */
-export function SignInScreen({ code, error, until }: SignInParams) {
+export function SignInScreen({ code, error, until, reason }: SignInParams) {
   const { t, locale } = useT();
   const session = useSession();
   const router = useRouter();
   const tap = useHapticTap();
   const [phase, setPhase] = useState<Phase>(() =>
-    error ? { kind: "error", code: error, until } : { kind: "idle" },
+    error ? { kind: "error", code: error, until, reason } : { kind: "idle" },
   );
   // A code is exchanged once, however often the screen re-renders with it.
   const exchanged = useRef<string | null>(null);
@@ -123,10 +129,10 @@ export function SignInScreen({ code, error, until }: SignInParams) {
   // is asked again whether it has recorded them.
   useEffect(() => {
     if (!error) return;
-    setPhase({ kind: "error", code: error, until });
+    setPhase({ kind: "error", code: error, until, reason });
     dropAgreements();
     setAgreed(null);
-  }, [error, until]);
+  }, [error, until, reason]);
 
   const status = session.status;
   useEffect(() => {
@@ -170,7 +176,7 @@ export function SignInScreen({ code, error, until }: SignInParams) {
     setPhase({ kind: "idle" });
     // What the last link said is put away, so that the next one is news even
     // when it says the same: the same refusal twice is two refusals.
-    router.setParams({ code: undefined, error: undefined, until: undefined });
+    router.setParams({ code: undefined, error: undefined, until: undefined, reason: undefined });
     try {
       // A verifier for this attempt alone: a second tap replaces the first's,
       // and a code from the first's browser tab is refused (ADR-027).
@@ -195,7 +201,7 @@ export function SignInScreen({ code, error, until }: SignInParams) {
     }
   };
 
-  const refusalText = (failure: { code: string; until?: string }): string | null => {
+  const refusalText = (failure: Failure): string | null => {
     const day = failure.until ? new Date(failure.until) : null;
     const valid = day !== null && !Number.isNaN(day.getTime());
     if (failure.code === "auth_cooldown") {
@@ -213,6 +219,14 @@ export function SignInScreen({ code, error, until }: SignInParams) {
     return words ? t(words) : null;
   };
   const refusal = phase.kind === "error" ? refusalText(phase) : null;
+  // Why a suspension or a ban, the rule it rests on and how to contest it
+  // (#715, ADR-073 §1): only a reason of the closed list, so a crafted link
+  // shows nothing more; a moderator always decided these two.
+  const sanctionReason =
+    phase.kind === "error" && SANCTIONED.has(phase.code)
+      ? SanctionReason.safeParse(phase.reason)
+      : null;
+  const statement = sanctionReason?.success ? sanctionStatement(t, sanctionReason.data) : [];
 
   const buttonText =
     phase.kind === "error" && !LASTING_REFUSALS.has(phase.code)
@@ -232,6 +246,7 @@ export function SignInScreen({ code, error, until }: SignInParams) {
 
   return (
     <SafeAreaView className="flex-1 bg-background">
+      <Backdrop />
       <ScrollView contentContainerClassName="flex-grow items-center justify-center gap-4 p-6">
         <Text variant="h1" accessibilityRole="header">
           {t("signIn.title")}
@@ -267,6 +282,9 @@ export function SignInScreen({ code, error, until }: SignInParams) {
               <CardHeader>
                 <CardTitle className="text-destructive">{t("signIn.error.title")}</CardTitle>
                 {refusal !== null && <CardDescription>{refusal}</CardDescription>}
+                {statement.map((line) => (
+                  <CardDescription key={line}>{line}</CardDescription>
+                ))}
               </CardHeader>
             </View>
           </Card>

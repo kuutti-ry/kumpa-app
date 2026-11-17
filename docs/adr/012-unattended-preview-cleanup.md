@@ -1,6 +1,6 @@
 # ADR-012: Preview cleanup runs unattended from main
 
-- Status: accepted, amended 2026-09-27 (§6 and §7: the merge starts the sweep; a preview run that outlives its pull request deploys nothing), 2026-09-28 (§8 and §9: a run that waits for a pull request that is not open is withdrawn; `preview-cleanup` takes deployments from `main` only) and 2026-10-08 (the reviewer on `preview` that §1, §2, §7 and §9 name is off from that day, ADR-004 §3; the points stand on the sweep running `main`'s copy, on its `actions: write` job and the plan role trusting `main` alone, and on the environment's branch policy, not on the reviewer)
+- Status: superseded by ADR-070 (#705, the maintainer's word of 2026-11-16: no pull-request previews, so nothing is left to remove; kept for its reasoning)
 - Date: 2026-09-27
 - Follows: TD-2 (free tiers, three previews), TD-19 (one staging box, previews on it), ADR-004 §3 (the trust of the `preview` environment: a reviewer from 2026-09-25 to 2026-10-08, write access from then), `.github/scripts/check-workflow-permissions.py` (no `pull_request_target`), CLAUDE.md "Do not add infrastructure for scale that is not coming"; issue #9, the staging outage of 2026-09-27
 
@@ -32,3 +32,7 @@
 - A preview run that waits when its pull request merges is cancelled by the sweep that merge starts, and shows as cancelled in the list of runs; one whose pull request closes unmerged, by the next sweep. What is left in the maintainer's list of deployments to review is of branches that have an open pull request, and whatever the sweep left because it could not tell: a run that names no branch or no repository, a branch no pull request is found for, a question GitHub did not answer. Each of those is a warning in the sweep's log, by the run's number.
 - The branch policy of point 9 is part of the environment's setup (`infra/README.md`, Previews, step 6). The tokens the environment held while it had none, from 2026-09-27 to 2026-09-28, were within reach of anybody who had write access in that time: the owners and the four contributors. Nothing says that anybody reached for them, and nothing in the repository could say so. The maintainer decided on 2026-09-28 not to rotate them.
 - For the box itself (the same outage): swap on the instance and an alarm on its free memory, ADR-046 (#77); a memory limit on Dokploy's service was tried and withdrawn the same day (ADR-046 §2).
+
+## History
+
+- 2026-11-16 (#705): superseded by ADR-070. There are no pull-request previews, so `preview-cleanup.yml`, its `actions: write` job (§8), the environment `preview-cleanup` (§2, §9) and the Run Command document that dropped `kuutti_pr_<n>` (§3) go with them; the record is kept for its reasoning about unattended removal and trust.

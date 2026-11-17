@@ -44,7 +44,6 @@ const adminRoutesWithoutStaffGuard = (routes: GuardedRoute[]) =>
     .filter(({ guards }) => !guards.includes("requireAdmin"))
     .map(({ key }) => key);
 
-const STAFF = ["moderator", "admin", "researcher"];
 const MODERATORS = ["moderator", "admin"];
 const ADMINS = ["admin"];
 
@@ -56,8 +55,8 @@ const ADMINS = ["admin"];
  */
 const STAFF_ROLES: { what: string; roles: string[]; keys: string[] }[] = [
   {
-    what: "a staff session's own two routes, who is signed in and signing out, to every staff role, the researcher's too (#49)",
-    roles: STAFF,
+    what: "a staff session's own two routes, who is signed in and signing out, to every staff role (#49)",
+    roles: MODERATORS,
     keys: ["GET /admin/whoami", "POST /admin/auth/logout"],
   },
   {
@@ -377,7 +376,7 @@ describe("no route grants or revokes a role", () => {
 
   it("nothing a request sends names a role", async () => {
     const doc = await contract();
-    const roleNames = new Set(["moderator", "admin", "researcher"]);
+    const roleNames = new Set(["moderator", "admin"]);
     const naming = operations(doc).filter(({ op }) =>
       [
         ...(op.parameters ?? []).map((parameter) => parameter.schema),
@@ -520,7 +519,6 @@ describe("no web surface", () => {
     expect(body).toContain("https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.33.1/");
 
     for (const deployed of [
-      testConfig({ APP_ENV: "preview", PR_NUMBER: "125" }),
       testConfig({ APP_ENV: "staging" }),
       testConfig({
         APP_ENV: "production",

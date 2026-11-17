@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import Star from "lucide-react-native/icons/star";
 import { Pressable, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Backdrop } from "@/components/backdrop";
 import { LoadFailed } from "@/components/LoadFailed";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { Button } from "@/components/ui/button";
@@ -10,14 +11,18 @@ import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
 import { PhotoImage } from "@/features/media";
 import { useT } from "@/lib/locale";
+import { cn } from "@/lib/utils";
 import { DECORATIVE, MINIMUM_TARGET } from "@/theme/a11y";
 import { useHapticTap } from "@/theme/haptics";
+import { pressFill } from "@/theme/looks";
+import { useLookTraits } from "@/theme/ThemeProvider";
 import { useStars } from "./useStars";
 
 function Row({ person, onClear }: { person: StarredPerson; onClear: () => void }) {
   const { t } = useT();
   const router = useRouter();
   const tap = useHapticTap();
+  const traits = useLookTraits();
   const { name, age, photo } = person;
   const who = t("profile.card.nameAge", { name, years: age });
   return (
@@ -25,7 +30,7 @@ function Row({ person, onClear }: { person: StarredPerson; onClear: () => void }
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={who}
-        className="flex-1 flex-row items-center gap-3 rounded-lg px-2 py-2 active:bg-accent"
+        className={cn("flex-1 flex-row items-center gap-3 rounded-lg px-2 py-2", pressFill(traits))}
         style={MINIMUM_TARGET}
         onPress={() => {
           tap();
@@ -75,6 +80,7 @@ export function StarredScreen() {
   const { view, clearFailed, clear, retry } = useStars();
   return (
     <SafeAreaView className="flex-1 bg-background">
+      <Backdrop />
       <ScreenHeader title={t("stars.title")} backLabel={t("stars.back")} />
       {clearFailed && (
         <Text accessibilityLiveRegion="polite" className="px-6 pt-4">

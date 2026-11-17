@@ -202,7 +202,6 @@ function anExport(): Record<string, unknown> {
       photosNotShown: [{ at, kind: "nudity", reason: "May show more than Kuutti allows" }],
       carefulCheckUntil: at,
     },
-    research: { enrolled: false, since: null, consentVersion: null, events: [] },
     exports: [{ at }],
     feedback: [
       {
@@ -446,10 +445,10 @@ describe("the account export", () => {
 
   it("takes ten thousand consents and refuses one more", () => {
     const full = anExport();
-    full.consents = Array.from({ length: 10_000 }, () => consent("research"));
+    full.consents = Array.from({ length: 10_000 }, () => consent("special_category"));
     expect(AccountExport.safeParse(full).success).toBe(true);
     const over = anExport();
-    over.consents = Array.from({ length: 10_001 }, () => consent("research"));
+    over.consents = Array.from({ length: 10_001 }, () => consent("special_category"));
     expect(codes(AccountExport, over)).toEqual(["too_big"]);
   });
 

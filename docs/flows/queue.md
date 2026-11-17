@@ -26,7 +26,7 @@ apps/api/src/profile/card.ts
 apps/mobile/src/features/matching/faceButtons.tsx
 -->
 
-Once matching is open for a person, People shows them everybody who fits them, one card at a time, as far as they like: each card with the reason it is there, and Like, Pass, Later and the fish as buttons. This flow follows the queue from See people on the home screen, through each decision and the star, to a match that opens a conversation, the queue's end with its offer to relax a deal-breaker for the day, and what the night still does. How matching opens is [People on Kuutti](people-on-kuutti.md); the answers and filters a card is read against are [the profile](profile.md).
+Once matching is open for a person, People shows them everybody who fits them, one card at a time, as far as they like: each card with the reason it is there, and Like, Pass, Later and the fish as buttons. This flow follows the queue from See people on the home screen, through each decision and the star, to a match that opens a conversation, the queue's end with its offer to relax a deal-breaker for the day, and what the night still does. How matching opens is [People on Kumpa](people-on-kuutti.md); the answers and filters a card is read against are [the profile](profile.md).
 
 ## Part 1: People reads the queue
 
@@ -78,7 +78,7 @@ flowchart TB
 
 ### Steps
 
-1. On the home screen, under "Matching is open for you.", the person chooses "See people". The button is there only once matching is open for them: [People on Kuutti](people-on-kuutti.md).
+1. On the home screen, under "Matching is open for you.", the person chooses "See people". The button is there only once matching is open for them: [People on Kumpa](people-on-kuutti.md).
 2. The app opens People and asks the API for the next cards. Nothing is built at night: the first read of the Finnish day opens the day's log of whom the queue holds, what was shown and what was decided. A queue left open past midnight is read anew, with no word, when it comes back in sight.
 3. Is matching open for the person: an admin has opened it, and their profile and onboarding are complete, with the account active or shadow-banned? Nobody taking a break, suspended or banned has a queue. No: 4. Yes: 5. Somebody whose matching closed after today's log was opened reads what is left of it and then the queue's end (13); one whose profile stopped being complete meets the end at once. Home says why.
 4. The app says "There is nobody to show you yet."
@@ -264,7 +264,7 @@ flowchart TB
 42. The app says "That card is no longer available." and the card leaves: part 2, step 27.
 43. Does the list show fewer people than `stars_max` (0 is off)? Those the list leaves out now do not count, and a person's stars stop at a ceiling of the contract whatever the panel sets. Yes: 45. No: 44.
 44. The app says "You have as many stars as you can have. Take one off to add another." The card stays.
-45. The API puts the star. It spends no like and reserves none, so a star with no likes left is allowed, and it decides nothing. Nobody is told of it, and nothing else reads it: it is in no count, no order of anybody's, no inbox rule and no research event.
+45. The API puts the star. It spends no like and reserves none, so a star with no likes left is allowed, and it decides nothing. Nobody is told of it, and nothing else reads it: it is in no count, no order of anybody's and no inbox rule.
 46. The card stays, its toggle reading "Starred". When it is the only star the list shows, the app says "Only you can see your stars.", the one place that says so.
 47. At the next read, a card starred and left undecided leaves the queue, and the starred person comes no more as an ordinary card, new or seen before, nor through a relaxation: they come through Starred. Somebody whose like or fish waits keeps coming as "Liked you" or "Sent you a fish" until the like expires, with the star on it. A like or a pass on the card takes the star off (part 2, step 24); Later leaves it.
 48. Later, the person chooses "Starred" on the home screen, under "See people". The line is there only while the list shows somebody, by its word and no count.
@@ -386,3 +386,4 @@ flowchart TB
 - 2026-11-03 (#503, PR #579): a like back spends one of the day's likes, a fish needs one too, and earned likes go.
 - 2026-11-03 (#575, PR #582): a star marks somebody for later without a like or a pass, with Starred on home and its list.
 - 2026-11-08 (#644, PR #647): a card shows a short card first, with the whole card in place under it.
+- 2026-11-16 (#208): research leaves the app, so a star has no research event to stay out of.

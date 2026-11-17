@@ -1,7 +1,7 @@
 import { resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CONSENT_VERSIONS } from "../src/generated/consent.ts";
-import { fi } from "../src/generated/fi.ts";
+import { en } from "../src/generated/en.ts";
 import { isLegalTextKind, legalPageUrl } from "../src/legal.ts";
 import { compile } from "./lib/compile.ts";
 import { siteFingerprint } from "./lib/legal-versions.ts";
@@ -130,13 +130,14 @@ describe("pnpm i18n:check", () => {
 
 describe("pnpm check:legal-versions", () => {
   // The site's /legal/versions.json as its build writes it for this app's
-  // versions and wordings (#208): the research opt-in and the sensitive
-  // answers fingerprinted from this app's Finnish, which the site carries as
-  // it is; `moved` replaces one kind's entry. The network is a stand-in.
-  const DEPLOYED = "https://kuutti.app/legal/versions.json";
+  // versions and wordings (#208): the sensitive answers fingerprinted from
+  // this app's own wording, which the site carries as it is, in the language
+  // the site says counts (the English); `moved` replaces one kind's entry.
+  // The network is a stand-in.
+  const DEPLOYED = "https://kumpa.fi/legal/versions.json";
   const hashOf = (kind: string) =>
-    kind === "research" || kind === "special_category"
-      ? siteFingerprint(fi[`legal.${kind}.title`] ?? "", fi[`legal.${kind}.summary`] ?? "")
+    kind === "special_category"
+      ? siteFingerprint(en[`legal.${kind}.title`] ?? "", en[`legal.${kind}.summary`] ?? "")
       : "0123456789abcdef";
   const versions = (moved: Record<string, unknown> = {}) =>
     JSON.stringify({
@@ -146,7 +147,7 @@ describe("pnpm check:legal-versions", () => {
           {
             version,
             hash: hashOf(kind),
-            language: "fi",
+            language: "en",
             url: isLegalTextKind(kind) ? legalPageUrl(kind, version) : "",
             dated: "2026-10-17",
           },
@@ -184,10 +185,10 @@ describe("pnpm check:legal-versions", () => {
         new Response(
           versions({
             privacy: {
-              version: "2026-11-1",
+              version: "2099-01-1",
               hash: "0123456789abcdef",
-              language: "fi",
-              url: "https://kuutti.app/legal/privacy/#privacy-2026-11-1",
+              language: "en",
+              url: "https://kumpa.fi/legal/privacy/#privacy-2099-01-1",
             },
           }),
         ),
@@ -196,23 +197,23 @@ describe("pnpm check:legal-versions", () => {
     expect(result.code).toBe(1);
     expect(result.err).toEqual([
       expect.stringMatching(
-        `^✖ privacy: the app carries ${CONSENT_VERSIONS.privacy}, the site publishes 2026-11-1`,
+        `^✖ privacy: the app carries ${CONSENT_VERSIONS.privacy}, the site publishes 2099-01-1`,
       ),
       `✖ check:legal-versions: the app's consent versions are not the site's (${DEPLOYED})`,
     ]);
     expect(result.out).toEqual([]);
   });
 
-  it("fails when the site's research text is not this app's Finnish wording under the same version", async () => {
+  it("fails when the site's sensitive-answers text is not this app's wording in the site's language under the same version", async () => {
     site.mockImplementation(
       async () =>
         new Response(
           versions({
-            research: {
-              version: CONSENT_VERSIONS.research,
+            special_category: {
+              version: CONSENT_VERSIONS.special_category,
               hash: "72a206b59f5659c5",
-              language: "fi",
-              url: legalPageUrl("research", CONSENT_VERSIONS.research ?? ""),
+              language: "en",
+              url: legalPageUrl("special_category", CONSENT_VERSIONS.special_category ?? ""),
             },
           }),
         ),
@@ -220,7 +221,7 @@ describe("pnpm check:legal-versions", () => {
     const result = await run("check-legal-versions.ts");
     expect(result.code).toBe(1);
     expect(result.err[0]).toMatch(
-      /^✖ research: the site's text of .* \(fi, 72a206b59f5659c5\) is not this app's Finnish legal\.research\.title and summary/,
+      /^✖ special_category: the site's text of .* \(en, 72a206b59f5659c5\) is not this app's legal\.special_category\.title and summary in that language/,
     );
   });
 

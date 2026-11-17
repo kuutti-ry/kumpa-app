@@ -1,8 +1,6 @@
 import { type Queryable, transaction } from "@kuutti/db";
 import { AppError, noLiveAccount } from "../lib/errors.ts";
-import { DAY_MS } from "../lib/finnish-day.ts";
 import type { Logger } from "../lib/logger.ts";
-import { track } from "../research/index.ts";
 import * as repo from "./repo.ts";
 
 // Taking a break (#170, ADR-022): the account to `paused` with the state it
@@ -25,7 +23,7 @@ export type PauseDeps = { db: Queryable; logger: Logger; now: () => Date };
 
 /**
  * One transaction: the row under its lock (ADR-015 §8), the state kept aside,
- * every session revoked, one research event. A second device that passed the
+ * every session revoked. A second device that passed the
  * session guard before the first commit finds the row paused and is told so.
  */
 export async function pauseAccount(
@@ -45,7 +43,6 @@ export async function pauseAccount(
       throw new AppError(409, "not_active", "Only a finished account can take a break");
     }
     const sessions = await repo.revokeAccountSessions(tx, accountId, at, "paused");
-    await track({ db: tx, logger: deps.logger, now: () => at }, accountId, "account_paused", {});
     return { sessions };
   });
   // The one line a break leaves: the account and how many devices it signed out.
@@ -54,20 +51,11 @@ export async function pauseAccount(
 }
 
 /**
- * The bank login that ends a break: the state kept aside comes back, and
- * research hears how long the break was, in whole days. A login on another
- * device that resumed the account first leaves nothing to do.
+ * The bank login that ends a break: the state kept aside comes back. A login
+ * on another device that resumed the account first leaves nothing to do.
  */
-export async function resumeAccount(
-  deps: PauseDeps,
-  account: { id: string; stateChangedAt: Date | null },
-): Promise<boolean> {
-  const at = deps.now();
-  if (!(await repo.resumeAccount(deps.db, account.id, at))) return false;
-  const since = account.stateChangedAt ?? at;
-  await track(deps, account.id, "account_resumed", {
-    afterDays: Math.max(0, Math.floor((at.getTime() - since.getTime()) / DAY_MS)),
-  });
-  deps.logger.info({ accountId: account.id }, "account resumed");
+export async function resumeAccount(deps: PauseDeps, accountId: string): Promise<boolean> {
+  if (!(await repo.resumeAccount(deps.db, accountId, deps.now()))) return false;
+  deps.logger.info({ accountId }, "account resumed");
   return true;
 }

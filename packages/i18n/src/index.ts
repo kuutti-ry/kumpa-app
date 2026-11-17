@@ -25,7 +25,13 @@ export {
   type TFunction,
   typedT,
 } from "./instance.ts";
-export { type LegalTextKind, legalPageUrl } from "./legal.ts";
+export {
+  LEGAL_PAGES,
+  type LegalTextKind,
+  legalLinkPath,
+  legalPageUrl,
+  legalSitePage,
+} from "./legal.ts";
 export {
   type AnyLocale,
   DEFAULT_LOCALE,
@@ -39,3 +45,4 @@ export {
   realLocale,
   resolveLocale,
 } from "./locales.ts";
+export { sanctionStatement } from "./sanction.ts";

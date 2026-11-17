@@ -9,6 +9,7 @@ import {
 } from "@kuutti/schema";
 import { type App, createApp } from "../app.ts";
 import {
+  confirmedAddress,
   type SignedIn,
   signedInAccount,
   staffSession,
@@ -24,6 +25,7 @@ import {
   type TestContext,
   testConfig,
 } from "../test/harness.ts";
+import { mailingApp, noticesOf } from "../test/push.ts";
 import { pidOf, waitsFor, watched, withTwoConnections } from "../test/races.ts";
 import { accountOf, reportIn, sanctionsOf, signedInPeople } from "../test/reports.ts";
 import { checkFirstMessage, checkReports } from "./automatic.ts";
@@ -192,8 +194,8 @@ async function ruledBan(db: Queryable, accountId: string, hoursAgo = 1): Promise
 }
 
 /** B reported by C, D and E within the week, the third through the route: the rule's ban. */
-async function bannedByReports(ctx: TestContext, app: App) {
-  const b = await signedInAccount(ctx.client);
+async function bannedByReports(ctx: TestContext, app: App, who?: SignedIn) {
+  const b = who ?? (await signedInAccount(ctx.client));
   const reporters = await reportsOf(ctx, b.accountId, [ago(2 * DAY), ago(DAY)]);
   const [third] = await signedInPeople(ctx.client, 1);
   if (!third) throw new Error("person not written");
@@ -215,8 +217,8 @@ async function bannedByReports(ctx: TestContext, app: App) {
 }
 
 /** A banned by the first-messages rule at their twentieth opener, sent through the route. */
-async function bannedByOpeners(ctx: TestContext, app: App) {
-  const a = await signedInAccount(ctx.client);
+async function bannedByOpeners(ctx: TestContext, app: App, who?: SignedIn) {
+  const a = who ?? (await signedInAccount(ctx.client));
   await openersBy(
     ctx,
     a,
@@ -702,6 +704,37 @@ describe("the first-messages rules", () => {
 });
 
 describe("the moderators' review", () => {
+  describe("A rule's shadow ban is never told, whether a moderator keeps it or reverses it", () => {
+    test.for([
+      ["reports", "keep"],
+      ["reports", "lift"],
+      ["first_messages", "keep"],
+      ["first_messages", "lift"],
+    ] as const)("%s, %s", async ([rule, outcome], { ctx }) => {
+      // The maintainer, 17/11/2026: a rule only puts the person in the
+      // moderators' queue; the terms' §6 says it acts without notice (ADR-033).
+      const { app, sent, settled } = await mailingApp(ctx.client, ticking());
+      const m = await staffSession(ctx.client);
+      const b = await signedInAccount(ctx.client);
+      await confirmedAddress(ctx.client, b, "b@example.test", "fi");
+      const { banId } =
+        rule === "reports"
+          ? await bannedByReports(ctx, app, b)
+          : await bannedByOpeners(ctx, app, b);
+      expect(await stateOf(ctx.client, b.accountId)).toBe("shadow_banned");
+      await settled();
+      expect(await noticesOf(app, b)).toEqual([]);
+      const looked = await app.request(
+        `/admin/sanctions/${banId}/review`,
+        json(m.headers, { outcome, note: "Looked at." }),
+      );
+      expect(looked.status).toBe(200);
+      await settled();
+      expect(await noticesOf(app, b)).toEqual([]);
+      expect(sent).toEqual([]);
+    });
+  });
+
   test("A confirmed automatic shadow ban closes the reports filed before it, one by one", async ({
     ctx,
     app,
@@ -792,22 +825,22 @@ describe("the moderators' review", () => {
     const app = await appOn(ctx.client, () => T);
     const moderator = await staffSession(ctx.client);
     const b = await signedInAccount(ctx.client);
-    const banId = await ruledBan(ctx.client, b.accountId, 49);
+    const banId = await ruledBan(ctx.client, b.accountId, 169);
     const list = AutomaticBanQueue.parse(
       await (
         await app.request("/admin/sanctions/automatic", { headers: moderator.headers })
       ).json(),
     );
-    expect(list).toMatchObject({ now: T.toISOString(), reviewHours: 48, total: 1 });
+    expect(list).toMatchObject({ now: T.toISOString(), reviewHours: 168, total: 1 });
     expect(list.items.map((item) => item.id)).toEqual([banId]);
     const front = AdminOverview.parse(
       await (await app.request("/admin/overview", { headers: moderator.headers })).json(),
     );
-    expect(front.reviewHours).toBe(48);
+    expect(front.reviewHours).toBe(168);
     expect(front.queues.find((q) => q.queue === "automatic_bans")).toEqual({
       queue: "automatic_bans",
       waiting: 1,
-      oldestSince: ago(49 * HOUR).toISOString(),
+      oldestSince: ago(169 * HOUR).toISOString(),
     });
     expect((await sanctionsOf(ctx.client, b.accountId))[0]?.lifted_at).toBeNull();
   });
@@ -851,12 +884,8 @@ describe("the moderators' review", () => {
     expect(front.queues.find((q) => q.queue === "automatic_bans")?.waiting).toBe(2);
   });
 
-  test("The automatic shadow bans refuse without a session and refuse a researcher", async ({
-    ctx,
-    app,
-  }) => {
+  test("The automatic shadow bans refuse without a session", async ({ ctx, app }) => {
     const member = await signedInAccount(ctx.client);
-    const researcher = await staffSession(ctx.client, "researcher");
     const expired = await staffSession(ctx.client);
     await ctx.client.query(
       "UPDATE admin_session SET expires_at = now() - interval '1 minute' WHERE id = $1",
@@ -874,7 +903,6 @@ describe("the moderators' review", () => {
       ["a product session's token", member.headers, 401, "unauthenticated"],
       ["an expired session", expired.headers, 401, "session_expired"],
       ["a revoked session", revoked.headers, 401, "session_revoked"],
-      ["a researcher", researcher.headers, 403, "admin_forbidden"],
     ] as const) {
       const answer = await app.request("/admin/sanctions/automatic", { headers });
       expect(answer.status, what).toBe(status);

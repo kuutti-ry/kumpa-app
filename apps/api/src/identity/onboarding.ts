@@ -18,7 +18,6 @@ import {
   type WithdrawableConsentKind,
 } from "@kuutti/schema";
 import { AppError, noLiveAccount } from "../lib/errors.ts";
-import { DAY_MS } from "../lib/finnish-day.ts";
 import type { Logger } from "../lib/logger.ts";
 import { matchingConfigNumber } from "../lib/matching-config.ts";
 import {
@@ -34,7 +33,6 @@ import {
   readProfile,
   withdrawSpecialCategoryAnswers,
 } from "../profile/index.ts";
-import { enrolResearchSubject, removeResearchSubject, track } from "../research/index.ts";
 import * as repo from "./repo.ts";
 import { visibleState } from "./standing.ts";
 
@@ -75,7 +73,7 @@ export type OnboardingAnswers = {
   profile: { name: boolean; intent: boolean; photos: boolean; promptsOrBio: boolean };
 };
 
-/** Pure: the steps still open, in the order the app asks them. Research is never one of them. */
+/** Pure: the steps still open, in the order the app asks them. */
 export function missingSteps(input: OnboardingAnswers): OnboardingStep[] {
   const done: Record<OnboardingStep, boolean> = {
     terms: input.terms !== null,
@@ -155,7 +153,6 @@ export async function onboardingStatus(
   const terms = acceptedCurrent(consents, "terms")?.version ?? null;
   const privacy = acceptedCurrent(consents, "privacy")?.version ?? null;
   const specialCategory = acceptedCurrent(consents, "special_category")?.version ?? null;
-  const research = acceptedCurrent(consents, "research");
   const missing = missingSteps({
     gender: account.gender,
     preferences,
@@ -183,7 +180,8 @@ export async function onboardingStatus(
     }
   }
   return {
-    // A shadow ban reads as active here, as everywhere the person can look (#105, ADR-024 §7).
+    // A shadow ban reads as active here: the app routes by the state. A
+    // moderator's is told by its notice and its mail, a rule's never (ADR-073).
     state: visibleState(state),
     age: ageInYears(account.birthYear, account.birthMonth, now),
     gender: account.gender,
@@ -193,9 +191,6 @@ export async function onboardingStatus(
       terms,
       privacy,
       specialCategory,
-      research: research
-        ? { version: research.version, givenAt: research.givenAt.toISOString() }
-        : null,
     },
     currentVersions: CURRENT_CONSENT_VERSIONS,
     nextChange: {
@@ -239,31 +234,12 @@ export async function giveConsent(
     });
   }
   const locale = shownLocale(request.kind, request.locale);
-  const at = deps.now();
-  const outcome = await transaction(deps.db, async (tx) => {
-    const recorded = await repo.recordConsent(
-      tx,
-      accountId,
-      { kind: request.kind, version: request.version, locale },
-      at,
-    );
-    if (recorded === "recorded" && request.kind === "research") {
-      // The research_id mapping lives exactly as long as the consent (#50,
-      // ADR-011): same transaction, and the opt-in is the first event.
-      await enrolResearchSubject(tx, accountId, request.version, at);
-      const account = await repo.findAccountById(tx, accountId);
-      if (account) {
-        await track({ db: tx, logger: deps.logger, now: () => at }, accountId, "research_opt_in", {
-          sinceRegistrationD: Math.max(
-            0,
-            Math.floor((at.getTime() - account.registeredAt.getTime()) / DAY_MS),
-          ),
-          accountActive: account.state === "active",
-        });
-      }
-    }
-    return recorded;
-  });
+  const outcome = await repo.recordConsent(
+    deps.db,
+    accountId,
+    { kind: request.kind, version: request.version, locale },
+    deps.now(),
+  );
   if (outcome === "no_account") throw noLiveAccount();
   if (outcome === "too_many") {
     throw new AppError(429, "too_many_changes", "The consent changed too often today", {
@@ -280,11 +256,11 @@ export async function giveConsent(
 }
 
 /**
- * The two consents a person withdraws; terms and privacy end with the
- * account. Research takes its research_id mapping with it (ADR-011); the
- * special-category consent takes the article 9 answers with it (ADR-019 §4):
- * whom one seeks, so onboarding asks again, and the politics and religion of
- * the profile. The rows stay as the record of what was agreed and when.
+ * The one consent a person withdraws; terms and privacy end with the
+ * account. The special-category consent takes the article 9 answers with it
+ * (ADR-019 §4): whom one seeks, so onboarding asks again, and the politics
+ * and religion of the profile. The rows stay as the record of what was agreed
+ * and when.
  */
 export async function withdrawConsentOf(
   deps: OnboardingDeps,
@@ -294,10 +270,7 @@ export async function withdrawConsentOf(
   const outcome = await transaction(deps.db, async (tx) => {
     const withdrawn = await repo.withdrawConsent(tx, accountId, kind, deps.now());
     if (!withdrawn.live) return withdrawn;
-    if (kind === "research") {
-      // The mapping row goes with the consent; the events stay, unlinkable (ADR-011).
-      await removeResearchSubject(tx, accountId);
-    } else if (withdrawn.withdrawn > 0) {
+    if (withdrawn.withdrawn > 0) {
       // Only a consent that was there takes the answers with it: a request
       // without one changes nothing.
       await deleteSeeksOfAccount(tx, accountId);

@@ -1,6 +1,6 @@
 # Reviewing Finnish (and later Swedish) texts
 
-For native speakers who check Kuutti's app texts. You need no programming, no git and no terminal: a GitHub account for the first way, a spreadsheet for the second. A developer does the rest.
+For native speakers who check the texts of Kumpa, Kuutti ry's app. You need no programming, no git and no terminal: a GitHub account for the first way, a spreadsheet for the second. A developer does the rest.
 
 ## Why a review
 
@@ -8,19 +8,19 @@ Most Finnish and Swedish in the app is first written by a machine translator (or
 
 When you approve a text, the file records a fingerprint of the English and your Finnish together. If either changes later, the text counts as unreviewed again and comes back to you. Your name is not written into the file; your approval on GitHub is the record.
 
-Legal texts (terms, privacy, research consent) are not reviewed this way. People write them, the Finnish wording is the binding one, and each has a version number.
+Legal texts (terms, privacy, the consents) are not reviewed this way. The English wording is the binding one, the Finnish is its translation, and each has a version number: a change to either is the maintainer's decision and a new version, never an approval here.
 
 ## Before you start
 
 - Read `docs/i18n/tone.md`: the voice (plain, warm, informal *sinä* through verb forms, calm, never blaming) and the rules.
 - Keep `packages/i18n/glossary.yaml` at hand: the fixed Finnish word for each product term. Use it exactly, so the same thing has the same name everywhere.
-- "Kuutti" always stays in the nominative (the glossary's rule): rephrase a sentence that would need "Kuutissa" or "Kuuttia".
+- The app is "Kumpa", and it always stays in the nominative or starts a compound (the glossary's rule): "Kumpa-sovelluksessa", never "Kumpassa" or "Kummassa". The association is "Kuutti ry", with its ending after a colon ("Kuutti ry:lle").
 - A text in curly braces, such as `{name}` or `{seconds, plural, one {# sekunti} other {# sekuntia}}`, is filled in by the app. Keep the braces and the words inside them exactly as they are; only the ordinary words around them and inside the plural forms are yours. Never add a case ending to a `{value}`: rephrase the sentence instead (for example after a colon).
 - Buttons are short. A "note" such as *at most 12 characters* or *2.1× the English: check it fits* means the room is tight.
 
 ## Seeing a text where it appears
 
-Every pull request has a comment with a preview link to the app on the web. Open it, tap the settings button (the cog), and choose **Suomi**. Some screens need a sign-in; the preview uses a test bank login, and the developer can walk you to a screen. The column *where it shows* (or the description in the file) says where each text appears.
+The app on staging shows every language. Install it as the team does (TestFlight on an iPhone, Google Play's internal testing on Android; the developer invites you), tap the settings button (the cog), and choose **Suomi**. Some screens need a sign-in; staging uses the bank's test login, and the developer can walk you to a screen. Staging has the texts of what has merged: a text still in a pull request the developer shows you on their own machine or in a screenshot. The column *where it shows* (or the description in the file) says where each text appears.
 
 ## Way 1: suggestions on the pull request (new texts)
 
@@ -54,4 +54,4 @@ For the texts written before you joined, a sheet is quicker.
 
 ## Swedish
 
-Swedish is filled by machine and is not a released language until a native reviewer of Finland Swedish joins; the same two ways apply, with **Svenska** in the preview and a `sv` sheet.
+Swedish is filled by machine and is not a released language until a native reviewer of Finland Swedish joins; the same two ways apply, with **Svenska** in the app on staging and a `sv` sheet.

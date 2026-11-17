@@ -1,6 +1,6 @@
 # ADR-062: One queue to the end of the pool
 
-- Status: accepted 2026-11-01 (#502, the maintainer's decisions of 2026-10-29, 2026-10-31 and 2026-11-01, built as written here; §15 marks what is the agent's and was not put to him; the points under "Open, the maintainer's" are his to confirm or change; amends ADR-007, ADR-008, ADR-011, ADR-014, ADR-031, ADR-032, ADR-034, ADR-035, ADR-036, ADR-037, ADR-038, ADR-039, ADR-041, ADR-042, ADR-044, ADR-055, ADR-056, ADR-060 and ADR-061), amended 2026-11-03 (Open 2: the model is not run again for one pool, the maintainer's of 2026-11-01, #503; see History), amended 2026-11-03 by ADR-064 (§1, §2: a starred person is no ordinary card and comes through the Starred list, unless their like waits, #575)
+- Status: accepted 2026-11-01 (#502, the maintainer's decisions of 2026-10-29, 2026-10-31 and 2026-11-01, built as written here; §15 marks what is the agent's and was not put to him; the points under "Open, the maintainer's" are his to confirm or change; amends ADR-007, ADR-008, ADR-011, ADR-014, ADR-031, ADR-032, ADR-034, ADR-035, ADR-036, ADR-037, ADR-038, ADR-039, ADR-041, ADR-042, ADR-044, ADR-055, ADR-056, ADR-060 and ADR-061), amended 2026-11-03 (Open 2: the model is not run again for one pool, the maintainer's of 2026-11-01, #503; see History), amended 2026-11-03 by ADR-064 (§1, §2: a starred person is no ordinary card and comes through the Starred list, unless their like waits, #575), amended 2026-11-16 by ADR-071 (§15: no events, #208; see History)
 - Date: 2026-11-01
 - Follows: TD-11, TD-12, TD-13 and TD-14 (departed from here, see Context), TD-6 (the exposure budget), CLAUDE.md rules 6 and 7 and Product constraints, ADR-034 (the round record), ADR-061 (one home, one pool), #502, #503
 
@@ -88,7 +88,7 @@ Rows the schema's DSL cannot express, so two of the three are `generate --custom
 
 ## Open, the maintainer's
 
-1. The privacy notice's line on the year, and when production's switch opens: the notice's wording is his, on `kuutti-ry/kuutti-app-site`.
+1. The privacy notice's line on the year, and when production's switch opens: the notice's wording is his, on `kuutti-ry/kumpa-app-site`.
 2. Answered 2026-11-01 (ADR-036, #503): the model is not run again for one pool, and the first months' counts from the round records check it (#190).
 3. The inbox stop's and the alarms' values after the first months' counts: both are in the panel.
 
@@ -96,3 +96,4 @@ Rows the schema's DSL cannot express, so two of the three are `generate --custom
 
 - 2026-11-03 (#503): Open 2 marked answered, the maintainer's of 2026-11-01, which ADR-036 already recorded. The Consequences' issue for starting attestation now exists as #580.
 - 2026-11-04 (#581, the maintainer's yes to the table of that day, row C58): the words of §5's banner, an agent's. It says the limit alone, "You can't like anyone new while 8 conversations are waiting.", since how many wait is the heading right under it, so it is told once as it appears and not again when that number moves. `your_turn_warning` and the refusal's number do not change.
+- 2026-11-16 (#208, ADR-071 §2): §15's events lapsed with research. `profile_viewed`, `like` and `pass` left with the registry.

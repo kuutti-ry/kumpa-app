@@ -3,14 +3,11 @@ import {
   type ContactKind,
   type ConversationContacts,
   type ConversationDetail,
-  elapsedBand,
-  messageCountBand,
   normaliseContact,
   type StoredContact,
   type StoredContacts,
 } from "@kuutti/schema";
 import { AppError, noLiveAccount } from "../lib/errors.ts";
-import { track } from "../research/index.ts";
 import {
   type ChatDeps,
   conversationClosed,
@@ -28,8 +25,7 @@ import * as repo from "./repo.ts";
 // conversation with one press: the other person sees it at once, until its
 // owner stops sharing it, removes or changes it, or the conversation closes.
 // No agreement step, no obligation to share back. A value reaches no log
-// line, error detail, event or socket frame: a refusal names the kind, the
-// events say that a share began or ended and when, never what.
+// line, error detail or socket frame: a refusal names the kind.
 
 type Deps = Pick<ChatDeps, "db" | "logger" | "now">;
 
@@ -88,8 +84,7 @@ export async function keepContact(
  * erasure while it waited for the removal (ADR-031 §11). Held first, one
  * waits for the other to finish, and a removal that outlived an erasure
  * writes nothing. Then the piece, whose row a share in flight holds, so the
- * shares ended next include the one it begins. Each share ended is the
- * owner's event.
+ * shares ended next include the one it begins.
  */
 export async function removeContact(
   deps: Deps,
@@ -102,7 +97,6 @@ export async function removeContact(
     return repo.endShares(tx, { ...input, how: "removed", at });
   });
   if (ended === null) throw noLiveAccount();
-  for (let i = 0; i < ended; i++) await unshared(deps, input.accountId, at);
 }
 
 /**
@@ -120,12 +114,7 @@ export async function readContacts(
   return repo.readConversationContacts(deps.db, accountId, conversationId);
 }
 
-type ShareOutcome =
-  | { kind: "not_found" }
-  | { kind: "closed" }
-  | { kind: "not_stored" }
-  | { kind: "standing" }
-  | { kind: "began"; openedAt: Date; messages: number };
+type ShareOutcome = "not_found" | "closed" | "not_stored" | "shared";
 
 /**
  * Shares the caller's piece of that kind in the conversation, in the send's
@@ -143,35 +132,20 @@ export async function shareContact(
   const at = deps.now();
   const outcome = await transaction(deps.db, async (tx): Promise<ShareOutcome> => {
     const state = await lockForSend(tx, input.accountId, input.conversationId);
-    if (!state) return { kind: "not_found" };
-    if (state.closed) return { kind: "closed" };
-    if (!(await repo.holdContact(tx, input.accountId, input.kind))) return { kind: "not_stored" };
-    if (!(await repo.beginShare(tx, { ...input, at }))) return { kind: "standing" };
-    await repo.leaveArchive(tx, input.accountId, input.conversationId);
-    return { kind: "began", openedAt: state.openedAt, messages: state.messages };
+    if (!state) return "not_found";
+    if (state.closed) return "closed";
+    if (!(await repo.holdContact(tx, input.accountId, input.kind))) return "not_stored";
+    if (await repo.beginShare(tx, { ...input, at })) {
+      await repo.leaveArchive(tx, input.accountId, input.conversationId);
+    }
+    return "shared";
   });
-  switch (outcome.kind) {
-    case "not_found":
-      throw notFound();
-    case "closed":
-      throw conversationClosed();
-    case "not_stored":
-      throw new AppError(409, "contact_not_stored", "No contact of this kind is kept", {
-        kind: input.kind,
-      });
-    case "standing":
-      break;
-    case "began":
-      await track(
-        { db: deps.db, logger: deps.logger, now: () => at },
-        input.accountId,
-        "contact_shared",
-        {
-          sinceOpened: elapsedBand(at.getTime() - outcome.openedAt.getTime()),
-          messages: messageCountBand(outcome.messages),
-        },
-      );
-      break;
+  if (outcome === "not_found") throw notFound();
+  if (outcome === "closed") throw conversationClosed();
+  if (outcome === "not_stored") {
+    throw new AppError(409, "contact_not_stored", "No contact of this kind is kept", {
+      kind: input.kind,
+    });
   }
   return readConversation(deps, input.accountId, input.conversationId);
 }
@@ -185,20 +159,7 @@ export async function stopSharing(
   deps: ChatDeps,
   input: { accountId: string; conversationId: string; kind: ContactKind },
 ): Promise<ConversationDetail> {
-  const at = deps.now();
   await requireConversation(deps.db, input.accountId, input.conversationId);
-  if ((await repo.endShares(deps.db, { ...input, how: "stopped", at })) > 0) {
-    await unshared(deps, input.accountId, at);
-  }
+  await repo.endShares(deps.db, { ...input, how: "stopped", at: deps.now() });
   return readConversation(deps, input.accountId, input.conversationId);
-}
-
-/** The owner took a share back: nothing of the kind or the value (#103). */
-async function unshared(deps: Deps, accountId: string, at: Date): Promise<void> {
-  await track(
-    { db: deps.db, logger: deps.logger, now: () => at },
-    accountId,
-    "contact_unshared",
-    {},
-  );
 }

@@ -36,9 +36,9 @@
  * deleted. An access token lives fifteen minutes, so a run lasts ten at most.
  *
  * What keeps it safe:
- * - The target is this computer or staging. Production by name, the previews (which share
- *   staging's box), any other host, APP_ENV=production and an APP_ENV that disagrees with the
- *   target are refused. Before any load the server is asked: /health must be ours and ready, and
+ * - The target is this computer or staging. Production by name, any other host (a name under
+ *   staging's included), APP_ENV=production and an APP_ENV that disagrees with the target are
+ *   refused. Before any load the server is asked: /health must be ours and ready, and
  *   /openapi.json must be served, which production never does (app.ts); it is counted in the
  *   address's window, so a spent window refuses it with 429 and its wait.
  * - Staging needs --confirm-staging: it is the demo, where the team tries the app while the run
@@ -1305,10 +1305,7 @@ async function selfTest(): Promise<never> {
       ["--target", "http://api.staging.kuutti.app", "--confirm-staging"],
       neither("api.staging.kuutti.app"),
     ],
-    [
-      ["--target", "https://pr-12.preview.api.staging.kuutti.app"],
-      neither("pr-12.preview.api.staging.kuutti.app"),
-    ],
+    [["--target", "https://other.api.staging.kuutti.app"], neither("other.api.staging.kuutti.app")],
     [["--target", "http://localhost.example.com:3000"], neither("localhost.example.com:3000")],
     [
       ["--target", `${STAGING}/health`, "--confirm-staging"],
@@ -2423,7 +2420,7 @@ async function standIn(
         version: "0.0.0-test",
         commit: "abc1234",
         builtAt: later,
-        source: "https://github.com/kuutti-ry/kuutti-app",
+        source: "https://github.com/kuutti-ry/kumpa-app",
         db: "ok",
         migrations: "current",
       });

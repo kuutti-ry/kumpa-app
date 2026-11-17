@@ -32,9 +32,15 @@ variable "dokploy_version" {
 }
 
 variable "domain" {
-  description = "The project domain; its hosted zone is declared in infra/bootstrap."
+  description = "The project domain, the one the configuration names: the API's parameters, the bank's callback, the panel's API origin and the outputs. Its hosted zone is declared in infra/bootstrap. The hosts answer under extra_domains as well (ADR-072)."
   type        = string
   default     = "kuutti.app"
+}
+
+variable "extra_domains" {
+  description = "Domains every host also answers under, beside domain (#703, ADR-072): kumpa.fi, the app's name, until no installed build calls kuutti.app. Each one's hosted zone is declared in infra/bootstrap; each is also a domain the box may send mail from (modules/compute). Nothing in the configuration names them yet: the switch is its own change."
+  type        = list(string)
+  default     = ["kumpa.fi"]
 }
 
 variable "alert_email" {
@@ -50,9 +56,9 @@ variable "admin_app_url" {
 }
 
 variable "cors_allowed_origins" {
-  description = "Browser origins the API answers (rule 8: the admin panel and the public site only), comma separated: /kuutti/prod/cors-allowed-origins. The panel's origin must be here or its preflight fails."
+  description = "Browser origins the API answers (rule 8: the admin panel and the public site only), comma separated: /kuutti/prod/cors-allowed-origins. The panel's origin must be here or its preflight fails: both of its names while it has two (ADR-072)."
   type        = string
-  default     = "https://admin.kuutti.app"
+  default     = "https://admin.kuutti.app,https://admin.kumpa.fi"
 }
 
 variable "telia_client_id" {

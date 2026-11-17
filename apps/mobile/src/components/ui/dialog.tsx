@@ -16,8 +16,9 @@ import { Icon } from "@/components/ui/icon";
 import { NativeOnlyAnimatedView } from "@/components/ui/native-only-animated-view";
 import { cn } from "@/lib/utils";
 import { HEADING_FONT_SCALE, MAX_FONT_SCALE, MINIMUM_TARGET } from "@/theme/a11y";
+import { pressFill } from "@/theme/looks";
 import { HARD_SHADOW, useHardShadow } from "@/theme/shadow";
-import { useLook } from "@/theme/ThemeProvider";
+import { useLookTraits } from "@/theme/ThemeProvider";
 
 // From React Native Reusables (#12, TD-9), adapted: the close control is a
 // labelled 44 pt button (closeLabel is required), the scrim is a token,
@@ -143,7 +144,8 @@ function DialogContent({
   /** Read by screen readers for the close control; an i18n string, never inline. */
   closeLabel: string;
 }) {
-  const neubrutalist = useLook() === "neubrutalism";
+  const traits = useLookTraits();
+  const { ink: neubrutalist, pill } = traits;
   const shadow = useHardShadow(HARD_SHADOW.overlay);
   return (
     <DialogPortal hostName={portalHost}>
@@ -153,6 +155,7 @@ function DialogContent({
           className={cn(
             "bg-background z-50 mx-auto flex w-full max-w-[calc(100%-2rem)] shrink flex-col gap-4 rounded-lg p-6 sm:max-w-lg",
             neubrutalist ? "border-stroke border-2 border-solid" : "border-border border",
+            pill && "rounded-3xl",
             Platform.select({
               web: "animate-in fade-in-0 zoom-in-95 duration-200",
             }),
@@ -167,9 +170,10 @@ function DialogContent({
             accessibilityLabel={closeLabel}
             aria-label={closeLabel}
             className={cn(
-              "absolute right-1 top-1 min-h-touch min-w-touch items-center justify-center rounded-md active:bg-accent",
+              "absolute right-1 top-1 min-h-touch min-w-touch items-center justify-center rounded-md",
+              pressFill(traits),
               Platform.select({
-                web: "hover:bg-accent focus-visible:ring-ring outline-none focus-visible:ring-2",
+                web: "focus-visible:ring-ring outline-none focus-visible:ring-2",
               }),
             )}
             style={MINIMUM_TARGET}

@@ -309,7 +309,7 @@ describe("SectionScreen", () => {
     const view = await show(<SectionScreen section="lifestyle" />);
     await waitFor(() => expect(screen.getByText("Smoking")).toBeTruthy());
     await press(screen.getByRole("button", { name: "Hide from your card: Smoking" }));
-    // Nothing goes before the leaving: each save is a research event (ADR-011).
+    // Nothing goes before the leaving: the section saves once, on leaving.
     expect(puts).toEqual([]);
     await leaveAndGo(view);
     expect(puts).toHaveLength(1);
@@ -606,7 +606,7 @@ describe("SectionScreen", () => {
     await show(<SectionScreen section="lifestyle" />);
     expect(screen.getByText(FAILED_TO_LOAD)).toBeTruthy();
     // Why, in words: the API answered 500.
-    expect(screen.getByText("Kuutti's server had a problem. Try again in a moment.")).toBeTruthy();
+    expect(screen.getByText("Kumpa's server had a problem. Try again in a moment.")).toBeTruthy();
     failing = false;
     await press(screen.getByRole("button", { name: "Try again" }));
     await waitFor(() => expect(screen.getByText("Smoking")).toBeTruthy());

@@ -100,4 +100,70 @@ describe("Card's look", () => {
       store.delete("kuutti.preference.look");
     }
   });
+
+  it("is a soft rounded surface on no shadow in the Organic Pop try", async () => {
+    store.set("kuutti.preference.look", "organic");
+    try {
+      const shown = await card();
+      await waitFor(() =>
+        expect(String(shown().props.className).split(" ")).toContain("rounded-3xl"),
+      );
+      const classes = String(shown().props.className).split(" ");
+      expect(classes).toEqual(expect.arrayContaining(["border", "border-border/70"]));
+      expect(classes).not.toContain("border-stroke");
+      expect(classes).not.toContain("shadow-sm");
+      expect(StyleSheet.flatten(shown().props.style)).toEqual({ marginTop: 4 });
+    } finally {
+      store.delete("kuutti.preference.look");
+    }
+  });
+
+  it("is a frosted pane over the backdrop in the Glass try", async () => {
+    store.set("kuutti.preference.look", "glass");
+    try {
+      const shown = await card();
+      await waitFor(() =>
+        expect(String(shown().props.className).split(" ")).toContain("bg-card/60"),
+      );
+      const classes = String(shown().props.className).split(" ");
+      expect(classes).toEqual(expect.arrayContaining(["rounded-3xl", "border-card/80"]));
+      expect(classes).not.toContain("bg-card");
+      expect(StyleSheet.flatten(shown().props.style)).toEqual({ marginTop: 4 });
+    } finally {
+      store.delete("kuutti.preference.look");
+    }
+  });
+
+  // High contrast keeps Glass's shape and takes away what thins the ground.
+  it("is a solid card in the Glass try with high contrast on", async () => {
+    store.set("kuutti.preference.look", "glass");
+    store.set("kuutti.preference.highContrast", "true");
+    try {
+      const shown = await card();
+      await waitFor(() =>
+        expect(String(shown().props.className).split(" ")).toContain("rounded-3xl"),
+      );
+      const classes = String(shown().props.className).split(" ");
+      expect(classes).toContain("bg-card");
+      expect(classes).not.toContain("bg-card/60");
+    } finally {
+      store.delete("kuutti.preference.look");
+      store.delete("kuutti.preference.highContrast");
+    }
+  });
+
+  it("is the soft rounded card in the Bold Contrast try", async () => {
+    store.set("kuutti.preference.look", "bold");
+    try {
+      const shown = await card();
+      await waitFor(() =>
+        expect(String(shown().props.className).split(" ")).toContain("rounded-3xl"),
+      );
+      const classes = String(shown().props.className).split(" ");
+      expect(classes).toEqual(expect.arrayContaining(["bg-card", "border-border/70"]));
+      expect(StyleSheet.flatten(shown().props.style)).toEqual({ marginTop: 4 });
+    } finally {
+      store.delete("kuutti.preference.look");
+    }
+  });
 });

@@ -42,10 +42,9 @@ module "compute" {
   backup_bucket              = local.state_bucket
   dokploy_version            = var.dokploy_version
   mail_recipients            = var.mail_recipients # testers only: Telia's test persons are public (#385, ADR-043 §6)
-  domain                     = var.domain
+  mail_domains               = concat([var.domain], var.extra_domains)
   cpu_credits                = "standard" # a pegged staging box slows down instead of costing extra
   manage_session_preferences = true
-  preview_databases          = true # pull-request previews run here (#9)
   demo_reset                 = true # the demo lives here (ADR-018); demo-reset.yml sends its document (#613)
 
   # Swap (#77, ADR-046): the size the box has had by hand since 2026-10-08.
@@ -76,12 +75,13 @@ module "media" {
   # Rotation (ADR-005): cloudfront-signing-key.<anything>.pub.pem files are trusted too.
   additional_signing_public_keys_pem = [for f in fileset(path.module, "cloudfront-signing-key.*.pub.pem") : file("${path.module}/${f}")]
 
-  # Dokploy's control plane and the previews behind the same distribution, so
-  # that the box can admit CloudFront alone (ADR-005 §7, #198). The wildcard is
-  # spelled through the previews' CAA record (dns.tf) so that the certificate
-  # waits for that record to admit ACM: a refused CAA check fails an ACM
-  # certificate for good.
-  extra_aliases = ["dokploy.staging.${var.domain}", "*.${aws_route53_record.preview_caa.name}"]
+  # Dokploy's control plane behind the same distribution, so that the box can
+  # admit CloudFront alone (ADR-005 §7, #198), and the second names of the API
+  # and of Dokploy (ADR-072, dns.tf), each with the zone it lives in.
+  extra_aliases = merge(
+    { "dokploy.staging.${var.domain}" = data.aws_route53_zone.main.zone_id },
+    { for fqdn, host in local.extra_hosts : fqdn => host.zone_id if host.distribution },
+  )
 
   # The proof of Kuutti's distribution, from the store below (ADR-066).
   origin_proof_store_arn = aws_cloudfront_key_value_store.origin_proof.arn
@@ -109,27 +109,13 @@ resource "aws_cloudfront_key_value_store" "origin_proof" {
   }
 }
 
-# The research copy (#194, ADR-029): the API's write-once rights on research/
-# of the media bucket, the research partner's read-only role there and the
-# trail that logs every object call under it. It lives in the media bucket,
-# so it comes and goes with media_enabled.
-module "research" {
-  count  = var.media_enabled ? 1 : 0
-  source = "../../modules/research"
-
-  environment              = local.environment
-  bucket                   = module.media[0].bucket
-  bucket_arn               = module.media[0].bucket_arn
-  prefix                   = module.media[0].research_prefix
-  instance_role_name       = module.compute.role_name
-  permissions_boundary_arn = local.permissions_boundary_arn
-}
-
 # The moderation panel's host (#313, ADR-025): a bucket and a distribution of
 # its own on admin.staging, the host admin-app-url and cors-allowed-origins
-# name (variables.tf). admin-deploy.yml syncs main's build to its root,
-# preview.yml a pull request's to pr-<n>/; both call this environment's API,
-# since only it can sign staff in (ADR-014 §1).
+# name (variables.tf). admin-deploy.yml syncs main's build to its root; the
+# panel calls this environment's API, since only it can sign staff in
+# (ADR-014 §1). It answers to admin.staging under each extra domain too, and
+# still calls the API by its kuutti.app name, the one its build and its CSP
+# name, until the switch (ADR-072).
 module "admin" {
   source = "../../modules/admin"
   providers = {
@@ -141,6 +127,8 @@ module "admin" {
   zone_id     = data.aws_route53_zone.main.zone_id
   admin_fqdn  = "admin.staging.${var.domain}"
   api_origin  = "https://api.staging.${var.domain}"
+
+  extra_aliases = { for d in var.extra_domains : "admin.staging.${d}" => data.aws_route53_zone.extra[d].zone_id }
 }
 
 # Alarms, the alert topic and the saved log queries (#11).
@@ -177,19 +165,15 @@ resource "aws_ssm_parameter" "config" {
     "db-port"   = tostring(module.data.port)
     "db-name"   = module.data.db_name
     "db-user"   = "kuutti_app"
-    # Pull-request previews connect as this role (#9); its password is
-    # db-preview-password from infra/scripts/db-app-role.sh.
-    "db-preview-user" = "kuutti_preview"
     # Photo moderation through Rekognition (#49, ADR-006); the instance role allows the three calls.
     "moderation" = "rekognition"
     # Mail through SES (#385, ADR-043 §4): the instance role sends as noreply@
-    # through the domain's identity in infra/bootstrap; the previews read this
-    # too. In SES's sandbox until production access, one for both environments.
+    # through the domain's identity in infra/bootstrap. In SES's sandbox until
+    # production access, one for both environments.
     "mail" = "ses"
     # Push through Expo (#102, ADR-055 §8): the API sends to Expo's push
     # service over HTTPS; its access token, once EAS's enhanced push security
-    # is on, is the SecureString expo-access-token, never a resource (ADR-001);
-    # the previews read this too.
+    # is on, is the SecureString expo-access-token, never a resource (ADR-001).
     "push" = "expo"
     # The staff login's return and the panel's origin (#49): without them a
     # deployed box sends the one-time code to localhost and refuses the panel's preflight.

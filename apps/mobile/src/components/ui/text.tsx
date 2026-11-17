@@ -4,6 +4,7 @@ import * as React from "react";
 import { Platform, Text as RNText, type Role } from "react-native";
 import { cn } from "@/lib/utils";
 import { HEADING_FONT_SCALE, MAX_FONT_SCALE } from "@/theme/a11y";
+import { useLookTraits } from "@/theme/ThemeProvider";
 
 // From React Native Reusables (#12, TD-9), adapted: text follows the OS font
 // size up to MAX_FONT_SCALE, headings less (HEADING_FONT_SCALE), and no
@@ -63,12 +64,18 @@ type TextProps = React.ComponentProps<typeof RNText> &
   React.RefAttributes<RNText> &
   TextVariantProps & { asChild?: boolean };
 
+// The Organic Pop try (outside production) reads what is read light, as Sini's
+// "Inter Light": the phone's own font at its light weight, which a button's or
+// a heading's own weight overrides.
+const LIGHT: Partial<Record<TextVariant, true>> = { default: true, muted: true };
+
 function Text({ className, asChild = false, variant = "default", ...props }: TextProps) {
   const textClass = React.useContext(TextClassContext);
+  const light = useLookTraits().lightText && variant !== null && LIGHT[variant];
   const Component = asChild ? Slot : RNText;
   return (
     <Component
-      className={cn(textVariants({ variant }), textClass, className)}
+      className={cn(textVariants({ variant }), light && "font-light", textClass, className)}
       role={variant ? ROLE[variant] : undefined}
       aria-level={variant ? ARIA_LEVEL[variant] : undefined}
       maxFontSizeMultiplier={(variant && FONT_SCALE[variant]) ?? MAX_FONT_SCALE}

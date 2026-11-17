@@ -37,7 +37,7 @@ describe("the decision buttons' choices", () => {
       "Left hand",
       "One-handed",
       "Button style",
-      "✓ Kuutti",
+      "✓ Kumpa",
       "✕ and ○",
       "A and B",
     ]);
@@ -73,7 +73,7 @@ describe("the decision buttons' choices", () => {
     await waitFor(() => expect(chosen(/Left hand/)).toBe(true));
     expect(oneHanded()).toBe(true);
     expect(chosen(/A and B/)).toBe(true);
-    expect(chosen(/^(✓ )?Kuutti$/)).toBe(false);
+    expect(chosen(/^(✓ )?Kumpa$/)).toBe(false);
   });
 
   it("offers the styles as a group of their own, Kuutti's chosen, with its name in sight over them (#581)", async () => {
@@ -81,12 +81,12 @@ describe("the decision buttons' choices", () => {
     const group = screen.getByLabelText("Button style");
     expect(group.props.accessibilityRole).toBe("radiogroup");
     expect(within(group).getAllByRole("radio")).toHaveLength(3);
-    expect(chosen(/^(✓ )?Kuutti$/)).toBe(true);
+    expect(chosen(/^(✓ )?Kumpa$/)).toBe(true);
     expect(chosen(/Cross and circle/)).toBe(false);
     expect(chosen(/A and B/)).toBe(false);
     // Not only for a screen reader, which hears the group's name.
     const lines = drawn();
-    expect(lines.indexOf("Button style")).toBe(lines.indexOf("✓ Kuutti") - 1);
+    expect(lines.indexOf("Button style")).toBe(lines.indexOf("✓ Kumpa") - 1);
   });
 
   it("keeps each style on the phone beside the hand, and back to Kuutti's own", async () => {
@@ -98,10 +98,10 @@ describe("the decision buttons' choices", () => {
       expect(stored()).toEqual({ hand: "left", oneHanded: true, style: "shapes" }),
     );
     expect(chosen(/Cross and circle/)).toBe(true);
-    expect(chosen(/^(✓ )?Kuutti$/)).toBe(false);
+    expect(chosen(/^(✓ )?Kumpa$/)).toBe(false);
     await fireEvent.press(screen.getByRole("radio", { name: /A and B/ }));
     await waitFor(() => expect(stored()?.style).toBe("letters"));
-    await fireEvent.press(screen.getByRole("radio", { name: /^(✓ )?Kuutti$/ }));
+    await fireEvent.press(screen.getByRole("radio", { name: /^(✓ )?Kumpa$/ }));
     await waitFor(() =>
       expect(stored()).toEqual({ hand: "left", oneHanded: true, style: "kuutti" }),
     );

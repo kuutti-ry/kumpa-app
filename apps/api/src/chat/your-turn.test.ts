@@ -345,11 +345,6 @@ describe("a second match (ADR-062 §7)", () => {
       expect(await counted(ctx, app, who)).toBe(1);
     }
     expect(await turnOf(app, a, old)).toBe(false);
-    // Its close tells nobody anything as an unmatch does: no research event of it.
-    const events = await ctx.client.query(
-      "SELECT 1 FROM events WHERE name = 'conversation_closed'",
-    );
-    expect(events.rows).toEqual([]);
   });
 
   test("a conversation that ended before stays as its close left it", async ({ ctx }) => {

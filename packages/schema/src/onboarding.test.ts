@@ -261,8 +261,9 @@ describe("the consents", () => {
     expect(ConsentRequest.parse({ ...request, kind }).kind).toBe(kind);
   });
 
-  it("are withdrawn only for research and the special categories", () => {
-    expect(WithdrawableConsentKind.options).toEqual(["research", "special_category"]);
+  it("are withdrawn only for the special categories", () => {
+    expect(WithdrawableConsentKind.options).toEqual(["special_category"]);
+    expect(codes(WithdrawableConsentKind, "research")).toEqual(["invalid_value"]);
     expect(codes(WithdrawableConsentKind, "terms")).toEqual(["invalid_value"]);
     expect(codes(WithdrawableConsentKind, "privacy")).toEqual(["invalid_value"]);
   });
@@ -283,7 +284,7 @@ describe("the consents", () => {
 
   it("read back each consent with its withdrawal, and the current wordings", () => {
     const record = { ...request, givenAt: at, withdrawnAt: null };
-    const versions = { terms: "1", privacy: "1", research: "1", special_category: "1" };
+    const versions = { terms: "1", privacy: "1", special_category: "1" };
     expect(ConsentRecord.parse(record)).toEqual(record);
     expect(ConsentsResponse.parse({ consents: [record], currentVersions: versions })).toEqual({
       consents: [record],
@@ -300,12 +301,11 @@ describe("the consents", () => {
 });
 
 describe("the onboarding steps", () => {
-  it("activate on the four answers and the two consents, never research", () => {
+  it("activate on the four answers and the two consents", () => {
     expect([...ACTIVATION_STEPS].sort()).toEqual(
       ["age_window", "gender", "home", "privacy", "seeks", "terms"].sort(),
     );
     for (const step of ACTIVATION_STEPS) expect(ONBOARDING_STEPS).toContain(step);
-    expect(ONBOARDING_STEPS).not.toContain("research");
   });
 
   it("ask the home after the age window, where the pond was (ADR-061 §1)", () => {
@@ -330,8 +330,8 @@ describe("the onboarding steps", () => {
     gender: null,
     home: null,
     preferences: { seeks: null, ageWindow: null },
-    consents: { terms: null, privacy: null, specialCategory: null, research: null },
-    currentVersions: { terms: "1", privacy: "1", research: "1", special_category: "1" },
+    consents: { terms: null, privacy: null, specialCategory: null },
+    currentVersions: { terms: "1", privacy: "1", special_category: "1" },
     nextChange: { gender: null },
     missing: [...ONBOARDING_STEPS],
     complete: false,
@@ -364,16 +364,5 @@ describe("the onboarding steps", () => {
     expect(codes(OnboardingStatus, { ...status, missing: ["research"] })).toEqual([
       "invalid_value",
     ]);
-  });
-
-  it("carry the research opt-in with its version and time", () => {
-    const enrolled = {
-      ...status,
-      consents: { ...status.consents, research: { version: "1", givenAt: at } },
-    };
-    expect(OnboardingStatus.parse(enrolled).consents.research).toEqual({
-      version: "1",
-      givenAt: at,
-    });
   });
 });

@@ -8,9 +8,9 @@ Feature: Reporting somebody from a card or a conversation
   and closes the conversation, and the person blocked can still report it
   for matching_config.report_after_close_days. The
   moderators read it in the panel (#311, #312); the reported person learns
-  nothing. The note reaches no log line, error detail or research event. At
-  most matching_config.reports_per_day a day per account, the Finnish
-  calendar day, and one open report per pair. Kept twelve months from
+  nothing. The note reaches no log line or error detail. At most
+  matching_config.reports_per_day a day per account, the Finnish calendar
+  day, and one open report per pair. Kept twelve months from
   filing, whoever of the two is erased meanwhile (features/identity/erasure.feature).
   A report may point at the one photo it is about (#476, ADR-030 §13): a
   photo the other person sent in the conversation, or a photo of the card
@@ -32,10 +32,10 @@ Feature: Reporting somebody from a card or a conversation
       | scraping          | Asked twenty people the same questions.    |
       | other             | none                                       |
 
-  Scenario: The note reaches no log line, no error detail and no event
-    Given "A" gave the research consent and may file one report today
+  Scenario: The note reaches no log line and no error detail
+    Given "A" may file one report today
     When "A" files a report with a note, one with a note too long, and one over the day's cap
-    Then no log line carries the note, whom it was about or why, and no research event was written
+    Then no log line carries the note, whom it was about or why
 
   Scenario: A second report of the same person while one is open writes nothing more
     Given "A" reported "B" and nobody has decided it

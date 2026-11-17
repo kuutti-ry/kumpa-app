@@ -1,7 +1,7 @@
 // Kuutti's distribution proves itself to the box (ADR-066). On every request
-// of the default behaviour (the API, Dokploy, the previews) it sets
-// x-kuutti-origin to the store's one value, origin-secret, which the API
-// compares with its own copy before it believes CloudFront's viewer address.
+// of the default behaviour (the API, Dokploy) it sets x-kuutti-origin to the
+// store's one value, origin-secret, which the API compares with its own copy
+// before it believes CloudFront's viewer address.
 // A viewer's own x-kuutti-origin never passes. While the store has no key
 // (written by hand, infra/README.md, Media) the request goes without one,
 // which matters only where the API trusts the viewer address: there it has

@@ -1,8 +1,8 @@
 # Kuutti
 
-[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/kuutti-ry/kuutti-app/badge)](https://scorecard.dev/viewer/?uri=github.com/kuutti-ry/kuutti-app) [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/15449/badge)](https://www.bestpractices.dev/projects/15449)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/kuutti-ry/kumpa-app/badge)](https://scorecard.dev/viewer/?uri=github.com/kuutti-ry/kumpa-app) [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/15449/badge)](https://www.bestpractices.dev/projects/15449)
 
-A free, open-source dating app for Finland. No ads, no premium tiers, no data sales. Every account is a real adult verified through Finnish bank identification. Run by a non-profit association, built as a hobby by volunteers, with research partners onboard.
+A free, open-source dating app for Finland. No ads, no premium tiers, no data sales. Every account is a real adult verified through Finnish bank identification. Run by a non-profit association, built as a hobby by volunteers.
 
 What is here: a Hono API (`apps/api`) on AWS (`infra/`), an Expo app (`apps/mobile`), a moderation panel (`apps/admin`), the shared contracts, database, i18n and bank-login packages (`packages/`), and the CI that deploys staging on every merge and production on a release tag. `CLAUDE.md` carries the standing rules, `docs/adr/` the decisions, `CONTRIBUTING.md` the fifteen-minute local setup; the open milestones on GitHub say what comes next.
 
@@ -11,7 +11,7 @@ What is here: a Hono API (`apps/api`) on AWS (`infra/`), an Expo app (`apps/mobi
 You need git, Node 22.18 or newer, and Docker (Docker Desktop or OrbStack). Six commands, about fifteen minutes; [CONTRIBUTING.md](CONTRIBUTING.md#local-setup) has the detail.
 
 ```bash
-git clone https://github.com/kuutti-ry/kuutti-app.git && cd kuutti-app
+git clone https://github.com/kuutti-ry/kumpa-app.git && cd kumpa-app
 corepack enable                    # pnpm, at the version the project pins
 cp env.example .env                # local values only, nothing secret
 pnpm install

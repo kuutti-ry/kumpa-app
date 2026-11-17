@@ -40,28 +40,31 @@ describe("the tech config screen", () => {
   });
   afterEach(() => jest.restoreAllMocks());
 
-  // The designers' try, on this screen alone, which production has not: a
-  // style and a palette, each a group of radios that says and keeps its choice.
+  // The designers' try, on this screen alone, which production has not: one
+  // group of radios, Sini's four styles after today's, that says and keeps its
+  // choice and puts the style's colours on the root view.
+  const STYLES = ["Today's", "Neobrutalism", "Organic Pop", "Glass", "Bold Contrast"];
   it.each([
-    ["Style to try", ["Today's", "Neubrutalism"], "Neubrutalism", "look", "neubrutalism"],
-    ["Colours to try", ["Today's", "Ice", "Dusk", "Birch"], "Dusk", "palette", "dusk"],
+    ["Glass", "glass"],
+    ["Bold Contrast", "bold"],
   ] as const)(
-    "offers the try's %s as radios, today's first, and keeps the one chosen",
-    async (title, options, pick, key, stored) => {
+    "offers the try's styles as radios, today's first, and keeps %s",
+    async (pick, stored) => {
       const store = (SecureStore as unknown as { __store: Map<string, string> }).__store;
       store.clear();
       await renderWithTheme(<TechConfigScreen />);
       await waitFor(() => expect(screen.getByText("git commit abc1234")).toBeTruthy());
-      const group = screen.getByLabelText(title);
+      const group = screen.getByLabelText("Style to try");
       expect(group.props.accessibilityRole).toBe("radiogroup");
       const labels = () =>
         within(group)
           .getAllByRole("radio")
           .map((radio) => radio.props.accessibilityLabel);
-      expect(labels()).toEqual(options.map((option, at) => (at === 0 ? `✓ ${option}` : option)));
+      expect(labels()).toEqual(STYLES.map((option, at) => (at === 0 ? `✓ ${option}` : option)));
       await fireEvent.press(within(group).getByRole("radio", { name: pick }));
-      expect(labels()).toEqual(options.map((option) => (option === pick ? `✓ ${option}` : option)));
-      await waitFor(() => expect(store.get(`kuutti.preference.${key}`)).toBe(stored));
+      expect(labels()).toEqual(STYLES.map((option) => (option === pick ? `✓ ${option}` : option)));
+      await waitFor(() => expect(store.get("kuutti.preference.look")).toBe(stored));
+      expect(screen.queryByLabelText("Colours to try")).toBeNull();
       expect(pressables(screen.toJSON() as HostNode).flatMap((n) => a11yProblems(n))).toEqual([]);
     },
   );

@@ -74,9 +74,9 @@ flowchart TB
 6. The API counts the person's invitations waiting, under a lock on the account, in the statement that makes the new one. Fewer than `invitations_open`, and never more than a ceiling the contract sets whatever the panel says: 8. Otherwise: 7. A profile no longer complete meanwhile is refused in the words of step 3.
 7. The app says "You have as many invitations waiting as you can have. Withdraw one, or wait until a friend uses one." Nothing was made.
 8. The API makes a code from an alphabet without look-alike letters, shown in groups, and keeps only a one-way fingerprint of it. The code itself is in no record, log line or export.
-9. "Your invitation is ready. Its code is below." is said aloud, and the app shows the code under "Your invitation code", large, selectable and read to a screen reader one character at a time, with "Kuutti shows this code only now. Share it with one friend." The code goes from the screen once a later read no longer lists it as waiting: a friend used it, or it was withdrawn.
+9. "Your invitation is ready. Its code is below." is said aloud, and the app shows the code under "Your invitation code", large, selectable and read to a screen reader one character at a time, with "Kumpa shows this code only now. Share it with one friend." The code goes from the screen once a later read no longer lists it as waiting: a friend used it, or it was withdrawn.
 10. The person chooses "Share the code".
-11. The app hands the phone's share sheet a message: "You're invited to Kuutti, a free dating app for Finland where everyone signs in with their bank ID.", then, while `invitation_reward` gives the friend a fish, what the code earns the friend and the person, with "A fish is a like that says a little more."; then "Get the app:" and the one link, an address of the API's with the code in it; then "After signing in, type this code:" and the code. Nothing else about the person. If the sheet does not open, the app says "The share did not open. You can copy the code above instead."
+11. The app hands the phone's share sheet a message: "You're invited to Kumpa, a free dating app for Finland where everyone signs in with their bank ID.", then, while `invitation_reward` gives the friend a fish, what the code earns the friend and the person, with "A fish is a like that says a little more."; then "Get the app:" and the one link, an address of the API's with the code in it; then "After signing in, type this code:" and the code. Nothing else about the person. If the sheet does not open, the app says "The share did not open. You can copy the code above instead."
 12. The friend gets the message in whatever app the person chose, outside Kuutti. Part 2 follows the friend.
 13. The person chooses "Withdraw" beside an invitation waiting; a dialog asks "Withdraw this invitation?" ("Its code stops working at once."), and they choose "Withdraw the invitation". "Keep it" closes the dialog.
 14. The API deletes the invitation, if it is the person's own and still waiting. One a friend has used cannot be withdrawn.
@@ -101,7 +101,7 @@ flowchart TB
     s17{"Which phone asks?"}
     s18["Sends an iPhone or iPad to the App Store"]
     s19["Sends an Android phone to Play, the code with it"]
-    s20["Sends anything else, or a phone whose store is not out yet, to kuutti.app"]
+    s20["Sends anything else, or a phone whose store is not out yet, to the website, kumpa.fi"]
     s23{"May the friend still use a code?"}
     s27{"Tries left today, by invitation_tries_per_day?"}
     s29{"May the friend still use a code, checked again?"}
@@ -142,9 +142,9 @@ flowchart TB
 
 16. The friend taps the link in the message.
 17. The API looks at which phone asks, by the request's User-Agent alone. The code is never looked up, so every code gets the same answer, and nothing is kept. iPhone or iPad: 18. Android: 19. Anything else: 20.
-18. An iPhone or an iPad goes to the App Store, or to kuutti.app while the store's listing is not out (#193). The App Store carries nothing through an install, so the friend will type the code (25). Then 22.
-19. An Android phone goes to Play, the code with it as the install referrer, which Play hands the app at its first start; or to kuutti.app while the listing is not out. Then 21.
-20. Anything else goes to kuutti.app, whose page has both stores. Then 22.
+18. An iPhone or an iPad goes to the App Store, or to the website, kumpa.fi, while the store's listing is not out (#193). The App Store carries nothing through an install, so the friend will type the code (25). Then 22.
+19. An Android phone goes to Play, the code with it as the install referrer, which Play hands the app at its first start; or to kumpa.fi while the listing is not out. Then 21.
+20. Anything else goes to kumpa.fi, whose page has both stores. Then 22.
 21. The app takes the code from the link by itself: not built yet, #184's native batch. Today nothing reads it, and the friend will type the code (25). Then 22.
 22. The friend gets the app, accepts the terms and the privacy summary, and signs in with their bank ([Signing in](sign-in.md), [Onboarding](onboarding.md)).
 23. Onboarding asks the API whether the friend may still use a code: their profile and onboarding are not complete, their identity has never had an account deleted, they have used no code before, and they have given the current terms and privacy consents. Yes: 25. No, or the question could not be answered: 24.
@@ -228,3 +228,5 @@ flowchart TB
 - 2026-11-03 (#503, PR #579): an invitation earns fish alone, for the person and now for the friend too, each told by a notice on home, and the friend is told beforehand what the code earns them; earned likes go; an inviter who deleted their account before the count still leaves the friend their fish.
 - 2026-11-04 (#581, PR #590): Invitations loses its opening line and its count of friends who finished; its button is "Create an invitation".
 - 2026-11-07 (#574, PR #642): the shared message carries one link with the code, which sends a phone to its store and anything else to the website.
+- 2026-11-16 (#700, PR #701): the invitation's message and the line under the code name the app Kumpa.
+- 2026-11-17 (#208): the website the link sends a computer to, or a phone whose store is not out, is kumpa.fi, the site's home since that day.

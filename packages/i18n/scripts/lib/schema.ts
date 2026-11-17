@@ -83,7 +83,7 @@ const SLANG_NAMESPACE = /^(round|home|profile|settings)\./;
 // failure), consent and a person's data, their way out of danger or of a
 // session, and the answers that say who somebody is.
 const NEVER_SLANG =
-  /failed|invalid|error|refused|contact|email|gender|consent|signout|research|sensitive|export|support|session|logout|lock|report|option/i;
+  /failed|invalid|error|refused|contact|email|gender|consent|signout|sensitive|export|support|session|logout|lock|report|option/i;
 
 /** True for keys a `slangi:` text may stand on: i18n:check refuses one anywhere else. */
 export const isSlangKey = (key: string): boolean =>
@@ -110,7 +110,7 @@ export function parseMessages(yamlText: string): Messages {
     }
     if (isLegalKey(key)) {
       if (message.machine) problems.push(`${key}: legal text is never machine-translated`);
-      // Its Finnish is the binding source, written by people, not a translation to approve.
+      // A wording a person accepts, versioned by consent_version: never a translation to approve.
       if (message.reviewed) problems.push(`${key}: legal text takes no review hash`);
       if (!message.consent_version) problems.push(`${key}: legal text needs a consent_version`);
     } else if (message.consent_version) {

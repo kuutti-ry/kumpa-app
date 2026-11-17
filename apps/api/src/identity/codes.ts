@@ -38,11 +38,13 @@ export function appReturnUrl(code: string): string {
  * Where a refused login sends the browser: back into the app with the error's
  * code, which the app has a text for, rather than a JSON envelope left in a
  * browser tab. The code is one of ours (never text from the request); the
- * cooldown's date rides along for the message.
+ * cooldown's or the suspension's date rides along for the message, and a
+ * suspension's or a ban's reason from the closed list (#715, ADR-073 §2).
  */
-export function appErrorUrl(code: string, until?: string): string {
+export function appErrorUrl(code: string, until?: string, reason?: string): string {
   const url = new URL("kuutti://auth");
   url.searchParams.set("error", code);
   if (until) url.searchParams.set("until", until);
+  if (reason) url.searchParams.set("reason", reason);
   return url.toString();
 }

@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "zod contracts shared by api, mobile and admin; the research event registry lives here too.",
+  "description": "zod contracts shared by api, mobile and admin.",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {

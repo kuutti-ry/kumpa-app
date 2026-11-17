@@ -69,7 +69,7 @@ name: A passcode set in Settings locks the app at a cold start and back from the
 - stopApp
 - runFlow: ../common/open-app.yaml
 - extendedWaitUntil:
-    visible: "Kuutti is locked|Kuutti on lukittu|Kuutti är låst"
+    visible: "Kumpa is locked|Kumpa on lukittu|Kumpa är låst"
     timeout: 15000
 # No tap on the field: it has the focus as the lock shows (no face or finger
 # here), and the number pad is up, so a tap "below" the label lands on a key
@@ -84,7 +84,7 @@ name: A passcode set in Settings locks the app at a cold start and back from the
 # The lock goes, and home is there; it lay below the lock all along, so the
 # lock's going is what is waited for.
 - extendedWaitUntil:
-    notVisible: "Kuutti is locked|Kuutti on lukittu|Kuutti är låst"
+    notVisible: "Kumpa is locked|Kumpa on lukittu|Kumpa är låst"
     timeout: 15000
 - extendedWaitUntil:
     visible: "Your profile|Profiilisi|Din profil"
@@ -94,11 +94,11 @@ name: A passcode set in Settings locks the app at a cold start and back from the
 - pressKey: Home
 - openLink: kuutti://
 - extendedWaitUntil:
-    visible: "Kuutti is locked|Kuutti on lukittu|Kuutti är låst"
+    visible: "Kumpa is locked|Kumpa on lukittu|Kumpa är låst"
     timeout: 15000
 # The bank is always the way out. A tap on the title, which is no button,
 # closes the keyboard the passcode's field opened (README).
-- tapOn: "Kuutti is locked|Kuutti on lukittu|Kuutti är låst"
+- tapOn: "Kumpa is locked|Kumpa on lukittu|Kumpa är låst"
 - scrollUntilVisible:
     element: "Sign in with the bank instead|Kirjaudu mieluummin pankkitunnuksilla|Logga in med banken i stället"
     direction: DOWN

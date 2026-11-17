@@ -31,9 +31,15 @@ variable "dokploy_version" {
 }
 
 variable "domain" {
-  description = "The project domain; its hosted zone is declared in infra/bootstrap."
+  description = "The project domain, the one the configuration names: the API's parameters, the bank's callback, the panel's API origin and the outputs. Its hosted zone is declared in infra/bootstrap. The hosts answer under extra_domains as well (ADR-072)."
   type        = string
   default     = "kuutti.app"
+}
+
+variable "extra_domains" {
+  description = "Domains every host also answers under, beside domain (#703, ADR-072): kumpa.fi, the app's name, until no installed build calls kuutti.app. Each one's hosted zone is declared in infra/bootstrap; each is also a domain the box may send mail from (modules/compute). Nothing in the configuration names them yet: the switch is its own change."
+  type        = list(string)
+  default     = ["kumpa.fi"]
 }
 
 variable "alert_email" {
@@ -43,25 +49,25 @@ variable "alert_email" {
 }
 
 variable "mail_recipients" {
-  description = "Whom staging may mail (#385, ADR-043 §6): its testers alone, since every staging account is one of Telia's test persons, whose credentials are published. CI passes the repository variable MAIL_TESTERS, a JSON list of addresses (patterns such as *@example.fi allowed), as TF_VAR_mail_recipients. The default is Kuutti's own sender, an alias at the association's Google Workspace: until the maintainer lists the testers, staging mails that address alone."
+  description = "Whom staging may mail (#385, ADR-043 §6): its testers alone, since every staging account is one of Telia's test persons, whose credentials are published. CI passes the repository variable MAIL_TESTERS, a JSON list of addresses (patterns such as *@example.fi allowed), as TF_VAR_mail_recipients. The default is Kuutti's own senders, aliases at the association's Google Workspace, one for each domain the box may send from (ADR-072): until the maintainer lists the testers, staging mails those addresses alone."
   type        = list(string)
-  default     = ["noreply@kuutti.app"]
+  default     = ["noreply@kuutti.app", "noreply@kumpa.fi"]
 }
 
 variable "admin_app_url" {
-  description = "Where the staff login returns to and the moderation panel lives (#49, ADR-006): /kuutti/staging/admin-app-url. The panel's own host, static behind CloudFront (module admin, #313, ADR-025). A preview's panel under /pr-<n>/ has no login of its own: staff sign in here and open it in the same tab (ADR-025 §6)."
+  description = "Where the staff login returns to and the moderation panel lives (#49, ADR-006): /kuutti/staging/admin-app-url. The panel's own host, static behind CloudFront (module admin, #313, ADR-025)."
   type        = string
   default     = "https://admin.staging.kuutti.app"
 }
 
 variable "cors_allowed_origins" {
-  description = "Browser origins the API answers (rule 8: the admin panel and the public site only), comma separated: /kuutti/staging/cors-allowed-origins. The panel's origin must be here or its preflight fails; its previews share it. A panel on a developer's laptop is not listed: the bank returns the one-time code to the hosted panel, so it could not finish a staging login anyway (ADR-025 §10)."
+  description = "Browser origins the API answers (rule 8: the admin panel and the public site only), comma separated: /kuutti/staging/cors-allowed-origins. The panel's origin must be here or its preflight fails: both of its names while it has two (ADR-072). A panel on a developer's laptop is not listed: the bank returns the one-time code to the hosted panel, so it could not finish a staging login anyway (ADR-025 §10)."
   type        = string
-  default     = "https://admin.staging.kuutti.app"
+  default     = "https://admin.staging.kuutti.app,https://admin.staging.kumpa.fi"
 }
 
 variable "telia_client_id" {
-  description = "The client_id Telia Tunnistus assigned to Kuutti on its pre-production bed (#32, docs/vendors/telia.md): /kuutti/staging/oidc-client-id. Public by OIDC design (it travels in every authorization URL), so it is a default here; Telia's provisioning mail of 2026-10-08 (ticket 01121315) carries it. Null keeps bank identification off: the issuer, the registered redirect URI and the acr value are written only together with it, because the API refuses half a configuration at boot. The two private keys are /kuutti/staging/telia-signing-key and -encryption-key, never resources (infra/README.md, Secrets)."
+  description = "The client_id Telia Tunnistus assigned to Kuutti on its pre-production bed (#32, docs/vendors/telia.md): /kuutti/staging/oidc-client-id. Public by OIDC design (it travels in every authorization URL), so it is a default here. Null keeps bank identification off: the issuer, the registered redirect URI and the acr value are written only together with it, because the API refuses half a configuration at boot. The two private keys are /kuutti/staging/telia-signing-key and -encryption-key, never resources (infra/README.md, Secrets)."
   type        = string
   default     = "b9b08a7a-ebb4-4a8c-a3e7-52824d3231e5"
 }
@@ -73,7 +79,7 @@ variable "media_enabled" {
 }
 
 variable "cloudfront_only_ingress" {
-  description = "Passed to the network module: HTTPS from CloudFront's prefix list only. On since #198, once Dokploy and the previews were behind the distribution too (ADR-005 §7). The list is every CloudFront distribution's servers, not Kuutti's alone, so this closes the box to direct requests and proves nothing about whose distribution a request came through; the proof of ADR-066 tells Kuutti's apart. Turning this off needs trusted_proxy at traefik first: a precondition refuses the pair."
+  description = "Passed to the network module: HTTPS from CloudFront's prefix list only. On since #198, once Dokploy was behind the distribution too (ADR-005 §7). The list is every CloudFront distribution's servers, not Kuutti's alone, so this closes the box to direct requests and proves nothing about whose distribution a request came through; the proof of ADR-066 tells Kuutti's apart. Turning this off needs trusted_proxy at traefik first: a precondition refuses the pair."
   type        = bool
   default     = true
 }

@@ -6,7 +6,7 @@
  * media of the Kuutti brand (Spoke's e-mail of 20-21/10/2026). Its files are
  * never public as sources: not in this repository, which is public, and not
  * on a GitHub runner, whose caches, artifacts and logs are. They live in the
- * association's private repository, `kuutti-app-fonts`.
+ * association's private repository, `kumpa-app-fonts`.
  *
  * This takes the faces of scripts/saiga.json from that repository at the
  * pinned commit, holds every file to the SHA-256 of the one Spoke delivered,

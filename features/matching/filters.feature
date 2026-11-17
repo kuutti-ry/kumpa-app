@@ -19,7 +19,7 @@ Feature: The filters, hard both ways, and the soft preferences that only order
   The soft preferences (education, drinking, the attitude to drugs) are a
   person's own answers. They only order the new people of a queue, counted
   where the two are similar from both sides. They never take anybody out of a
-  pool, and never reach a card, an event or a log line as a number.
+  pool, and never reach a card or a log line as a number.
 
   Scenario Outline: A deal-breaker lets through only the answers its holder accepts, asked from either side
     Given a person with a deal-breaker on <field> accepting <accept>, <unknown> people who did not answer

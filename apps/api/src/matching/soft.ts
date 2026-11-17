@@ -12,8 +12,8 @@ import { PROFILE_FIELD_KEYS, PROFILE_FIELDS, type ProfileFields } from "@kuutti/
  *
  * Which fields are soft is the registry's (`preferenceAbout`), never named
  * here. The round builder (#95) orders a round's non-forced places by the
- * count, without weights; it never reaches a card, an event or a log line
- * as a number (the matching document's invariant 6).
+ * count, without weights; it never reaches a card or a log line as a
+ * number (the matching document's invariant 6).
  */
 const SOFT = PROFILE_FIELD_KEYS.flatMap((key) => {
   const spec = PROFILE_FIELDS[key];

@@ -21,7 +21,7 @@ const parsed = (argv: readonly string[], reason: string) => {
 describe("the population's command line", () => {
   attack("demo:population: production named after the separator pnpm hands through is written to", {
     attempt: () => parsed(["--", "--env", "production"], 'refusing: --env is "production"'),
-    control: () => parsed(["--", "--env", "preview"], 'refusing: --env is "production"'),
+    control: () => parsed(["--", "--env", "test"], 'refusing: --env is "production"'),
     succeeds: (seen) => expect(seen.goesAhead).toBe(true),
   });
 
@@ -77,55 +77,6 @@ describe("the population's command line", () => {
       expect(() => parsed(["--env", "production"], 'refusing: --env is "production"')).toThrow(
         /refusing:/,
       );
-    } finally {
-      spy.mockRestore();
-    }
-  });
-});
-
-describe("the server the population would go to", () => {
-  /** A managed server, asked for as a preview: whether the database is let through as a pull request's own. */
-  const preview = (database: string): { taken: boolean } => {
-    const target: command.DemoTarget = {
-      database,
-      user: "kuutti_preview",
-      host: "127.0.0.1",
-      port: 15432,
-      managed: true,
-    };
-    try {
-      command.assertDemoTarget(target, "preview");
-      return { taken: true };
-    } catch (error) {
-      if (!(error instanceof command.DemoCommandError)) throw error;
-      expect(error.message).toContain(`refusing: database "${database}" is on a managed server`);
-      return { taken: false };
-    }
-  };
-
-  for (const [how, database] of [
-    ["goes on after the number", "kuutti_pr_88_copy"],
-    ["is in capitals", "KUUTTI_PR_88"],
-    ["ends in a line break", "kuutti_pr_88\n"],
-    ["has a digit of another script", "kuutti_pr_8８"],
-  ] as const) {
-    attack(
-      `demo:population: a managed database whose name ${how} is taken for a pull request's own`,
-      {
-        attempt: () => preview(database),
-        control: () => preview("kuutti_pr_88"),
-        succeeds: (seen) => expect(seen.taken).toBe(true),
-      },
-    );
-  }
-
-  it("does not turn a broken target check into a refusal", () => {
-    const error = new TypeError("broken target check");
-    const spy = vi.spyOn(command, "assertDemoTarget").mockImplementationOnce(() => {
-      throw error;
-    });
-    try {
-      expect(() => preview("kuutti_pr_88_copy")).toThrow(error);
     } finally {
       spy.mockRestore();
     }

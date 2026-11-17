@@ -22,12 +22,12 @@ import { applySanction, liftSanction } from "./sanctions.ts";
 
 // A person's page in the panel (#306): GET /admin/accounts/{id} through the
 // app. Every field of a seeded person exactly; what the page never carries
-// (the hash, the broker's ids, the research id, the e-mail, the photo check's
-// notes, staff's words); the audit section's subjects and bounds; one
-// account.view row per open, written before the page is read; the tombstone;
-// the guard, the roles, the 400 and the 404s; the log line. Real Postgres in
-// one rolled-back transaction per test, the routes' clock fixed; the order of
-// the statements is read through a recording Queryable, never by sleeping.
+// (the hash, the broker's ids, the e-mail, the photo check's notes, staff's
+// words); the audit section's subjects and bounds; one account.view row per
+// open, written before the page is read; the tombstone; the guard, the roles,
+// the 400 and the 404s; the log line. Real Postgres in one rolled-back
+// transaction per test, the routes' clock fixed; the order of the statements
+// is read through a recording Queryable, never by sleeping.
 
 /** The routes' clock: 12:00 in Finland on a Tuesday. */
 const T = new Date("2026-10-20T09:00:00Z");
@@ -225,11 +225,10 @@ async function registered(ctx: TestContext, accountId: string): Promise<void> {
 
 /**
  * A person with everything the page shows and everything it must not: an
- * identity with the broker's ids, an e-mail, a research id, a profile
- * with special-category answers, two photos (one rejected with a check note),
- * two feedback rows (one handled through the panel), a shadow ban applied and
- * lifted, a suspension that stays, and a moderator's look at the rejected
- * picture through the panel.
+ * identity with the broker's ids, an e-mail, a profile with special-category
+ * answers, two photos (one rejected with a check note), two feedback rows (one
+ * handled through the panel), a shadow ban applied and lifted, a suspension
+ * that stays, and a moderator's look at the rejected picture through the panel.
  */
 async function seededPerson(ctx: TestContext, api: Api, moderator: Staff) {
   const person = await signedInAccount(ctx.client);
@@ -246,11 +245,6 @@ async function seededPerson(ctx: TestContext, api: Api, moderator: Staff) {
        authenticated_at = $5
      WHERE id = (SELECT identity_id FROM account WHERE id = $1) RETURNING hetu_hmac`,
     [person.accountId, BROKER_SUBJECT, BROKER_SESSION_INDEX, BROKER_TOKEN_ID, REGISTERED],
-  );
-  const { research_id: researchId } = await one<{ research_id: string }>(
-    ctx,
-    "INSERT INTO research_subject (account_id, consent_version) VALUES ($1, 'v1') RETURNING research_id",
-    [person.accountId],
   );
   await profileOf(ctx, person.accountId);
   const approved = await photoOf(ctx, person.accountId, {
@@ -306,7 +300,6 @@ async function seededPerson(ctx: TestContext, api: Api, moderator: Staff) {
     person,
     bug,
     hetuHmac,
-    researchId,
     approved,
     rejected,
     noteId,
@@ -404,7 +397,7 @@ describe("GET /admin/accounts/{id}", () => {
     expect(audit).toEqual(expect.arrayContaining(expected));
   });
 
-  test("carries none of the hash, the broker's ids, the research id, the e-mail, the photo check's note or staff's words", async ({
+  test("carries none of the hash, the broker's ids, the e-mail, the photo check's note or staff's words", async ({
     ctx,
     api,
   }) => {
@@ -419,7 +412,6 @@ describe("GET /admin/accounts/{id}", () => {
       ["broker_subject", BROKER_SUBJECT],
       ["broker_session_index", BROKER_SESSION_INDEX],
       ["broker_token_id", BROKER_TOKEN_ID],
-      ["research_id", s.researchId],
       ["the e-mail", EMAIL],
       ["the photo check note's kind", CHECK_KIND],
       ["the photo check note's id", s.noteId],
@@ -429,7 +421,7 @@ describe("GET /admin/accounts/{id}", () => {
     ] as const) {
       expect(text, what).not.toContain(value);
     }
-    expect(text).not.toMatch(/hetu|broker|research|mail|check_?note|sanctioned_?from/i);
+    expect(text).not.toMatch(/hetu|broker|mail|check_?note|sanctioned_?from/i);
   });
 
   test("A moderator reads no home", async ({ ctx, api }) => {
@@ -1007,18 +999,6 @@ describe("refusals", () => {
     await refused(await open(api, {}, "not-a-uuid"), 401, "unauthenticated");
   });
 
-  test("a researcher is refused with admin_forbidden, and no row is written", async ({
-    ctx,
-    api,
-  }) => {
-    const researcher = await staffSession(ctx.client, "researcher");
-    const person = await signedInAccount(ctx.client);
-    const before = await auditCount(ctx);
-    await refused(await open(api, researcher.headers, person.accountId), 403, "admin_forbidden");
-    expect(await auditCount(ctx)).toBe(before);
-    expect(linesOf(api, "account viewed")).toEqual([]);
-  });
-
   test.for(["moderator", "admin"] as const)("a %s is let in", async (role, { ctx, api }) => {
     const staff = await staffSession(ctx.client, role);
     const person = await signedInAccount(ctx.client);
@@ -1052,7 +1032,6 @@ describe("the log", () => {
     const logged = JSON.stringify(api.logs());
     for (const value of [
       s.hetuHmac,
-      s.researchId,
       EMAIL,
       MARK,
       DISPLAY_NAME,

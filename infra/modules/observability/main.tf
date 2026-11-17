@@ -326,7 +326,7 @@ resource "aws_cloudwatch_metric_alarm" "photo_budget_refusals" {
 # of the product answer 429 too (likes, cards, messages, photos): a person
 # meets each a few times a day, so a hundred refusals in five minutes is a
 # script, a loop in a build or a limit set too low, whichever limit it was.
-# The saved query below says which. A preview logs to the same group.
+# The saved query below says which.
 resource "aws_cloudwatch_log_metric_filter" "refusals" {
   name           = "${local.name}-api-refusals"
   log_group_name = var.log_group_name
@@ -370,18 +370,13 @@ resource "aws_cloudwatch_query_definition" "refusals" {
 }
 
 # Every nightly job ends in one line (apps/api/src/jobs/nightly.ts), and a
-# failure is {"msg":"nightly job failed","job":...}; the prune that had to drop
-# days of research events the copy does not have says so in a line of its own
-# (#194, ADR-029 §6). Either is worth a mail the same morning: a research
-# export left failing loses its days at the prune about sixty days later, and
-# the other jobs keep promises with dates in them (the ninety days of the
-# research events, the sweep of sessions, the end of suspensions). A preview's
-# container logs to the same group and runs the same jobs; the line's stream,
-# named after the container, tells which.
+# failure is {"msg":"nightly job failed","job":...}. It is worth a mail the same
+# morning: the jobs keep promises with dates in them (the sweep of sessions, the
+# end of suspensions, the year of the queue's log).
 resource "aws_cloudwatch_log_metric_filter" "nightly_failures" {
   name           = "${local.name}-nightly-failures"
   log_group_name = var.log_group_name
-  pattern        = "{ ($.msg = \"nightly job failed\") || ($.msg = \"research events dropped without their copy\") }"
+  pattern        = "{ $.msg = \"nightly job failed\" }"
 
   metric_transformation {
     name          = "NightlyFailures"
@@ -393,7 +388,7 @@ resource "aws_cloudwatch_log_metric_filter" "nightly_failures" {
 
 resource "aws_cloudwatch_metric_alarm" "nightly_failures" {
   alarm_name          = "${local.name}-nightly-job-failed"
-  alarm_description   = "A nightly job failed, or the prune dropped research events without their copy (#194, ADR-029). First steps: docs/runbooks/alerts.md."
+  alarm_description   = "A nightly job failed. First steps: docs/runbooks/alerts.md."
   namespace           = local.namespace
   metric_name         = "NightlyFailures"
   statistic           = "Sum"
