@@ -761,6 +761,8 @@ export type MessageParams = {
   "onboarding.prompts.explain": { "min": number };
   "onboarding.prompts.save": Record<never, never>;
   "onboarding.prompts.title": Record<never, never>;
+  "onboarding.ready.body": Record<never, never>;
+  "onboarding.ready.title": Record<never, never>;
   "onboarding.seeks.allow": Record<never, never>;
   "onboarding.seeks.anyone": Record<never, never>;
   "onboarding.seeks.explain": Record<never, never>;
@@ -1378,6 +1380,11 @@ export type MessageParams = {
   "round.done": Record<never, never>;
   "round.fish": Record<never, never>;
   "round.gone": Record<never, never>;
+  "round.hello.both": Record<never, never>;
+  "round.hello.open": Record<never, never>;
+  "round.hello.photos": { "name": string };
+  "round.hello.title": Record<never, never>;
+  "round.hello.you": Record<never, never>;
   "round.home.open": Record<never, never>;
   "round.like": Record<never, never>;
   "round.likesLeft": { "likes": number };
@@ -1644,11 +1651,14 @@ export type MessageParams = {
   "tech.licenses.title": Record<never, never>;
   "tech.licenses.version": { "version": string; "license": string };
   "tech.look.neubrutalism": Record<never, never>;
+  "tech.look.organic": Record<never, never>;
   "tech.look.title": Record<never, never>;
   "tech.look.today": Record<never, never>;
   "tech.palette.birch": Record<never, never>;
   "tech.palette.dusk": Record<never, never>;
   "tech.palette.ice": Record<never, never>;
+  "tech.palette.lime": Record<never, never>;
+  "tech.palette.plum": Record<never, never>;
   "tech.palette.title": Record<never, never>;
   "tech.palette.today": Record<never, never>;
   "tech.title": Record<never, never>;

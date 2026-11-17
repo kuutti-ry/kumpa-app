@@ -143,7 +143,9 @@ function DialogContent({
   /** Read by screen readers for the close control; an i18n string, never inline. */
   closeLabel: string;
 }) {
-  const neubrutalist = useLook() === "neubrutalism";
+  const look = useLook();
+  const neubrutalist = look === "neubrutalism";
+  const organic = look === "organic";
   const shadow = useHardShadow(HARD_SHADOW.overlay);
   return (
     <DialogPortal hostName={portalHost}>
@@ -153,6 +155,7 @@ function DialogContent({
           className={cn(
             "bg-background z-50 mx-auto flex w-full max-w-[calc(100%-2rem)] shrink flex-col gap-4 rounded-lg p-6 sm:max-w-lg",
             neubrutalist ? "border-stroke border-2 border-solid" : "border-border border",
+            organic && "rounded-3xl",
             Platform.select({
               web: "animate-in fade-in-0 zoom-in-95 duration-200",
             }),

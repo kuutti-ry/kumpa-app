@@ -1,4 +1,5 @@
-import { fireEvent, screen } from "@testing-library/react-native";
+import { fireEvent, screen, waitFor } from "@testing-library/react-native";
+import * as SecureStore from "expo-secure-store";
 import { renderWithTheme, underProviders } from "@/test/render";
 import { Input } from "./input";
 
@@ -44,5 +45,51 @@ describe("Input", () => {
     const input = screen.getByLabelText("Locked");
     expect(input.props.className).toMatch(/\bborder-solid\b/);
     expect(input.props.className).not.toMatch(/\bborder-dashed\b/);
+  });
+});
+
+// The designers' tries (outside production) draw the field in their own shape,
+// and a read-only one still looks it: dashed in --input, its words muted (#467).
+describe.each([
+  ["neubrutalism", "border-2"],
+  ["organic", "rounded-2xl"],
+] as const)("Input in the %s try", (look, drawnBy) => {
+  const store = (SecureStore as unknown as { __store: Map<string, string> }).__store;
+  beforeEach(() => store.set("kuutti.preference.look", look));
+  afterEach(() => store.delete("kuutti.preference.look"));
+
+  const classesOf = async (editable: boolean) => {
+    await renderWithTheme(<Input accessibilityLabel="Locked" editable={editable} />);
+    const classes = () => String(screen.getByLabelText("Locked").props.className).split(" ");
+    await waitFor(() => expect(classes()).toContain(drawnBy));
+    return classes();
+  };
+
+  it("is found by its label and takes what is typed", async () => {
+    const typed = jest.fn();
+    await renderWithTheme(<Input accessibilityLabel="Your name" onChangeText={typed} />);
+    await waitFor(() =>
+      expect(String(screen.getByLabelText("Your name").props.className).split(" ")).toContain(
+        drawnBy,
+      ),
+    );
+    await fireEvent.changeText(screen.getByLabelText("Your name"), "Aino");
+    expect(typed).toHaveBeenCalledWith("Aino");
+  });
+
+  it("looks read-only when it cannot be edited", async () => {
+    const classes = await classesOf(false);
+    expect(classes).toEqual(
+      expect.arrayContaining(["border-dashed", "border-input", "text-muted-foreground"]),
+    );
+    expect(classes).not.toContain("border-solid");
+    expect(classes).not.toContain("text-foreground");
+    expect(classes.some((each) => each.startsWith("opacity-"))).toBe(false);
+  });
+
+  it("is drawn solid when it can be edited", async () => {
+    const classes = await classesOf(true);
+    expect(classes).toContain("border-solid");
+    expect(classes).not.toContain("border-dashed");
   });
 });

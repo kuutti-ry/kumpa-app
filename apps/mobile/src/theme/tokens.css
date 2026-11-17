@@ -13,8 +13,10 @@
  * production only: --stroke, in every set, is the one ink of the style's
  * outline and hard shadow, light on dark; and three palettes from Gaiane's
  * concept, "Ice" (today's blues, softened), "Dusk" (lavender dusk and peach)
- * and "Birch" (cream, spruce and lingonberry), are classes ThemeProvider puts
- * on the root view instead of the base sets, as it does the high-contrast
+ * and "Birch" (cream, spruce and lingonberry), and "Lime", the colours of
+ * Sini's screens (cream, lime, lilac and royal blue), and "Plum", her Organic
+ * Pop (cream, plum, lavender, lime and violet), are classes ThemeProvider
+ * puts on the root view instead of the base sets, as it does the high-contrast
  * pair. The base sets are today's colours, which a released app keeps.
  *
  * `pnpm --filter mobile check:contrast` holds every text pair to WCAG AA
@@ -312,5 +314,123 @@
     --seeks-everyone: 175 77% 26%;
     --seeks-women: 269 100% 92%;
     --stroke: 40 20% 78%;
+  }
+
+  /* Lime: Sini's cream, lime, lilac and royal blue, in a near-black ink. */
+  .palette-lime {
+    --background: 36 50% 94%;
+    --foreground: 240 6% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 6% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 6% 10%;
+    --primary: 227 68% 37%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 268 100% 86%;
+    --secondary-foreground: 240 6% 10%;
+    --muted: 36 30% 89%;
+    --muted-foreground: 30 6% 30%;
+    --accent: 68 100% 58%;
+    --accent-foreground: 240 6% 10%;
+    --destructive: 0 70% 38%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 36 20% 80%;
+    --input: 30 8% 40%;
+    --ring: 227 68% 37%;
+    --overlay: 240 6% 10%;
+    --logo-plate: 0 0% 100%;
+    --seeks-men: 224 76% 48%;
+    --seeks-everyone: 174 55% 59%;
+    --seeks-women: 273 67% 39%;
+    --stroke: 240 6% 10%;
+  }
+
+  /* Lime in the dark: a spruce night, lime to press and a lilac slab. */
+  .palette-lime-dark {
+    --background: 150 30% 8%;
+    --foreground: 40 35% 93%;
+    --card: 150 22% 13%;
+    --card-foreground: 40 35% 93%;
+    --popover: 150 22% 13%;
+    --popover-foreground: 40 35% 93%;
+    --primary: 68 100% 58%;
+    --primary-foreground: 150 30% 8%;
+    --secondary: 268 30% 28%;
+    --secondary-foreground: 40 35% 93%;
+    --muted: 150 16% 17%;
+    --muted-foreground: 40 12% 72%;
+    --accent: 268 100% 86%;
+    --accent-foreground: 150 30% 8%;
+    --destructive: 0 90% 80%;
+    --destructive-foreground: 0 60% 15%;
+    --border: 150 12% 26%;
+    --input: 40 8% 58%;
+    --ring: 68 100% 58%;
+    --overlay: 0 0% 0%;
+    --logo-plate: 0 0% 100%;
+    --seeks-men: 212 96% 78%;
+    --seeks-everyone: 175 77% 26%;
+    --seeks-women: 269 100% 92%;
+    --stroke: 40 25% 80%;
+  }
+
+  /* Plum, Sini's Organic Pop of 15/11/2026: warm cream, deep plum ink, soft
+     lavender, acid lime, and electric violet in the ring and the bar's step. */
+  .palette-plum {
+    --background: 39 41% 93%;
+    --foreground: 254 60% 19%;
+    --card: 30 100% 99%;
+    --card-foreground: 254 60% 19%;
+    --popover: 30 100% 99%;
+    --popover-foreground: 254 60% 19%;
+    --primary: 254 60% 19%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 259 100% 89%;
+    --secondary-foreground: 254 60% 19%;
+    --muted: 36 30% 88%;
+    --muted-foreground: 254 18% 36%;
+    --accent: 67 100% 63%;
+    --accent-foreground: 254 60% 19%;
+    --destructive: 0 70% 38%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 259 30% 84%;
+    --input: 254 15% 45%;
+    --ring: 244 67% 57%;
+    --overlay: 254 60% 19%;
+    --logo-plate: 0 0% 100%;
+    --seeks-men: 224 76% 48%;
+    --seeks-everyone: 174 55% 59%;
+    --seeks-women: 273 67% 39%;
+    --stroke: 254 60% 19%;
+  }
+
+  /* Plum in the dark: a deep plum night, cream words, and the lavender and the
+     lime kept bright, as on the dark half of Sini's board. */
+  .palette-plum-dark {
+    --background: 254 62% 12%;
+    --foreground: 39 41% 93%;
+    --card: 254 45% 19%;
+    --card-foreground: 39 41% 93%;
+    --popover: 254 45% 19%;
+    --popover-foreground: 39 41% 93%;
+    --primary: 67 100% 63%;
+    --primary-foreground: 254 60% 19%;
+    --secondary: 259 100% 89%;
+    --secondary-foreground: 254 60% 19%;
+    --muted: 254 35% 22%;
+    --muted-foreground: 259 30% 80%;
+    --accent: 67 100% 63%;
+    --accent-foreground: 254 60% 19%;
+    --destructive: 0 90% 80%;
+    --destructive-foreground: 0 60% 15%;
+    --border: 254 25% 32%;
+    --input: 259 18% 62%;
+    --ring: 245 100% 78%;
+    --overlay: 0 0% 0%;
+    --logo-plate: 0 0% 100%;
+    --seeks-men: 212 96% 78%;
+    --seeks-everyone: 175 77% 26%;
+    --seeks-women: 269 100% 92%;
+    --stroke: 259 60% 88%;
   }
 }

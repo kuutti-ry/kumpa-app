@@ -100,4 +100,21 @@ describe("Card's look", () => {
       store.delete("kuutti.preference.look");
     }
   });
+
+  it("is a soft rounded surface on no shadow in the Organic Pop try", async () => {
+    store.set("kuutti.preference.look", "organic");
+    try {
+      const shown = await card();
+      await waitFor(() =>
+        expect(String(shown().props.className).split(" ")).toContain("rounded-3xl"),
+      );
+      const classes = String(shown().props.className).split(" ");
+      expect(classes).toEqual(expect.arrayContaining(["border", "border-border/70"]));
+      expect(classes).not.toContain("border-stroke");
+      expect(classes).not.toContain("shadow-sm");
+      expect(StyleSheet.flatten(shown().props.style)).toEqual({ marginTop: 4 });
+    } finally {
+      store.delete("kuutti.preference.look");
+    }
+  });
 });

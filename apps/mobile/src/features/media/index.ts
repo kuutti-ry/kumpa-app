@@ -3,6 +3,7 @@
 export { CachedPhoto } from "./CachedPhoto";
 export { captionKey } from "./captions";
 export { listPhotos, uploadPicture, uploadRefusal } from "./client";
+export { OwnPhoto } from "./OwnPhoto";
 export { PhotoDescriptionText } from "./PhotoDescriptionText";
 export { type OnRefused, PhotoImage, photoRefusalKey } from "./PhotoImage";
 export { PhotosScreen } from "./PhotosScreen";

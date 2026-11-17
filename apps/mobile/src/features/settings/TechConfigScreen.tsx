@@ -190,6 +190,7 @@ export function TechConfigScreen() {
 const LOOK_LABELS = {
   today: "tech.look.today",
   neubrutalism: "tech.look.neubrutalism",
+  organic: "tech.look.organic",
 } as const;
 
 const PALETTE_LABELS = {
@@ -197,6 +198,8 @@ const PALETTE_LABELS = {
   ice: "tech.palette.ice",
   dusk: "tech.palette.dusk",
   birch: "tech.palette.birch",
+  lime: "tech.palette.lime",
+  plum: "tech.palette.plum",
 } as const;
 
 function TryChoices() {

@@ -24,6 +24,20 @@ function hslOf(channels: unknown): string | undefined {
   return hue && saturation && lightness ? `hsl(${hue}, ${saturation}, ${lightness})` : undefined;
 }
 
+/**
+ * A token's colour as a string, for what takes no class: a gradient's stops in
+ * the Organic Pop try (components/organic.tsx). On the web the CSS variable
+ * itself, which an SVG paint resolves; on a phone the value of the set the root
+ * view carries, which NativeWind keeps only for a token some class uses.
+ */
+const useNativeToken: (token: string) => unknown =
+  Platform.OS === "web" ? () => undefined : (token) => useUnstableNativeVariable(`--${token}`);
+
+export function useTokenColour(token: string): string | undefined {
+  const channels = useNativeToken(token);
+  return Platform.OS === "web" ? `hsl(var(--${token}))` : hslOf(channels);
+}
+
 /** The hard shadow at an offset, or nothing where the token cannot be read. */
 export function useHardShadow(offset: number): ViewStyle {
   const channels = useInkChannels();

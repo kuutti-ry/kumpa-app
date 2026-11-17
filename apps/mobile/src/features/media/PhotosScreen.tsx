@@ -7,6 +7,7 @@ import {
 } from "@kuutti/schema";
 import { useRouter } from "expo-router";
 import Hourglass from "lucide-react-native/icons/hourglass";
+import Plus from "lucide-react-native/icons/plus";
 import Trash from "lucide-react-native/icons/trash";
 import { useEffect, useRef, useState } from "react";
 import { Animated, Pressable, ScrollView, useWindowDimensions, View } from "react-native";
@@ -14,14 +15,17 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { sayAloud } from "@/components/Notice";
 import { ScreenHeader } from "@/components/ScreenHeader";
+import { StepProgress, StepTitle } from "@/components/step-heading";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
 import { useT } from "@/lib/locale";
 import { usePhotoDescriptionText } from "@/lib/photo-descriptions";
+import { cn } from "@/lib/utils";
 import { MINIMUM_TARGET } from "@/theme/a11y";
 import { useHapticTap } from "@/theme/haptics";
+import { useLook } from "@/theme/ThemeProvider";
 import { useMotionDuration } from "@/theme/useReducedMotion";
 import { CaptionDialog } from "./CaptionDialog";
 import { captionKey } from "./captions";
@@ -112,6 +116,9 @@ export function PhotosScreen({
   step?: { position: number; total: number; reading: boolean; onContinue: () => void };
 }) {
   const { t } = useT();
+  // The Organic Pop try (outside production): rounder tiles, the main photo's
+  // word as a lime tag and Add a photo as a soft button, as Sini's photo step.
+  const pop = useLook() === "organic";
   const router = useRouter();
   const tap = useHapticTap();
   const photos = usePhotos();
@@ -173,12 +180,8 @@ export function PhotosScreen({
       >
         {step && (
           <>
-            <Text variant="muted" accessibilityLiveRegion="polite">
-              {t("onboarding.progress", { step: step.position, total: step.total })}
-            </Text>
-            <Text variant="h1" accessibilityRole="header">
-              {t("onboarding.photos.title")}
-            </Text>
+            <StepProgress step={step.position} total={step.total} />
+            <StepTitle>{t("onboarding.photos.title")}</StepTitle>
             <Text>{t("onboarding.photos.explain")}</Text>
           </>
         )}
@@ -229,7 +232,7 @@ export function PhotosScreen({
                       accessibilityLabel={t("photos.open", { position: index + 1 })}
                       accessibilityActions={tileActions}
                       onAccessibilityAction={(event) => act(photo, event.nativeEvent.actionName)}
-                      className="overflow-hidden rounded-lg bg-muted"
+                      className={cn("overflow-hidden bg-muted", pop ? "rounded-3xl" : "rounded-lg")}
                       style={MINIMUM_TARGET}
                       onPress={() => {
                         tap();
@@ -292,7 +295,16 @@ export function PhotosScreen({
                     </Pressable>
                     {(photo.id === mainId || photo.state !== "approved" || words !== null) && (
                       <View className="gap-0.5">
-                        {photo.id === mainId && <Text variant="small">{t("photos.main")}</Text>}
+                        {photo.id === mainId &&
+                          (pop ? (
+                            <View className="self-start rounded-full bg-accent px-2.5 py-0.5">
+                              <Text variant="small" className="text-accent-foreground">
+                                {t("photos.main")}
+                              </Text>
+                            </View>
+                          ) : (
+                            <Text variant="small">{t("photos.main")}</Text>
+                          ))}
                         {inReview(photo.state) && (
                           <View className="flex-row items-center gap-1">
                             <Icon as={Hourglass} size={16} />
@@ -367,16 +379,19 @@ export function PhotosScreen({
         {atMax && <Text variant="muted">{count}</Text>}
         <Button
           accessibilityLabel={t("photos.add")}
+          variant={pop ? "secondary" : "default"}
           disabled={busy || atMax || photos.status !== "ready"}
           onPress={() => {
             tap();
             void photos.add();
           }}
         >
+          {pop && <Icon as={Plus} />}
           <Text>{t("photos.add")}</Text>
         </Button>
         {step ? (
           <Button
+            onward
             // A failed read shows the upload's fallback above, and this reads the list again.
             disabled={busy || step.reading || (photos.status !== "error" && !enough)}
             onPress={() => {
