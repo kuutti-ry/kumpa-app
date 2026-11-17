@@ -16,8 +16,12 @@
 # in the UI and is exported in your shell; this script never prints it.
 # Everything it sets is what infra/README.md "After the first apply" lists:
 # project <env>, application api from the GHCR image, the three environment
-# lines, the api.<env> domain with Let's Encrypt, Dokploy's own domain, and
-# one deployment. The container's log driver is the Docker daemon default (awslogs, set by
+# lines, the api.<env> domains with Let's Encrypt, Dokploy's own domain, and
+# one deployment. While the hosts have two names, kuutti.app's and kumpa.fi's
+# (ADR-072), the application gets both API hosts and the pin keeps both of
+# each; Dokploy's own domain, the one deploy.yml calls, is the first. Run it
+# after the apply that made the kumpa.fi records: Traefik asks Let's Encrypt
+# for their certificates as soon as their routers exist. The container's log driver is the Docker daemon default (awslogs, set by
 # user_data), not an application setting.
 set -euo pipefail
 
@@ -28,10 +32,15 @@ env="${1:?usage: dokploy-setup.sh <staging|prod>}"
 for tool in curl jq aws; do command -v "$tool" >/dev/null || { echo "$tool is not installed" >&2; exit 1; }; done
 
 case "$env" in
-  staging) app_env=staging; api_host=api.staging.kuutti.app; dokploy_host=dokploy.staging.kuutti.app ;;
-  prod)    app_env=production; api_host=api.kuutti.app; dokploy_host=dokploy.kuutti.app ;;
+  staging) app_env=staging; sub=staging. ;;
+  prod)    app_env=production; sub= ;;
   *) echo "environment must be staging or prod" >&2; exit 2 ;;
 esac
+# kuutti.app first: it is the name the configuration and deploy.yml use until
+# the switch (ADR-072).
+api_hosts=("api.${sub}kuutti.app" "api.${sub}kumpa.fi")
+dokploy_hosts=("dokploy.${sub}kuutti.app" "dokploy.${sub}kumpa.fi")
+dokploy_host=${dokploy_hosts[0]}
 
 # Staging and production share the account, so Run Command would take either
 # box's id; the Name tag (modules/compute) says whose it is. This also proves
@@ -83,14 +92,17 @@ post application.saveEnvironment "$(jq -cn --arg id "$app_id" --arg env "$(print
   '{applicationId: $id, env: $env, buildArgs: "", buildSecrets: "", createEnvFile: false}')" >/dev/null
 echo "environment NODE_ENV=production APP_ENV=$app_env PORT=3000"
 
-# --- domain ------------------------------------------------------------------
-if get "domain.byApplicationId?applicationId=$app_id" | jq -e --arg h "$api_host" '.[] | select(.host == $h)' >/dev/null; then
-  echo "domain $api_host exists"
-else
-  post domain.create "$(jq -cn --arg id "$app_id" --arg host "$api_host" \
-    '{applicationId: $id, host: $host, path: "/", port: 3000, https: true, certificateType: "letsencrypt", domainType: "application"}')" >/dev/null
-  echo "domain https://$api_host -> 3000 (Let's Encrypt)"
-fi
+# --- domains -----------------------------------------------------------------
+domains=$(get "domain.byApplicationId?applicationId=$app_id")
+for api_host in "${api_hosts[@]}"; do
+  if jq -e --arg h "$api_host" '.[] | select(.host == $h)' <<<"$domains" >/dev/null; then
+    echo "domain $api_host exists"
+  else
+    post domain.create "$(jq -cn --arg id "$app_id" --arg host "$api_host" \
+      '{applicationId: $id, host: $host, path: "/", port: 3000, https: true, certificateType: "letsencrypt", domainType: "application"}')" >/dev/null
+    echo "domain https://$api_host -> 3000 (Let's Encrypt)"
+  fi
+done
 
 # --- Dokploy's own domain -------------------------------------------------
 # Web Server, Server Domain in the UI. The procedure exists in this Dokploy
@@ -104,45 +116,44 @@ else
 fi
 
 # --- Traefik: pin the control-plane hosts ---------------------------------
-# These priority routers keep dokploy.<env> and api.<env> with their owners,
-# whatever host an application is given; first boot writes none, so until
-# this has run nothing on 80 or 443 reaches Dokploy. A run that cannot write
-# them stops before the deployment (ADR-048).
+# These priority routers keep every dokploy.<env> and api.<env> name with its
+# owner, whatever host an application is given; first boot writes none, so
+# until this has run nothing on 80 or 443 reaches Dokploy. A run that cannot
+# write them stops before the deployment (ADR-048). One pair of routers per
+# name, so each name has a certificate of its own, and a name that no longer
+# answers Let's Encrypt cannot hold up another's renewal (ADR-072).
 app_name=$(get "application.one?applicationId=$app_id" | jq -r .appName)
 if [ -z "$app_name" ] || [ "$app_name" = null ]; then
   echo "application api has no appName; control-plane routers not written" >&2
   exit 1
 fi
+pin() { # <host> <service>: the two routers that keep <host> with <service>
+  local name="control-plane-${1//./-}"
+  cat <<YAML
+    $name:
+      rule: Host(\`$1\`)
+      priority: 1000
+      service: $2
+      entryPoints: [web]
+      middlewares: [redirect-to-https]
+    $name-secure:
+      rule: Host(\`$1\`)
+      priority: 1000
+      service: $2
+      entryPoints: [websecure]
+      tls:
+        certResolver: letsencrypt
+YAML
+}
+routers=$(
+  for h in "${dokploy_hosts[@]}"; do pin "$h" control-plane-dokploy; done
+  for h in "${api_hosts[@]}"; do pin "$h" control-plane-api; done
+)
 file=$(cat <<YAML
 # Written by infra/scripts/dokploy-setup.sh once Dokploy has its owner; first boot writes none (ADR-048).
 http:
   routers:
-    control-plane-dokploy:
-      rule: Host(\`$dokploy_host\`)
-      priority: 1000
-      service: control-plane-dokploy
-      entryPoints: [web]
-      middlewares: [redirect-to-https]
-    control-plane-dokploy-secure:
-      rule: Host(\`$dokploy_host\`)
-      priority: 1000
-      service: control-plane-dokploy
-      entryPoints: [websecure]
-      tls:
-        certResolver: letsencrypt
-    control-plane-api:
-      rule: Host(\`$api_host\`)
-      priority: 1000
-      service: control-plane-api
-      entryPoints: [web]
-      middlewares: [redirect-to-https]
-    control-plane-api-secure:
-      rule: Host(\`$api_host\`)
-      priority: 1000
-      service: control-plane-api
-      entryPoints: [websecure]
-      tls:
-        certResolver: letsencrypt
+$routers
   services:
     control-plane-dokploy:
       loadBalancer:
@@ -166,7 +177,7 @@ for _ in $(seq 1 60); do
   case "$st" in Success|Failed|TimedOut|Cancelled) break ;; esac
   sleep 3
 done
-echo "Traefik control-plane routers for $dokploy_host and $api_host -> $app_name: $st"
+echo "Traefik control-plane routers for ${dokploy_hosts[*]} and ${api_hosts[*]} -> $app_name: $st"
 if [ "$st" != Success ]; then
   echo "control-plane routers not written (ADR-048); run again" >&2
   exit 1

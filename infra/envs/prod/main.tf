@@ -41,7 +41,7 @@ module "compute" {
   permissions_boundary_arn   = local.permissions_boundary_arn
   backup_bucket              = local.state_bucket
   dokploy_version            = var.dokploy_version
-  domain                     = var.domain
+  mail_domains               = concat([var.domain], var.extra_domains)
   manage_session_preferences = false
 
   # No swap: a page can hold a hetu or the HMAC key, and the file outlives the
@@ -74,8 +74,13 @@ module "media" {
   additional_signing_public_keys_pem = [for f in fileset(path.module, "cloudfront-signing-key.*.pub.pem") : file("${path.module}/${f}")]
 
   # Dokploy's control plane behind the same distribution, so that the box can
-  # admit CloudFront alone from the cutover on (ADR-005 §7, #198).
-  extra_aliases = ["dokploy.${var.domain}"]
+  # admit CloudFront alone from the cutover on (ADR-005 §7, #198), and the
+  # second names of the API and of Dokploy (ADR-072, dns.tf), each with the
+  # zone it lives in.
+  extra_aliases = merge(
+    { "dokploy.${var.domain}" = data.aws_route53_zone.main.zone_id },
+    { for fqdn, host in local.extra_hosts : fqdn => host.zone_id if host.distribution },
+  )
 
   # The proof of Kuutti's distribution, from the store below (ADR-066).
   origin_proof_store_arn = aws_cloudfront_key_value_store.origin_proof.arn
@@ -105,7 +110,9 @@ resource "aws_cloudfront_key_value_store" "origin_proof" {
 
 # The moderation panel's host (#313, ADR-025): a bucket and a distribution of
 # its own on the host admin-app-url and cors-allowed-origins name
-# (variables.tf). admin-deploy.yml writes the build to its root.
+# (variables.tf). admin-deploy.yml writes the build to its root. It answers to
+# admin under each extra domain too, and still calls the API by its kuutti.app
+# name, the one its build and its CSP name, until the switch (ADR-072).
 module "admin" {
   source = "../../modules/admin"
   providers = {
@@ -117,6 +124,8 @@ module "admin" {
   zone_id     = data.aws_route53_zone.main.zone_id
   admin_fqdn  = "admin.${var.domain}"
   api_origin  = "https://api.${var.domain}"
+
+  extra_aliases = { for d in var.extra_domains : "admin.${d}" => data.aws_route53_zone.extra[d].zone_id }
 }
 
 # Alarms, the alert topic and the saved log queries (#11).

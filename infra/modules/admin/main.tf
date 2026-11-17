@@ -3,6 +3,9 @@
 # of its own on admin.<env>.<domain>, not a path on the API's (the API serves
 # /admin/* itself, and the panel's CSP would cover its answers too). A path the
 # bucket has no object for is the app, whose router finds the page (#302).
+# While the hosts have two names, the distribution answers to the panel's name
+# under the second domain as well (extra_aliases, ADR-072): one bucket, one
+# build, the same API.
 # Every answer carries the panel's headers, whose CSP lets it talk to the API
 # and nothing else. TLS terminates at CloudFront with an ACM certificate from
 # us-east-1.
@@ -199,15 +202,17 @@ removed {
 }
 
 # ---------------------------------------------------------------------------
-# The certificate for the alias, in us-east-1 as CloudFront requires, validated
-# by a record in the project zone.
+# The certificate for the aliases, in us-east-1 as CloudFront requires, each
+# name validated by a record in its own zone: the project zone's for
+# admin_fqdn, the one extra_aliases gives for every other (ADR-072).
 # ---------------------------------------------------------------------------
 
 resource "aws_acm_certificate" "admin" {
   provider = aws.us_east_1
 
-  domain_name       = var.admin_fqdn
-  validation_method = "DNS"
+  domain_name               = var.admin_fqdn
+  subject_alternative_names = keys(var.extra_aliases)
+  validation_method         = "DNS"
 
   lifecycle {
     create_before_destroy = true
@@ -225,7 +230,7 @@ resource "aws_route53_record" "validation" {
     }
   }
 
-  zone_id         = var.zone_id
+  zone_id         = lookup(var.extra_aliases, each.key, var.zone_id)
   name            = each.value.name
   type            = each.value.type
   ttl             = 60
@@ -251,7 +256,7 @@ resource "aws_cloudfront_distribution" "this" {
   http_version    = "http2and3"
   # Europe and North America, as the API's distribution (modules/media).
   price_class         = "PriceClass_100"
-  aliases             = [var.admin_fqdn]
+  aliases             = concat([var.admin_fqdn], keys(var.extra_aliases))
   default_root_object = "index.html"
 
   origin {
@@ -340,6 +345,26 @@ resource "aws_route53_record" "admin" {
   zone_id = var.zone_id
   name    = var.admin_fqdn
   type    = each.key
+
+  alias {
+    name                   = aws_cloudfront_distribution.this.domain_name
+    zone_id                = aws_cloudfront_distribution.this.hosted_zone_id
+    evaluate_target_health = false
+  }
+}
+
+# And so is each extra alias, in its own zone (ADR-072).
+resource "aws_route53_record" "extra_alias" {
+  for_each = {
+    for pair in setproduct(keys(var.extra_aliases), ["A", "AAAA"]) : "${pair[0]} ${pair[1]}" => {
+      name = pair[0]
+      type = pair[1]
+    }
+  }
+
+  zone_id = var.extra_aliases[each.value.name]
+  name    = each.value.name
+  type    = each.value.type
 
   alias {
     name                   = aws_cloudfront_distribution.this.domain_name

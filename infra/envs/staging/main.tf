@@ -42,7 +42,7 @@ module "compute" {
   backup_bucket              = local.state_bucket
   dokploy_version            = var.dokploy_version
   mail_recipients            = var.mail_recipients # testers only: Telia's test persons are public (#385, ADR-043 §6)
-  domain                     = var.domain
+  mail_domains               = concat([var.domain], var.extra_domains)
   cpu_credits                = "standard" # a pegged staging box slows down instead of costing extra
   manage_session_preferences = true
   demo_reset                 = true # the demo lives here (ADR-018); demo-reset.yml sends its document (#613)
@@ -76,8 +76,12 @@ module "media" {
   additional_signing_public_keys_pem = [for f in fileset(path.module, "cloudfront-signing-key.*.pub.pem") : file("${path.module}/${f}")]
 
   # Dokploy's control plane behind the same distribution, so that the box can
-  # admit CloudFront alone (ADR-005 §7, #198).
-  extra_aliases = ["dokploy.staging.${var.domain}"]
+  # admit CloudFront alone (ADR-005 §7, #198), and the second names of the API
+  # and of Dokploy (ADR-072, dns.tf), each with the zone it lives in.
+  extra_aliases = merge(
+    { "dokploy.staging.${var.domain}" = data.aws_route53_zone.main.zone_id },
+    { for fqdn, host in local.extra_hosts : fqdn => host.zone_id if host.distribution },
+  )
 
   # The proof of Kuutti's distribution, from the store below (ADR-066).
   origin_proof_store_arn = aws_cloudfront_key_value_store.origin_proof.arn
@@ -109,7 +113,9 @@ resource "aws_cloudfront_key_value_store" "origin_proof" {
 # its own on admin.staging, the host admin-app-url and cors-allowed-origins
 # name (variables.tf). admin-deploy.yml syncs main's build to its root; the
 # panel calls this environment's API, since only it can sign staff in
-# (ADR-014 §1).
+# (ADR-014 §1). It answers to admin.staging under each extra domain too, and
+# still calls the API by its kuutti.app name, the one its build and its CSP
+# name, until the switch (ADR-072).
 module "admin" {
   source = "../../modules/admin"
   providers = {
@@ -121,6 +127,8 @@ module "admin" {
   zone_id     = data.aws_route53_zone.main.zone_id
   admin_fqdn  = "admin.staging.${var.domain}"
   api_origin  = "https://api.staging.${var.domain}"
+
+  extra_aliases = { for d in var.extra_domains : "admin.staging.${d}" => data.aws_route53_zone.extra[d].zone_id }
 }
 
 # Alarms, the alert topic and the saved log queries (#11).
