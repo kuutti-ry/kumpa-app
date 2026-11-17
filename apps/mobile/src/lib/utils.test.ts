@@ -10,6 +10,10 @@ describe("cn", () => {
     expect(cn("text-body text-foreground")).toBe("text-body text-foreground");
     expect(cn("text-body text-foreground", "text-control")).toBe("text-foreground text-control");
     expect(cn("text-h1", "text-h1/[normal]")).toBe("text-h1/[normal]");
+    // The try's headline size, beside its colour and over h1's.
+    expect(cn("text-h1", "text-display text-accent-foreground")).toBe(
+      "text-display text-accent-foreground",
+    );
     expect(cn("font-system", "font-sans")).toBe("font-sans");
   });
 

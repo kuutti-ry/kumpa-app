@@ -4,7 +4,7 @@ import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
 import * as ImagePicker from "expo-image-picker";
 import { useLocales } from "expo-localization";
 import type * as React from "react";
-import { AccessibilityInfo, PixelRatio, Platform } from "react-native";
+import { AccessibilityInfo, PixelRatio, Platform, StyleSheet } from "react-native";
 import { saveSession } from "@/lib/session";
 import { a11yProblems, type HostNode, pressables } from "@/test/a11y";
 import { FAILED_TO_LOAD } from "@/test/failed";
@@ -1539,6 +1539,190 @@ describe("OnboardingScreen", () => {
     await flush();
     await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/"));
     expect(server.seeks).toEqual(["man"]);
+  });
+
+  // The designers' try (the tech screen's neubrutalism, outside production): a
+  // walk that asked something ends on ProfileReady. Today's look goes home at
+  // once, which the tests above hold.
+  describe("the end of the walk in the designers' try", () => {
+    const LOOK = "kuutti.preference.look";
+    beforeEach(() => store.set(LOOK, "neubrutalism"));
+    afterEach(() => store.delete(LOOK));
+
+    it("celebrates a walk that asked something, and goes home from its one button", async () => {
+      const { server } = fakeApi();
+      allAnswered(server);
+      server.consents = server.consents.map((c) =>
+        c.kind === "special_category" ? { ...c, withdrawnAt: "2026-10-01T10:00:00.000Z" } : c,
+      );
+      server.seeks = null;
+      await show(<OnboardingScreen />);
+      await waitFor(() => expect(screen.getByText("Whom are you looking for?")).toBeTruthy());
+      await press(row("Men"));
+      await press(screen.getByLabelText("I consent to Kuutti ry storing whom I seek"));
+      await press(screen.getByRole("button", { name: "Continue" }));
+      await flush();
+      await waitFor(() =>
+        expect(screen.getByRole("heading", { name: "Profile ready!" })).toBeTruthy(),
+      );
+      expect(screen.getByText("Nicely done. That was the hard part.")).toBeTruthy();
+      // Home waits for the button, and nothing else is offered.
+      expect(router.replace).not.toHaveBeenCalled();
+      expect(screen.getAllByRole("button").map((b) => b.props.accessibilityLabel)).toEqual([
+        "Continue",
+      ]);
+      checkA11y();
+      await press(screen.getByRole("button", { name: "Continue" }));
+      expect(router.replace).toHaveBeenCalledWith("/");
+    });
+
+    it("celebrates without motion when reduce motion is on, the same words and button", async () => {
+      jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(true);
+      const { server } = fakeApi();
+      allAnswered(server);
+      server.consents = server.consents.map((c) =>
+        c.kind === "special_category" ? { ...c, withdrawnAt: "2026-10-01T10:00:00.000Z" } : c,
+      );
+      server.seeks = null;
+      await show(<OnboardingScreen />);
+      await waitFor(() => expect(screen.getByText("Whom are you looking for?")).toBeTruthy());
+      await press(row("Men"));
+      await press(screen.getByLabelText("I consent to Kuutti ry storing whom I seek"));
+      await press(screen.getByRole("button", { name: "Continue" }));
+      await flush();
+      await waitFor(() =>
+        expect(screen.getByRole("heading", { name: "Profile ready!" })).toBeTruthy(),
+      );
+      await press(screen.getByRole("button", { name: "Continue" }));
+      expect(router.replace).toHaveBeenCalledWith("/");
+    });
+
+    it("goes home at once when nothing was asked, with no celebration", async () => {
+      const { server } = fakeApi();
+      allAnswered(server);
+      await show(<OnboardingScreen />);
+      await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/"));
+      expect(screen.queryByRole("heading", { name: "Profile ready!" })).toBeNull();
+    });
+  });
+
+  // Organic Pop (outside production) ends the same walk on its own Profile
+  // ready: the same words and one way on, the person's own photo, still in
+  // review, in a circle among the shapes, drawn and never read.
+  describe("the end of the walk in the Organic Pop try", () => {
+    const LOOK = "kuutti.preference.look";
+    beforeEach(() => store.set(LOOK, "organic"));
+    afterEach(() => store.delete(LOOK));
+
+    const toTheEnd = async () => {
+      const { server } = fakeApi();
+      allAnswered(server);
+      server.consents = server.consents.map((c) =>
+        c.kind === "special_category" ? { ...c, withdrawnAt: "2026-10-01T10:00:00.000Z" } : c,
+      );
+      server.seeks = null;
+      await show(<OnboardingScreen />);
+      await waitFor(() => expect(screen.getByText("Whom are you looking for?")).toBeTruthy());
+      await press(row("Men"));
+      await press(screen.getByLabelText("I consent to Kuutti ry storing whom I seek"));
+      await press(screen.getByRole("button", { name: "Continue" }));
+      await flush();
+      await waitFor(() =>
+        expect(screen.getByRole("heading", { name: "Profile ready!" })).toBeTruthy(),
+      );
+    };
+
+    it("celebrates with the same words and button, the photo in review drawn and unheard", async () => {
+      await toTheEnd();
+      expect(screen.getByText("Nicely done. That was the hard part.")).toBeTruthy();
+      expect(router.replace).not.toHaveBeenCalled();
+      // One way on, named by its words.
+      expect(screen.getAllByRole("button")).toEqual([
+        screen.getByRole("button", { name: "Continue" }),
+      ]);
+      // The photo is the person's own, pending, on the screen but kept from the reader.
+      await waitFor(() =>
+        expect(screen.getByLabelText("You", { includeHiddenElements: true })).toBeTruthy(),
+      );
+      expect(screen.queryByLabelText("You")).toBeNull();
+      checkA11y();
+      await press(screen.getByRole("button", { name: "Continue" }));
+      expect(router.replace).toHaveBeenCalledWith("/");
+    });
+
+    /** Every rotation drawn, the hidden too: the shape's turn is where the motion shows. */
+    const rotations = () => {
+      const found: string[] = [];
+      const walk = (node: unknown): void => {
+        if (Array.isArray(node)) {
+          node.forEach(walk);
+          return;
+        }
+        if (!node || typeof node !== "object") return;
+        const { props, children } = node as { props?: { style?: unknown }; children?: unknown };
+        const style = StyleSheet.flatten(props?.style as never) as
+          | { transform?: { rotate?: unknown }[] }
+          | undefined;
+        for (const part of style?.transform ?? []) {
+          if (typeof part.rotate === "string") found.push(part.rotate);
+        }
+        walk(children);
+      };
+      walk(screen.toJSON());
+      return found;
+    };
+
+    it("celebrates without motion when reduce motion is on: the shape upright, the same words and button", async () => {
+      jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(true);
+      await toTheEnd();
+      expect(rotations()).toContain("0deg");
+      expect(rotations()).not.toContain("12deg");
+      expect(screen.getByText("Nicely done. That was the hard part.")).toBeTruthy();
+      await press(screen.getByRole("button", { name: "Continue" }));
+      expect(router.replace).toHaveBeenCalledWith("/");
+    });
+
+    it("begins with the shape turned when motion is allowed", async () => {
+      jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(false);
+      await toTheEnd();
+      expect(rotations()).toContain("12deg");
+    });
+
+    /** The width of every drawing, the hidden too: a shape is as wide as its words. */
+    const drawnWidths = () => {
+      const found: number[] = [];
+      const walk = (node: unknown): void => {
+        if (Array.isArray(node)) {
+          node.forEach(walk);
+          return;
+        }
+        if (!node || typeof node !== "object") return;
+        const { type, props, children } = node as {
+          type?: unknown;
+          props?: { width?: unknown };
+          children?: unknown;
+        };
+        if (type === "RNSVGSvgView" && typeof props?.width === "number") found.push(props.width);
+        walk(children);
+      };
+      walk(screen.toJSON());
+      return found;
+    };
+    /** The headline as wide as `width` points, as the layout measures it on a phone. */
+    const measure = (headline: string, width: number) =>
+      fireEvent(screen.getByRole("heading", { name: headline }), "layout", {
+        nativeEvent: { layout: { x: 0, y: 0, width, height: 80 } },
+      });
+
+    it("widens the shape under the words when they are wider than the room", async () => {
+      await toTheEnd();
+      expect(drawnWidths()).toContain(400);
+      await measure("Profile ready!", 300);
+      expect(drawnWidths()).toContain(400);
+      await measure("Profile ready!", 400);
+      expect(drawnWidths()).toContain(480);
+      expect(drawnWidths()).not.toContain(400);
+    });
   });
 
   describe("the seeks step and a stored answer (#542)", () => {

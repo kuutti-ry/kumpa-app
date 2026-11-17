@@ -308,3 +308,123 @@ describe("Button in the neubrutalism try", () => {
     expect(StyleSheet.flatten(button().props.style).transform).toBeUndefined();
   });
 });
+
+/** The drawings inside a node, and those a screen reader would reach. */
+const drawingsIn = (node: unknown, hidden = false): { all: number; spoken: number } => {
+  if (Array.isArray(node)) {
+    return node.reduce(
+      (sum, each) => {
+        const found = drawingsIn(each, hidden);
+        return { all: sum.all + found.all, spoken: sum.spoken + found.spoken };
+      },
+      { all: 0, spoken: 0 },
+    );
+  }
+  if (!node || typeof node !== "object") return { all: 0, spoken: 0 };
+  const host = node as { type?: unknown; props?: Record<string, unknown>; children?: unknown };
+  const props = host.props ?? {};
+  const under =
+    hidden ||
+    props.accessibilityElementsHidden === true ||
+    props.importantForAccessibility === "no-hide-descendants" ||
+    props["aria-hidden"] === true;
+  const here = host.type === "RNSVGSvgView" ? 1 : 0;
+  const below = drawingsIn(host.children, under);
+  return { all: here + below.all, spoken: (here && !under ? 1 : 0) + below.spoken };
+};
+
+// A step's Continue (onward): the designers' tries draw an arrow at its end, as
+// Sini's screens do; today's look draws the words alone. The arrow is never read.
+describe("The way on, a step's Continue", () => {
+  afterEach(() => store.delete("kuutti.preference.look"));
+
+  it("is the words alone in today's look", async () => {
+    await renderWithTheme(<Button onward>Continue</Button>);
+    const button = screen.getByRole("button", { name: "Continue" });
+    expect(drawingsIn(screen.toJSON()).all).toBe(0);
+    expect(String(button.props.className).split(" ")).not.toContain("px-14");
+  });
+
+  it.each([
+    ["neubrutalism", "border-2"],
+    ["organic", "rounded-full"],
+  ] as const)(
+    "carries an arrow in the %s try, unheard, the words still its name and centred",
+    async (look, drawnBy) => {
+      store.set("kuutti.preference.look", look);
+      await renderWithTheme(<Button onward>Continue</Button>);
+      const button = () => screen.getByRole("button", { name: "Continue" });
+      await waitFor(() => expect(String(button().props.className).split(" ")).toContain(drawnBy));
+      expect(drawingsIn(screen.toJSON())).toEqual({ all: 1, spoken: 0 });
+      // Room at both ends, so the words stay at the middle and clear of the arrow.
+      expect(String(button().props.className).split(" ")).toContain("px-14");
+      expect(String(screen.getByText("Continue").props.className).split(" ")).toContain(
+        "text-center",
+      );
+    },
+  );
+
+  it.each(["neubrutalism", "organic"] as const)(
+    "draws no arrow on a button that is not the way on, in the %s try",
+    async (look) => {
+      store.set("kuutti.preference.look", look);
+      await renderWithTheme(<Button>Later</Button>);
+      const button = () => screen.getByRole("button", { name: "Later" });
+      await waitFor(() =>
+        expect(String(button().props.className).split(" ")).toContain(
+          look === "organic" ? "rounded-full" : "border-2",
+        ),
+      );
+      expect(drawingsIn(screen.toJSON()).all).toBe(0);
+      expect(String(button().props.className).split(" ")).not.toContain("px-14");
+    },
+  );
+});
+
+// Organic Pop (outside production): pills, Sini's, with no hard shadow and a
+// press that only darkens; outline is the one variant with a visible stroke.
+describe("Button in the Organic Pop try", () => {
+  beforeEach(() => store.set("kuutti.preference.look", "organic"));
+  afterEach(() => store.delete("kuutti.preference.look"));
+
+  const shown = async (ui: React.ReactElement, name: string) => {
+    await renderWithTheme(ui);
+    const button = () => screen.getByRole("button", { name });
+    await waitFor(() =>
+      expect(String(button().props.className).split(" ")).toContain("rounded-full"),
+    );
+    return button;
+  };
+
+  it("is a pill on no shadow, and pressed stays where it is", async () => {
+    const button = await shown(<Button>Send</Button>, "Send");
+    expect(StyleSheet.flatten(button().props.style)).toMatchObject({ minHeight: 44 });
+    expect(StyleSheet.flatten(button().props.style).boxShadow).toBeUndefined();
+    await fireEvent(button(), "pressIn");
+    expect(StyleSheet.flatten(button().props.style).transform).toBeUndefined();
+    expect(StyleSheet.flatten(button().props.style).boxShadow).toBeUndefined();
+  });
+
+  it.each([
+    ["default", "bg-primary"],
+    ["destructive", "bg-destructive"],
+    ["outline", "border-foreground"],
+    ["secondary", "bg-secondary"],
+  ] as const)("draws the %s variant in its own colour, here %s", async (variant, colour) => {
+    const button = await shown(<Button variant={variant}>Block</Button>, "Block");
+    expect(String(button().props.className).split(" ")).toContain(colour);
+  });
+
+  it("still says it is disabled, and ignores presses", async () => {
+    const onPress = jest.fn();
+    const button = await shown(
+      <Button disabled onPress={onPress}>
+        Send
+      </Button>,
+      "Send",
+    );
+    expect(button().props.accessibilityState?.disabled).toBe(true);
+    await fireEvent.press(button());
+    expect(onPress).not.toHaveBeenCalled();
+  });
+});

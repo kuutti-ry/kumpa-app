@@ -8265,6 +8265,59 @@ round.match.continue:
   sv: "Tillbaka till människorna"
   machine: { fi: true, sv: true }
 
+# --- The match as a hello: the designers' try (outside production), Sini's idea of 15/11/2026 ---
+
+round.hello.title:
+  en: "Well, hello!"
+  description: "The neubrutalism try's match moment (outside production): the headline in a tilted slab after a like made a match. A greeting, not the word match: the two would like to hear more about each other, like a smile across a room. Two or three short words. The Finnish is Sini's, with her exclamation mark, which the tone guide does not allow: the maintainer's call before it leaves the try."
+  fi: "Kas moi!"
+  sv: "Nämen hej!"
+  machine: { fi: true, sv: true }
+
+round.hello.both:
+  en: "You would both like to hear more about each other."
+  description: "The neubrutalism try's match moment (outside production), the one sentence under the headline: what happened, in plain words. Never a score, a fit or a feeling the two are said to share."
+  fi: "Te molemmat haluatte kuulla toisistanne lisää."
+  sv: "Ni vill båda höra mer om varandra."
+  machine: { fi: true, sv: true }
+
+round.hello.open:
+  en: "Say hello"
+  description: "The neubrutalism try's match moment (outside production): the button that opens the conversation the match opened. It sends nothing by itself."
+  fi: "Sano moi"
+  sv: "Säg hej"
+  machine: { fi: true, sv: true }
+
+round.hello.you:
+  en: "You"
+  description: "The neubrutalism try's match moment (outside production): the caption under the reader's own photo; the other photo's caption is that person's name."
+  fi: "Sinä"
+  sv: "Du"
+  machine: { fi: true, sv: true }
+
+round.hello.photos:
+  en: "You and {name}"
+  description: "The neubrutalism try's match moment (outside production): what a screen reader says for the two photos side by side. {name} is the other person's display name, in a list, so never inflected."
+  fi: "Sinä ja {name}"
+  sv: "Du och {name}"
+  machine: { fi: true, sv: true }
+
+# --- The end of making a profile, celebrated: the designers' try (outside production), Sini's screens of 15/11/2026 ---
+
+onboarding.ready.title:
+  en: "Profile ready!"
+  description: "The neubrutalism try's celebration at the end of making a profile (outside production): the headline in a tilted slab, over a high five. Two short words. The Finnish is Sini's, with her exclamation mark, which the tone guide does not allow: the maintainer's call before it leaves the try."
+  fi: "Profiili valmis!"
+  sv: "Profilen klar!"
+  machine: { fi: true, sv: true }
+
+onboarding.ready.body:
+  en: "Nicely done. That was the hard part."
+  description: "The neubrutalism try's celebration at the end of making a profile (outside production), the one line under the high five: making a profile is the laborious part, and it is behind. It promises nothing about who sees the profile or when; home's matching card says that."
+  fi: "Hienoa. Se oli se työläin osa."
+  sv: "Snyggt. Det där var den jobbiga delen."
+  machine: { fi: true, sv: true }
+
 # --- The stars (#575, ADR-064): somebody marked for later, without a like or a pass ---
 
 round.star:
@@ -9112,6 +9165,13 @@ tech.look.neubrutalism:
   sv: "Nybrutalism"
   machine: { fi: true, sv: true }
 
+tech.look.organic:
+  en: "Organic Pop"
+  description: "Sini's Organic Pop style, soft gradient shapes, a slanted display headline and pill-shaped controls, one of the tech screen's choices of style (outside production only). A style's name, kept in English in every language."
+  fi: "Organic Pop"
+  sv: "Organic Pop"
+  machine: { fi: true, sv: true }
+
 tech.palette.today:
   en: "Today's"
   description: "The app's colours as they are today, one of the tech screen's choices of palette (outside production only)."
@@ -9145,6 +9205,20 @@ tech.palette.birch:
   description: "Palette of the neubrutalism try: birch-bark cream, spruce and a muted lingonberry red."
   fi: "Koivu"
   sv: "Björk"
+  machine: { fi: true, sv: true }
+
+tech.palette.lime:
+  en: "Lime"
+  description: "Palette of the neubrutalism try: Sini's cream, lime, lilac and royal blue, and in the dark a spruce night with lime to press."
+  fi: "Lime"
+  sv: "Lime"
+  machine: { fi: true, sv: true }
+
+tech.palette.plum:
+  en: "Plum"
+  description: "Palette of the designers' try: Sini's Organic Pop colours, warm cream, deep plum, soft lavender, acid lime and electric violet, and in the dark a deep plum night."
+  fi: "Luumu"
+  sv: "Plommon"
   machine: { fi: true, sv: true }
 
 tech.errorTest.sent:

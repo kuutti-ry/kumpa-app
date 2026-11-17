@@ -9,7 +9,8 @@ function Card({
   style,
   ...props
 }: React.ComponentProps<typeof View> & React.RefAttributes<View>) {
-  const neubrutalist = useLook() === "neubrutalism";
+  const look = useLook();
+  const neubrutalist = look === "neubrutalism";
   const shadow = useHardShadow(HARD_SHADOW.container);
   return (
     <TextClassContext.Provider value="text-card-foreground">
@@ -18,7 +19,9 @@ function Card({
           "bg-card flex flex-col gap-6 py-6",
           neubrutalist
             ? "border-stroke rounded-lg border-2 border-solid"
-            : "border-border rounded-xl border shadow-sm shadow-black/5",
+            : look === "organic"
+              ? "border-border/70 rounded-3xl border"
+              : "border-border rounded-xl border shadow-sm shadow-black/5",
           className,
         )}
         style={[neubrutalist && shadow, style]}

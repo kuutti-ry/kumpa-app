@@ -1,6 +1,8 @@
 import { cva, type VariantProps } from "class-variance-authority";
+import ArrowRight from "lucide-react-native/icons/arrow-right";
 import * as React from "react";
-import { Platform, Pressable, type StyleProp, type ViewStyle } from "react-native";
+import { Platform, Pressable, type StyleProp, View, type ViewStyle } from "react-native";
+import { Icon } from "@/components/ui/icon";
 import { Text, TextClassContext } from "@/components/ui/text";
 import { cn } from "@/lib/utils";
 import { MINIMUM_TARGET } from "@/theme/a11y";
@@ -84,6 +86,36 @@ const neubrutalistButton = cva(cn(BASE, "border-2"), {
   defaultVariants: { variant: "default", size: "default" },
 });
 
+// The Organic Pop try (outside production): pills, Sini's, no outline but where
+// outline is the variant, and a press that only darkens.
+const organicButton = cva(cn(BASE, "rounded-full border-[1.5px]"), {
+  variants: {
+    variant: {
+      default: cn(
+        "bg-primary active:bg-primary/85",
+        Platform.select({ web: "hover:bg-primary/90" }),
+      ),
+      destructive: cn(
+        "bg-destructive active:bg-destructive/85",
+        Platform.select({ web: "hover:bg-destructive/90" }),
+      ),
+      outline: cn(
+        "border-foreground bg-transparent active:bg-secondary",
+        Platform.select({ web: "hover:bg-secondary/60" }),
+      ),
+      secondary: cn(
+        "bg-secondary active:bg-secondary/80",
+        Platform.select({ web: "hover:bg-secondary/80" }),
+      ),
+      ghost: cn("active:bg-secondary", Platform.select({ web: "hover:bg-secondary/60" })),
+    },
+    size: { ...SIZES, default: "min-h-12 min-w-touch px-6 py-2.5" },
+  },
+  defaultVariants: { variant: "default", size: "default" },
+});
+
+const RECIPES = { today: todaysButton, neubrutalism: neubrutalistButton, organic: organicButton };
+
 // Saiga Regular: as dark as the system font's Semibold, the weight a phone
 // gives a button's words (#408). A drawn button centres its words as it
 // centres its content, so a label wrapped at the largest text stays in the
@@ -133,7 +165,14 @@ type ButtonProps = Omit<
   accessibilityRole?: "button" | "radio" | "checkbox" | "tab" | "link";
 } & React.RefAttributes<React.ComponentRef<typeof Pressable>> &
   VariantProps<typeof todaysButton> &
-  ButtonContent & { style?: StyleProp<ViewStyle> };
+  ButtonContent & {
+    style?: StyleProp<ViewStyle>;
+    /**
+     * The way on, a step's Continue: the designers' tries draw an arrow at its
+     * end, as Sini's screens do, the words staying centred. Decoration only.
+     */
+    onward?: boolean;
+  };
 
 // Pressed, a drawn button moves into its hard shadow, which it then covers: the
 // neubrutalism try's press, at once, so no motion to reduce.
@@ -151,13 +190,15 @@ function Button({
   accessibilityState,
   onPressIn,
   onPressOut,
+  onward = false,
   ...props
 }: ButtonProps) {
   const look = useLook();
+  const arrow = onward && look !== "today";
   const shadow = useHardShadow(HARD_SHADOW.control);
   // A ghost button is a row or a link, and a disabled one lies flat.
   const raised = look === "neubrutalism" && variant !== "ghost" && props.disabled !== true;
-  const recipe = look === "neubrutalism" ? neubrutalistButton : todaysButton;
+  const recipe = RECIPES[look];
   // Pressed is state here, not a style function: NativeWind's Pressable drops one.
   const [pressed, setPressed] = React.useState(false);
   return (
@@ -167,7 +208,12 @@ function Button({
       <Pressable
         accessibilityRole={accessibilityRole}
         accessibilityState={{ ...accessibilityState, disabled: props.disabled === true }}
-        className={cn(recipe({ variant, size }), props.disabled && DISABLED, className)}
+        className={cn(
+          recipe({ variant, size }),
+          props.disabled && DISABLED,
+          arrow && "px-14",
+          className,
+        )}
         style={[MINIMUM_TARGET, raised && (pressed ? PRESSED : shadow), style]}
         onPressIn={(event) => {
           setPressed(true);
@@ -180,6 +226,11 @@ function Button({
         {...props}
       >
         {typeof children === "string" ? <Text>{children}</Text> : children}
+        {arrow && (
+          <View className="absolute bottom-0 right-5 top-0 justify-center" pointerEvents="none">
+            <Icon as={ArrowRight} />
+          </View>
+        )}
       </Pressable>
     </TextClassContext.Provider>
   );

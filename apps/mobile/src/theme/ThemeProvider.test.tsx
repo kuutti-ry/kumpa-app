@@ -265,6 +265,22 @@ describe("ThemeProvider", () => {
     expect(rootClass().split(" ")).toContain("palette-birch");
   });
 
+  // Lime, the colours of Sini's screens, as any palette: the scheme's own set.
+  it.each([
+    ["light", "palette-lime"],
+    ["dark", "palette-lime-dark"],
+  ] as const)(
+    "puts Lime's %s set on the root view when it was chosen last time",
+    async (scheme, set) => {
+      mockColorScheme = scheme;
+      osSettings();
+      store.set("kuutti.preference.palette", "lime");
+      await show();
+      expect(textOf("palette")).toBe("lime");
+      expect(rootClass().split(" ")).toContain(set);
+    },
+  );
+
   it("keeps today's colours for a stored palette it does not know", async () => {
     osSettings();
     store.set("kuutti.preference.palette", "neon");

@@ -39,6 +39,10 @@ describe("contrast", () => {
       ".palette-dusk-dark",
       ".palette-birch",
       ".palette-birch-dark",
+      ".palette-lime",
+      ".palette-lime-dark",
+      ".palette-plum",
+      ".palette-plum-dark",
     ]);
   });
 
