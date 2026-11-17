@@ -68,14 +68,7 @@ The first login on the test bed (2026-10-08) showed what was left to watch: `acr
 
 ### The second name, `kumpa.fi` (#703, ADR-072)
 
-The app is called Kumpa since 2026-11-16, and its hosts get names under `kumpa.fi` beside the `kuutti.app` ones (ADR-072). Telia matches the redirect URI exactly, so the bank's callback moves only once Telia has registered the new one. One mail from the maintainer to id-maintenance, drafted by the agent on 2026-11-17 and sent by him, asks for:
-
-1. pre-production (the client above, ticket 01121315): `https://api.staging.kumpa.fi/auth/callback` registered beside `https://api.staging.kuutti.app/auth/callback`, both valid at once;
-2. the display name **Kumpa**, as `ftn_spname` and as `client_name` in the three languages, with `client_uri` `https://kumpa.fi`, so that the bank shows "lähettäjä Kumpa" (#700); the organisation stays Kuutti ry. The agreement allows one SP-Name, so the mail asks whether replacing it is free;
-3. production, not requested yet (TVP00648): its client, when requested, with `https://api.kumpa.fi/auth/callback` beside `https://api.kuutti.app/auth/callback`;
-4. whether the mail is enough, or Telia wants a new metadata file. The keys stay as registered.
-
-Until Telia answers, `oidc-redirect-uri`, `telia-keys.sh`'s metadata and the table above keep `kuutti.app`'s callback and the name Kuutti. Telia's answer goes here with its date, and the switch (ADR-072 §7) follows it.
+The app is called Kumpa since 2026-11-16, and its hosts get names under `kumpa.fi` beside the `kuutti.app` ones (ADR-072). Telia matches the redirect URI exactly, so the bank's callback moves only once Telia has registered `https://api.staging.kumpa.fi/auth/callback` beside the present one; production's client carries `https://api.kumpa.fi/auth/callback` beside `https://api.kuutti.app/auth/callback` when it is requested. Until then, `oidc-redirect-uri`, `telia-keys.sh`'s metadata and the table above keep `kuutti.app`'s callback, and `ftn_spname` stays Kuutti (#700). Asking Telia is the maintainer's, and the correspondence stays off GitHub.
 
 ## What Telia gives us
 
