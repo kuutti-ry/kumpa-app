@@ -1,6 +1,6 @@
 # ADR-073: Telling a person of a sanction: what, why, and how to contest it
 
-- Status: proposed (#715, built as written here on the maintainer's decisions of 2026-11-17 in a session; the points under "Open, the maintainer's" are his; accepting this record is his)
+- Status: accepted 2026-11-17 (#715, the maintainer's word "Accept ADR-073" in a session of that day; built as written here on his decisions of that day; the points under "Open, the maintainer's" are his to confirm or change)
 - Date: 2026-11-17
 - Follows: TD-5 (moderation and the audit log), TD-7 (the standing on the identity, refused at the callback), TD-18 (no mail without a reason; the optional e-mail; notifications), ADR-024 (§3 the second look, §6 what a shadow ban withholds; §7 and §8 amended here), ADR-032 (§2 and §3 amended here: a moderator's shadow ban's notice), ADR-033 (a rule's shadow ban stays untold; §6's review hours amended here), ADR-041 (the velocity rules, untold as ADR-033's are), ADR-043 (§1 amended here: a confirmed address receives a sanction's statement), ADR-068 §5 (the announcement's mail, whose shape this follows), ADR-030 §9 (a reporter is never named), CLAUDE.md rule 8 (no link in a mail) and Product constraints (every tunable in `matching_config`); issues #715, #105, #307, #176, #190
 
@@ -65,3 +65,4 @@ The panel has asked for a reason since #307: a closed list (harassment, misrepre
 ## History
 
 - 2026-11-17: written with #715, telling every shadow ban, the reports rule's once a moderator kept it. The same day, on the maintainer's word: a rule's shadow ban is never told, the court sentence goes, `hello@kuutti.app` stands for now, and the review hours go to 168 (§2, §3, §4, §7).
+- 2026-11-17: accepted on the maintainer's word, "Accept ADR-073", in a session of that day, as it stands after the same day's changes (PR #719).
