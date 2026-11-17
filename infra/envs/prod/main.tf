@@ -142,9 +142,8 @@ module "observability" {
   db_identifier  = module.data.identifier
   log_group_name = module.compute.log_group_name
   alert_email    = var.alert_email
-  # Telia bills each identification (#471). The S package holds 200 a month,
-  # so a day of 50 spends a quarter of it; the maintainer resets this to twice a
-  # normal day once production has one.
+  # Telia bills each identification (#471), by the agreement's package; the
+  # maintainer resets this to twice a normal day once production has one.
   bank_identifications_per_day = 50
   # The edge's refusals mail too (#41, ADR-067), from the cutover on.
   edge_web_acl_metric_name = var.media_enabled ? module.media[0].edge_web_acl_metric_name : null
