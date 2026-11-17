@@ -9,6 +9,7 @@ import {
   type SanctionReason,
 } from "@kuutti/schema";
 import { AppError, noLiveAccount } from "../lib/errors.ts";
+import { AUTO_SHADOW_BAN_REVIEW_HOURS_KEY, matchingConfigNumber } from "../lib/matching-config.ts";
 import { announcementTextFor } from "./announcements.ts";
 import * as repo from "./repo.ts";
 
@@ -17,7 +18,8 @@ import * as repo from "./repo.ts";
 // sent from here: the senders read the choice (the push of #102, in
 // `push.ts`). A notice is what must reach the person even without a push, the
 // first of them a moderator's warning (ADR-024 §7), the second an invitation
-// of theirs that counted (#107, ADR-044 §9).
+// of theirs that counted (#107, ADR-044 §9); a shadow ban told to its owner
+// is the sanction's other (#715, ADR-073 §2).
 
 /** Every kind in its order, each on unless the person switched it off. */
 export async function choicesOf(db: Queryable, accountId: string): Promise<NotificationChoice[]> {
@@ -39,15 +41,26 @@ export async function setChoice(
 }
 
 /**
- * One notice as the contract has it: a warning with its reason, a counted
- * invitation with what it earned the person, an announcement with its words
- * in the reader's language (ADR-068 §3).
+ * One notice as the contract has it: a warning with its reason, a shadow ban
+ * with its reason, its rule and its review, a counted invitation with what it
+ * earned the person, an announcement with its words in the reader's language
+ * (ADR-068 §3).
  */
-function noticeOf(row: repo.NoticeRow, locale: string): Notice {
+function noticeOf(row: repo.NoticeRow, locale: string, reviewHours: number): Notice {
   const base = { id: row.id, at: row.at.toISOString(), readAt: row.readAt?.toISOString() ?? null };
+  // A sanction's notice holds its sanction (notice_sanction_check), so its reason is there.
   if (row.kind === "warning") {
-    // A warning holds its sanction (notice_warning_check), so its reason is there.
     return { ...base, kind: row.kind, reason: row.reason as SanctionReason };
+  }
+  if (row.kind === "shadow_ban") {
+    return {
+      ...base,
+      kind: row.kind,
+      reason: row.reason as SanctionReason,
+      rule: row.rule,
+      reviewed: row.reviewed,
+      reviewHours,
+    };
   }
   if (row.kind === "announcement") {
     // An announcement's notice holds it (notice_announcement_check), and goes with it.
@@ -65,7 +78,11 @@ export async function noticesOf(
   locale: string,
 ): Promise<Notices> {
   const rows = await repo.listNotices(db, accountId, NOTICES_MAX);
-  return { notices: rows.map((row) => noticeOf(row, locale)) };
+  // What a rule's shadow ban says of the moderator's look (ADR-033 §6), read only when one is there.
+  const reviewHours = rows.some((row) => row.kind === "shadow_ban")
+    ? await matchingConfigNumber(db, AUTO_SHADOW_BAN_REVIEW_HOURS_KEY)
+    : 0;
+  return { notices: rows.map((row) => noticeOf(row, locale, reviewHours)) };
 }
 
 /** Marks one of the caller's notices read; one not theirs is 404. */
@@ -78,12 +95,16 @@ export async function readNotice(
   }
 }
 
-/** A moderator's warning tells the person in the app (ADR-024 §7), in the warning's transaction. */
-export async function recordWarningNotice(
+/**
+ * A warning and a shadow ban tell the person in the app (ADR-024 §7, ADR-073
+ * §2), in the sanction's transaction; a suspension and a ban end the sessions
+ * and are told at the bank login.
+ */
+export async function recordSanctionNotice(
   db: Queryable,
-  input: { accountId: string; sanctionId: string; at: Date },
+  input: { accountId: string; kind: "warning" | "shadow_ban"; sanctionId: string; at: Date },
 ): Promise<void> {
-  await repo.insertWarningNotice(db, input);
+  await repo.insertSanctionNotice(db, input);
 }
 
 /** A counted invitation tells its inviter and its friend (ADR-044 §9), in the night's count's transaction. */

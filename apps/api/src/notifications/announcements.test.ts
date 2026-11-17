@@ -8,7 +8,7 @@ import {
 import { it } from "vitest";
 import { type App, createApp } from "../app.ts";
 import { MailFailed, type MailMessage } from "../lib/mail.ts";
-import { type SignedIn, signedInAccount, staffSession } from "../test/account.ts";
+import { confirmedAddress, type SignedIn, signedInAccount, staffSession } from "../test/account.ts";
 import {
   captureLogger,
   describe,
@@ -139,19 +139,6 @@ async function switchOff(app: App, who: SignedIn) {
   expect(answer.status).toBe(200);
 }
 
-/** A confirmed address, and the terms read in `locale`. */
-async function confirmed(ctx: TestContext, who: SignedIn, address: string, locale: string) {
-  await ctx.client.query(
-    "UPDATE account SET email = $2, email_confirmed_at = now() WHERE id = $1",
-    [who.accountId, address],
-  );
-  await ctx.client.query(
-    `INSERT INTO consent (account_id, kind, version, locale_shown)
-     VALUES ($1, 'terms', 'test', $2)`,
-    [who.accountId, locale],
-  );
-}
-
 const auditOf = async (ctx: TestContext, id: string) =>
   (
     await ctx.client.query<{ actor_identity_id: string; action: string; detail: unknown }>(
@@ -177,7 +164,7 @@ describe("announcements", () => {
     const other = await staffSession(ctx.client, "admin");
     const person = await signedInAccount(ctx.client);
     await phoneOf(app, person);
-    await confirmed(ctx, person, "person@example.test", "en");
+    await confirmedAddress(ctx.client, person, "person@example.test", "en");
     const draft = await written(app, writer.headers);
     expect(draft).toMatchObject({ approvedAt: null, yours: true, sv: null });
 
@@ -352,13 +339,13 @@ describe("announcements", () => {
     const b = await signedInAccount(ctx.client);
     const c = await signedInAccount(ctx.client);
     const d = await signedInAccount(ctx.client);
-    await confirmed(ctx, a, "a@example.test", "sv");
-    await confirmed(ctx, b, "b@example.test", "fi");
+    await confirmedAddress(ctx.client, a, "a@example.test", "sv");
+    await confirmedAddress(ctx.client, b, "b@example.test", "fi");
     await switchOff(app, b);
     await ctx.client.query("UPDATE account SET email = 'c@example.test' WHERE id = $1", [
       c.accountId,
     ]);
-    await confirmed(ctx, d, "d@example.test", "fi");
+    await confirmedAddress(ctx.client, d, "d@example.test", "fi");
     const { id } = await written(app, writer.headers);
     expect((await approve(app, other.headers, id)).status).toBe(200);
     await settled();
@@ -423,7 +410,7 @@ describe("the panel's announcements", () => {
     const writer = await staffSession(ctx.client, "admin");
     const other = await staffSession(ctx.client, "admin");
     const person = await signedInAccount(ctx.client);
-    await confirmed(ctx, person, "list@example.test", "fi");
+    await confirmedAddress(ctx.client, person, "list@example.test", "fi");
     const first = await written(ctx.app, writer.headers);
     const second = await written(ctx.app, other.headers, { ...DRAFT, sv: SWEDISH });
     const answer = await list(ctx.app, writer.headers);
@@ -570,8 +557,8 @@ describe("the email of an announcement", () => {
     ];
     const first = await signedInAccount(ctx.client);
     const second = await signedInAccount(ctx.client);
-    await confirmed(ctx, first, "first@example.test", "en");
-    await confirmed(ctx, second, "second@example.test", "en");
+    await confirmedAddress(ctx.client, first, "first@example.test", "en");
+    await confirmedAddress(ctx.client, second, "second@example.test", "en");
     const { id } = await written(app, writer.headers);
     expect((await approve(app, other.headers, id)).status).toBe(200);
     await push.settled();

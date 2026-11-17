@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Kuutti API",
-    "version": "0.123.1",
+    "version": "0.124.0",
     "description": "Free, non-commercial dating app for Finland. Every account is verified through a Finnish bank. Source: AGPL-3.0 with App Store exception."
   },
   "components": {
@@ -2241,7 +2241,8 @@
           "warning",
           "invitation_counted",
           "invitation_friend",
-          "announcement"
+          "announcement",
+          "shadow_ban"
         ]
       },
       "ExportedRounds": {
@@ -4297,6 +4298,9 @@
             "$ref": "#/components/schemas/WarningNotice"
           },
           {
+            "$ref": "#/components/schemas/ShadowBanNotice"
+          },
+          {
             "$ref": "#/components/schemas/InvitationCountedNotice"
           },
           {
@@ -4310,6 +4314,7 @@
           "propertyName": "kind",
           "mapping": {
             "warning": "#/components/schemas/WarningNotice",
+            "shadow_ban": "#/components/schemas/ShadowBanNotice",
             "invitation_counted": "#/components/schemas/InvitationCountedNotice",
             "invitation_friend": "#/components/schemas/InvitationFriendNotice",
             "announcement": "#/components/schemas/AnnouncementNotice"
@@ -4348,6 +4353,66 @@
           "readAt",
           "kind",
           "reason"
+        ]
+      },
+      "ShadowBanNotice": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "readAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "shadow_ban"
+            ]
+          },
+          "reason": {
+            "$ref": "#/components/schemas/SanctionReason"
+          },
+          "rule": {
+            "$ref": "#/components/schemas/SanctionRule"
+          },
+          "reviewed": {
+            "type": "boolean"
+          },
+          "reviewHours": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "id",
+          "at",
+          "readAt",
+          "kind",
+          "reason",
+          "rule",
+          "reviewed",
+          "reviewHours"
+        ]
+      },
+      "SanctionRule": {
+        "type": "string",
+        "nullable": true,
+        "enum": [
+          "reports",
+          "first_messages",
+          "same_first_message",
+          "photo_fetches",
+          "cards_served",
+          "round_reads",
+          null
         ]
       },
       "InvitationCountedNotice": {
@@ -5199,17 +5264,6 @@
           "count",
           "firstAt",
           "createdAt"
-        ]
-      },
-      "SanctionRule": {
-        "type": "string",
-        "enum": [
-          "reports",
-          "first_messages",
-          "same_first_message",
-          "photo_fetches",
-          "cards_served",
-          "round_reads"
         ]
       },
       "SanctionList": {
@@ -7401,7 +7455,7 @@
         ],
         "responses": {
           "302": {
-            "description": "Redirect to kuutti://auth?code=… on success, or to kuutti://auth?error=<code> (auth_state_mismatch, auth_cancelled, auth_under_18, auth_banned, auth_suspended with &until=<date> when the suspension has an end, auth_cooldown with &until=<date>, auth_provider_error) so the app shows the refusal."
+            "description": "Redirect to kuutti://auth?code=… on success, or to kuutti://auth?error=<code> (auth_state_mismatch, auth_cancelled, auth_under_18, auth_banned, auth_suspended with &until=<date> when the suspension has an end, auth_cooldown with &until=<date>, auth_provider_error; auth_banned and auth_suspended with &reason=<the sanction's reason> when a sanction is behind them) so the app shows the refusal."
           }
         }
       }
@@ -11829,7 +11883,7 @@
     "/admin/sanctions/{id}/review": {
       "post": {
         "summary": "Look at a sanction again",
-        "description": "A second member of staff's note, and keep or lift. Somebody other than who applied it; once. Written to audit_log.",
+        "description": "A second member of staff's note, and keep or lift. Somebody other than who applied it; once. Written to audit_log. Keeping an open shadow ban of the reports rule is what tells its person: its notice, and its email after the answer (ADR-073 §2).",
         "security": [
           {
             "session": []
@@ -12007,7 +12061,7 @@
     "/admin/bans/{id}/review": {
       "post": {
         "summary": "Look at a ban again",
-        "description": "A second member of staff's note, and keep or lift. Somebody other than who applied it; once. Written to audit_log.",
+        "description": "A second member of staff's note, and keep or lift. Somebody other than who applied it; once. Written to audit_log. Keeping an open shadow ban of the reports rule is what tells its person: its notice, and its email after the answer (ADR-073 §2).",
         "security": [
           {
             "session": []

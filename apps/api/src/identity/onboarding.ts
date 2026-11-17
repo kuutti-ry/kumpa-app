@@ -180,7 +180,8 @@ export async function onboardingStatus(
     }
   }
   return {
-    // A shadow ban reads as active here, as everywhere the person can look (#105, ADR-024 §7).
+    // A shadow ban reads as active here: the app routes by the state, and the
+    // person is told of the ban by its notice and its mail (ADR-073 §2, §4).
     state: visibleState(state),
     age: ageInYears(account.birthYear, account.birthMonth, now),
     gender: account.gender,

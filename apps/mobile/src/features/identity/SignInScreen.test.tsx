@@ -363,6 +363,7 @@ describe("SignInScreen", () => {
       code: undefined,
       error: undefined,
       until: undefined,
+      reason: undefined,
     });
     await view.rerender(underProviders(<SignInScreen />));
     expect(drawn()).toEqual(READY);
@@ -588,6 +589,130 @@ describe("SignInScreen", () => {
     await renderWithTheme(<SignInScreen error="auth_banned" until="2026-10-21T21:00:00.000Z" />);
     expect(await screen.findByText("This person may not use Kumpa.")).toBeTruthy();
     expect(screen.queryByText(/22\.10\.2026/)).toBeNull();
+  });
+
+  describe("the reason of a suspension or a ban (#715, ADR-073 §1)", () => {
+    const BANNED = "This person may not use Kumpa.";
+    const SUSPENDED = "This account is suspended. You can sign in again from: 22.10.2026";
+    const CONTEST =
+      "If you think we got this wrong, write to hello@kuutti.app. Someone other than the person who decided will look at it again. You can also take the matter to a court.";
+    const HARASSMENT = [
+      "Why: Harassment.",
+      "The terms of use, section 4: you must not threaten, harass or pressure anyone, or ask anyone for money.",
+      "A moderator decided this.",
+      CONTEST,
+    ];
+    const SCRAPING = [
+      "Why: Copying or collecting other people's profiles.",
+      "The terms of use, section 4: you must not use Kumpa by automated means, or copy, store or pass on another user's photos or profile.",
+      "A moderator decided this.",
+      CONTEST,
+    ];
+    const lines = (fact: string, statement: readonly string[] = []) => [
+      "Sign in",
+      REFUSED,
+      fact,
+      ...statement,
+      "Sign in with your bank",
+    ];
+
+    it.each([
+      ["auth_banned", undefined, BANNED],
+      ["auth_suspended", "2026-10-21T21:00:00.000Z", SUSPENDED],
+    ])(
+      "says why under %s, the terms' rule, that a moderator decided, and how to contest it",
+      async (error, until, fact) => {
+        await renderWithTheme(<SignInScreen error={error} until={until} reason="harassment" />);
+        expect(await screen.findByText("Why: Harassment.")).toBeTruthy();
+        expect(drawn()).toEqual(lines(fact, HARASSMENT));
+        const found = pressables(screen.toJSON() as HostNode);
+        expect(found.flatMap((node) => a11yProblems(node))).toEqual([]);
+      },
+    );
+
+    it.each([
+      [
+        "fi-FI",
+        [
+          "Kirjaudu sisään",
+          "Kirjautuminen ei onnistunut",
+          "Tämä tili on jäädytetty. Voit kirjautua taas sisään alkaen: 22.10.2026",
+          "Syy: Muiden profiilien kopiointi tai kerääminen.",
+          "Käyttöehdot, kohta 4: et saa käyttää Kumpa-sovellusta automaattisin keinoin etkä kopioida, tallentaa tai välittää toisen käyttäjän kuvia tai profiilia.",
+          "Tämän päätti moderaattori.",
+          "Jos olemme mielestäsi erehtyneet, kirjoita osoitteeseen hello@kuutti.app. Asian katsoo uudelleen joku muu kuin päätöksen tehnyt. Voit myös viedä asian tuomioistuimeen.",
+        ],
+      ],
+      [
+        "sv-FI",
+        [
+          "Logga in",
+          "Inloggningen slutfördes inte",
+          "Det här kontot är avstängt. Du kan logga in igen från och med: 22.10.2026",
+          "Skäl: Kopiering eller insamling av andras profiler.",
+          "Användarvillkoren, punkt 4: du får inte använda Kumpa automatiserat eller kopiera, spara eller sprida en annan användares bilder eller profil.",
+          "Det här beslutade en moderator.",
+          "Om du tycker att vi har gjort fel, skriv till hello@kuutti.app. Någon annan än den som beslutade går igenom det på nytt. Du kan också föra saken till domstol.",
+        ],
+      ],
+    ])("says a suspension's reason on a %s phone in its language", async (languageTag, words) => {
+      (useLocales as jest.Mock).mockReturnValue([{ languageTag }]);
+      try {
+        await renderWithTheme(
+          <SignInScreen
+            error="auth_suspended"
+            until="2026-10-21T21:00:00.000Z"
+            reason="scraping"
+          />,
+        );
+        expect(await screen.findByText(words[3] as string)).toBeTruthy();
+        // The screen's own button follows, in the phone's language.
+        expect(drawn().slice(0, words.length)).toEqual(words);
+        expect(drawn()).toHaveLength(words.length + 1);
+      } finally {
+        (useLocales as jest.Mock).mockReturnValue([{ languageTag: "en-US" }]);
+      }
+    });
+
+    it.each([
+      // A crafted link: only a reason of the closed list says anything.
+      ["a word of none", "nope"],
+      ["a reason's words, not its key", "Harassment"],
+      ["an empty one", ""],
+      ["a prototype member", "toString"],
+      ["the prototype", "__proto__"],
+      ["a reason with more after it", `harassment${"x".repeat(500)}`],
+    ])("says nothing more than the ban for a reason off the list: %s", async (_, reason) => {
+      await renderWithTheme(<SignInScreen error="auth_banned" reason={reason} />);
+      expect(await screen.findByText(BANNED)).toBeTruthy();
+      expect(drawn()).toEqual(lines(BANNED));
+    });
+
+    it.each([
+      ["auth_under_18", UNDER_18, "Sign in with your bank"],
+      ["auth_code_used", null, "Try again"],
+    ])("says no reason under %s, which no sanction explains", async (error, fact, button) => {
+      await renderWithTheme(<SignInScreen error={error} reason="harassment" />);
+      expect(await screen.findByRole("button", { name: button })).toBeTruthy();
+      expect(drawn()).toEqual(["Sign in", REFUSED, ...(fact ? [fact] : []), button]);
+    });
+
+    it("says no reason under a cooldown, which no sanction explains", async () => {
+      await renderWithTheme(
+        <SignInScreen error="auth_cooldown" until="2026-10-22T10:00:00.000Z" reason="harassment" />,
+      );
+      expect(await screen.findByText(/The earliest day for a new one/)).toBeTruthy();
+      expect(screen.queryByText(/Harassment|hello@kuutti\.app/)).toBeNull();
+    });
+
+    it("follows a new link's reason, and the plain ban once a link carries none", async () => {
+      const view = await renderWithTheme(<SignInScreen error="auth_banned" reason="harassment" />);
+      expect(await screen.findByText("Why: Harassment.")).toBeTruthy();
+      await view.rerender(underProviders(<SignInScreen error="auth_banned" reason="scraping" />));
+      await waitFor(() => expect(drawn()).toEqual(lines(BANNED, SCRAPING)));
+      await view.rerender(underProviders(<SignInScreen error="auth_banned" />));
+      await waitFor(() => expect(drawn()).toEqual(lines(BANNED)));
+    });
   });
 
   it("on the web, says there is no bank sign-in instead of offering a button", async () => {

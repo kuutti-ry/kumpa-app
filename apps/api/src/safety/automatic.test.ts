@@ -6,9 +6,12 @@ import {
   ConversationList,
   ErrorResponse,
   MessagePage,
+  Sanction,
 } from "@kuutti/schema";
+import type { QueryResultRow } from "pg";
 import { type App, createApp } from "../app.ts";
 import {
+  confirmedAddress,
   type SignedIn,
   signedInAccount,
   staffSession,
@@ -24,6 +27,7 @@ import {
   type TestContext,
   testConfig,
 } from "../test/harness.ts";
+import { mailingApp, noticesOf } from "../test/push.ts";
 import { pidOf, waitsFor, watched, withTwoConnections } from "../test/races.ts";
 import { accountOf, reportIn, sanctionsOf, signedInPeople } from "../test/reports.ts";
 import { checkFirstMessage, checkReports } from "./automatic.ts";
@@ -215,8 +219,8 @@ async function bannedByReports(ctx: TestContext, app: App) {
 }
 
 /** A banned by the first-messages rule at their twentieth opener, sent through the route. */
-async function bannedByOpeners(ctx: TestContext, app: App) {
-  const a = await signedInAccount(ctx.client);
+async function bannedByOpeners(ctx: TestContext, app: App, who?: SignedIn) {
+  const a = who ?? (await signedInAccount(ctx.client));
   await openersBy(
     ctx,
     a,
@@ -628,7 +632,10 @@ describe("the first-messages rules", () => {
     expect((await read(a)).sort()).toEqual(["Hei numero kaksikymmentä", "Vastaa jo"].sort());
   });
 
-  test("A person a rule shadow-banned gets the answers they got before", async ({ ctx, app }) => {
+  test("A person a rule shadow-banned is told of it, and otherwise gets the answers they got before", async ({
+    ctx,
+    app,
+  }) => {
     const a = await signedInAccount(ctx.client);
     const onboarding = async () =>
       (await app.request("/onboarding", { headers: a.headers })).json();
@@ -656,7 +663,19 @@ describe("the first-messages rules", () => {
     for (const item of listed) expect(after.find((x) => x.id === item.id)).toEqual(item);
     expect(after.find((x) => x.id === id)?.state).toBe(listed[0]?.state);
     expect(await onboarding()).toEqual(before);
-    expect(await listSanctionsOfAccount(ctx.client, a.accountId, 100)).toEqual([]);
+    // Told at once (ADR-073 §2): the rule, and the hours a moderator's look takes.
+    expect(await noticesOf(app, a)).toEqual([
+      expect.objectContaining({
+        kind: "shadow_ban",
+        reason: "other",
+        rule: "first_messages",
+        reviewed: false,
+        reviewHours: 48,
+      }),
+    ]);
+    expect(await listSanctionsOfAccount(ctx.client, a.accountId, 100)).toEqual([
+      expect.objectContaining({ kind: "shadow_ban", reason: "other", liftedAt: null }),
+    ]);
   });
 
   test("A threshold of zero switches its rule off", async ({ ctx, app }) => {
@@ -702,6 +721,165 @@ describe("the first-messages rules", () => {
 });
 
 describe("the moderators' review", () => {
+  test("A rule's shadow ban is mailed once it has committed, and its confirmation changes its notice", async ({
+    ctx,
+  }) => {
+    const { app, sent, settled } = await mailingApp(ctx.client, ticking());
+    const a = await signedInAccount(ctx.client);
+    await confirmedAddress(ctx.client, a, "a@example.test", "en");
+    const { banId } = await bannedByOpeners(ctx, app, a);
+    await settled();
+    expect(sent.map((m) => ({ to: m.to, subject: m.subject }))).toEqual([
+      { to: "a@example.test", subject: "Kumpa: others don't see your profile for now" },
+    ]);
+    const text = sent[0]?.text ?? "";
+    expect(text).toContain(
+      "An automatic rule did this: you started very many conversations in a short time.",
+    );
+    expect(text).toContain("A moderator will look at it within 48 hours.");
+    // Never how many: the rule counted 20.
+    expect(text).not.toContain("20");
+
+    const m = await staffSession(ctx.client);
+    const confirmed = await app.request(
+      `/admin/sanctions/${banId}/review`,
+      json(m.headers, { outcome: "keep", note: "Twenty openers in an hour; it stands." }),
+    );
+    expect(confirmed.status).toBe(200);
+    await settled();
+    expect(await noticesOf(app, a)).toEqual([
+      expect.objectContaining({ kind: "shadow_ban", rule: "first_messages", reviewed: true }),
+    ]);
+    expect(sent).toHaveLength(1);
+  });
+
+  /** "A", with a confirmed address, shadow-banned by three people's reports, and its ban's id. */
+  async function mailedReportsBan(ctx: TestContext) {
+    const mailing = await mailingApp(ctx.client, ticking());
+    const a = await signedInAccount(ctx.client);
+    await confirmedAddress(ctx.client, a, "a@example.test", "en");
+    const reporters = await reportsOf(ctx, a.accountId, [ago(2 * DAY), ago(DAY)]);
+    const [third] = await signedInPeople(ctx.client, 1);
+    if (!third) throw new Error("person not written");
+    await reportFrom(ctx, mailing.app, third, a.accountId);
+    await mailing.settled();
+    const { rows } = await ctx.client.query<{ id: string }>(
+      "SELECT id FROM sanction WHERE account_id = $1 AND rule = 'reports'",
+      [a.accountId],
+    );
+    return { ...mailing, a, reporters: [...reporters, third], banId: rows[0]?.id as string };
+  }
+
+  test("The reports rule's shadow ban is told only once a moderator keeps it", async ({ ctx }) => {
+    const { app, sent, settled, a, reporters, banId } = await mailedReportsBan(ctx);
+    expect(await stateOf(ctx.client, a.accountId)).toBe("shadow_banned");
+    // Nothing at the report's moment: the reporter's ended conversation would name them (ADR-030 §9).
+    expect(sent).toEqual([]);
+    expect(await noticesOf(app, a)).toEqual([]);
+    expect(await listSanctionsOfAccount(ctx.client, a.accountId, 100)).toEqual([]);
+
+    const m = await staffSession(ctx.client);
+    const kept = await app.request(
+      `/admin/sanctions/${banId}/review`,
+      json(m.headers, { outcome: "keep", note: "Three different people in a day; it stands." }),
+    );
+    expect(kept.status).toBe(200);
+    const reviewedAt = Sanction.parse(await kept.json()).reviewedAt;
+    await settled();
+    expect(await noticesOf(app, a)).toEqual([
+      expect.objectContaining({
+        kind: "shadow_ban",
+        rule: "reports",
+        reviewed: true,
+        at: reviewedAt,
+      }),
+    ]);
+    expect(sent.map((x) => ({ to: x.to, subject: x.subject }))).toEqual([
+      { to: "a@example.test", subject: "Kumpa: others don't see your profile for now" },
+    ]);
+    const text = sent[0]?.text ?? "";
+    expect(text).toContain("An automatic rule did this: many people reported you in a short time.");
+    expect(text).toContain("A moderator has since looked at it and kept it in place.");
+    // Never who reported, nor how many; and the export never lists it.
+    for (const reporter of reporters) expect(text).not.toContain(reporter.accountId);
+    expect(text).not.toContain("3");
+    expect(await listSanctionsOfAccount(ctx.client, a.accountId, 100)).toEqual([]);
+  });
+
+  test("A reports rule's shadow ban that a moderator reverses is never told", async ({ ctx }) => {
+    const { app, sent, settled, a, banId } = await mailedReportsBan(ctx);
+    const m = await staffSession(ctx.client);
+    const reversed = await app.request(
+      `/admin/sanctions/${banId}/review`,
+      json(m.headers, { outcome: "lift", note: "The reports do not hold." }),
+    );
+    expect(reversed.status).toBe(200);
+    await settled();
+    expect(await stateOf(ctx.client, a.accountId)).toBe("active");
+    expect(sent).toEqual([]);
+    expect(await noticesOf(app, a)).toEqual([]);
+    expect(await listSanctionsOfAccount(ctx.client, a.accountId, 100)).toEqual([]);
+  });
+
+  test("a rule tells of its ban only once it has committed: none met, none rolled back", async ({
+    ctx,
+  }) => {
+    const b = await signedInAccount(ctx.client);
+    const told: Array<{ accountId: string; sanctionId: string }> = [];
+    const { logger, lines } = await captureLogger();
+    const deps = {
+      db: ctx.client,
+      logger,
+      now: ticking(),
+      sanctioned: (x: (typeof told)[0]) => void told.push(x),
+    };
+    const others = await signedInPeople(ctx.client, 5);
+    const opens = async (i: number) => {
+      const other = others[i];
+      if (!other) throw new Error("person not written");
+      return conversationBetween(ctx.client, b.accountId, other.accountId, {
+        openedAt: ago(DAY),
+        messages: [{ from: "a", body: OPENER, at: ago((5 - i) * HOUR) }],
+      });
+    };
+    const check = (db: Queryable, conversationId: string) =>
+      checkFirstMessage({ ...deps, db }, { accountId: b.accountId, conversationId });
+    // Four of the same opener are one short of the threshold.
+    let last = "";
+    for (const i of [0, 1, 2, 3]) last = await opens(i);
+    await check(ctx.client, last);
+    expect(told).toEqual([]);
+    // The fifth meets it, and the commit fails after the ban was written: nobody told.
+    last = await opens(4);
+    // The rule's own transaction is the first savepoint; the sanction's are inside it.
+    let outer: string | undefined;
+    const failing: Queryable = {
+      async query<R extends QueryResultRow = QueryResultRow>(text: string, values?: unknown[]) {
+        outer ??= /^SAVEPOINT (\w+)$/.exec(text)?.[1];
+        if (outer && text === `RELEASE SAVEPOINT ${outer}`) throw new Error("the commit failed");
+        return ctx.client.query<R>(text, values);
+      },
+    };
+    await check(failing, last);
+    expect(told).toEqual([]);
+    expect(await sanctionsOf(ctx.client, b.accountId)).toEqual([]);
+    expect(lines().map((line) => line.msg)).toContain("automatic rule check failed");
+    // Committed, it is told once, with its own sanction.
+    await check(ctx.client, last);
+    const { rows } = await ctx.client.query<{ id: string; rule: string }>(
+      "SELECT id, rule FROM sanction WHERE account_id = $1",
+      [b.accountId],
+    );
+    expect(rows.map((r) => r.rule)).toEqual(["same_first_message"]);
+    expect(told).toEqual([{ accountId: b.accountId, sanctionId: rows[0]?.id }]);
+    // The reports rule's, committed, tells nobody until a moderator keeps it.
+    const c = await signedInAccount(ctx.client);
+    await reportsOf(ctx, c.accountId, [ago(2 * DAY), ago(DAY), ago(HOUR)]);
+    await checkReports(deps, c.accountId);
+    expect((await sanctionsOf(ctx.client, c.accountId)).map((s) => s.rule)).toEqual(["reports"]);
+    expect(told).toHaveLength(1);
+  });
+
   test("A confirmed automatic shadow ban closes the reports filed before it, one by one", async ({
     ctx,
     app,

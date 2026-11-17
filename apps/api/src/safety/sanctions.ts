@@ -18,7 +18,7 @@ import {
 } from "../identity/index.ts";
 import { AppError } from "../lib/errors.ts";
 import { addDays, finnishDay } from "../lib/finnish-day.ts";
-import { recordWarningNotice } from "../notifications/index.ts";
+import { recordSanctionNotice } from "../notifications/index.ts";
 import { recordAudit } from "./audit.ts";
 
 // Sanctions (#307, ADR-024): the record of what staff did to a person, and the
@@ -36,6 +36,15 @@ type Actor = string | null;
 
 /** Which route a sanction is reached through: a ban's own, for admins, or the rest, for moderators. */
 export type SanctionScope = "ban" | "other";
+
+/**
+ * The reports rule's shadow ban is told only once a moderator keeps it, and
+ * never if it is reversed or lifted first (the maintainer, 2026-11-17; ADR-073
+ * §2). Told at once, it would arrive with the end the last report made of the
+ * reporter's conversation (ADR-030 §12), and name the reporter by its moment
+ * (ADR-030 §9). The other rules meet only the person's own acts.
+ */
+export const toldWhenKept = (rule: SanctionRule | null | undefined): boolean => rule === "reports";
 
 const COLUMNS = `id, identity_id, account_id, kind, reason, note, ends_at, created_by, created_at,
   lifted_at, lifted_by, review_note, reviewed_by, reviewed_at, rule`;
@@ -193,8 +202,9 @@ export type ApplyInput = {
  * Applies a sanction (ADR-024 §2-§4): the audit row, the sanction row, the
  * account and identity settled, and for a suspension or a ban every session
  * ended; a ban closes the person's conversations too (#348). A ban binds an
- * erased account's identity too; anything else refuses a tombstone. Nothing
- * the person can read changes for a shadow ban.
+ * erased account's identity too; anything else refuses a tombstone. A
+ * warning and a shadow ban write the person's notice (ADR-073 §2); what the
+ * person is mailed goes after the commit, from the caller (ADR-073 §4).
  */
 export async function applySanction(db: Queryable, input: ApplyInput): Promise<Sanction> {
   const note = noteOf(input.note);
@@ -251,9 +261,16 @@ export async function applySanction(db: Queryable, input: ApplyInput): Promise<S
     );
     const row = rows[0];
     if (!row) throw new Error("sanction insert returned no row");
-    // A warning tells the person in the app (ADR-024 §7, #176), in its transaction.
-    if (input.kind === "warn") {
-      await recordWarningNotice(tx, { accountId: input.accountId, sanctionId: id, at: input.at });
+    // A warning and a shadow ban tell the person in the app (ADR-024 §7, #176;
+    // ADR-073 §2, #715), in its transaction; the other two at the bank login.
+    // The reports rule's ban waits for a moderator's keep (reviewSanction).
+    if (input.kind === "warn" || (input.kind === "shadow_ban" && !toldWhenKept(input.rule?.rule))) {
+      await recordSanctionNotice(tx, {
+        accountId: input.accountId,
+        kind: input.kind === "warn" ? "warning" : "shadow_ban",
+        sanctionId: id,
+        at: input.at,
+      });
     }
     await settleAll(tx, account, input.at);
     if (input.kind === "suspend" || input.kind === "ban") {
@@ -327,7 +344,9 @@ export async function liftSanction(
 /**
  * A second member of staff's look (ADR-024 §3): somebody other than who
  * applied it, once; keep it, or lift it in the same step. The note is the
- * reviewer's words, kept like the sanction's own.
+ * reviewer's words, kept like the sanction's own. `told` when the look is what
+ * tells the person: an open ban of the reports rule, kept, gets its notice
+ * here, and its caller mails it after the commit (ADR-073 §2).
  */
 export async function reviewSanction(
   db: Queryable,
@@ -339,7 +358,7 @@ export async function reviewSanction(
     outcome: "keep" | "lift";
     at: Date;
   },
-): Promise<Sanction> {
+): Promise<{ sanction: Sanction; told: boolean }> {
   const note = noteOf(input.note);
   const found = await sanctionIn(db, input.sanctionId, input.scope);
   if (found.identity_id === input.actor) throw ownAccount();
@@ -381,7 +400,16 @@ export async function reviewSanction(
       throw now?.reviewed_at ? reviewed() : lifted();
     }
     if (lift) await settleAll(tx, account, input.at);
-    return toItem(row);
+    const told = !lift && row.lifted_at === null && toldWhenKept(row.rule);
+    if (told) {
+      await recordSanctionNotice(tx, {
+        accountId: row.account_id,
+        kind: "shadow_ban",
+        sanctionId: row.id,
+        at: input.at,
+      });
+    }
+    return { sanction: toItem(row), told };
   });
 }
 
@@ -476,7 +504,10 @@ export type OwnSanction = {
 
 /**
  * The export's half (ADR-024 §8): the account's sanctions, newest first;
- * never who, never a note, and not an open shadow ban (#105).
+ * never who, never a note. An open shadow ban is listed too, since its owner
+ * is told of it (ADR-073 §2); never one of the reports rule, whose moment is
+ * the last report's (toldWhenKept): its owner has its notice, dated by the
+ * moderator's look, once it is kept.
  */
 export async function listSanctionsOfAccount(
   db: Queryable,
@@ -485,7 +516,7 @@ export async function listSanctionsOfAccount(
 ): Promise<OwnSanction[]> {
   const { rows } = await db.query<Row>(
     `SELECT ${COLUMNS} FROM sanction
-     WHERE account_id = $1 AND NOT (kind = 'shadow_ban' AND lifted_at IS NULL)
+     WHERE account_id = $1 AND rule IS DISTINCT FROM 'reports'
      ORDER BY created_at DESC, id DESC LIMIT $2`,
     [accountId, limit],
   );

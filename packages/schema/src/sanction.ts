@@ -119,7 +119,7 @@ export type SanctionList = z.infer<typeof SanctionList>;
 /**
  * A sanction in the person's own export (ADR-024 §8): kind, reason and dates,
  * in words in the request's language too; never who, never staff's note. An
- * open shadow ban is not listed while it lasts (#105).
+ * open shadow ban is listed too, since its owner is told of it (#715, ADR-073 §2).
  */
 export const ExportedSanction = z
   .object({

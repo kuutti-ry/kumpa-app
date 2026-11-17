@@ -69,17 +69,20 @@ export function AutomaticBans() {
       first: when(ban.firstAt),
       at: when(ban.createdAt),
     });
+    // The reports rule's ban is told only when a moderator confirms it, so
+    // its moment names no reporter; a reversed one was never told (ADR-073 §2).
+    const untold = ban.rule === "reports";
     return outcome === "keep"
       ? {
           outcome,
           title: t("admin.automaticBans.confirmTitle", { account }),
-          effect: `${counted} ${t("admin.automaticBans.confirmEffect")}`,
+          effect: `${counted} ${untold ? t("admin.automaticBans.confirmEffectReports") : t("admin.automaticBans.confirmEffect")}`,
           submit: t("admin.automaticBans.confirm"),
         }
       : {
           outcome,
           title: t("admin.automaticBans.reverseTitle", { account }),
-          effect: `${counted} ${t("admin.automaticBans.reverseEffect")}`,
+          effect: `${counted} ${untold ? t("admin.automaticBans.reverseEffectReports") : t("admin.automaticBans.reverseEffect")}`,
           submit: t("admin.automaticBans.reverse"),
         };
   };

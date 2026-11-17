@@ -9,20 +9,20 @@ Feature: Sanctions
     Given account "A" has two signed-in devices
     When an admin bans "A" for harassment
     Then both devices' next requests answer session_revoked
-    And "A"'s next bank login is refused with auth_banned
+    And "A"'s next bank login is refused with auth_banned and the reason harassment
 
   Scenario: A suspension refuses the login until its day and the night lifts it
     Given a moderator suspends "A" until 22.10.2026
     When "A" authenticates with their bank on 21.10.2026
-    Then the login is refused with auth_suspended until the start of 22.10.2026 in Finland
+    Then the login is refused with auth_suspended until the start of 22.10.2026 in Finland, with its reason
     When the night runs on 22.10.2026
     Then "A" is active again and the next bank login resumes the account
 
-  Scenario: A shadow-banned person gets the same answers from every route
+  Scenario: A shadow-banned person's state reads as active, and the export lists the shadow ban
     Given a moderator shadow-bans "A"
     When "A" reads their onboarding status and exports their data
     Then both say the account is active, with the date it last visibly changed
-    And the export lists no sanction while the shadow ban is open
+    And the export lists the open shadow ban among the sanctions
 
   Scenario: A photo of a sanctioned owner is not served from a shown card
     Given "B" was shown a card of "A" with an approved photo
@@ -77,8 +77,38 @@ Feature: Sanctions
     Then no log line of the request carries the note
 
   Scenario: A warning shows the person a notice in the app until it is read, and none once lifted
-    Given a moderator warned "A" for harassment, and "A" is also hidden for a while
+    Given a moderator warned "A" for harassment
     When "A" opens the app
-    Then the home screen's notices hold one warning with its reason, and nothing of the hiding
+    Then the home screen's notices hold one warning with its reason
     When "A" marks it read
     Then it is read for good, and a second warning lifted since shows no notice
+
+  Scenario: A shadow ban shows the person a notice at once, and none once lifted
+    Given a moderator shadow-banned "A" for harassment
+    When "A" opens the app
+    Then the home screen's notices hold the shadow ban with its reason, no rule and no review to come
+    When the shadow ban is lifted
+    Then the notice is gone, and nothing is sent
+
+  Scenario Outline: Each sanction is mailed once to its person's confirmed address
+    Given "A" confirmed an address and read the terms in Finnish
+    When a member of staff applies a <kind> to "A" for harassment
+    Then one mail goes to the address, in Finnish, with the <kind>'s subject, its reason and how to contest it
+    And no line of the mail or of the log names the note or the address
+
+    Examples:
+      | kind       |
+      | warning    |
+      | shadow ban |
+      | suspension |
+      | ban        |
+
+  Scenario: A sanction is not mailed to an unconfirmed address, nor once lifted
+    Given "A" set an address and never confirmed it, and "B" confirmed one
+    When a moderator warns "A", and warns "B" and lifts it before the mail goes
+    Then neither address is sent anything
+
+  Scenario: Lifting or reviewing a sanction sends nothing
+    Given "A" confirmed an address and a moderator suspended "A"
+    When another moderator looks at it again and keeps it, and an admin lifts it
+    Then only the suspension's own mail went to the address

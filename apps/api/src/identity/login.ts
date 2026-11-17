@@ -257,16 +257,34 @@ async function resolveAccount(
             until: decision.until.toISOString(),
           });
         }
+        // The sanction's reason travels to the app as &reason=, so the
+        // refusal says why and how to contest it (#715, ADR-073 §2); a
+        // standing with no row behind it has none.
+        const reason = identity
+          ? await repo.standingReasonOf(
+              deps.db,
+              identity.id,
+              decision.reason === "suspended" ? "suspend" : "ban",
+            )
+          : null;
         if (decision.reason === "suspended") {
           // The day it ends travels to the app as &until=, as the cooldown's does (ADR-024 §5).
+          const until = decision.until?.toISOString();
           throw new AppError(
             403,
             "auth_suspended",
             "This person may not use Kuutti for now",
-            decision.until ? { until: decision.until.toISOString() } : undefined,
+            until || reason
+              ? { ...(until ? { until } : {}), ...(reason ? { reason } : {}) }
+              : undefined,
           );
         }
-        throw new AppError(403, "auth_banned", "This person may not use Kuutti");
+        throw new AppError(
+          403,
+          "auth_banned",
+          "This person may not use Kuutti",
+          reason ? { reason } : undefined,
+        );
       }
       case "create_identity": {
         const created = await repo.insertIdentity(deps.db, {

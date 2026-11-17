@@ -57,6 +57,7 @@ describe("the notices", () => {
       "invitation_counted",
       "invitation_friend",
       "announcement",
+      "shadow_ban",
     ]);
     expect(Notices.parse({ notices: [notice] }).notices).toEqual([notice]);
     expect(codes(Notices, { notices: [{ ...notice, reason: "rude" }] })).toEqual(["invalid_value"]);
@@ -64,6 +65,36 @@ describe("the notices", () => {
     expect(
       codes(Notices, { notices: Array.from({ length: NOTICES_MAX + 1 }, () => notice) }),
     ).toEqual(["too_big"]);
+  });
+
+  it("carry a shadow ban's reason, the rule or none, whether a moderator has looked, and the hours a look takes (#715)", () => {
+    const hidden = {
+      id: notice.id,
+      kind: "shadow_ban",
+      at,
+      readAt: null,
+      reason: "other",
+      rule: "reports",
+      reviewed: false,
+      reviewHours: 48,
+    };
+    const byModerator = { ...hidden, reason: "harassment", rule: null, reviewHours: 0 };
+    expect(Notices.parse({ notices: [hidden, byModerator] }).notices).toEqual([
+      hidden,
+      byModerator,
+    ]);
+    expect(codes(Notices, { notices: [{ ...hidden, rule: "nope" }] })).toEqual(["invalid_value"]);
+    expect(codes(Notices, { notices: [{ ...hidden, reason: "rude" }] })).toEqual(["invalid_value"]);
+    expect(codes(Notices, { notices: [{ ...hidden, reviewHours: -1 }] })).toEqual(["too_small"]);
+    expect(codes(Notices, { notices: [{ ...hidden, reviewed: "no" }] })).toEqual(["invalid_type"]);
+    // Every one of the four is said: none is left for the phone to guess.
+    for (const key of ["rule", "reviewed", "reviewHours"] as const) {
+      const { [key]: _gone, ...without } = hidden;
+      expect(Notices.safeParse({ notices: [without] }).success).toBe(false);
+    }
+    // Staff's note is never part of it (ADR-024 §8).
+    const noted = Notices.parse({ notices: [{ ...hidden, note: "Reported by Sanna" }] }).notices[0];
+    expect(noted).toEqual(hidden);
   });
 
   it("carry an announcement's own words, at most a title of 80 characters and a body of 1,000 (#573)", () => {

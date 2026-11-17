@@ -8,7 +8,8 @@ import { renderWithTheme } from "@/test/render";
 import { Notices } from "./Notices";
 
 // The home screen's notices (#176, ADR-032): the unread ones under a heading,
-// a warning with its reason in words, an invitation that counted with what it
+// a warning and a shadow ban with their statements (#715, ADR-073 §1), the
+// reason, the terms' rule, who decided and how to contest it, an invitation that counted with what it
 // earned and never who, the inviter's (#107) and the friend's who used it
 // (#503), Got it marking it read and taking it off, a failure said and the
 // notice kept, nothing at all without one.
@@ -25,7 +26,35 @@ const notice = (n: number, readAt: string | null = null) => ({
   readAt,
   reason: "harassment",
 });
-const BODY = "Reason: Harassment. A warning by itself changes nothing in how you use the app.";
+const BODY = "A warning by itself changes nothing in how you use the app.";
+/** How to contest what a person decided or confirmed (ADR-073 §3). */
+const CONTEST =
+  "If you think we got this wrong, write to hello@kuutti.app. Someone other than the person who decided will look at it again. You can also take the matter to a court.";
+/** A moderator's sanction for harassment, in its statement's words. */
+const HARASSMENT = [
+  "Why: Harassment.",
+  "The terms of use, section 4: you must not threaten, harass or pressure anyone, or ask anyone for money.",
+  "A moderator decided this.",
+  CONTEST,
+];
+/** A shadow ban (#715), a moderator's or a rule's, and whether a moderator has looked since. */
+const shadowBanned = (
+  n: number,
+  of: { reason?: string; rule?: string | null; reviewed?: boolean; reviewHours?: number } = {},
+) => ({
+  id: `00000000-0000-4000-8000-00000000004${n}`,
+  kind: "shadow_ban",
+  at: "2026-11-17T09:00:00.000Z",
+  readAt: null,
+  reason: "harassment",
+  rule: null,
+  reviewed: false,
+  reviewHours: 48,
+  ...of,
+});
+const HIDDEN = "Others don't see your profile for now";
+const HIDDEN_BODY =
+  "For now your profile is not shown to other people, and your likes and messages do not reach them.";
 const counted = (n: number, reward: { fish: number }) => ({
   id: `00000000-0000-4000-8000-00000000001${n}`,
   kind: "invitation_counted",
@@ -87,7 +116,13 @@ describe("Notices", () => {
     await renderWithTheme(<Notices />);
     expect(await screen.findByRole("heading", { name: "Notices" })).toBeTruthy();
     expect(screen.getAllByText("A warning from a moderator")).toHaveLength(1);
-    expect(screen.getByText(BODY)).toBeTruthy();
+    expect(said()).toEqual([
+      "Notices",
+      "A warning from a moderator",
+      BODY,
+      ...HARASSMENT,
+      "Got it",
+    ]);
     noProblems();
     await act(async () => fireEvent.press(screen.getByRole("button", { name: "Got it" })));
     await settle();
@@ -223,6 +258,93 @@ describe("Notices", () => {
     },
   );
 
+  it("shows a moderator's shadow ban with its statement, and Got it marks it read (#715)", async () => {
+    const seen = api([shadowBanned(1)]);
+    await renderWithTheme(<Notices />);
+    expect(await screen.findByText(HIDDEN)).toBeTruthy();
+    expect(said()).toEqual(["Notices", HIDDEN, HIDDEN_BODY, ...HARASSMENT, "Got it"]);
+    noProblems();
+    await act(async () => fireEvent.press(screen.getByRole("button", { name: "Got it" })));
+    await settle();
+    expect(seen).toContain(`POST /notices/${shadowBanned(1).id}/read`);
+    expect(screen.queryByText(HIDDEN)).toBeNull();
+  });
+
+  it.each([
+    // The reports rule's is told only once a moderator kept it (ADR-073 §2).
+    [
+      "en",
+      { rule: "reports", reviewed: true },
+      [
+        HIDDEN,
+        HIDDEN_BODY,
+        "An automatic rule did this: many people reported you in a short time.",
+        "The terms of use, section 6: automatic rules can limit what others see of an account until a moderator has looked at it.",
+        "A moderator has since looked at it and kept it in place.",
+        CONTEST,
+      ],
+    ],
+    [
+      "en",
+      { rule: "photo_fetches", reason: "scraping", reviewHours: 1 },
+      [
+        HIDDEN,
+        HIDDEN_BODY,
+        "An automatic rule did this: your account opened very many other people's photos in a short time.",
+        "The terms of use, section 6: automatic rules can limit what others see of an account until a moderator has looked at it.",
+        "A moderator will look at it within 1 hour.",
+        "If you think we got this wrong, write to hello@kuutti.app. You can also take the matter to a court.",
+      ],
+    ],
+    [
+      "en",
+      { rule: "first_messages", reviewHours: 48 },
+      [
+        HIDDEN,
+        HIDDEN_BODY,
+        "An automatic rule did this: you started very many conversations in a short time.",
+        "The terms of use, section 6: automatic rules can limit what others see of an account until a moderator has looked at it.",
+        "A moderator will look at it within 48 hours.",
+        "If you think we got this wrong, write to hello@kuutti.app. You can also take the matter to a court.",
+      ],
+    ],
+    [
+      "fi",
+      { rule: "cards_served", reason: "scraping", reviewHours: 1 },
+      [
+        "Muut eivät toistaiseksi näe profiiliasi",
+        "Profiiliasi ei toistaiseksi näytetä muille, eivätkä tykkäyksesi ja viestisi tavoita heitä.",
+        "Tämän teki automaattinen sääntö: tilillesi näytettiin hyvin monta profiilia lyhyessä ajassa.",
+        "Käyttöehdot, kohta 6: automaattiset säännöt voivat rajoittaa sitä, mitä muut näkevät tilistä, kunnes moderaattori on tarkistanut sen.",
+        "Moderaattori tarkistaa sen 1 tunnin kuluessa.",
+        "Jos olemme mielestäsi erehtyneet, kirjoita osoitteeseen hello@kuutti.app. Voit myös viedä asian tuomioistuimeen.",
+      ],
+    ],
+    [
+      "sv",
+      { rule: "same_first_message", reviewHours: 48 },
+      [
+        "Andra ser inte din profil för tillfället",
+        "Din profil visas för tillfället inte för andra, och dina gillanden och meddelanden når dem inte.",
+        "Det här gjorde en automatisk regel: du skickade samma första meddelande till flera personer.",
+        "Användarvillkoren, punkt 6: automatiska regler kan begränsa vad andra ser av ett konto tills en moderator har granskat det.",
+        "En moderator granskar det inom 48 timmar.",
+        "Om du tycker att vi har gjort fel, skriv till hello@kuutti.app. Du kan också föra saken till domstol.",
+      ],
+    ],
+  ] as const)(
+    "says in %s what a rule's shadow ban saw, %j, when a moderator looks, and how to contest it",
+    async (locale, of, words) => {
+      (useLocales as jest.Mock).mockReturnValue([{ languageTag: locale }]);
+      api([shadowBanned(2, { reason: "other", ...of })]);
+      await renderWithTheme(<Notices />);
+      expect(await screen.findByText(words[0])).toBeTruthy();
+      const [heading, gotIt] = AROUND[locale];
+      expect(said()).toEqual([heading, ...words, gotIt]);
+      noProblems();
+    },
+  );
+
   it("shows an announcement in its own words beside a warning, and Got it takes it off (#573)", async () => {
     const seen = api([announced(1), notice(1)]);
     await renderWithTheme(<Notices />);
@@ -235,6 +357,7 @@ describe("Notices", () => {
       "Got it",
       "A warning from a moderator",
       BODY,
+      ...HARASSMENT,
       "Got it",
     ]);
     noProblems();

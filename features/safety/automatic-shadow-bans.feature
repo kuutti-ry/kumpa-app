@@ -4,10 +4,11 @@ Feature: Automatic shadow bans
   behaviour looks like abuse (#105, TD-5, ADR-033): reports by different
   people, first messages faster than a person writes them, and the same
   first message to many. It is only ever a shadow ban, by nobody, for the
-  reason other, an audit row with no actor naming its rule, and the person
-  learns nothing from any route. A moderator confirms or reverses it from the
-  moderators' list within matching_config auto_shadow_ban_review_hours; past
-  that it stays, and says Late. A confirmed one may close the reports filed
+  reason other, an audit row with no actor naming its rule. Its person's
+  routes answer as before; a notice and a mail tell them of it, the reports
+  rule's only once a moderator confirms it (#715, ADR-073). A moderator
+  confirms or reverses it from the moderators' list within matching_config
+  auto_shadow_ban_review_hours; past that it stays, and says Late. A confirmed one may close the reports filed
   before it, one by one. Being blocked counts for nothing. The rule's record
   is its name, a count and two times; message text is compared in memory and
   kept nowhere. The thresholds are the maintainer's of 19/10/2026.
@@ -114,10 +115,28 @@ Feature: Automatic shadow bans
     When the reports rule is checked for "B" twice at the same moment
     Then "B" has one shadow ban, by the rule reports counting 3
 
-  Scenario: A person a rule shadow-banned gets the answers they got before
+  Scenario: A person a rule shadow-banned is told of it, and otherwise gets the answers they got before
     Given a rule shadow-banned "A" at their twentieth first message
-    When "A" sends again, and reads their conversations, their onboarding and their sanctions as the export lists them
-    Then every answer is as before the ban, and the export lists no sanction
+    When "A" sends again, and reads their conversations, their onboarding, their notices and their sanctions as the export lists them
+    Then the sends, the conversations and the onboarding answer as before the ban
+    And the notices hold the shadow ban with the rule first_messages and the review hours, and the export lists it
+
+  Scenario: A rule's shadow ban is mailed once it has committed, and its confirmation changes its notice
+    Given "A" confirmed an address, and the first-messages rule shadow-bans "A"
+    Then one mail goes to the address naming the rule on first messages and the review hours, never its count
+    When a moderator confirms the shadow ban
+    Then the notice says that a moderator has looked at it and kept it, and nothing more is sent
+
+  Scenario: The reports rule's shadow ban is told only once a moderator keeps it
+    Given "A" confirmed an address, and reports by three different people shadow-ban "A"
+    Then no notice and no mail tell "A" of it, and the export lists no sanction
+    When a moderator confirms the shadow ban
+    Then a notice dated by the confirmation and one mail say that a moderator kept it, naming the rule on reports and never a reporter, and the export still lists no sanction
+
+  Scenario: A reports rule's shadow ban that a moderator reverses is never told
+    Given reports by three different people shadow-ban "A"
+    When a moderator reverses the shadow ban
+    Then no notice and no mail ever tell "A" of it, and the export lists no sanction
 
   Scenario: An automatic shadow ban is an audit row with no actor, naming its rule
     Given auto_shadow_ban_reports is 3 and two people reported "B" this week
