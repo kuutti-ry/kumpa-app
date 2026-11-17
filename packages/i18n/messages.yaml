@@ -9188,7 +9188,7 @@ tech.errorTest.send:
 
 tech.look.title:
   en: "Style to try"
-  description: "Heading of the tech screen's choice of style for the designers' try (outside production only): today's look, or neubrutalism's outlines and hard shadows."
+  description: "Heading of the tech screen's choice of style for the designers' try (outside production only): today's look, or one of Sini's four styles, each with its own colours, which a released app never shows."
   fi: "Kokeiltava tyyli"
   sv: "Stil att prova"
   machine: { fi: true, sv: true }
@@ -9201,66 +9201,31 @@ tech.look.today:
   machine: { fi: true, sv: true }
 
 tech.look.neubrutalism:
-  en: "Neubrutalism"
-  description: "The style of neubrutalism.com, outlines and hard shadows in one ink, one of the tech screen's choices of style (outside production only)."
+  en: "Neobrutalism"
+  description: "Sini's Neobrutalism style, colour blocks in thick ink outlines and hard offset shadows, in cream, lime, lilac and royal blue, one of the tech screen's choices of style (outside production only)."
   fi: "Neobrutalismi"
   sv: "Nybrutalism"
   machine: { fi: true, sv: true }
 
 tech.look.organic:
   en: "Organic Pop"
-  description: "Sini's Organic Pop style, soft gradient shapes, a slanted display headline and pill-shaped controls, one of the tech screen's choices of style (outside production only). A style's name, kept in English in every language."
+  description: "Sini's Organic Pop style, soft gradient shapes in cream, plum, lavender, lime and violet, a slanted display headline and pill-shaped controls, one of the tech screen's choices of style (outside production only). A style's name, kept in English in every language."
   fi: "Organic Pop"
   sv: "Organic Pop"
   machine: { fi: true, sv: true }
 
-tech.palette.today:
-  en: "Today's"
-  description: "The app's colours as they are today, one of the tech screen's choices of palette (outside production only)."
-  fi: "Nykyiset"
-  sv: "Nuvarande"
+tech.look.glass:
+  en: "Glass"
+  description: "Sini's Glassmorphism style, frosted panes over an aqua sky with soft bubbles, pill-shaped controls and an italic headline, one of the tech screen's choices of style (outside production only)."
+  fi: "Lasi"
+  sv: "Glas"
   machine: { fi: true, sv: true }
 
-tech.palette.title:
-  en: "Colours to try"
-  description: "Heading of the tech screen's choice of palette for the designers' try (outside production only); a released app keeps today's colours."
-  fi: "Kokeiltavat värit"
-  sv: "Färger att prova"
-  machine: { fi: true, sv: true }
-
-tech.palette.ice:
-  en: "Ice"
-  description: "Palette of the neubrutalism try: today's blues, softened (ice and water)."
-  fi: "Jää"
-  sv: "Is"
-  machine: { fi: true, sv: true }
-
-tech.palette.dusk:
-  en: "Dusk"
-  description: "Palette of the neubrutalism try: lavender dusk over the sea, with peach (the designer's concept)."
-  fi: "Hämärä"
-  sv: "Skymning"
-  machine: { fi: true, sv: true }
-
-tech.palette.birch:
-  en: "Birch"
-  description: "Palette of the neubrutalism try: birch-bark cream, spruce and a muted lingonberry red."
-  fi: "Koivu"
-  sv: "Björk"
-  machine: { fi: true, sv: true }
-
-tech.palette.lime:
-  en: "Lime"
-  description: "Palette of the neubrutalism try: Sini's cream, lime, lilac and royal blue, and in the dark a spruce night with lime to press."
-  fi: "Lime"
-  sv: "Lime"
-  machine: { fi: true, sv: true }
-
-tech.palette.plum:
-  en: "Plum"
-  description: "Palette of the designers' try: Sini's Organic Pop colours, warm cream, deep plum, soft lavender, acid lime and electric violet, and in the dark a deep plum night."
-  fi: "Luumu"
-  sv: "Plommon"
+tech.look.bold:
+  en: "Bold Contrast"
+  description: "Sini's Bold Contrast style, strong colour blocks (cream, plum, coral and lime by day, navy, lime and electric blue by night), pill-shaped controls and an italic headline, one of the tech screen's choices of style (outside production only). A style's name, kept in English in every language."
+  fi: "Bold Contrast"
+  sv: "Bold Contrast"
   machine: { fi: true, sv: true }
 
 tech.errorTest.sent:

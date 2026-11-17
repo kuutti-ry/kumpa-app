@@ -1,10 +1,12 @@
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { Animated, Easing, useWindowDimensions, View } from "react-native";
+import { MomentGround, momentInk } from "@/components/backdrop";
 import { Sparks, UNSPOKEN } from "@/components/celebration";
-import { GradientBlob, PopHeadline } from "@/components/organic";
+import { PopHeadline } from "@/components/organic";
 import { Text } from "@/components/ui/text";
 import { useT } from "@/lib/locale";
 import { focusOnMount } from "@/theme/a11y";
+import { useLookTraits } from "@/theme/ThemeProvider";
 
 /** The widest the hello is drawn, on a tablet or the web preview. */
 const ROOM_MAX = 400;
@@ -22,9 +24,10 @@ function Round({ size, children }: { size: number; children: ReactNode }) {
 }
 
 /**
- * A match as a hello in the Organic Pop try (outside production, the tech
- * screen's third style), from Sini's "It's a Match!" of 15/11/2026: the
- * greeting large and slanted on a soft shape of lavender running into lime,
+ * A match as a hello in the try's pill styles (outside production, the tech
+ * screen's), from Sini's "It's a Match!" of 15/11/2026: the greeting large on
+ * the style's ground (Organic Pop's soft shape of lavender running into lime,
+ * Glass's frosted pane on bubbles, Bold Contrast's blocks of colour),
  * three strokes beside it, the two faces in circles that come together until
  * they overlap, and the one sentence that says what happened. Nothing loops and
  * nothing counts; with reduce motion on (`still`) it stands as it ends.
@@ -49,6 +52,7 @@ export function MatchPop({
   still: boolean;
 }) {
   const { t } = useT();
+  const { backdrop } = useLookTraits();
   const { width } = useWindowDimensions();
   const room = Math.min(width - 48, ROOM_MAX);
   const face = Math.round(room * 0.5);
@@ -96,11 +100,10 @@ export function MatchPop({
             ],
           }}
         >
-          <GradientBlob
+          <MomentGround
             width={Math.max(room * 1.02, ink * 1.22)}
             height={room * 0.6}
             shape="bean"
-            run="match"
             angle={-12}
           />
         </Animated.View>
@@ -110,11 +113,11 @@ export function MatchPop({
             transform: [{ scale: grow.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1] }) }],
           }}
         >
-          {/* On the shape, in the ink of the accent in either scheme, which the shape is as wide as. */}
+          {/* On the shape, in the ink its colour is paired with in either scheme, which the shape is as wide as. */}
           <PopHeadline
             textRef={focusOnMount}
             size={Math.min(64, Math.floor(room * 0.17))}
-            className="text-accent-foreground"
+            className={momentInk(backdrop)}
           >
             {t("round.hello.title")}
           </PopHeadline>

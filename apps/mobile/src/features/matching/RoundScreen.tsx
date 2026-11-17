@@ -8,6 +8,7 @@ import Undo2 from "lucide-react-native/icons/undo-2";
 import { type ReactNode, type Ref, useCallback, useRef, useState } from "react";
 import { ScrollView, useWindowDimensions, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Backdrop } from "@/components/backdrop";
 import { LoadFailed } from "@/components/LoadFailed";
 import { useSpokenOnIos } from "@/components/Notice";
 import { ScreenHeader } from "@/components/ScreenHeader";
@@ -21,7 +22,7 @@ import { useT } from "@/lib/locale";
 import { cn } from "@/lib/utils";
 import { focusOnMount } from "@/theme/a11y";
 import { useHapticTap } from "@/theme/haptics";
-import { useLook, useTheme } from "@/theme/ThemeProvider";
+import { useLookTraits, useTheme } from "@/theme/ThemeProvider";
 import { useReducedMotion } from "@/theme/useReducedMotion";
 import { DECISION_ICONS, type DecisionIcons } from "./faceButtons";
 import { MatchHello } from "./MatchHello";
@@ -149,14 +150,14 @@ export function RoundScreen({ star }: { star?: string }) {
   // The designers' try (outside production): a match is a hello. Read here, long
   // before a match, so the setting is known when the hello mounts.
   const still = useReducedMotion();
-  const look = useLook();
+  const { moment } = useLookTraits();
   const { highContrast } = useTheme();
-  const hello = look !== "today" && match !== null ? liked?.entry.card : undefined;
+  const hello = moment !== "plain" && match !== null ? liked?.entry.card : undefined;
   const helloPhoto = hello?.photos[0];
-  // Organic Pop's hello is Sini's, its way on a pill of the accent colour. High
-  // contrast makes the accent the background's colour, which would leave the
-  // way on as bare words, so there it is the plain button.
-  const pop = hello !== undefined && look === "organic";
+  // The pill styles' hello is Sini's, its way on a pill of the accent colour.
+  // High contrast makes the accent the background's colour, which would leave
+  // the way on as bare words, so there it is the plain button.
+  const pop = hello !== undefined && moment === "pop";
   const lime = pop && !highContrast;
   const Hello = pop ? MatchPop : MatchHello;
 
@@ -214,6 +215,7 @@ export function RoundScreen({ star }: { star?: string }) {
 
   return (
     <SafeAreaView className="flex-1 bg-background">
+      <Backdrop />
       <ScreenHeader
         title={t(star ? "stars.title" : "round.title")}
         backLabel={t(star ? "stars.card.back" : "round.back")}

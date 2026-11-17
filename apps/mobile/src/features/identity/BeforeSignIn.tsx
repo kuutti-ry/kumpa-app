@@ -1,6 +1,7 @@
 import { realLocale } from "@kuutti/i18n";
 import { ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Backdrop } from "@/components/backdrop";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
@@ -60,6 +61,7 @@ export function BeforeSignIn({ onAgreed }: { onAgreed: (agreements: Agreements) 
   const tap = useHapticTap();
   return (
     <SafeAreaView className="flex-1 bg-background">
+      <Backdrop />
       <ScrollView contentContainerClassName="flex-grow gap-4 p-6">
         <NormsAndConsents />
         <Button

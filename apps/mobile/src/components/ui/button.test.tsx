@@ -428,3 +428,130 @@ describe("Button in the Organic Pop try", () => {
     expect(onPress).not.toHaveBeenCalled();
   });
 });
+
+// Glass and Bold Contrast (outside production) are pills too, each with its own
+// outline variant: Glass's a frosted pane in the primary's line, Bold
+// Contrast's a thicker ink on a taller pill, its words in Saiga Medium.
+describe.each([
+  ["glass", ["border-primary", "bg-card/60"], "min-h-12"],
+  ["bold", ["border-2", "border-foreground", "bg-transparent"], "min-h-14"],
+] as const)("Button in the %s try", (look, outline, height) => {
+  beforeEach(() => store.set("kuutti.preference.look", look));
+  afterEach(() => store.delete("kuutti.preference.look"));
+
+  const shown = async (ui: React.ReactElement, name: string) => {
+    await renderWithTheme(ui);
+    const button = () => screen.getByRole("button", { name });
+    await waitFor(() =>
+      expect(String(button().props.className).split(" ")).toContain("rounded-full"),
+    );
+    return button;
+  };
+
+  it("is a pill of its own height on no shadow", async () => {
+    const button = await shown(<Button>Send</Button>, "Send");
+    expect(String(button().props.className).split(" ")).toContain(height);
+    expect(StyleSheet.flatten(button().props.style).boxShadow).toBeUndefined();
+    await fireEvent(button(), "pressIn");
+    expect(StyleSheet.flatten(button().props.style).transform).toBeUndefined();
+  });
+
+  it("draws its outline variant in its own way", async () => {
+    const button = await shown(<Button variant="outline">Later</Button>, "Later");
+    expect(String(button().props.className).split(" ")).toEqual(
+      expect.arrayContaining([...outline]),
+    );
+  });
+
+  it("weighs its words as the style asks", async () => {
+    await shown(<Button>Send</Button>, "Send");
+    const words = String(screen.getByText("Send").props.className).split(" ");
+    if (look === "bold") expect(words).toContain("font-medium");
+    else expect(words).not.toContain("font-medium");
+  });
+
+  it("is still drawn disabled, dashed and unfilled, and ignores presses", async () => {
+    const onPress = jest.fn();
+    const button = await shown(
+      <Button disabled onPress={onPress}>
+        Send
+      </Button>,
+      "Send",
+    );
+    expect(String(button().props.className).split(" ")).toEqual(
+      expect.arrayContaining(["border-dashed", "bg-transparent"]),
+    );
+    expect(button().props.accessibilityState?.disabled).toBe(true);
+    await fireEvent.press(button());
+    expect(onPress).not.toHaveBeenCalled();
+  });
+
+  it("carries the arrow on a step's Continue, unheard", async () => {
+    await shown(<Button onward>Continue</Button>, "Continue");
+    expect(drawingsIn(screen.toJSON())).toEqual({ all: 1, spoken: 0 });
+  });
+});
+
+// A pressed or hovered ghost or outline keeps its words' colour (text-foreground)
+// and so needs a ground they are paired with: today's --accent is a neutral
+// grey, while a try's --accent and --secondary are its loud colours, white on
+// lavender in Neobrutalism's dark set. The try tints with the ink instead,
+// which looks.test.ts holds the words to; Glass's outline presses to its card.
+describe("A ghost or outline pressed", () => {
+  afterEach(() => store.delete("kuutti.preference.look"));
+
+  const classes = (name: string) =>
+    String(screen.getByRole("button", { name }).props.className).split(" ");
+
+  it.each(["ghost", "outline"] as const)(
+    "fills with --accent in today's look, %s",
+    async (variant) => {
+      await renderWithTheme(<Button variant={variant}>Later</Button>);
+      expect(classes("Later")).toContain("active:bg-accent");
+      expect(classes("Later")).not.toContain("active:bg-foreground/10");
+    },
+  );
+
+  it.each([
+    ["neubrutalism", "ghost"],
+    ["neubrutalism", "outline"],
+    ["organic", "ghost"],
+    ["organic", "outline"],
+    ["glass", "ghost"],
+    ["bold", "ghost"],
+    ["bold", "outline"],
+  ] as const)("tints with the ink in the %s try, %s", async (look, variant) => {
+    store.set("kuutti.preference.look", look);
+    await renderWithTheme(<Button variant={variant}>Later</Button>);
+    await waitFor(() => expect(classes("Later")).toContain("active:bg-foreground/10"));
+    expect(classes("Later").filter((name) => /^active:bg-(accent|secondary)\b/.test(name))).toEqual(
+      [],
+    );
+  });
+
+  it("presses to its card in the glass try, outline", async () => {
+    store.set("kuutti.preference.look", "glass");
+    await renderWithTheme(<Button variant="outline">Later</Button>);
+    await waitFor(() => expect(classes("Later")).toContain("active:bg-card"));
+    expect(classes("Later")).not.toContain("active:bg-accent");
+  });
+
+  it.each(["neubrutalism", "organic", "glass", "bold"] as const)(
+    "lies unfilled when disabled in the %s try",
+    async (look) => {
+      store.set("kuutti.preference.look", look);
+      await renderWithTheme(
+        <>
+          <Button variant="ghost">Later</Button>
+          <Button variant="ghost" disabled>
+            Never
+          </Button>
+        </>,
+      );
+      // The enabled one says the style has loaded.
+      await waitFor(() => expect(classes("Later")).toContain("active:bg-foreground/10"));
+      expect(classes("Never")).toContain("active:bg-transparent");
+      expect(classes("Never")).not.toContain("active:bg-foreground/10");
+    },
+  );
+});

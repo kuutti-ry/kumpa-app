@@ -3,22 +3,24 @@ import ArrowRight from "lucide-react-native/icons/arrow-right";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { Animated, ScrollView, useWindowDimensions, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Backdrop, MomentGround, momentInk, Patch } from "@/components/backdrop";
 import { Blob, Slab, Sparks, UNSPOKEN } from "@/components/celebration";
-import { GradientBlob, PopHeadline, Sparkle } from "@/components/organic";
+import { PopHeadline, Sparkle } from "@/components/organic";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
 import { useT } from "@/lib/locale";
+import { cn } from "@/lib/utils";
 import { focusOnMount } from "@/theme/a11y";
 import { useHapticTap } from "@/theme/haptics";
-import { useLook } from "@/theme/ThemeProvider";
+import { useLookTraits } from "@/theme/ThemeProvider";
 
 const ROOM_MAX = 400;
 
 /**
  * Sini's high five from Figma ("High-Five Lime Celebration", 15/11/2026): two
  * hands meeting over a lime splash, with its own sparkles. A picture, so its
- * colours are Lime's whatever the palette or the scheme; 960 px wide, three
+ * colours are Neobrutalism's whatever the scheme; 960 px wide, three
  * times the width it is drawn at on a phone.
  */
 const HIGH_FIVE = require("../../../../assets/try/high-five.png");
@@ -43,7 +45,9 @@ export function ProfileReady({
   /** The person's own first photo, filling its circle in the Organic Pop try. */
   you?: ReactNode;
 }) {
-  if (useLook() === "organic") return <ReadyPop still={still} onContinue={onContinue} you={you} />;
+  if (useLookTraits().moment === "pop") {
+    return <ReadyPop still={still} onContinue={onContinue} you={you} />;
+  }
   return <ReadyLoud still={still} onContinue={onContinue} />;
 }
 
@@ -74,6 +78,7 @@ function ReadyLoud({ still, onContinue }: { still: boolean; onContinue: () => vo
 
   return (
     <SafeAreaView className="flex-1 bg-background">
+      <Backdrop />
       {/* Wider than a phone, it stands centred in its room, the headline over the hands. */}
       <ScrollView
         contentContainerClassName="w-full flex-grow justify-center gap-6 self-center p-6"
@@ -164,6 +169,7 @@ function ReadyPop({
 }) {
   const { t } = useT();
   const tap = useHapticTap();
+  const { backdrop } = useLookTraits();
   const { width } = useWindowDimensions();
   const room = Math.min(width - 48, ROOM_MAX);
   const face = Math.round(room * 0.56);
@@ -190,6 +196,7 @@ function ReadyPop({
 
   return (
     <SafeAreaView className="flex-1 bg-background">
+      <Backdrop />
       <ScrollView
         contentContainerClassName="w-full flex-grow justify-center gap-6 self-center p-6"
         contentContainerStyle={{ maxWidth: ROOM_MAX + 48 }}
@@ -206,11 +213,10 @@ function ReadyPop({
               ],
             }}
           >
-            <GradientBlob
+            <MomentGround
               width={Math.max(room, ink * 1.2)}
               height={room * 0.62}
               shape="cloud"
-              run="match"
               angle={-20}
             />
           </Animated.View>
@@ -222,11 +228,11 @@ function ReadyPop({
               ],
             }}
           >
-            {/* On the shape, in the ink of the accent in either scheme. */}
+            {/* On the shape, in the ink its colour is paired with in either scheme. */}
             <PopHeadline
               textRef={focusOnMount}
               size={Math.min(60, Math.floor(room * 0.17))}
-              className="text-center text-accent-foreground"
+              className={cn("text-center", momentInk(backdrop))}
             >
               {t("onboarding.ready.title")}
             </PopHeadline>
@@ -251,7 +257,7 @@ function ReadyPop({
           }}
           {...UNSPOKEN}
         >
-          <GradientBlob
+          <Patch
             width={face * 0.95}
             height={face * 0.7}
             shape="bean"
@@ -259,7 +265,7 @@ function ReadyPop({
             angle={200}
             style={{ position: "absolute", left: room * 0.02, bottom: 0 }}
           />
-          <GradientBlob
+          <Patch
             width={face * 0.7}
             height={face * 0.6}
             shape="puddle"

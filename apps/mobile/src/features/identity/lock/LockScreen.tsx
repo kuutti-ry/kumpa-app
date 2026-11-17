@@ -2,6 +2,7 @@ import type { PlainMessageKey } from "@kuutti/i18n";
 import { useEffect, useRef, useState } from "react";
 import { AccessibilityInfo, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Backdrop } from "@/components/backdrop";
 import { KeyboardScrollView } from "@/components/KeyboardScrollView";
 import { sayOnIos } from "@/components/Notice";
 import { Button } from "@/components/ui/button";
@@ -116,6 +117,7 @@ export function LockScreen({
 
   return (
     <SafeAreaView className="flex-1 bg-background">
+      <Backdrop />
       {/* The wrong try's words and the bank stay above the number pad, as on a
           settings screen (KeyboardScrollView, #103). */}
       <KeyboardScrollView contentContainerClassName="flex-grow items-center justify-center gap-6 p-6">

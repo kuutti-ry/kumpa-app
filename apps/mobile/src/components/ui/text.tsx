@@ -4,7 +4,7 @@ import * as React from "react";
 import { Platform, Text as RNText, type Role } from "react-native";
 import { cn } from "@/lib/utils";
 import { HEADING_FONT_SCALE, MAX_FONT_SCALE } from "@/theme/a11y";
-import { useLook } from "@/theme/ThemeProvider";
+import { useLookTraits } from "@/theme/ThemeProvider";
 
 // From React Native Reusables (#12, TD-9), adapted: text follows the OS font
 // size up to MAX_FONT_SCALE, headings less (HEADING_FONT_SCALE), and no
@@ -71,7 +71,7 @@ const LIGHT: Partial<Record<TextVariant, true>> = { default: true, muted: true }
 
 function Text({ className, asChild = false, variant = "default", ...props }: TextProps) {
   const textClass = React.useContext(TextClassContext);
-  const light = useLook() === "organic" && variant !== null && LIGHT[variant];
+  const light = useLookTraits().lightText && variant !== null && LIGHT[variant];
   const Component = asChild ? Slot : RNText;
   return (
     <Component

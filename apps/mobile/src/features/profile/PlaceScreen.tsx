@@ -2,6 +2,7 @@ import type { PlainMessageKey } from "@kuutti/i18n";
 import type { HomeSummary, HomeUpdate } from "@kuutti/schema";
 import { useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Backdrop } from "@/components/backdrop";
 import { KeyboardScrollView } from "@/components/KeyboardScrollView";
 import { LoadFailedScreen, LoadingScreen } from "@/components/LoadFailed";
 import { sayAloud, useSpokenOnIos } from "@/components/Notice";
@@ -66,6 +67,7 @@ export function PlaceScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-background">
+      <Backdrop />
       <ScreenHeader title={t("profile.place.title")} backLabel={t("profile.place.back")} />
       <KeyboardScrollView contentContainerClassName="flex-grow gap-6 p-6">
         <Text>{t("profile.place.othersSee")}</Text>

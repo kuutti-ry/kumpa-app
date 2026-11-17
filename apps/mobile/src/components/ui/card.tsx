@@ -2,29 +2,32 @@ import { View } from "react-native";
 import { Text, TextClassContext } from "@/components/ui/text";
 import { cn } from "@/lib/utils";
 import { HARD_SHADOW, useHardShadow } from "@/theme/shadow";
-import { useLook } from "@/theme/ThemeProvider";
+import { useLookTraits } from "@/theme/ThemeProvider";
 
 function Card({
   className,
   style,
   ...props
 }: React.ComponentProps<typeof View> & React.RefAttributes<View>) {
-  const look = useLook();
-  const neubrutalist = look === "neubrutalism";
+  const { ink, pill, glass } = useLookTraits();
   const shadow = useHardShadow(HARD_SHADOW.container);
   return (
     <TextClassContext.Provider value="text-card-foreground">
       <View
         className={cn(
-          "bg-card flex flex-col gap-6 py-6",
-          neubrutalist
-            ? "border-stroke rounded-lg border-2 border-solid"
-            : look === "organic"
-              ? "border-border/70 rounded-3xl border"
-              : "border-border rounded-xl border shadow-sm shadow-black/5",
+          "flex flex-col gap-6 py-6",
+          // Today's, or the try's: Neobrutalism's ink and hard shadow, Glass's
+          // frosted pane over the backdrop, or the other pill styles' soft card.
+          ink
+            ? "bg-card border-stroke rounded-lg border-2 border-solid"
+            : glass
+              ? "bg-card/60 border-card/80 rounded-3xl border"
+              : pill
+                ? "bg-card border-border/70 rounded-3xl border"
+                : "bg-card border-border rounded-xl border shadow-sm shadow-black/5",
           className,
         )}
-        style={[neubrutalist && shadow, style]}
+        style={[ink && shadow, style]}
         {...props}
       />
     </TextClassContext.Provider>

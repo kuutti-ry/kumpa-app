@@ -2,6 +2,7 @@ import type { PlainMessageKey } from "@kuutti/i18n";
 import { useState } from "react";
 import { Linking, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Backdrop } from "@/components/backdrop";
 import { Notice } from "@/components/Notice";
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
@@ -69,6 +70,7 @@ export function LoadingScreen() {
   const { t } = useT();
   return (
     <SafeAreaView className="flex-1 bg-background">
+      <Backdrop />
       <View className="flex-1 items-center justify-center p-6">
         <Text accessibilityLiveRegion="polite">{t("load.loading")}</Text>
       </View>
@@ -80,6 +82,7 @@ export function LoadingScreen() {
 export function LoadFailedScreen({ error, onRetry }: { error: unknown; onRetry: () => void }) {
   return (
     <SafeAreaView className="flex-1 bg-background">
+      <Backdrop />
       <View className="flex-1 items-center justify-center gap-4 p-6">
         <LoadFailed error={error} onRetry={onRetry} />
       </View>

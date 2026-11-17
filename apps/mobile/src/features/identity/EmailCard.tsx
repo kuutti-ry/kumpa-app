@@ -4,6 +4,7 @@ import { useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AccessibilityInfo, Platform, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Backdrop } from "@/components/backdrop";
 import { KeyboardScrollView } from "@/components/KeyboardScrollView";
 import { LoadFailed } from "@/components/LoadFailed";
 import { sayAloud } from "@/components/Notice";
@@ -425,6 +426,7 @@ export function EmailScreen() {
   const lockOfferDue = useLockOfferDue();
   return (
     <SafeAreaView className="flex-1 bg-background">
+      <Backdrop />
       <KeyboardScrollView contentContainerClassName="flex-grow items-center gap-6 p-6">
         <Text variant="h1" accessibilityRole="header">
           {t("profile.later.title")}

@@ -4,6 +4,7 @@ import Eye from "lucide-react-native/icons/eye";
 import { useCallback, useRef, useState } from "react";
 import { ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Backdrop } from "@/components/backdrop";
 import { LoadFailedScreen, LoadingScreen } from "@/components/LoadFailed";
 import { type Row, RowGroup } from "@/components/RowGroup";
 import { ScreenHeader } from "@/components/ScreenHeader";
@@ -129,6 +130,7 @@ export function ProfileScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-background">
+      <Backdrop />
       <ScreenHeader title={t("profile.title")} backLabel={t("profile.back")}>
         <Button
           variant="ghost"

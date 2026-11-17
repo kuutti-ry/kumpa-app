@@ -9,6 +9,7 @@ import {
   type View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Backdrop } from "@/components/backdrop";
 import { KeyboardScrollView } from "@/components/KeyboardScrollView";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { useT } from "@/lib/locale";
@@ -146,6 +147,7 @@ export function SettingsPage({
   const router = useRouter();
   return (
     <SafeAreaView className="flex-1 bg-background">
+      <Backdrop />
       <ScreenHeader
         title={title}
         backLabel={t("settings.back")}

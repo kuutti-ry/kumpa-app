@@ -6,12 +6,12 @@ import { drawn, Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
 import { cn } from "@/lib/utils";
 import { useTokenColour } from "@/theme/shadow";
-import { useTheme } from "@/theme/ThemeProvider";
+import { useLookTraits, useTheme } from "@/theme/ThemeProvider";
 
-// The pieces of the Organic Pop try (outside production, the tech screen's
-// third style), after Sini's board of 15/11/2026: soft shapes in a gradient of
-// the palette's colours, a slanted display headline, and small marks drawn in
-// the ink. Every colour is a token, so the shapes follow every set of
+// The pieces of the Organic Pop try (outside production, one of the tech
+// screen's styles), after Sini's board of 15/11/2026: soft shapes in a
+// gradient of the style's colours, a display headline, and small marks drawn
+// in the ink; the headline serves the other pill styles too. Every colour is a token, so the shapes follow every set of
 // tokens.css; all of it but the headline's words is hidden from screen readers.
 
 /** Three shapes on a 200-point grid: a three-lobed puddle, a wide bean, a cloud. */
@@ -134,11 +134,13 @@ export function Sparkle({
 }
 
 /**
- * The try's display headline: Saiga at its heaviest, slanted as Sini's
- * "Saiga Bold Italic" is (Saiga's licensed faces have an italic in Regular
- * alone, so the Extrabold leans by 9 degrees). The screen's first heading;
- * `textRef` takes the screen reader to it. Drawn at `size` whatever the OS's
- * text size, being larger already than h1 at its largest.
+ * The try's display headline, as the style draws it (looks.ts): in Organic Pop
+ * Saiga at its heaviest, slanted as Sini's "Saiga Bold Italic" is (Saiga's
+ * licensed faces have an italic in Regular alone, so the Extrabold leans by 9
+ * degrees); in Glass and Bold Contrast Saiga's own italic, as her boards name
+ * it. The screen's first heading; `textRef` takes the screen reader to it.
+ * Drawn at `size` whatever the OS's text size, being larger already than h1 at
+ * its largest.
  */
 export function PopHeadline({
   children,
@@ -151,19 +153,20 @@ export function PopHeadline({
   textRef?: Ref<RNText>;
   className?: string;
 }) {
+  const italic = useLookTraits().headline === "italic";
   return (
     <Text
       ref={textRef}
       variant="h1"
       accessibilityLiveRegion="polite"
       maxFontSizeMultiplier={1}
-      className={cn("font-extrabold text-foreground", className)}
+      className={cn(italic ? "font-normal italic" : "font-extrabold", "text-foreground", className)}
       style={{
         fontSize: size,
-        lineHeight: Math.round(size * 1.04),
-        letterSpacing: -size * 0.02,
+        lineHeight: Math.round(size * (italic ? 1.1 : 1.04)),
+        letterSpacing: -size * (italic ? 0.01 : 0.02),
         paddingHorizontal: Math.ceil(size * 0.08),
-        transform: [{ skewX: "-9deg" }],
+        transform: italic ? undefined : [{ skewX: "-9deg" }],
       }}
     >
       {children}

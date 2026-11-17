@@ -5,6 +5,7 @@ import * as Updates from "expo-updates";
 import { useCallback, useEffect, useState } from "react";
 import { ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Backdrop } from "@/components/backdrop";
 import { Choice } from "@/components/Choice";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { Button } from "@/components/ui/button";
@@ -16,7 +17,8 @@ import { buildInfo } from "@/lib/build";
 import { appEnvironment, isProduction } from "@/lib/environment";
 import { useT } from "@/lib/locale";
 import { useHapticTap } from "@/theme/haptics";
-import { LOOKS, PALETTES, useTheme } from "@/theme/ThemeProvider";
+import { LOOKS, type Look } from "@/theme/looks";
+import { useTheme } from "@/theme/ThemeProvider";
 import { SourceOffer } from "./SourceOffer";
 
 type State =
@@ -80,6 +82,7 @@ export function TechConfigScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-background">
+      <Backdrop />
       <ScreenHeader title={t("tech.title")} backLabel={t("tech.back")} />
       <ScrollView contentContainerClassName="items-center gap-4 p-6">
         {isProduction() ? (
@@ -151,10 +154,10 @@ export function TechConfigScreen() {
               </View>
             </Card>
 
-            {/* The designers' try: a style and a palette apart (tokens.css). This
-                screen exists outside production only, so a released app keeps
-                today's look. */}
-            <TryChoices />
+            {/* The designers' try: a style with its own colours (looks.ts,
+                tokens.css). This screen exists outside production only, so a
+                released app keeps today's look. */}
+            <StyleChoice />
 
             {/* Proves error reporting end to end (#11): a real JS error with a stack
                 for Sentry to symbolicate. A no-op in a build without a DSN. */}
@@ -187,62 +190,42 @@ export function TechConfigScreen() {
   );
 }
 
-const LOOK_LABELS = {
+const LOOK_LABELS: Record<Look, PlainMessageKey> = {
   today: "tech.look.today",
   neubrutalism: "tech.look.neubrutalism",
   organic: "tech.look.organic",
-} as const;
+  glass: "tech.look.glass",
+  bold: "tech.look.bold",
+};
 
-const PALETTE_LABELS = {
-  today: "tech.palette.today",
-  ice: "tech.palette.ice",
-  dusk: "tech.palette.dusk",
-  birch: "tech.palette.birch",
-  lime: "tech.palette.lime",
-  plum: "tech.palette.plum",
-} as const;
-
-function TryChoices() {
+function StyleChoice() {
   const { t } = useT();
-  const theme = useTheme();
+  const { look, setLook } = useTheme();
   const tap = useHapticTap();
-  const group = <Option extends string>(
-    title: "tech.look.title" | "tech.palette.title",
-    options: readonly Option[],
-    labels: Record<Option, PlainMessageKey>,
-    chosen: Option,
-    choose: (option: Option) => void,
-  ) => (
+  return (
     <View className="w-full max-w-md gap-2">
       <Text variant="group" role="heading" aria-level="2">
-        {t(title)}
+        {t("tech.look.title")}
       </Text>
       <View
         accessibilityRole="radiogroup"
-        accessibilityLabel={t(title)}
-        className="flex-row flex-wrap gap-2"
+        accessibilityLabel={t("tech.look.title")}
+        // A column, one style a row: five names of uneven length wrapped into
+        // uneven rows that read as groups.
+        className="gap-2"
       >
-        {options.map((option) => {
-          const label: PlainMessageKey = labels[option];
-          return (
-            <Choice
-              key={option}
-              label={t(label)}
-              chosen={chosen === option}
-              onPress={() => {
-                tap();
-                choose(option);
-              }}
-            />
-          );
-        })}
+        {LOOKS.map((option) => (
+          <Choice
+            key={option}
+            label={t(LOOK_LABELS[option])}
+            chosen={look === option}
+            onPress={() => {
+              tap();
+              setLook(option);
+            }}
+          />
+        ))}
       </View>
     </View>
-  );
-  return (
-    <>
-      {group("tech.look.title", LOOKS, LOOK_LABELS, theme.look, theme.setLook)}
-      {group("tech.palette.title", PALETTES, PALETTE_LABELS, theme.palette, theme.setPalette)}
-    </>
   );
 }

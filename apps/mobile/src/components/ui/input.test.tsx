@@ -53,6 +53,8 @@ describe("Input", () => {
 describe.each([
   ["neubrutalism", "border-2"],
   ["organic", "rounded-2xl"],
+  ["glass", "bg-card/70"],
+  ["bold", "rounded-2xl"],
 ] as const)("Input in the %s try", (look, drawnBy) => {
   const store = (SecureStore as unknown as { __store: Map<string, string> }).__store;
   beforeEach(() => store.set("kuutti.preference.look", look));
@@ -91,5 +93,31 @@ describe.each([
     const classes = await classesOf(true);
     expect(classes).toContain("border-solid");
     expect(classes).not.toContain("border-dashed");
+  });
+});
+
+// Glass's field is a frosted pane over the backdrop; in high contrast it is
+// the pill styles' solid card, nothing seen through it.
+describe("Input in the Glass try", () => {
+  const store = (SecureStore as unknown as { __store: Map<string, string> }).__store;
+  beforeEach(() => store.set("kuutti.preference.look", "glass"));
+  afterEach(() => {
+    store.delete("kuutti.preference.look");
+    store.delete("kuutti.preference.highContrast");
+  });
+  const classes = () => String(screen.getByLabelText("Your name").props.className).split(" ");
+
+  it("is a rounded frosted pane", async () => {
+    await renderWithTheme(<Input accessibilityLabel="Your name" />);
+    await waitFor(() => expect(classes()).toContain("bg-card/70"));
+    expect(classes()).toContain("rounded-2xl");
+  });
+
+  it("is a solid card with high contrast on", async () => {
+    store.set("kuutti.preference.highContrast", "true");
+    await renderWithTheme(<Input accessibilityLabel="Your name" />);
+    await waitFor(() => expect(classes()).toContain("rounded-2xl"));
+    expect(classes()).toContain("bg-card");
+    expect(classes()).not.toContain("bg-card/70");
   });
 });

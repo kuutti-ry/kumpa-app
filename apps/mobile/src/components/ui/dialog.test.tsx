@@ -1,4 +1,5 @@
-import { act, fireEvent, render, screen } from "@testing-library/react-native";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
+import * as SecureStore from "expo-secure-store";
 import { DeviceEventEmitter, Keyboard, Platform, StyleSheet, Text, TextInput } from "react-native";
 import { a11yProblems, type HostNode, pressables } from "@/test/a11y";
 import { renderWithTheme, underProviders } from "@/test/render";
@@ -16,6 +17,8 @@ import {
 // The dialog (#12, TD-9): a labelled 44 pt close control, a scrim that is not
 // an accessibility element, and on the web preview a tap on the scrim itself,
 // not on the dialog, closes it.
+
+const store = (SecureStore as unknown as { __store: Map<string, string> }).__store;
 
 describe("Dialog", () => {
   it("shows its title and body with a labelled close control that closes it", async () => {
@@ -79,6 +82,30 @@ describe("Dialog", () => {
     expect(scrim.props.accessible).toBe(false);
     await fireEvent.press(scrim);
     expect(onPress).toHaveBeenCalledTimes(1);
+  });
+});
+
+// Pressed, the close control's cross keeps its colour on a ground it is paired
+// with: today's --accent, or the ink's tint in a try style, whose --accent is loud.
+describe("A dialog's close control pressed (#408)", () => {
+  afterEach(() => store.delete("kuutti.preference.look"));
+
+  it.each([
+    ["today", "active:bg-accent", "active:bg-foreground/10"],
+    ["glass", "active:bg-foreground/10", "active:bg-accent"],
+  ] as const)("fills in the %s style's way", async (look, fill, not) => {
+    if (look !== "today") store.set("kuutti.preference.look", look);
+    await renderWithTheme(
+      <Dialog open>
+        <DialogContent closeLabel="Close">
+          <DialogTitle>Remove this photo?</DialogTitle>
+        </DialogContent>
+      </Dialog>,
+    );
+    const classes = () =>
+      String(screen.getByRole("button", { name: "Close" }).props.className).split(" ");
+    await waitFor(() => expect(classes()).toContain(fill));
+    expect(classes()).not.toContain(not);
   });
 });
 

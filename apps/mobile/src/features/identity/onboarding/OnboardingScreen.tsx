@@ -16,6 +16,7 @@ import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { type ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Backdrop } from "@/components/backdrop";
 import { Choice } from "@/components/Choice";
 import { KeyboardScrollView } from "@/components/KeyboardScrollView";
 import { LoadFailedScreen, LoadingScreen } from "@/components/LoadFailed";
@@ -47,7 +48,7 @@ import {
 import { fetchInvitations, InvitationStep } from "@/features/rewards";
 import { useT } from "@/lib/locale";
 import { useHapticTap } from "@/theme/haptics";
-import { useLook } from "@/theme/ThemeProvider";
+import { useLookTraits } from "@/theme/ThemeProvider";
 import { useReducedMotion } from "@/theme/useReducedMotion";
 import { agreementsOf, giveAgreements } from "../agreements";
 import { NormsAndConsents } from "../BeforeSignIn";
@@ -208,7 +209,7 @@ export function OnboardingScreen() {
     if (current !== null && current !== "done") setWalked(true);
   }, [current]);
   const still = useReducedMotion();
-  const celebrate = useLook() !== "today" && walked;
+  const celebrate = useLookTraits().moment !== "plain" && walked;
   useEffect(() => {
     if (current === "done" && !celebrate) router.replace("/");
   }, [current, celebrate, router]);
@@ -334,6 +335,7 @@ export function OnboardingScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-background">
+      <Backdrop />
       {/* The home's list lies under its field: a scroll reaches it past the keyboard. */}
       <KeyboardScrollView ref={scroll} contentContainerClassName="flex-grow gap-4 p-6">
         {current !== "welcome" && current !== "invitation" && (

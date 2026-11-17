@@ -2,7 +2,7 @@ import type * as React from "react";
 import { Platform, TextInput } from "react-native";
 import { cn } from "@/lib/utils";
 import { MAX_FONT_SCALE } from "@/theme/a11y";
-import { useLook } from "@/theme/ThemeProvider";
+import { useLookTraits } from "@/theme/ThemeProvider";
 
 // From React Native Reusables (#12), adapted: a minimum height instead of a
 // fixed one (scaled text is never clipped), the 3:1 --input outline in both
@@ -14,15 +14,16 @@ type InputProps = Omit<React.ComponentProps<typeof TextInput>, "accessibilityLab
   React.RefAttributes<TextInput> & { accessibilityLabel: string };
 
 function Input({ className, ...props }: InputProps) {
-  // Today's 1 px --input outline, or the neubrutalism try's stroke in the ink.
-  const look = useLook();
-  const neubrutalist = look === "neubrutalism";
+  // Today's 1 px --input outline, the try's Neobrutalism stroke in the ink, or
+  // a pill style's soft field, frosted in Glass.
+  const { ink, pill, glass } = useLookTraits();
   return (
     <TextInput
       className={cn(
         "min-h-touch w-full min-w-0 rounded-md border-solid px-3 py-2 font-system text-body text-foreground placeholder:text-muted-foreground",
-        neubrutalist ? "border-2 border-stroke bg-card" : "border border-input bg-background",
-        look === "organic" && "rounded-2xl bg-card px-4",
+        ink ? "border-2 border-stroke bg-card" : "border border-input bg-background",
+        pill && "rounded-2xl bg-card px-4",
+        glass && "bg-card/70",
         props.editable === false && "border-dashed border-input text-muted-foreground",
         Platform.select({
           web: "outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring",

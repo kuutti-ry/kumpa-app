@@ -1,6 +1,6 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react-native";
 import * as SecureStore from "expo-secure-store";
-import { AccessibilityInfo, Platform } from "react-native";
+import { AccessibilityInfo, Platform, StyleSheet } from "react-native";
 import { a11yProblems, type HostNode, pressables } from "@/test/a11y";
 import { hasCutText } from "@/test/layout";
 import { renderWithTheme, underProviders } from "@/test/render";
@@ -181,6 +181,8 @@ describe("Stepper", () => {
 describe.each([
   ["neubrutalism", "rounded-2xl border-solid border-stroke"],
   ["organic", "rounded-[32px]"],
+  ["glass", "rounded-[32px]"],
+  ["bold", "rounded-[32px]"],
 ] as const)("Stepper in the %s try", (look, drawnBy) => {
   const store = (SecureStore as unknown as { __store: Map<string, string> }).__store;
   beforeEach(() => store.set("kuutti.preference.look", look));
@@ -240,4 +242,49 @@ describe("Stepper's tone in the neubrutalism try", () => {
       expect(screen.getByText("170 cm").props.className).toMatch(new RegExp(`\\b${ink}\\b`));
     },
   );
+});
+
+// The pill styles write the number as their headline: Organic Pop's slanted
+// Saiga Extrabold, Glass's and Bold Contrast's Saiga italic; Glass's pill and
+// tab are frosted panes over the backdrop, solid again in high contrast.
+describe.each([
+  ["organic", "font-extrabold", [{ skewX: "-9deg" }], "bg-card"],
+  ["glass", "italic", undefined, "bg-card/70"],
+  ["bold", "italic", undefined, "bg-card"],
+] as const)("Stepper's number and pane in the %s try", (look, face, transform, pane) => {
+  const store = (SecureStore as unknown as { __store: Map<string, string> }).__store;
+  beforeEach(() => store.set("kuutti.preference.look", look));
+  afterEach(() => {
+    store.delete("kuutti.preference.look");
+    store.delete("kuutti.preference.highContrast");
+  });
+
+  /** The classes of the pill and of the tab above it. */
+  const panes = () =>
+    JSON.stringify(screen.toJSON()).match(/"className":"[^"]*rounded-(\[32px\]|t-2xl)[^"]*"/g) ??
+    [];
+
+  it("writes the number in the style's face", async () => {
+    await show();
+    await waitFor(() => expect(JSON.stringify(screen.toJSON())).toContain("rounded-[32px]"));
+    const number = screen.getByText("170 cm");
+    expect(String(number.props.className).split(" ")).toContain(face);
+    expect(StyleSheet.flatten(number.props.style).transform).toEqual(transform);
+  });
+
+  it("draws its pill and tab on the style's pane", async () => {
+    await show();
+    await waitFor(() => expect(panes()).toHaveLength(2));
+    for (const each of panes()) expect(each.split(/[\s"]/)).toContain(pane);
+  });
+
+  it("draws them solid with high contrast on", async () => {
+    store.set("kuutti.preference.highContrast", "true");
+    await show();
+    await waitFor(() => expect(panes()).toHaveLength(2));
+    for (const each of panes()) {
+      expect(each.split(/[\s"]/)).toContain("bg-card");
+      expect(each).not.toContain("bg-card/70");
+    }
+  });
 });

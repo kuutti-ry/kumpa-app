@@ -9,6 +9,7 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Backdrop } from "@/components/backdrop";
 import { Choice } from "@/components/Choice";
 import { LoadFailedScreen, LoadingScreen } from "@/components/LoadFailed";
 import { Notice, sayAloud } from "@/components/Notice";
@@ -218,6 +219,7 @@ export function DealBreakerFieldScreen({ field: key }: { field: string }) {
 
   return (
     <SafeAreaView className="flex-1 bg-background">
+      <Backdrop />
       <ScreenHeader title={t(fieldLabelKey(field))} backLabel={t("profile.dealBreakers.back")} />
       <ScrollView
         contentContainerClassName="flex-grow gap-6 p-6"

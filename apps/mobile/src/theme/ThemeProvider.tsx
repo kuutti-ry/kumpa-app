@@ -9,41 +9,13 @@ import {
 } from "react-native";
 import { readPreference, writePreference } from "@/lib/preferences";
 import { cn } from "@/lib/utils";
+import { isLook, LOOK_CLASS, type Look, type LookTraits, traitsOf } from "./looks";
 import { useMotionDuration } from "./useReducedMotion";
 
 export type SchemePreference = "system" | "light" | "dark";
 
 const isScheme = (value: string | null): value is SchemePreference =>
   value === "system" || value === "light" || value === "dark";
-
-/**
- * The designers' try of neubrutalism, chosen on the tech screen, which
- * production has not, so a released app always looks as today: the style,
- * today's, neubrutalism's outlines and hard shadows, or Organic Pop's soft
- * shapes, and apart from it the palette, today's colours (the base sets of
- * tokens.css) or one of the try's five, a class on the root view.
- */
-export const LOOKS = ["today", "neubrutalism", "organic"] as const;
-export type Look = (typeof LOOKS)[number];
-export const PALETTES = ["today", "ice", "dusk", "birch", "lime", "plum"] as const;
-export type Palette = (typeof PALETTES)[number];
-
-const isLook = (value: string | null): value is Look =>
-  (LOOKS as readonly (string | null)[]).includes(value);
-
-const isPalette = (value: string | null): value is Palette =>
-  (PALETTES as readonly (string | null)[]).includes(value);
-
-// Whole class names, never built from parts: Tailwind keeps a rule of
-// tokens.css only for a class it finds written out in the source.
-const PALETTE_CLASS: Record<Palette, { light?: string; dark?: string }> = {
-  today: {},
-  ice: { light: "palette-ice", dark: "palette-ice-dark" },
-  dusk: { light: "palette-dusk", dark: "palette-dusk-dark" },
-  birch: { light: "palette-birch", dark: "palette-birch-dark" },
-  lime: { light: "palette-lime", dark: "palette-lime-dark" },
-  plum: { light: "palette-plum", dark: "palette-plum-dark" },
-};
 
 type Theme = {
   /** What is on screen now. */
@@ -53,10 +25,9 @@ type Theme = {
   setPreference: (preference: SchemePreference) => void;
   highContrast: boolean;
   setHighContrast: (on: boolean) => void;
+  /** The designers' try's style (looks.ts), "today" unless chosen on the tech screen. */
   look: Look;
   setLook: (look: Look) => void;
-  palette: Palette;
-  setPalette: (palette: Palette) => void;
 };
 
 const ThemeContext = React.createContext<Theme | null>(null);
@@ -100,7 +71,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const systemHighContrast = useSystemHighContrast();
   const [chosenHighContrast, setChosenHighContrast] = React.useState<boolean | null>(null);
   const [look, setLookState] = React.useState<Look>("today");
-  const [palette, setPaletteState] = React.useState<Palette>("today");
   const highContrast = chosenHighContrast ?? systemHighContrast;
   const scheme = colorScheme === "dark" ? "dark" : "light";
 
@@ -134,10 +104,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     setLookState(next);
     void writePreference("look", next === "today" ? null : next);
   }, []);
-  const setPalette = React.useCallback((next: Palette) => {
-    setPaletteState(next);
-    void writePreference("palette", next === "today" ? null : next);
-  }, []);
 
   // What was chosen last time, read once; nothing stored is the OS's setting.
   React.useEffect(() => {
@@ -151,9 +117,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     void readPreference("look").then((stored) => {
       if (mounted && isLook(stored)) setLookState(stored);
     });
-    void readPreference("palette").then((stored) => {
-      if (mounted && isPalette(stored)) setPaletteState(stored);
-    });
     return () => {
       mounted = false;
     };
@@ -163,12 +126,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // high-contrast set also goes on <body> there (not on <html>, where
   // .dark:root would outrank it). Native portals render inside the PortalHost
   // and inherit from the root view.
-  // High contrast wins over a palette: its sets are for a person who needs them.
+  // High contrast wins over a style's colours: its sets are for a person who
+  // needs them.
   const contrastClass = highContrast
     ? scheme === "dark"
       ? "high-contrast-dark"
       : "high-contrast"
-    : PALETTE_CLASS[palette][scheme];
+    : LOOK_CLASS[look][scheme];
   React.useEffect(() => {
     if (Platform.OS !== "web" || !contrastClass) return;
     const body = globalThis.document?.body;
@@ -178,7 +142,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const duration = useMotionDuration(THEME_FADE_MS);
   const opacity = React.useRef(new Animated.Value(1)).current;
-  const appearance = `${scheme}:${highContrast}:${look}:${palette}`;
+  const appearance = `${scheme}:${highContrast}:${look}`;
   const shown = React.useRef(appearance);
   React.useEffect(() => {
     if (shown.current === appearance) return;
@@ -200,20 +164,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       setHighContrast,
       look,
       setLook,
-      palette,
-      setPalette,
     }),
-    [
-      scheme,
-      preference,
-      setPreference,
-      highContrast,
-      setHighContrast,
-      look,
-      setLook,
-      palette,
-      setPalette,
-    ],
+    [scheme, preference, setPreference, highContrast, setHighContrast, look, setLook],
   );
 
   return (
@@ -230,11 +182,17 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * The style the primitives draw in: today's, or the try's neubrutalism.
+ * The style the primitives draw in: today's, or one of the try's.
  * Today's where no provider is above, as in a test rendered without one.
  */
 export function useLook(): Look {
   return React.useContext(ThemeContext)?.look ?? "today";
+}
+
+/** What the style asks of a primitive or a screen (looks.ts), high contrast applied. */
+export function useLookTraits(): LookTraits {
+  const theme = React.useContext(ThemeContext);
+  return traitsOf(theme?.look ?? "today", theme?.highContrast ?? false);
 }
 
 export function useTheme(): Theme {

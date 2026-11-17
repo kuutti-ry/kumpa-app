@@ -13,6 +13,7 @@ import ImagePlus from "lucide-react-native/icons/image-plus";
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { AppState, KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Backdrop } from "@/components/backdrop";
 import { LoadFailed } from "@/components/LoadFailed";
 import { Notice, sayAloud } from "@/components/Notice";
 import { ScreenHeader } from "@/components/ScreenHeader";
@@ -535,6 +536,7 @@ export function ConversationScreen({ id }: { id: string }) {
   }, [state, closedHow, acting, view, t]);
   return (
     <SafeAreaView className="flex-1 bg-background">
+      <Backdrop />
       <ScreenHeader title={title} backLabel={t("chat.back")}>
         {offered && (
           <Button

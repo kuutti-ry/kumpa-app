@@ -1,6 +1,7 @@
 import { useRouter } from "expo-router";
 import { useEffect } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Backdrop } from "@/components/backdrop";
 import { KeyboardScrollView } from "@/components/KeyboardScrollView";
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
@@ -26,6 +27,7 @@ export function LockOfferScreen() {
   }, []);
   return (
     <SafeAreaView className="flex-1 bg-background">
+      <Backdrop />
       <KeyboardScrollView contentContainerClassName="flex-grow gap-6 p-6">
         <Text variant="h1" accessibilityRole="header">
           {t("profile.later.title")}
