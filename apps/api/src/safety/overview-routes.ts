@@ -6,10 +6,10 @@ import { foundThemCounts } from "../identity/index.ts";
 import { staffOf } from "../lib/admin-middleware.ts";
 import type { AppEnv } from "../lib/env.ts";
 import { finnishDay } from "../lib/finnish-day.ts";
-import { AUTO_SHADOW_BAN_REVIEW_HOURS_KEY, matchingConfigNumber } from "../lib/matching-config.ts";
+import { matchingConfigNumber } from "../lib/matching-config.ts";
 import { bearer, json, staffErrors } from "../lib/openapi.ts";
 import { queueSummary } from "../media/index.ts";
-import { automaticBanSummary } from "./automatic.ts";
+import { AUTO_SHADOW_BAN_REVIEW_HOURS_KEY, automaticBanSummary } from "./automatic.ts";
 import { feedbackSummary } from "./feedback.ts";
 import { reportSummary } from "./report-queue.ts";
 

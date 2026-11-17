@@ -188,7 +188,6 @@ export type MessageParams = {
   "admin.automaticBans.account": { "account": string };
   "admin.automaticBans.confirm": Record<never, never>;
   "admin.automaticBans.confirmEffect": Record<never, never>;
-  "admin.automaticBans.confirmEffectReports": Record<never, never>;
   "admin.automaticBans.confirmTitle": { "account": string };
   "admin.automaticBans.done.confirm": { "account": string };
   "admin.automaticBans.done.reverse": { "account": string };
@@ -198,7 +197,6 @@ export type MessageParams = {
   "admin.automaticBans.reportsLink": Record<never, never>;
   "admin.automaticBans.reverse": Record<never, never>;
   "admin.automaticBans.reverseEffect": Record<never, never>;
-  "admin.automaticBans.reverseEffectReports": Record<never, never>;
   "admin.automaticBans.reverseTitle": { "account": string };
   "admin.automaticBans.rule.cards_served": { "people": number; "first": string; "at": string };
   "admin.automaticBans.rule.first_messages": { "conversations": number; "first": string; "at": string };
@@ -1444,7 +1442,6 @@ export type MessageParams = {
   "safety.report.send": Record<never, never>;
   "safety.sending": Record<never, never>;
   "sanction.statement.contest": Record<never, never>;
-  "sanction.statement.contestAutomatic": Record<never, never>;
   "sanction.statement.ground.commercial_use": Record<never, never>;
   "sanction.statement.ground.harassment": Record<never, never>;
   "sanction.statement.ground.misrepresentation": Record<never, never>;
@@ -1452,15 +1449,6 @@ export type MessageParams = {
   "sanction.statement.ground.scraping": Record<never, never>;
   "sanction.statement.ground.under_age": Record<never, never>;
   "sanction.statement.moderator": Record<never, never>;
-  "sanction.statement.review": { "hours": number };
-  "sanction.statement.reviewed": Record<never, never>;
-  "sanction.statement.rule.cards_served": Record<never, never>;
-  "sanction.statement.rule.first_messages": Record<never, never>;
-  "sanction.statement.rule.photo_fetches": Record<never, never>;
-  "sanction.statement.rule.reports": Record<never, never>;
-  "sanction.statement.rule.round_reads": Record<never, never>;
-  "sanction.statement.rule.same_first_message": Record<never, never>;
-  "sanction.statement.ruleGround": Record<never, never>;
   "sanction.statement.why": { "reason": string };
   "settings.about.title": Record<never, never>;
   "settings.back": Record<never, never>;

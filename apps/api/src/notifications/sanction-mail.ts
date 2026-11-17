@@ -5,7 +5,6 @@ import { errorName } from "../lib/errors.ts";
 import { tFor } from "../lib/i18n.ts";
 import type { Logger } from "../lib/logger.ts";
 import { type Mailer, MailFailed } from "../lib/mail.ts";
-import { AUTO_SHADOW_BAN_REVIEW_HOURS_KEY, matchingConfigNumber } from "../lib/matching-config.ts";
 import { type SanctionMail, sanctionMailOf } from "./repo.ts";
 
 /** Each kind's subject. */
@@ -49,13 +48,7 @@ export async function mailSanction(
   if (!mail) return false;
   const locale = realLocale(mail.locale ?? "en");
   const t = tFor(locale);
-  const statement = sanctionStatement(t, {
-    reason: mail.reason,
-    rule: mail.rule,
-    reviewed: mail.reviewed,
-    // Said only by a rule's shadow ban no moderator has looked at yet.
-    reviewHours: await matchingConfigNumber(deps.db, AUTO_SHADOW_BAN_REVIEW_HOURS_KEY),
-  });
+  const statement = sanctionStatement(t, mail.reason);
   try {
     await deps.mailer.send({
       to: mail.address,

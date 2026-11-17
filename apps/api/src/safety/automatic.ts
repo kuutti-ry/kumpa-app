@@ -7,7 +7,7 @@ import type { Logger } from "../lib/logger.ts";
 import { matchingConfigNumbers } from "../lib/matching-config.ts";
 import { cardsServedSince, othersPhotoFetchesSince } from "../media/index.ts";
 import { reportersSince } from "./reports.ts";
-import { applySanction, toldWhenKept } from "./sanctions.ts";
+import { applySanction } from "./sanctions.ts";
 
 // The automatic shadow bans (#105, ADR-033): rules that take a person out of
 // everyone else's sight at once when their behaviour looks like abuse, until
@@ -43,6 +43,8 @@ const AUTO_SHADOW_BAN_CARDS_SERVED_MINUTES_KEY = "auto_shadow_ban_cards_served_m
 /** matching_config: reads of the day's round within the minutes. */
 const AUTO_SHADOW_BAN_ROUND_READS_KEY = "auto_shadow_ban_round_reads";
 const AUTO_SHADOW_BAN_ROUND_READS_MINUTES_KEY = "auto_shadow_ban_round_reads_minutes";
+/** matching_config: the hours a moderator has to confirm or reverse one; past them it stays, and says late. */
+export const AUTO_SHADOW_BAN_REVIEW_HOURS_KEY = "auto_shadow_ban_review_hours";
 
 const MINUTE_MS = 60_000;
 
@@ -66,10 +68,7 @@ const RULE_REASON: Record<SanctionRule, SanctionReason> = {
   round_reads: "scraping",
 };
 
-/** Told of a sanction once it has committed: its statement's email (#715, ADR-073 §4), the notifications slice's. */
-export type Sanctioned = (input: { accountId: string; sanctionId: string }) => void;
-
-export type RuleDeps = { db: Queryable; logger: Logger; now: () => Date; sanctioned?: Sanctioned };
+export type RuleDeps = { db: Queryable; logger: Logger; now: () => Date };
 
 type Met = { rule: SanctionRule; count: number; firstAt: Date };
 
@@ -148,23 +147,23 @@ async function underRuleLock(
       if (!standing || standing.erased || standing.hidden) return;
       if (!(await measure(deps.db, at, standing.floor))) return;
     }
-    const applied = await transaction(deps.db, async (tx) => {
+    await transaction(deps.db, async (tx) => {
       const locked = await lockAccountForSanction(tx, accountId);
-      if (!locked || locked.state === "deleted") return null;
+      if (!locked || locked.state === "deleted") return;
       const standing = await standingOf(tx, accountId);
-      if (!standing || standing.hidden) return null;
+      if (!standing || standing.hidden) return;
       const at = deps.now();
       const met = await measure(tx, at, standing.floor);
-      if (!met) return null;
+      if (!met) return;
       // ADR-024 §3: staff lose the role before any sanction; a rule never applies one to them.
       if (standing.staff) {
         deps.logger.warn(
           { rule: met.rule },
           "automatic rule met by a member of staff; not applied",
         );
-        return null;
+        return;
       }
-      const sanction = await applySanction(tx, {
+      await applySanction(tx, {
         accountId,
         kind: "shadow_ban",
         reason: RULE_REASON[met.rule],
@@ -174,13 +173,7 @@ async function underRuleLock(
         rule: met,
       });
       deps.logger.info({ rule: met.rule, count: met.count }, "automatic shadow ban");
-      return { sanction, rule: met.rule };
     });
-    // Told after the commit, so a mail never names a ban that rolled back; the
-    // reports rule's only once a moderator keeps it (ADR-073 §2).
-    if (applied && !toldWhenKept(applied.rule)) {
-      deps.sanctioned?.({ accountId, sanctionId: applied.sanction.id });
-    }
   } catch (error) {
     // The trigger has committed and its answer stands; the next event checks
     // again. The code and message only: a pg error's detail can quote a row.

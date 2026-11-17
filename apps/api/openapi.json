@@ -4379,16 +4379,6 @@
           },
           "reason": {
             "$ref": "#/components/schemas/SanctionReason"
-          },
-          "rule": {
-            "$ref": "#/components/schemas/SanctionRule"
-          },
-          "reviewed": {
-            "type": "boolean"
-          },
-          "reviewHours": {
-            "type": "number",
-            "minimum": 0
           }
         },
         "required": [
@@ -4396,23 +4386,7 @@
           "at",
           "readAt",
           "kind",
-          "reason",
-          "rule",
-          "reviewed",
-          "reviewHours"
-        ]
-      },
-      "SanctionRule": {
-        "type": "string",
-        "nullable": true,
-        "enum": [
-          "reports",
-          "first_messages",
-          "same_first_message",
-          "photo_fetches",
-          "cards_served",
-          "round_reads",
-          null
+          "reason"
         ]
       },
       "InvitationCountedNotice": {
@@ -5264,6 +5238,17 @@
           "count",
           "firstAt",
           "createdAt"
+        ]
+      },
+      "SanctionRule": {
+        "type": "string",
+        "enum": [
+          "reports",
+          "first_messages",
+          "same_first_message",
+          "photo_fetches",
+          "cards_served",
+          "round_reads"
         ]
       },
       "SanctionList": {
@@ -11883,7 +11868,7 @@
     "/admin/sanctions/{id}/review": {
       "post": {
         "summary": "Look at a sanction again",
-        "description": "A second member of staff's note, and keep or lift. Somebody other than who applied it; once. Written to audit_log. Keeping an open shadow ban of the reports rule is what tells its person: its notice, and its email after the answer (ADR-073 §2).",
+        "description": "A second member of staff's note, and keep or lift. Somebody other than who applied it; once. Written to audit_log.",
         "security": [
           {
             "session": []
@@ -12061,7 +12046,7 @@
     "/admin/bans/{id}/review": {
       "post": {
         "summary": "Look at a ban again",
-        "description": "A second member of staff's note, and keep or lift. Somebody other than who applied it; once. Written to audit_log. Keeping an open shadow ban of the reports rule is what tells its person: its notice, and its email after the answer (ADR-073 §2).",
+        "description": "A second member of staff's note, and keep or lift. Somebody other than who applied it; once. Written to audit_log.",
         "security": [
           {
             "session": []

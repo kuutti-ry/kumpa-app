@@ -10,7 +10,6 @@ import {
   type Staff,
   signedInAccount,
   staffSession,
-  withMatchingConfig,
 } from "../test/account.ts";
 import {
   captureLogger,
@@ -26,11 +25,11 @@ import { createPush } from "./push.ts";
 import { mailSanction } from "./sanction-mail.ts";
 
 // A sanction's statement by email (#715, ADR-073 §4; features/safety/
-// sanctions.feature and automatic-shadow-bans.feature): once, after the
-// sanction committed, to the account's confirmed address, in the language
-// its terms were read in, whatever its switches say; nothing for an address
-// unconfirmed or gone, a sanction lifted by then, a lift or a review. The app
-// is the real one over a memory mailer; `settled` waits for the background.
+// sanctions.feature): once, after a sanction staff applied committed, to the
+// account's confirmed address, in the language its terms were read in,
+// whatever its switches say; nothing for an address unconfirmed or gone, a
+// sanction lifted by then, a lift or a review. The app is the real one over a
+// memory mailer; `settled` waits for the background.
 
 /** 12:00 in Helsinki on 20.10.2026: a suspension until 22.10 is two days ahead. */
 const T = new Date("2026-10-20T09:00:00.000Z");
@@ -109,9 +108,9 @@ function paragraphsOf(sent: MailMessage[]): string[] {
 }
 
 const FI_CONTEST =
-  "Jos olemme mielestäsi erehtyneet, kirjoita osoitteeseen hello@kuutti.app. Asian katsoo uudelleen joku muu kuin päätöksen tehnyt. Voit myös viedä asian tuomioistuimeen.";
+  "Jos olemme mielestäsi erehtyneet, kirjoita osoitteeseen hello@kuutti.app. Asian katsoo uudelleen joku muu kuin päätöksen tehnyt.";
 const EN_CONTEST =
-  "If you think we got this wrong, write to hello@kuutti.app. Someone other than the person who decided will look at it again. You can also take the matter to a court.";
+  "If you think we got this wrong, write to hello@kuutti.app. Someone other than the person who decided will look at it again.";
 const EN_WHY =
   "You get this because you confirmed this address in the Kumpa app. A decision about your account is always sent to you, whatever your notification settings say.";
 
@@ -265,53 +264,6 @@ describe("mailSanction", () => {
     const { deps, sent } = await mailDeps(ctx.client);
     await mailSanction(deps, { accountId: a.accountId, sanctionId: warning.id });
     expect(paragraphsOf(sent)[1]).toBe("Skäl: Trakasserier.");
-  });
-
-  test("says what a rule saw and when a moderator will look, and the reports rule's, mailed once kept, that it was kept", async ({
-    ctx,
-  }) => {
-    const a = await signedInAccount(ctx.client);
-    await confirmedAddress(ctx.client, a, ADDRESS, "en");
-    const opener = await sanctionOf(ctx.client, a, {
-      kind: "shadow_ban",
-      reason: "other",
-      rule: { rule: "same_first_message", count: 5, firstAt: T },
-    });
-    const { deps, sent } = await mailDeps(ctx.client);
-    await withMatchingConfig(ctx.client, { auto_shadow_ban_review_hours: 6 });
-    await mailSanction(deps, { accountId: a.accountId, sanctionId: opener.id });
-    expect(sent[0]?.subject).toBe("Kumpa: others don't see your profile for now");
-    expect(paragraphsOf(sent).slice(1, 5)).toEqual([
-      "An automatic rule did this: you sent the same first message to several people.",
-      "The terms of use, section 6: automatic rules can limit what others see of an account until a moderator has looked at it.",
-      "A moderator will look at it within 6 hours.",
-      "If you think we got this wrong, write to hello@kuutti.app. You can also take the matter to a court.",
-    ]);
-    // Never how many: the rule counted 5.
-    expect(sent[0]?.text).not.toContain("5");
-
-    // The reports rule's is mailed only after a moderator kept it (ADR-073 §2),
-    // as the panel's review writes it.
-    const reports = await sanctionOf(ctx.client, a, {
-      kind: "shadow_ban",
-      reason: "other",
-      rule: { rule: "reports", count: 3, firstAt: T },
-    });
-    const moderator = await staffSession(ctx.client);
-    await ctx.client.query(
-      "UPDATE sanction SET reviewed_at = $2, reviewed_by = $3, review_note = $4 WHERE id = $1",
-      [reports.id, T, moderator.identityId, "Looked at the reports; they hold."],
-    );
-    sent.length = 0;
-    await mailSanction(deps, { accountId: a.accountId, sanctionId: reports.id });
-    expect(paragraphsOf(sent).slice(1, 5)).toEqual([
-      "An automatic rule did this: many people reported you in a short time.",
-      "The terms of use, section 6: automatic rules can limit what others see of an account until a moderator has looked at it.",
-      "A moderator has since looked at it and kept it in place.",
-      EN_CONTEST,
-    ]);
-    // Never how many reported: the rule counted 3.
-    expect(sent[0]?.text).not.toContain("3");
   });
 
   test("says a suspension's end as the day it is in Finland", async ({ ctx }) => {

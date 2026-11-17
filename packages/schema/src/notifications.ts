@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { RewardUnits } from "./rewards.ts";
-import { SanctionReason, SanctionRule } from "./sanction.ts";
+import { SanctionReason } from "./sanction.ts";
 
 // Notification choices and the notices in the app (#176, ADR-032): what a
 // person may be told of, each kind on or off, and what must reach them even
@@ -59,17 +59,12 @@ export const WarningNotice = NoticeBase.extend({
 }).meta({ id: "WarningNotice" });
 
 /**
- * A shadow ban, told to its owner (#715, ADR-073 §2): its reason, and the
- * automatic rule that applied it (null for a moderator's) with whether a
- * moderator has looked at it since and the hours such a look should take
- * (matching_config auto_shadow_ban_review_hours). One lifted since is not shown.
+ * A moderator's shadow ban, told to its owner (#715, ADR-073 §2): its reason.
+ * An automatic rule's is never told (ADR-033). One lifted since is not shown.
  */
 export const ShadowBanNotice = NoticeBase.extend({
   kind: z.literal("shadow_ban"),
   reason: SanctionReason,
-  rule: SanctionRule.nullable(),
-  reviewed: z.boolean(),
-  reviewHours: z.number().min(0),
 }).meta({ id: "ShadowBanNotice" });
 
 /**

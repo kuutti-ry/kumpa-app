@@ -174,7 +174,7 @@ flowchart TB
 ```mermaid
 flowchart TB
   accTitle: Notifications and notices, part 4: the notices on home
-  accDescr: A moderator's warning, a shadow ban by a moderator or a rule, an invitation that counted at night and an approved announcement each leave a notice; a sanction's says what it does, why and how to contest it. The home screen shows the unread ones first, under Notices, each with Got it, which marks it read and takes it off the screen.
+  accDescr: A moderator's warning or shadow ban, an invitation that counted at night and an approved announcement each leave a notice; a sanction's says what it does, why and how to contest it. The home screen shows the unread ones first, under Notices, each with Got it, which marks it read and takes it off the screen.
   subgraph person["The person"]
     s36["Opens home, or comes back to it"]
     s41["Chooses Got it under a notice"]
@@ -192,7 +192,7 @@ flowchart TB
     s42{"Marked read?"}
   end
   subgraph moderator["A moderator"]
-    s33(["Warns or shadow-bans the person, with a reason, or a rule shadow-bans them"])
+    s33(["Warns or shadow-bans the person, with a reason"])
   end
   subgraph night["The night's jobs"]
     s34(["Counts an invitation the person made or used, and writes a notice of it"])
@@ -213,14 +213,14 @@ flowchart TB
 
 ### Steps
 
-33. A moderator warns or shadow-bans the person, with a reason, in the moderation panel, or an automatic rule shadow-bans them ([Moderation](moderation.md), [Report and block](report-and-block.md)). A suspension and a ban leave no notice: they end the person's sessions and are said at the bank login, with their reason. After the sanction's answer the API also e-mails it once to a confirmed address of the person, in the language they read the terms in, whatever they chose in part 2: what it does and the same lines the notice or the bank login says. A lift sends nothing, and a second look nothing but a moderator's confirmation of the reports rule's shadow ban, which is the first that person hears of it ([Moderation](moderation.md), part 4).
+33. A moderator warns or shadow-bans the person, with a reason, in the moderation panel ([Moderation](moderation.md), [Report and block](report-and-block.md)). An automatic rule's shadow ban leaves no notice and no e-mail, whether a moderator keeps it or reverses it. A suspension and a ban leave no notice: they end the person's sessions and are said at the bank login, with their reason. After the sanction's answer the API also e-mails it once to a confirmed address of the person, in the language they read the terms in, whatever they chose in part 2: what it does and the same lines the notice or the bank login says. A lift and a second look send nothing.
 34. Separately, the night's count of invitations writes a notice for each invitation of the person's that counted, even one that earned nothing, and one for the invitation the person used, when it earned them a fish ([Inviting a friend](invitations.md)).
-35. In the same step as the warning or the shadow ban, the API writes a notice that points at it, but for the reports rule's shadow ban in the step a moderator confirms it, and never if it is reversed; the approval of an announcement writes one for every account not erased ([Announcements](announcements.md)). A notice holds no words of its own but an announcement's: the app says it from its kind and what it points at. A warning or a shadow ban is a notice whatever the person chose for moderators' decisions in part 2.
+35. In the same step as the warning or the moderator's shadow ban, the API writes a notice that points at it; the approval of an announcement writes one for every account not erased ([Announcements](announcements.md)). A notice holds no words of its own but an announcement's: the app says it from its kind and what it points at. A warning or a shadow ban is a notice whatever the person chose for moderators' decisions in part 2.
 36. The person opens the app on home, or comes back to home from another screen.
-37. The API answers the person's newest notices, read or not, up to a ceiling the contract sets, an announcement's in the app's language: Finnish for Finnish and Stadi, Swedish where it was written in Swedish, English otherwise. A shadow ban's carries its reason, the rule that applied it or none, whether a moderator has looked since, and the hours of `auto_shadow_ban_review_hours`, keys and never words. A warning or a shadow ban lifted since is left out.
+37. The API answers the person's newest notices, read or not, up to a ceiling the contract sets, an announcement's in the app's language: Finnish for Finnish and Stadi, Swedish where it was written in Swedish, English otherwise. A warning's and a shadow ban's carry their reason, a key and never words, and never staff's note. A warning or a shadow ban lifted since is left out.
 38. The app keeps the ones not read yet. Any: 40; none: 39.
 39. Home shows no Notices heading and no space for them. A read that fails is left out quietly: home does not fail for it.
-40. Home shows them under "Notices", before anything else it offers, newest first, each with its title, its sentence and Got it: "A warning from a moderator" ("A warning by itself changes nothing in how you use the app."); "Others don't see your profile for now" ("For now your profile is not shown to other people, and your likes and messages do not reach them."); each of these two followed by why and how to contest it: "Why:" and the reason, the section of the terms it rests on, "A moderator decided this." and "If you think we got this wrong, write to hello@kuutti.app. Someone other than the person who decided will look at it again. You can also take the matter to a court.", or for a rule's shadow ban what the rule saw, the terms' section on automatic rules, when a moderator will look or that one has, and the address and the court; "An invitation of yours counted" ("Somebody you invited has finished their profile." and what it earned, as "You earned a fish." or "Thank you for inviting them."), never who was invited; "The invitation you used counted" ("The invitation earned you a fish."), never who invited them; or an announcement's own title and text. No badge and no count.
+40. Home shows them under "Notices", before anything else it offers, newest first, each with its title, its sentence and Got it: "A warning from a moderator" ("A warning by itself changes nothing in how you use the app."); "Others don't see your profile for now" ("For now your profile is not shown to other people, and your likes and messages do not reach them."); each of these two followed by why and how to contest it: "Why:" and the reason, the section of the terms it rests on, "A moderator decided this." and "If you think we got this wrong, write to hello@kuutti.app. Someone other than the person who decided will look at it again."; "An invitation of yours counted" ("Somebody you invited has finished their profile." and what it earned, as "You earned a fish." or "Thank you for inviting them."), never who was invited; "The invitation you used counted" ("The invitation earned you a fish."), never who invited them; or an announcement's own title and text. No badge and no count.
 41. The person chooses Got it, a button.
 42. The API marks the notice read, once: the first time stands. One that is not the person's is refused. Marked: 43; not marked: 44.
 43. The app takes the notice off home. The person's data export still lists it, with when it was read.
@@ -249,4 +249,4 @@ flowchart TB
 - 2026-11-03 (#503, PR #579): a third notice: the invitation the person used counted, with the fish it earned them.
 - 2026-11-07 (#573, PR #643): an announcement to everybody leaves a notice in Kuutti's own words and has its own push and its own switch, which stops the push and the e-mail, never the notice; a tap on its push opens home.
 - 2026-11-16 (#700, PR #701): the offer, the settings and the announcement's push name the app Kumpa.
-- 2026-11-17 (#715, PR #719): a shadow ban leaves a notice too, the reports rule's once a moderator confirms it, and a warning's and a shadow ban's notice say why and how to contest it; every sanction is e-mailed once to a confirmed address whatever the switches say.
+- 2026-11-17 (#715, PR #719): a moderator's shadow ban leaves a notice too, an automatic rule's none, and a warning's and a shadow ban's notice say why and how to contest it; every sanction staff applies is e-mailed once to a confirmed address whatever the switches say.

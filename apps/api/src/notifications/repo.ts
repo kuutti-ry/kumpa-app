@@ -6,7 +6,6 @@ import type {
   NotificationKind,
   SanctionKind,
   SanctionReason,
-  SanctionRule,
 } from "@kuutti/schema";
 
 /** The person keeps announcements to everybody on: no row is on (#573, ADR-068 §5). */
@@ -75,10 +74,6 @@ export type NoticeRow = {
   readAt: Date | null;
   /** A sanction's, a warning's or a shadow ban's; null for any other kind. */
   reason: SanctionReason | null;
-  /** The automatic rule that applied a shadow ban (#105); null for a moderator's and any other kind. */
-  rule: SanctionRule | null;
-  /** Whether a second member of staff has looked at the sanction (ADR-024 §3); false for any other kind. */
-  reviewed: boolean;
   /** The units a counted invitation earned the person; nought for a warning. */
   fish: number;
   /** An announcement's words; null for any other kind. */
@@ -107,15 +102,14 @@ export async function listNotices(
   limit: number,
 ): Promise<NoticeRow[]> {
   const { rows } = await db.query<Row>(
-    `SELECT n.id, n.kind, n.created_at, n.read_at, s.reason, s.rule, s.reviewed_at,
-            count(r.id)::int AS fish,
+    `SELECT n.id, n.kind, n.created_at, n.read_at, s.reason, count(r.id)::int AS fish,
             a.id AS announcement, a.title_en, a.body_en, a.title_fi, a.body_fi, a.title_sv, a.body_sv
        FROM notice n
        LEFT JOIN sanction s ON s.id = n.sanction_id
        LEFT JOIN reward r ON r.invitation_id = n.invitation_id AND r.account_id = n.account_id
        LEFT JOIN announcement a ON a.id = n.announcement_id
       WHERE n.account_id = $1 AND (n.sanction_id IS NULL OR s.lifted_at IS NULL)
-      GROUP BY n.id, s.reason, s.rule, s.reviewed_at, a.id
+      GROUP BY n.id, s.reason, a.id
       ORDER BY n.created_at DESC, n.id DESC
       LIMIT $2`,
     [accountId, limit],
@@ -126,8 +120,6 @@ export async function listNotices(
     at: r.created_at as Date,
     readAt: (r.read_at as Date | null) ?? null,
     reason: (r.reason as SanctionReason | null) ?? null,
-    rule: (r.rule as SanctionRule | null) ?? null,
-    reviewed: r.reviewed_at !== null,
     fish: r.fish as number,
     texts: r.announcement === null ? null : textsOf(r),
   }));
@@ -390,10 +382,8 @@ export type SanctionMail = {
   locale: string | null;
   kind: SanctionKind;
   reason: SanctionReason;
-  rule: SanctionRule | null;
   /** A suspension's end: the start of its chosen day in Finland. */
   endsAt: Date | null;
-  reviewed: boolean;
 };
 
 /**
@@ -413,11 +403,9 @@ export async function sanctionMailOf(
     locale: string | null;
     kind: SanctionKind;
     reason: SanctionReason;
-    rule: SanctionRule | null;
     ends_at: Date | null;
-    reviewed: boolean;
   }>(
-    `SELECT a.email, s.kind, s.reason, s.rule, s.ends_at, s.reviewed_at IS NOT NULL AS reviewed,
+    `SELECT a.email, s.kind, s.reason, s.ends_at,
             (SELECT c.locale_shown FROM consent c
               WHERE c.account_id = a.id AND c.kind = 'terms'
               ORDER BY c.given_at DESC LIMIT 1) AS locale
@@ -434,8 +422,6 @@ export async function sanctionMailOf(
     locale: row.locale,
     kind: row.kind,
     reason: row.reason,
-    rule: row.rule,
     endsAt: row.ends_at,
-    reviewed: row.reviewed,
   };
 }

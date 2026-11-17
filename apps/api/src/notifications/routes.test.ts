@@ -206,7 +206,7 @@ describe("the notices", () => {
     expect(applied.status).toBe(201);
     const { id } = (await applied.json()) as { id: string };
     await settled();
-    // A moderator's: its reason, no rule, and no look to come.
+    // Its reason, and never the note.
     expect(await noticesOf(app, a)).toEqual([
       {
         id: expect.any(String),
@@ -214,16 +214,10 @@ describe("the notices", () => {
         at: expect.any(String),
         readAt: null,
         reason: "harassment",
-        rule: null,
-        reviewed: false,
-        reviewHours: 48,
       },
     ]);
     expect(JSON.stringify(await noticesOf(app, a))).not.toContain("Kept writing");
     expect(await noticesOf(app, b)).toEqual([]);
-    // The hours are the config's, read when the notice is read.
-    await withMatchingConfig(ctx.client, { auto_shadow_ban_review_hours: 12 });
-    expect((await noticesOf(app, a))[0]).toMatchObject({ reviewHours: 12 });
     expect(sent).toHaveLength(1);
 
     const lifted = await app.request(`/admin/sanctions/${id}/lift`, {

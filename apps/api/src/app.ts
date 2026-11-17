@@ -239,36 +239,9 @@ export function createApp(deps: Deps) {
   // A ban and its lift and review (#307, ADR-024 §3).
   const admins = staff(["admin"]);
 
-  // The chat's live sockets (#349): who is in the app now, which the push asks too.
-  const live =
-    deps.live ??
-    createLive({
-      db: deps.db,
-      logger: deps.logger,
-      socketsPerAccount: deps.config.WS_SOCKETS_PER_ACCOUNT,
-    });
-  // The pushes (#102, ADR-055): the notifications slice decides whom to tell,
-  // the chat, the round's and the sanctions' routes only say when.
-  const push =
-    deps.push ??
-    createPush({
-      db: deps.db,
-      logger: deps.logger,
-      now: deps.now ?? (() => new Date()),
-      ...(deps.pusher ? { pusher: deps.pusher } : {}),
-      ...(deps.mailer ? { mailer: deps.mailer } : {}),
-      online: (accountId) => live.online(accountId),
-    });
-
   // The automatic rules' clock and connection (#105, ADR-033), and the round
-  // reads one of them counts in memory, once for this app (#86, ADR-041). A
-  // sanction, theirs or staff's, is mailed to its person (#715, ADR-073 §4).
-  const ruleDeps = {
-    db: deps.db,
-    logger: deps.logger,
-    now: deps.now ?? (() => new Date()),
-    sanctioned: push.sanction,
-  };
+  // reads one of them counts in memory, once for this app (#86, ADR-041).
+  const ruleDeps = { db: deps.db, logger: deps.logger, now: deps.now ?? (() => new Date()) };
   const roundRead = roundReadRule(ruleDeps);
 
   app.route("/", healthRoutes(deps));
@@ -288,7 +261,7 @@ export function createApp(deps: Deps) {
   app.route("/", onboardingRoutes(deps, guard));
   app.route("/", feedbackRoutes(deps, guard));
   app.route("/", feedbackAdminRoutes(deps, moderators));
-  app.route("/", reportRoutes(deps, guard, push.sanction));
+  app.route("/", reportRoutes(deps, guard));
   // What a person chose to be notified of, and the notices in the app (#176, ADR-032).
   app.route("/", notificationRoutes(deps, guard));
   // Invitations and the reward they earn (#107, ADR-044).
@@ -298,6 +271,27 @@ export function createApp(deps: Deps) {
       isComplete(db, accountId, deps.now?.() ?? new Date()),
     ),
   );
+  // The chat's live sockets (#349): who is in the app now, which the push asks too.
+  const live =
+    deps.live ??
+    createLive({
+      db: deps.db,
+      logger: deps.logger,
+      socketsPerAccount: deps.config.WS_SOCKETS_PER_ACCOUNT,
+    });
+  // The pushes (#102, ADR-055): the notifications slice decides whom to tell,
+  // the chat, the round's and the sanctions' routes only say when; a
+  // sanction staff applied is mailed to its person (#715, ADR-073 §4).
+  const push =
+    deps.push ??
+    createPush({
+      db: deps.db,
+      logger: deps.logger,
+      now: deps.now ?? (() => new Date()),
+      ...(deps.pusher ? { pusher: deps.pusher } : {}),
+      ...(deps.mailer ? { mailer: deps.mailer } : {}),
+      online: (accountId) => live.online(accountId),
+    });
   // The conversations a match opens and their text messages (#348, ADR-031).
   // A conversation's first message is checked by the automatic rules (#105,
   // ADR-033): the safety slice decides, the chat only measures. Every new

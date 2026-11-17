@@ -4939,7 +4939,7 @@ export interface paths {
         put?: never;
         /**
          * Look at a sanction again
-         * @description A second member of staff's note, and keep or lift. Somebody other than who applied it; once. Written to audit_log. Keeping an open shadow ban of the reports rule is what tells its person: its notice, and its email after the answer (ADR-073 §2).
+         * @description A second member of staff's note, and keep or lift. Somebody other than who applied it; once. Written to audit_log.
          */
         post: {
             parameters: {
@@ -5115,7 +5115,7 @@ export interface paths {
         put?: never;
         /**
          * Look at a ban again
-         * @description A second member of staff's note, and keep or lift. Somebody other than who applied it; once. Written to audit_log. Keeping an open shadow ban of the reports rule is what tells its person: its notice, and its email after the answer (ADR-073 §2).
+         * @description A second member of staff's note, and keep or lift. Somebody other than who applied it; once. Written to audit_log.
          */
         post: {
             parameters: {
@@ -8552,12 +8552,7 @@ export interface components {
              */
             kind: "shadow_ban";
             reason: components["schemas"]["SanctionReason"];
-            rule: components["schemas"]["SanctionRule"];
-            reviewed: boolean;
-            reviewHours: number;
         };
-        /** @enum {string|null} */
-        SanctionRule: "reports" | "first_messages" | "same_first_message" | "photo_fetches" | "cards_served" | "round_reads" | null;
         InvitationCountedNotice: {
             /** Format: uuid */
             id: string;
@@ -8796,6 +8791,8 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
         };
+        /** @enum {string} */
+        SanctionRule: "reports" | "first_messages" | "same_first_message" | "photo_fetches" | "cards_served" | "round_reads";
         SanctionList: {
             items: components["schemas"]["SanctionEntry"][];
         };

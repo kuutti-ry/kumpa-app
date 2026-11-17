@@ -26,20 +26,15 @@ function wordsOf(
     return {
       title: t("notices.warning.title"),
       body: t("notices.warning.body"),
-      statement: sanctionStatement(t, {
-        reason: notice.reason,
-        rule: null,
-        reviewed: false,
-        reviewHours: 0,
-      }),
+      statement: sanctionStatement(t, notice.reason),
     };
   }
-  // A shadow ban, told at once (ADR-073 §2): a moderator's, or a rule's with its look to come.
+  // A moderator's shadow ban, told at once (ADR-073 §2); a rule's is never told.
   if (notice.kind === "shadow_ban") {
     return {
       title: t("notices.shadowBan.title"),
       body: t("notices.shadowBan.body"),
-      statement: sanctionStatement(t, notice),
+      statement: sanctionStatement(t, notice.reason),
     };
   }
   // What the counted invitation earned the person, never who the other was (ADR-044 §9).
@@ -59,7 +54,7 @@ function wordsOf(
  * The notices on the home screen (#176, ADR-032): what must reach the person
  * even without a push, the unread ones only, newest first, under a heading of
  * their own; nothing at all when there are none. Today that is a moderator's
- * warning (ADR-024 §7) and a shadow ban (#715), each with its reason, the
+ * warning (ADR-024 §7) and shadow ban (#715), each with its reason, the
  * rule it rests on and how to contest it, an invitation of the person's that
  * counted, with what it earned (#107), and an announcement to everybody in
  * its own words (#573). Each has Got it, a button, which marks

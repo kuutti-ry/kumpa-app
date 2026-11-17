@@ -1168,44 +1168,18 @@ describe("applySanction", () => {
       outcome: "keep",
       at: T,
     });
-    expect(kept.sanction.reviewNote).toBe("Kept.");
+    expect(kept.reviewNote).toBe("Kept.");
   });
 });
 
 describe("liftSanction and reviewSanction", () => {
-  test("the reports rule's shadow ban has no notice until a moderator keeps it, and the keep's notice is dated by the look", async ({
-    ctx,
-  }) => {
-    const a = await signedInAccount(ctx.client);
-    const m = await staffSession(ctx.client);
-    const shadow = await applySanction(
-      ctx.client,
-      input(a.accountId, "shadow_ban", { rule: "reports" }),
-    );
-    expect(await sanctionNotices(ctx, a.accountId)).toEqual([]);
-    const look = new Date("2026-10-21T13:00:00Z");
-    const kept = await reviewSanction(ctx.client, {
-      sanctionId: shadow.id,
-      scope: "other",
-      actor: m.identityId,
-      note: "It stands.",
-      outcome: "keep",
-      at: look,
-    });
-    expect(kept).toMatchObject({ sanction: { id: shadow.id, liftedAt: null }, told: true });
-    expect(await sanctionNotices(ctx, a.accountId)).toEqual([
-      { kind: "shadow_ban", sanctionId: shadow.id, at: look },
-    ]);
-  });
-
   test.for([
-    ["the reports rule's, reversed", "reports", "lift", false, 0],
-    ["the reports rule's, lifted before the look", "reports", "keep", true, 0],
-    ["another rule's, kept", "first_messages", "keep", false, 1],
-    ["a moderator's, kept", null, "keep", false, 1],
+    ["a rule's, kept", "first_messages", "keep"],
+    ["the reports rule's, reversed", "reports", "lift"],
+    ["a moderator's, kept", null, "keep"],
   ] as const)(
-    "a review tells nobody of a shadow ban: %s",
-    async ([, rule, outcome, liftedFirst, notices], { ctx }) => {
+    "a shadow ban is told only when a moderator applies it, never at its review: %s",
+    async ([, rule, outcome], { ctx }) => {
       const a = await signedInAccount(ctx.client);
       const m = await staffSession(ctx.client);
       const n = await staffSession(ctx.client);
@@ -1213,17 +1187,10 @@ describe("liftSanction and reviewSanction", () => {
         ctx.client,
         input(a.accountId, "shadow_ban", rule ? { rule } : { actor: m.identityId }),
       );
-      if (liftedFirst) {
-        await liftSanction(ctx.client, {
-          sanctionId: shadow.id,
-          scope: "other",
-          actor: n.identityId,
-          at: T,
-        });
-      }
-      const before = await sanctionNotices(ctx, a.accountId);
-      expect(before).toHaveLength(notices);
-      const reviewed = await reviewSanction(ctx.client, {
+      // A rule's is never told, kept or reversed (the maintainer, 17/11/2026).
+      const told = rule ? [] : [{ kind: "shadow_ban", sanctionId: shadow.id, at: T }];
+      expect(await sanctionNotices(ctx, a.accountId)).toEqual(told);
+      await reviewSanction(ctx.client, {
         sanctionId: shadow.id,
         scope: "other",
         actor: n.identityId,
@@ -1231,10 +1198,10 @@ describe("liftSanction and reviewSanction", () => {
         outcome,
         at: new Date("2026-10-21T13:00:00Z"),
       });
-      expect(reviewed.told).toBe(false);
-      expect(await sanctionNotices(ctx, a.accountId)).toEqual(before);
+      expect(await sanctionNotices(ctx, a.accountId)).toEqual(told);
     },
   );
+
   test("a second lift is refused with sanction_lifted and its audit row goes with it", async ({
     ctx,
   }) => {
@@ -1387,7 +1354,7 @@ describe("liftSanction and reviewSanction", () => {
     await expect(review("lift")).rejects.toMatchObject({ status: 409, code: "sanction_lifted" });
     expect(await auditBy(ctx, [n.identityId])).toBe(0);
     const kept = await review("keep");
-    expect(kept.sanction).toMatchObject({
+    expect(kept).toMatchObject({
       reviewedBy: n.identityId,
       liftedBy: m.identityId,
       liftedAt: T.toISOString(),
@@ -1412,10 +1379,7 @@ describe("liftSanction and reviewSanction", () => {
       outcome: "keep",
       at: T,
     });
-    expect(kept).toMatchObject({
-      sanction: { reviewedBy: n.identityId, liftedAt: null, liftedBy: null },
-      told: false,
-    });
+    expect(kept).toMatchObject({ reviewedBy: n.identityId, liftedAt: null, liftedBy: null });
     expect(await stateOf(ctx, a.accountId)).toEqual(before);
     expect(before).toMatchObject({ state: "suspended", standing: "suspended" });
   });
@@ -1432,10 +1396,7 @@ describe("liftSanction and reviewSanction", () => {
       outcome: "lift",
       at: T,
     });
-    expect(reviewed).toMatchObject({
-      sanction: { createdBy: null, liftedBy: admin.identityId },
-      told: false,
-    });
+    expect(reviewed).toMatchObject({ createdBy: null, liftedBy: admin.identityId });
     expect(await stateOf(ctx, a.accountId)).toEqual(ACTIVE);
   });
 
@@ -1658,7 +1619,7 @@ describe("the lists and the erasure's half", () => {
     expect(await listSanctions(ctx.client, UNKNOWN_ID)).toBeNull();
   });
 
-  test("listSanctionsOfAccount lists every sanction of the account, an open shadow ban among them, newest first, never the reports rule's", async ({
+  test("listSanctionsOfAccount lists every sanction of the account newest first, a moderator's open shadow ban among them, a rule's once lifted, never the reports rule's", async ({
     ctx,
   }) => {
     const a = await signedInAccount(ctx.client);
@@ -1672,9 +1633,10 @@ describe("the lists and the erasure's half", () => {
     );
     const at = (day: number) => new Date(`2026-10-${day}T09:00:00Z`);
     await applySanction(ctx.client, input(a.accountId, "warn", { at: at(11) }));
+    // A rule's is listed once lifted; while it lasts it is never told (ADR-033).
     const lifted = await applySanction(
       ctx.client,
-      input(a.accountId, "shadow_ban", { at: at(12) }),
+      input(a.accountId, "shadow_ban", { at: at(12), rule: "first_messages" }),
     );
     await liftSanction(ctx.client, {
       sanctionId: lifted.id,
@@ -1682,7 +1644,11 @@ describe("the lists and the erasure's half", () => {
       actor: m.identityId,
       at: at(13),
     });
-    await applySanction(ctx.client, input(a.accountId, "shadow_ban", { at: at(14) }));
+    // A moderator's is told at once (ADR-073 §2), so it is listed while open.
+    await applySanction(
+      ctx.client,
+      input(a.accountId, "shadow_ban", { at: at(14), actor: m.identityId }),
+    );
     const suspension = await applySanction(
       ctx.client,
       input(a.accountId, "suspend", { at: at(15), endsOn: "2026-10-22", actor: m.identityId }),
@@ -1695,21 +1661,22 @@ describe("the lists and the erasure's half", () => {
       outcome: "keep",
       at: at(16),
     });
-    // The reports rule's, open or kept, is its notice's alone (ADR-073 §2).
+    // A rule's still open is not, nor the reports rule's even once reversed
+    // (ADR-030 §9, §12).
     await applySanction(
       ctx.client,
-      input(a.accountId, "shadow_ban", { at: at(17), rule: "reports" }),
+      input(a.accountId, "shadow_ban", { at: at(17), rule: "first_messages" }),
     );
-    const kept = await applySanction(
+    const reversed = await applySanction(
       ctx.client,
       input(a.accountId, "shadow_ban", { at: at(18), rule: "reports" }),
     );
     await reviewSanction(ctx.client, {
-      sanctionId: kept.id,
+      sanctionId: reversed.id,
       scope: "other",
       actor: n.identityId,
-      note: "It stands.",
-      outcome: "keep",
+      note: "Friends reporting together.",
+      outcome: "lift",
       at: at(19),
     });
 

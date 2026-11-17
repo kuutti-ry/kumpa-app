@@ -48,7 +48,7 @@ export const notificationPreference = pgTable(
  * What a notice in the app is about (#176, ADR-032): a moderator's warning
  * (ADR-024 §7), an invitation of the person's that counted (#107, ADR-044),
  * the invitation they used, counted (#503), an announcement to everybody
- * (#573, ADR-068 §3), or a shadow ban, told to its owner (#715, ADR-073 §2).
+ * (#573, ADR-068 §3), or a moderator's shadow ban, told to its owner (#715, ADR-073 §2).
  * #312's decisions and M5's matches add their kinds when they write one.
  */
 export const noticeKind = pgEnum("notice_kind", [

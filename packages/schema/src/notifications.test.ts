@@ -67,33 +67,16 @@ describe("the notices", () => {
     ).toEqual(["too_big"]);
   });
 
-  it("carry a shadow ban's reason, the rule or none, whether a moderator has looked, and the hours a look takes (#715)", () => {
-    const hidden = {
-      id: notice.id,
-      kind: "shadow_ban",
-      at,
-      readAt: null,
-      reason: "other",
-      rule: "reports",
-      reviewed: false,
-      reviewHours: 48,
-    };
-    const byModerator = { ...hidden, reason: "harassment", rule: null, reviewHours: 0 };
-    expect(Notices.parse({ notices: [hidden, byModerator] }).notices).toEqual([
-      hidden,
-      byModerator,
-    ]);
-    expect(codes(Notices, { notices: [{ ...hidden, rule: "nope" }] })).toEqual(["invalid_value"]);
+  it("carry a moderator's shadow ban with its reason alone (#715)", () => {
+    const hidden = { id: notice.id, kind: "shadow_ban", at, readAt: null, reason: "harassment" };
+    expect(Notices.parse({ notices: [hidden] }).notices).toEqual([hidden]);
     expect(codes(Notices, { notices: [{ ...hidden, reason: "rude" }] })).toEqual(["invalid_value"]);
-    expect(codes(Notices, { notices: [{ ...hidden, reviewHours: -1 }] })).toEqual(["too_small"]);
-    expect(codes(Notices, { notices: [{ ...hidden, reviewed: "no" }] })).toEqual(["invalid_type"]);
-    // Every one of the four is said: none is left for the phone to guess.
-    for (const key of ["rule", "reviewed", "reviewHours"] as const) {
-      const { [key]: _gone, ...without } = hidden;
-      expect(Notices.safeParse({ notices: [without] }).success).toBe(false);
-    }
-    // Staff's note is never part of it (ADR-024 §8).
-    const noted = Notices.parse({ notices: [{ ...hidden, note: "Reported by Sanna" }] }).notices[0];
+    const { reason: _gone, ...without } = hidden;
+    expect(Notices.safeParse({ notices: [without] }).success).toBe(false);
+    // Neither staff's note nor a rule is part of it (ADR-024 §8, ADR-033).
+    const noted = Notices.parse({
+      notices: [{ ...hidden, note: "Reported by Sanna", rule: "reports" }],
+    }).notices[0];
     expect(noted).toEqual(hidden);
   });
 

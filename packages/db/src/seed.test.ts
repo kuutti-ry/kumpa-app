@@ -10,7 +10,7 @@ import { withTemporaryDatabase } from "./test/temporary-database.ts";
 const MIGRATIONS = resolve(import.meta.dirname, "..", "drizzle");
 
 describe("seed", () => {
-  it("is idempotent and writes matching_config's version 1, and no later version but the switch's", async () => {
+  it("is idempotent and writes matching_config's version 1, and no later version but the switch's and the migrations'", async () => {
     await withTemporaryDatabase(async (url) => {
       const pool = createPool({ connectionString: url, max: 2 });
       try {
@@ -122,6 +122,8 @@ describe("seed", () => {
         });
         expect(byKey).toEqual(MATCHING_CONFIG_V1);
         expect(config.rows.filter((r) => r.version > 1)).toEqual([
+          // Migration 0011's (ADR-033 History), whatever the seed's version 1 says.
+          { key: "auto_shadow_ban_review_hours", value: 168, version: 2 },
           { key: "matching_open", value: true, version: 2 },
         ]);
       } finally {

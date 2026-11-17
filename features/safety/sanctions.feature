@@ -86,7 +86,7 @@ Feature: Sanctions
   Scenario: A shadow ban shows the person a notice at once, and none once lifted
     Given a moderator shadow-banned "A" for harassment
     When "A" opens the app
-    Then the home screen's notices hold the shadow ban with its reason, no rule and no review to come
+    Then the home screen's notices hold the shadow ban with its reason
     When the shadow ban is lifted
     Then the notice is gone, and nothing is sent
 

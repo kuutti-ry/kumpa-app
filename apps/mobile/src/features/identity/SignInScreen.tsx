@@ -225,14 +225,7 @@ export function SignInScreen({ code, error, until, reason }: SignInParams) {
     phase.kind === "error" && SANCTIONED.has(phase.code)
       ? SanctionReason.safeParse(phase.reason)
       : null;
-  const statement = sanctionReason?.success
-    ? sanctionStatement(t, {
-        reason: sanctionReason.data,
-        rule: null,
-        reviewed: false,
-        reviewHours: 0,
-      })
-    : [];
+  const statement = sanctionReason?.success ? sanctionStatement(t, sanctionReason.data) : [];
 
   const buttonText =
     phase.kind === "error" && !LASTING_REFUSALS.has(phase.code)

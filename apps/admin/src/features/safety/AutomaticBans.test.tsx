@@ -150,14 +150,9 @@ const noteIn = (dialog: HTMLElement) => within(dialog).getByRole("textbox", { na
 const reportsWords = (item: AutomaticBan) =>
   `3 people reported this account between ${when(item.firstAt)} and ${when(item.createdAt)}.`;
 const CONFIRM_EFFECT =
-  "The person stays hidden from everyone else, and what they send stays withheld, until somebody lifts it. Their notice then says that a moderator has looked at it and kept it. The reports filed before it can then be closed with it, one by one.";
+  "The person stays hidden from everyone else, and what they send stays withheld, until somebody lifts it. They are not told. The reports filed before it can then be closed with it, one by one.";
 const REVERSE_EFFECT =
-  "The person is seen again at once, unless something else still open hides them, and what they sent while hidden reaches the people they wrote to. Its notice leaves their app; nothing is sent to them.";
-// The reports rule's ban is told only when confirmed (ADR-073 §2).
-const CONFIRM_EFFECT_REPORTS =
-  "The person stays hidden from everyone else, and what they send stays withheld, until somebody lifts it. Only now are they told of it, in their app and by email if they confirmed an address, with the words that a moderator has looked at it and kept it; never your note. The reports filed before it can then be closed with it, one by one.";
-const REVERSE_EFFECT_REPORTS =
-  "The person is seen again at once, unless something else still open hides them, and what they sent while hidden reaches the people they wrote to. They were never told of it, and nothing is sent to them.";
+  "The person is seen again at once, unless something else still open hides them, and what they sent while hidden reaches the people they wrote to. They are not told.";
 
 beforeEach(() => setTokenSource(() => "t".repeat(43)));
 afterEach(() => {
@@ -375,7 +370,7 @@ describe("confirming or reversing an automatic shadow ban", () => {
     ).toBe(dialog);
     // The step says what the rule counted before what confirming does.
     expect(
-      within(dialog).getByText(`${reportsWords(second)} ${CONFIRM_EFFECT_REPORTS}`),
+      within(dialog).getByText(`${reportsWords(second)} ${CONFIRM_EFFECT}`),
     ).toBeInTheDocument();
     // The button pressed is the decision: no choice to make again, none preset, and only its own effect said.
     expect(within(dialog).queryAllByRole("radio")).toHaveLength(0);
@@ -456,24 +451,6 @@ describe("confirming or reversing an automatic shadow ban", () => {
     expect(screen.getByText("Nothing waiting")).toBeInTheDocument();
     expect(asked(calls)).toEqual([`GET ${LIST}`, `POST ${reviewRoute(item)}`]);
     expect(await bodyOf(calls[1])).toEqual({ note: TEXT, outcome: "lift" });
-  });
-
-  it.each<[AutomaticBan["rule"], "Confirm" | "Reverse", string]>([
-    ["reports", "Confirm", CONFIRM_EFFECT_REPORTS],
-    ["reports", "Reverse", REVERSE_EFFECT_REPORTS],
-    ["same_first_message", "Confirm", CONFIRM_EFFECT],
-    ["cards_served", "Confirm", CONFIRM_EFFECT],
-    ["cards_served", "Reverse", REVERSE_EFFECT],
-  ])("says what the %s rule's %s tells the person", async (rule, button, effect) => {
-    const item = ban(5, { rule });
-    fetchMock([listOf(queue([item]))]);
-    show();
-    const { dialog } = await press(button, item);
-    expect(within(dialog).getByText((text) => text.endsWith(`. ${effect}`))).toBeInTheDocument();
-    const other = [CONFIRM_EFFECT, REVERSE_EFFECT, CONFIRM_EFFECT_REPORTS, REVERSE_EFFECT_REPORTS];
-    for (const words of other.filter((words) => words !== effect)) {
-      expect(dialog).not.toHaveTextContent(words);
-    }
   });
 
   it("clears the last decision's status when the next step opens, and says the next one where the focus goes", async () => {

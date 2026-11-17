@@ -83,13 +83,6 @@ export async function matchingConfigNumbers<K extends string>(
  */
 export const MATCHING_OPEN_KEY = "matching_open";
 
-/**
- * The hours a moderator has to confirm or reverse an automatic shadow ban
- * (ADR-033 §6); past them it stays, and says late. Read by the safety slice's
- * queue and by the notifications slice's notice, which tells its owner (#715).
- */
-export const AUTO_SHADOW_BAN_REVIEW_HOURS_KEY = "auto_shadow_ban_review_hours";
-
 /** Whether matching is open: the switch's latest version, read on every ask like any tunable. */
 export function matchingOpen(db: Queryable): Promise<boolean> {
   return matchingConfigOf(db, MATCHING_OPEN_KEY, z.boolean(), "a boolean");

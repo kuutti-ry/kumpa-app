@@ -6191,24 +6191,16 @@ admin.automaticBans.confirmTitle:
   description: "Admin panel, the automatic shadow bans (#105): the title of the step that keeps one; {account} is the account id shortened, so the moderator sees whose ban it is."
 
 admin.automaticBans.confirmEffect:
-  en: "The person stays hidden from everyone else, and what they send stays withheld, until somebody lifts it. Their notice then says that a moderator has looked at it and kept it. The reports filed before it can then be closed with it, one by one."
-  description: "Admin panel, the automatic shadow bans (#105): what confirming one of a rule other than the reports does, in words, and what the person's notice says then (#715, ADR-073)."
-
-admin.automaticBans.confirmEffectReports:
-  en: "The person stays hidden from everyone else, and what they send stays withheld, until somebody lifts it. Only now are they told of it, in their app and by email if they confirmed an address, with the words that a moderator has looked at it and kept it; never your note. The reports filed before it can then be closed with it, one by one."
-  description: "Admin panel, the automatic shadow bans (#105): what confirming one of the reports rule does, in words. That rule's ban is told only at this step, so its moment names no reporter (#715, ADR-073 §2)."
+  en: "The person stays hidden from everyone else, and what they send stays withheld, until somebody lifts it. They are not told. The reports filed before it can then be closed with it, one by one."
+  description: "Admin panel, the automatic shadow bans (#105): what confirming one does, in words."
 
 admin.automaticBans.reverseTitle:
   en: "Reverse the automatic shadow ban on account {account}"
   description: "Admin panel, the automatic shadow bans (#105): the title of the step that lifts one; {account} is the account id shortened, so the moderator sees whose ban it is."
 
 admin.automaticBans.reverseEffect:
-  en: "The person is seen again at once, unless something else still open hides them, and what they sent while hidden reaches the people they wrote to. Its notice leaves their app; nothing is sent to them."
-  description: "Admin panel, the automatic shadow bans (#105): what reversing one of a rule other than the reports does, in words, and that the person's notice of it goes (#715, ADR-073)."
-
-admin.automaticBans.reverseEffectReports:
-  en: "The person is seen again at once, unless something else still open hides them, and what they sent while hidden reaches the people they wrote to. They were never told of it, and nothing is sent to them."
-  description: "Admin panel, the automatic shadow bans (#105): what reversing one of the reports rule does, in words: that rule's ban is told only when a moderator confirms it, so its person never hears of a reversed one (#715, ADR-073 §2)."
+  en: "The person is seen again at once, unless something else still open hides them, and what they sent while hidden reaches the people they wrote to. They are not told."
+  description: "Admin panel, the automatic shadow bans (#105): what reversing one does, in words."
 
 admin.automaticBans.done.confirm:
   en: "Confirmed: the shadow ban on account {account} stays."
@@ -9535,14 +9527,14 @@ notices.warning.title:
 
 notices.warning.body:
   en: "A warning by itself changes nothing in how you use the app."
-  description: "The home screen's notices and the warning's email (#176, ADR-024 §7; #715), under the warning's title: what a warning does. The statement's lines (sanction.statement.*) follow it with the reason, the rule and how to contest it."
+  description: "The home screen's notices and the warning's email (#176, ADR-024 §7; #715), under the warning's title: what a warning does. The statement's lines (sanction.statement.*) follow it with the reason, the rule of the terms and how to contest it."
   fi: "Varoitus ei sellaisenaan muuta mitään siinä, miten käytät sovellusta."
   sv: "En varning ändrar i sig ingenting i hur du använder appen."
   machine: { fi: true, sv: true }
 
 notices.shadowBan.title:
   en: "Others don't see your profile for now"
-  description: "The home screen's notices (#715, ADR-073 §2): a shadow ban, told to its owner at once, by a moderator or an automatic rule. Calm, no blame; the lines under it say why and how to contest it."
+  description: "The home screen's notices (#715, ADR-073 §2): a moderator's shadow ban, told to its owner at once; an automatic rule's is never told. Calm, no blame; the lines under it say why and how to contest it."
   fi: "Muut eivät toistaiseksi näe profiiliasi"
   sv: "Andra ser inte din profil för tillfället"
   machine: { fi: true, sv: true }
@@ -9605,86 +9597,16 @@ sanction.statement.ground.other:
 
 sanction.statement.moderator:
   en: "A moderator decided this."
-  description: "A sanction's statement (#715, ADR-073 §1): whether it was automatic. Said of every sanction a person applied; an admin's ban too."
+  description: "A sanction's statement (#715, ADR-073 §1): that no automatic means decided it. Said of every sanction staff applied, an admin's ban too; an automatic rule's shadow ban is never told."
   fi: "Tämän päätti moderaattori."
   sv: "Det här beslutade en moderator."
   machine: { fi: true, sv: true }
 
-sanction.statement.rule.reports:
-  en: "An automatic rule did this: many people reported you in a short time."
-  description: "A shadow ban's statement (#715, ADR-073 §1): the automatic rule that applied it (#105, ADR-033, reports by different people within days). Never who reported, how many, or the threshold."
-  fi: "Tämän teki automaattinen sääntö: moni ilmoitti sinusta lyhyessä ajassa."
-  sv: "Det här gjorde en automatisk regel: många anmälde dig på kort tid."
-  machine: { fi: true, sv: true }
-
-sanction.statement.rule.first_messages:
-  en: "An automatic rule did this: you started very many conversations in a short time."
-  description: "A shadow ban's statement (#715, ADR-073 §1): the automatic rule on first messages within a window (#105, ADR-033). Never the threshold."
-  fi: "Tämän teki automaattinen sääntö: aloitit hyvin monta keskustelua lyhyessä ajassa."
-  sv: "Det här gjorde en automatisk regel: du inledde väldigt många samtal på kort tid."
-  machine: { fi: true, sv: true }
-
-sanction.statement.rule.same_first_message:
-  en: "An automatic rule did this: you sent the same first message to several people."
-  description: "A shadow ban's statement (#715, ADR-073 §1): the automatic rule on the same opener to several people (#105, ADR-033). Never the message or to whom."
-  fi: "Tämän teki automaattinen sääntö: lähetit saman ensimmäisen viestin usealle ihmiselle."
-  sv: "Det här gjorde en automatisk regel: du skickade samma första meddelande till flera personer."
-  machine: { fi: true, sv: true }
-
-sanction.statement.rule.photo_fetches:
-  en: "An automatic rule did this: your account opened very many other people's photos in a short time."
-  description: "A shadow ban's statement (#715, ADR-073 §1): the velocity rule on other people's photos fetched within a window (#86, ADR-041). Never the threshold."
-  fi: "Tämän teki automaattinen sääntö: tililläsi avattiin hyvin monen muun ihmisen kuvia lyhyessä ajassa."
-  sv: "Det här gjorde en automatisk regel: ditt konto öppnade väldigt många andras bilder på kort tid."
-  machine: { fi: true, sv: true }
-
-sanction.statement.rule.cards_served:
-  en: "An automatic rule did this: your account was shown very many profiles in a short time."
-  description: "A shadow ban's statement (#715, ADR-073 §1): the velocity rule on cards served within a window (#86, ADR-041). Never the threshold."
-  fi: "Tämän teki automaattinen sääntö: tilillesi näytettiin hyvin monta profiilia lyhyessä ajassa."
-  sv: "Det här gjorde en automatisk regel: ditt konto visades väldigt många profiler på kort tid."
-  machine: { fi: true, sv: true }
-
-sanction.statement.rule.round_reads:
-  en: "An automatic rule did this: your account asked for new profiles very many times in a short time."
-  description: "A shadow ban's statement (#715, ADR-073 §1): the velocity rule on reads of the queue within a window (#86, ADR-041). Never the threshold."
-  fi: "Tämän teki automaattinen sääntö: tilisi pyysi uusia profiileja hyvin monta kertaa lyhyessä ajassa."
-  sv: "Det här gjorde en automatisk regel: ditt konto bad om nya profiler väldigt många gånger på kort tid."
-  machine: { fi: true, sv: true }
-
-sanction.statement.ruleGround:
-  en: "The terms of use, section 6: automatic rules can limit what others see of an account until a moderator has looked at it."
-  description: "A shadow ban's statement (#715, ADR-073 §1): the rule of the terms an automatic shadow ban rests on (section 6), after the rule that applied it."
-  fi: "Käyttöehdot, kohta 6: automaattiset säännöt voivat rajoittaa sitä, mitä muut näkevät tilistä, kunnes moderaattori on tarkistanut sen."
-  sv: "Användarvillkoren, punkt 6: automatiska regler kan begränsa vad andra ser av ett konto tills en moderator har granskat det."
-  machine: { fi: true, sv: true }
-
-sanction.statement.review:
-  en: "A moderator will look at it within {hours, plural, one {# hour} other {# hours}}."
-  description: "An automatic shadow ban's statement (#715, ADR-073 §1), while no moderator has looked at it: hours is matching_config auto_shadow_ban_review_hours, the time the panel's queue marks as late (ADR-033)."
-  fi: "Moderaattori tarkistaa sen {hours, plural, one {# tunnin} other {# tunnin}} kuluessa."
-  sv: "En moderator granskar det inom {hours, plural, one {# timme} other {# timmar}}."
-  machine: { fi: true, sv: true }
-
-sanction.statement.reviewed:
-  en: "A moderator has since looked at it and kept it in place."
-  description: "An automatic shadow ban's statement (#715, ADR-073 §1), once a moderator confirmed it (ADR-033's review; one reversed is lifted and no longer shown)."
-  fi: "Moderaattori on sittemmin tarkistanut sen ja pitänyt sen voimassa."
-  sv: "En moderator har sedan dess granskat det och låtit det stå kvar."
-  machine: { fi: true, sv: true }
-
 sanction.statement.contest:
-  en: "If you think we got this wrong, write to hello@kuutti.app. Someone other than the person who decided will look at it again. You can also take the matter to a court."
-  description: "A sanction's statement (#715, ADR-073 §3), last: how to contest a decision a person made, or confirmed. The address is the association's public one (the maintainer, 17/11/2026); the second look is ADR-024 §3's review by somebody else; the court sentence is the terms' section 11 in plain words. The address stays exactly as it is in every language."
-  fi: "Jos olemme mielestäsi erehtyneet, kirjoita osoitteeseen hello@kuutti.app. Asian katsoo uudelleen joku muu kuin päätöksen tehnyt. Voit myös viedä asian tuomioistuimeen."
-  sv: "Om du tycker att vi har gjort fel, skriv till hello@kuutti.app. Någon annan än den som beslutade går igenom det på nytt. Du kan också föra saken till domstol."
-  machine: { fi: true, sv: true }
-
-sanction.statement.contestAutomatic:
-  en: "If you think we got this wrong, write to hello@kuutti.app. You can also take the matter to a court."
-  description: "An automatic shadow ban's statement (#715, ADR-073 §3), last, while no moderator has looked at it: no person decided, and sanction.statement.review already says one will look. The address stays exactly as it is in every language."
-  fi: "Jos olemme mielestäsi erehtyneet, kirjoita osoitteeseen hello@kuutti.app. Voit myös viedä asian tuomioistuimeen."
-  sv: "Om du tycker att vi har gjort fel, skriv till hello@kuutti.app. Du kan också föra saken till domstol."
+  en: "If you think we got this wrong, write to hello@kuutti.app. Someone other than the person who decided will look at it again."
+  description: "A sanction's statement (#715, ADR-073 §3), last: how to contest a decision staff made. The address is the association's public one, for now (the maintainer, 17/11/2026); the second look is ADR-024 §3's review by somebody else. The address stays exactly as it is in every language."
+  fi: "Jos olemme mielestäsi erehtyneet, kirjoita osoitteeseen hello@kuutti.app. Asian katsoo uudelleen joku muu kuin päätöksen tehnyt."
+  sv: "Om du tycker att vi har gjort fel, skriv till hello@kuutti.app. Någon annan än den som beslutade går igenom det på nytt."
   machine: { fi: true, sv: true }
 
 notices.read:

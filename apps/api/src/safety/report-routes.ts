@@ -14,7 +14,7 @@ import { AppError } from "../lib/errors.ts";
 import { matchingConfigNumber } from "../lib/matching-config.ts";
 import { bearer, errorContent, json, unauthenticated } from "../lib/openapi.ts";
 import { dayWindow, secondsUntil } from "../media/index.ts";
-import { checkReports, type Sanctioned } from "./automatic.ts";
+import { checkReports } from "./automatic.ts";
 import { recordBlock, recordConversationBlock } from "./blocks.ts";
 import { REPORTS_PER_DAY_KEY, recordConversationReport, recordReport } from "./reports.ts";
 
@@ -128,13 +128,13 @@ const conversationReportRoute = createRoute({
   },
 });
 
-export function reportRoutes(deps: Deps, guard: MiddlewareHandler<AppEnv>, sanctioned: Sanctioned) {
+export function reportRoutes(deps: Deps, guard: MiddlewareHandler<AppEnv>) {
   const app = new OpenAPIHono<AppEnv>();
   const now = () => (deps.now ?? (() => new Date()))();
   // The reports rule (#105, ADR-033) after a report is filed and committed;
-  // it changes no answer, whatever it finds. A ban it applies is mailed (#715).
+  // it changes no answer, whatever it finds.
   const afterFiled = (reportedAccountId: string) =>
-    checkReports({ db: deps.db, logger: deps.logger, now, sanctioned }, reportedAccountId);
+    checkReports({ db: deps.db, logger: deps.logger, now }, reportedAccountId);
   // On the routing paths themselves, which app.test.ts holds every guarded route to.
   for (const route of [blockRoute, reportRoute, conversationBlockRoute, conversationReportRoute]) {
     app.use(route.getRoutingPath(), guard);

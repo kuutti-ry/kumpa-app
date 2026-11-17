@@ -14,9 +14,9 @@ import type { Deps } from "../app.ts";
 import { staffOf } from "../lib/admin-middleware.ts";
 import type { AppEnv } from "../lib/env.ts";
 import { AppError } from "../lib/errors.ts";
-import { AUTO_SHADOW_BAN_REVIEW_HOURS_KEY, matchingConfigNumber } from "../lib/matching-config.ts";
+import { matchingConfigNumber } from "../lib/matching-config.ts";
 import { bearer, errorContent, json, staffErrors } from "../lib/openapi.ts";
-import { listAutomaticBans, type Sanctioned } from "./automatic.ts";
+import { AUTO_SHADOW_BAN_REVIEW_HOURS_KEY, listAutomaticBans } from "./automatic.ts";
 import {
   applySanction,
   liftSanction,
@@ -129,7 +129,7 @@ const reviewRoute = (scope: SanctionScope) =>
     path: scope === "ban" ? "/admin/bans/{id}/review" : "/admin/sanctions/{id}/review",
     summary: scope === "ban" ? "Look at a ban again" : "Look at a sanction again",
     description:
-      "A second member of staff's note, and keep or lift. Somebody other than who applied it; once. Written to audit_log. Keeping an open shadow ban of the reports rule is what tells its person: its notice, and its email after the answer (ADR-073 §2).",
+      "A second member of staff's note, and keep or lift. Somebody other than who applied it; once. Written to audit_log.",
     ...bearer,
     request: { params: SanctionParams, body: { required: true, ...json(SanctionReviewRequest) } },
     responses: {
@@ -151,7 +151,8 @@ export function sanctionAdminRoutes(
   deps: Deps,
   requireModerator: MiddlewareHandler<AppEnv>,
   requireAdministrator: MiddlewareHandler<AppEnv>,
-  sanctioned: Sanctioned,
+  /** Told of a sanction staff applied, once it has committed: its email (#715, ADR-073 §4). */
+  sanctioned: (input: { accountId: string; sanctionId: string }) => void,
 ) {
   const app = new OpenAPIHono<AppEnv>();
   const now = () => (deps.now ?? (() => new Date()))();
@@ -259,7 +260,7 @@ export function sanctionAdminRoutes(
       const staff = staffOf(c);
       const { id } = c.req.valid("param");
       const body = c.req.valid("json");
-      const { sanction: item, told } = await reviewSanction(deps.db, {
+      const item = await reviewSanction(deps.db, {
         sanctionId: id,
         scope,
         actor: staff.identityId,
@@ -277,8 +278,6 @@ export function sanctionAdminRoutes(
         },
         "sanction reviewed",
       );
-      // The reports rule's ban is told by its keep, and mailed after it (ADR-073 §2).
-      if (told) sanctioned({ accountId: item.accountId, sanctionId: id });
       return c.json(item, 200);
     });
   }
