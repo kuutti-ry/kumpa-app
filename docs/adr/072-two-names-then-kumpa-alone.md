@@ -1,12 +1,12 @@
 # ADR-072: Two names, then kumpa.fi alone
 
-- Status: proposed (#703, on the maintainer's word of 2026-11-16 in chat; §1 to §6 built as written here in the pull request for #703; the applies, the Workspace alias and the mail to Telia are his; §7 and §8 wait on Telia's answer and on the installed builds; accepting it is the maintainer's)
+- Status: proposed (#703, on the maintainer's word of 2026-11-16 in chat; §1 to §5 built as written here in the pull request for #703; the applies, the Workspace alias and §6 are his; §7 and §8 wait on Telia's answer and on the installed builds; accepting it is the maintainer's)
 - Date: 2026-11-17
 - Follows: TD-4 (one vendor, AWS, and the association's own accounts and domain), TD-1 (every account is a bank login, so the bank's callback cannot break), ADR-001 (declared in code; the bootstrap applied by hand), ADR-005 §7 (what the box serves on 443 is behind the distribution), ADR-025 §3 and §10 (the panel's CSP and its origin), ADR-043 §5 and §6 (the mail identity and staging's recipients), ADR-048 (the control-plane pin), ADR-070 (no previews), CLAUDE.md rule 8; issues #703, #700, #698, #25. It amends ADR-025 §10 (the panel's origins), ADR-043 §5 and §6 (the identities and staging's list) and ADR-048 §3 (the pin, per name)
 
 ## Context
 
-The app is called Kumpa; Kuutti ry is the association that runs it. On 2026-11-16 the maintainer decided that the servers, the moderation panel and the mail move to `kumpa.fi`, as the website already had beside `kuutti.app` (#698): "AWS is using kumpa.fi instead of https://api.kuutti.app/health and https://api.staging.kuutti.app/health and so on". Asked how, he chose both names first and `kuutti.app`'s retired later, the mail as `Kumpa <noreply@kumpa.fi>` through an SES identity of its own, and a mail to Telia that the agent drafts and he sends.
+The app is called Kumpa; Kuutti ry is the association that runs it. On 2026-11-16 the maintainer decided that the servers, the moderation panel and the mail move to `kumpa.fi`, as the website already had beside `kuutti.app` (#698): "AWS is using kumpa.fi instead of https://api.kuutti.app/health and https://api.staging.kuutti.app/health and so on". Asked how, he chose both names first and `kuutti.app`'s retired later, and the mail as `Kumpa <noreply@kumpa.fi>` through an SES identity of its own.
 
 What names `kuutti.app` on that day:
 
@@ -25,7 +25,7 @@ The `kumpa.fi` zone is in this account since #698, adopted in `infra/bootstrap/d
 3. **Traefik holds every name.** `dokploy-setup.sh` gives the API application both API hosts, and the pin of ADR-048 keeps every name of `dokploy` and of `api` with its owner. Each name gets a pair of routers of its own, so each has its own certificate, and a name that stops answering Let's Encrypt cannot hold up another's renewal. Dokploy's own domain takes one host, and it stays `kuutti.app`'s, the one `deploy.yml` calls. `kumpa.fi`'s CAA admits Let's Encrypt, as `kuutti.app`'s does, since the boxes now serve names there.
 4. **The panel's origins.** `cors-allowed-origins` holds both of the panel's origins while it has two. That is the only new browser origin: rule 8's surface is the same panel under another name.
 5. **Mail.** `kumpa.fi` is a second SES identity, in the shape of `kuutti.app`'s (`infra/bootstrap/mail.tf`): Easy DKIM as `d=kumpa.fi`, which aligns under the zone's `adkim=s`, and the MAIL FROM `mail.kumpa.fi` with its MX and an SPF of its own. The instance role may send as `noreply@` of either domain (`modules/compute`, `mail_domains`, statement `SesSendAsNoreply`). Staging's default recipients name both senders. Nothing sends through the new identity until `MAIL_FROM` says `Kumpa <noreply@kumpa.fi>` (§7).
-6. **Telia.** One mail from the maintainer to id-maintenance asks Telia to register the `kumpa.fi` callbacks beside the present ones: `https://api.staging.kumpa.fi/auth/callback` for the pre-production client and `https://api.kumpa.fi/auth/callback` for production's. It also asks for **Kumpa** as `ftn_spname` and `client_name`, which covers #700's "lähettäjä Kuutti". The agent drafts it in the maintainer's mailbox and never sends it, and Telia's answer is written into `docs/vendors/telia.md`.
+6. **Telia.** The bank's callback moves only once Telia has registered the `kumpa.fi` ones beside the present ones: `https://api.staging.kumpa.fi/auth/callback` for the pre-production client and `https://api.kumpa.fi/auth/callback` for production's. The display name `ftn_spname` becomes **Kumpa** with them, which covers #700's "lähettäjä Kuutti". Asking Telia is the maintainer's, and the correspondence stays off GitHub: the switch starts on his word that Telia has registered them.
 7. **The switch** is its own change, made once Telia has said yes and the Workspace alias `noreply@kumpa.fi` exists. It covers the bank's callback (`oidc-redirect-uri`, `telia-keys.sh`'s metadata), `MAIL_FROM`, `EXPO_PUBLIC_API_URL` in the EAS environments, the GitHub variables, `admin-app-url` and the panel's API origin with its CSP, `media-url-base`, the invitation link's host and `SITE_URL`, the runbooks, the load smoke, the drawings and the store listings. Whether `domain` itself flips is for that change to plan. The records are keyed by name, so flipping it in place would plan every record again under the other zone; the plan is read for a record deleted and made in the same apply.
 8. **The retirement.** Once no installed build calls a `kuutti.app` host, those hosts go: their records, the aliases, the certificates' names, the pin's routers, the old Telia callbacks and `kuutti.app`'s place in `mail_domains`. The distribution's origin then moves to `origin.api.<env>.kumpa.fi`, which needs Traefik's certificate first (a Dokploy domain on the application). The `kuutti.app` zone stays: the website and the association's Workspace mail live there.
 
@@ -43,7 +43,7 @@ The `kumpa.fi` zone is in this account since #698, adopted in `infra/bootstrap/d
 
 1. `tofu apply` in `infra/bootstrap` by hand: the `kumpa.fi` identity, its MAIL FROM and five records, and the CAA changed in place. Then the identity's verification (`infra/README.md`, Mail, step 2).
 2. Staging through `infra.yml` after the merge, a redeploy of the API so that it reads the new origins, `dokploy-setup.sh staging`, and the checks of `infra/README.md`, Two names. Production at its next release tag (`infra-prod.yml`), then `dokploy-setup.sh prod`.
-3. Sending the mail to Telia from the draft, and the answer, which goes into `docs/vendors/telia.md`.
+3. Asking Telia to register the `kumpa.fi` callbacks and the name Kumpa (§6), and his word once it has.
 4. The Workspace alias `noreply@kumpa.fi`.
 5. At §8, how to tell that no installed build calls `kuutti.app`, for example from Traefik's access log by host or from a minimum app version, and how long a quiet spell is enough.
 
@@ -62,4 +62,5 @@ The `kumpa.fi` zone is in this account since #698, adopted in `infra/bootstrap/d
 
 ## History
 
-- 2026-11-17: written, and §1 to §6 built in the pull request for #703; the mail to Telia of §6 drafted for the maintainer to send.
+- 2026-11-17: written, and §1 to §5 built in the pull request for #703 (#713).
+- 2026-11-17: §6 and Open 3 say what Telia must register, no longer what was asked of it: correspondence with Telia stays off GitHub (the maintainer's word in chat).
