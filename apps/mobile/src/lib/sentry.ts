@@ -35,8 +35,12 @@ const namesSupport = (...values: unknown[]): boolean =>
  * touched component and every one around it: a message, a name, a shared
  * contact (#103). The components' names stay, nothing they say. A crumb that
  * names the support page goes altogether, on the way there and on the way back.
+ * A console line goes whole: it is a library's words about whatever it held,
+ * and the router's warning about a link it could not open quotes the link, the
+ * bank's return with its one-time code or an invitation's with its code (#184).
  */
 export function stripBreadcrumb(crumb: Breadcrumb): Breadcrumb | null {
+  if (crumb.category === "console") return null;
   if (crumb.category?.startsWith("navigation")) {
     const { from, to } = (crumb.data ?? {}) as { from?: unknown; to?: unknown };
     if (namesSupport(crumb.message, from, to)) return null;
@@ -105,8 +109,12 @@ export function sentryOptions(input: {
     attachScreenshot: false,
     attachViewHierarchy: false,
     enableAutoSessionTracking: false,
-    // Default integrations minus anything that records the screen or asks the user for input.
-    integrations: (defaults) => defaults.filter((i) => !/replay|feedback/i.test(i.name)),
+    // Default integrations minus anything that records the screen or asks the
+    // user for input, or that records a link from outside the app: the bank
+    // login's return carries a one-time code and an invitation's link its
+    // code in the path (#184). The SDK's deep-link integration is opt-in
+    // today; this keeps it off if a later version makes it a default.
+    integrations: (defaults) => defaults.filter((i) => !/replay|feedback|deeplink/i.test(i.name)),
     beforeBreadcrumb: stripBreadcrumb,
     beforeSend: (event) => stripSupportView(stripUser(event)),
   };

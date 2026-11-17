@@ -4106,10 +4106,10 @@ settings.lock.label:
   machine: { fi: true, sv: true }
 
 native.ios.NSFaceIDUsageDescription:
-  en: "Kuutti uses Face ID to unlock the app when you have turned the lock on."
-  description: "iOS asks this before Kuutti first uses Face ID (#418): the purpose string in Info.plist, written per language by app.config.ts from native.json. No double quotes or backslashes."
-  fi: "Kuutti käyttää Face ID:tä sovelluksen avaamiseen, kun olet ottanut lukituksen käyttöön."
-  sv: "Kuutti använder Face ID för att låsa upp appen när du har slagit på låset."
+  en: "Kumpa uses Face ID to unlock the app when you have turned the lock on."
+  description: "iOS asks this before Kumpa first uses Face ID (#418): the purpose string in Info.plist, written per language by app.config.ts from native.json. No double quotes or backslashes."
+  fi: "Kumpa käyttää Face ID:tä sovelluksen avaamiseen, kun olet ottanut lukituksen käyttöön."
+  sv: "Kumpa använder Face ID för att låsa upp appen när du har slagit på låset."
   machine: { fi: true, sv: true }
 
 signIn.error.auth_cooldown:

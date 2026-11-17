@@ -20,6 +20,7 @@ import { healthRoutes } from "./health/index.ts";
 import {
   accountRoutes,
   adminSessionStore,
+  appLinkRoutes,
   authRoutes,
   currentConsent,
   type IdentityBroker,
@@ -28,7 +29,6 @@ import {
   onboardingRoutes,
   refuseSignInStart,
   sessionStore,
-  wellKnownRoutes,
 } from "./identity/index.ts";
 import { isComplete, matchingStatusOf } from "./jobs/pool.ts";
 import { fillQueue, fitsNow, relaxationOffers, relaxedCandidates } from "./jobs/queue-builder.ts";
@@ -146,6 +146,9 @@ export const PUBLIC_ROUTES = new Set([
   "POST /auth/refresh",
   "GET /.well-known/assetlinks.json",
   "GET /.well-known/apple-app-site-association",
+  // The bank login's return when the phone kept it in the browser (#184, ADR-074 §3):
+  // a redirect to the app's scheme, no page, no lookup.
+  "GET /auth/return",
   // The one link (#574, ADR-044 §13): a redirect to a store, no page, no lookup.
   "GET /i",
   "GET /i/:code",
@@ -247,7 +250,7 @@ export function createApp(deps: Deps) {
   app.route("/", healthRoutes(deps));
   app.route("/", authRoutes(deps, guard, moderators));
   app.route("/", accountRoutes(deps, guard));
-  app.route("/", wellKnownRoutes(deps));
+  app.route("/", appLinkRoutes(deps));
   app.route("/", legalTextRoutes());
   app.route("/", invitationLinkRoutes(deps));
   // A URL of somebody else's photo is checked by the velocity rule (#86,

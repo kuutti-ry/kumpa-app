@@ -121,7 +121,7 @@ export interface paths {
         };
         /**
          * The broker's return
-         * @description The registered redirect URI. Exchanges the code with the broker, derives the identity, applies the re-registration rule and redirects to the app's deep link with a one-time code. A state is answered once: its second return, at once or later, is auth_state_mismatch without a call to the broker. Never called by the app itself.
+         * @description The registered redirect URI. Exchanges the code with the broker, derives the identity, applies the re-registration rule and redirects to the app's link with a one-time code: the verified https link (/auth/return on this API's host) where this environment serves the platform's file, the app's scheme otherwise (ADR-074). A state is answered once: its second return, at once or later, is auth_state_mismatch without a call to the broker. Never called by the app itself.
          */
         get: {
             parameters: {
@@ -137,7 +137,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Redirect to kuutti://auth?code=… on success, or to kuutti://auth?error=<code> (auth_state_mismatch, auth_cancelled, auth_under_18, auth_banned, auth_suspended with &until=<date> when the suspension has an end, auth_cooldown with &until=<date>, auth_provider_error; auth_banned and auth_suspended with &reason=<the sanction's reason> when a sanction is behind them) so the app shows the refusal. */
+                /** @description Redirect to kuutti://auth?code=… on success, or to https://<this API's host>/auth/return?code=… where the platform's verified link is served, or to kuutti://auth?error=<code> (auth_state_mismatch, auth_cancelled, auth_under_18, auth_banned, auth_suspended with &until=<date> when the suspension has an end, auth_cooldown with &until=<date>, auth_provider_error; auth_banned and auth_suspended with &reason=<the sanction's reason> when a sanction is behind them) so the app shows the refusal. */
                 302: {
                     headers: {
                         [name: string]: unknown;

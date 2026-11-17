@@ -47,10 +47,10 @@ Google's side, as read on 2026-10-27 by three research passes and a fact-check o
 - The merge moves the fingerprint once (point 8): its push to `main` starts a development build, and every installed development and preview build stops receiving updates until it is replaced.
 - A new long-lived credential, the service account's key, at Expo: `docs/runbooks/custody.md`, and `rotation.md`, section 14, and section 10 for a leak of `EXPO_TOKEN`, which reaches it too.
 - Verified links (#184) list Play's three signing fingerprints beside EAS's in `assetlinks.json`, and a Firebase key for push restricted by signing certificate (#102) needs Play's too.
-- The version name stays `0.0.0` until #184's native batch; testers see it in Play.
+- The version name stayed `0.0.0` until #184's native batch, which set it to the counted version (ADR-074 §7); testers see it in Play.
 - Google's pre-launch robots run each uploaded bundle on test phones. In the staging app they stop at the bank login.
 - ADR-056 §1's second trigger reads "Kuutti is distributed through Google Play". This record takes it to mean the production app on Play, which waits for point 7; whether the staging app on internal testing already counts is the maintainer's reading (ADR-056: starting §2 is his).
-- The Expo template's `SYSTEM_ALERT_WINDOW` is in every release build's manifest, though nothing uses it. Leaving it out is an `app.json` change, so it belongs to #184's native batch.
+- The Expo template's `SYSTEM_ALERT_WINDOW` was in every release build's manifest, though nothing used it. Leaving it out is an `app.json` change, so it went with #184's native batch (`android.blockedPermissions`, ADR-074 §7).
 
 ## Alternatives considered
 
@@ -72,3 +72,4 @@ Google's side, as read on 2026-10-27 by three research passes and a fact-check o
 - 2026-10-28 (#193): §3, the maintainer's login holds Service Account Token Creator on `eas-submit`, so that the tracks can be read from the command line (`docs/vendors/google-play.md`, Reading Play from the command line). The IAM Service Account Credentials API was switched on in the project for it, by the agent at the maintainer's asking.
 - 2026-10-28: internal app sharing's testers restricted to the team's list and Manage uploaders emptied, a day after the key rather than before it (§3). A tester installed version code 3 from Play the same morning.
 - 2026-11-02 (#193): §1's "for Android alone until the association's Apple account can take it to TestFlight" ends with ADR-063: the association's Apple team exists, and the `staging` profile builds both platforms, the iOS build for TestFlight's internal testing.
+- 2026-11-17 (#184, ADR-074 §7): from the native batch's first build on, the version name is the counted version and `SYSTEM_ALERT_WINDOW` is out of the manifest. The verified links' file lists EAS's and Play's fingerprints once the maintainer sets the parameter (ADR-074 Open 1). No point changes.

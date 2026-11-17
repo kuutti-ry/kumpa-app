@@ -3,6 +3,7 @@
 <!-- draws
 apps/api/src/identity/routes.ts
 apps/api/src/identity/login.ts
+apps/api/src/identity/links.ts
 apps/api/src/identity/hetu.ts
 apps/api/src/identity/oidc-broker.ts
 apps/api/src/identity/broker.ts
@@ -11,10 +12,12 @@ apps/api/src/identity/codes.ts
 apps/api/src/identity/sessions.ts
 apps/api/src/identity/admin-session.ts
 apps/mobile/src/features/identity/verifier.ts
+apps/mobile/src/features/identity/return-link.ts
 apps/mobile/src/features/identity/session.tsx
 apps/mobile/src/features/identity/SignedOutToStart.tsx
 apps/mobile/src/lib/session.ts
 apps/mobile/app/auth.tsx
+apps/mobile/app/+native-intent.ts
 apps/mobile/app/_layout.tsx
 apps/admin/src/features/identity/session.tsx
 -->
@@ -54,7 +57,7 @@ sequenceDiagram
 ### Steps
 
 1. The person chooses "Sign in with your bank". The button stands only once this phone has recorded the terms and the privacy summary, or holds the answers to them for this attempt (ADR-010 §15).
-2. The app makes a new verifier for this attempt alone, 64 lowercase hex characters, and keeps it with the pending mark in the phone's secure store, readable on this device only. A second tap writes a new verifier, so a code that belongs to the first tap is refused later (ADR-027 §1). The verifier is two native UUIDs until #184 brings `expo-crypto`, a `shortcut:` (ADR-027 §5).
+2. The app makes a new verifier for this attempt alone, 64 lowercase hex characters, and keeps it with the pending mark in the phone's secure store, readable on this device only. A second tap writes a new verifier, so a code that belongs to the first tap is refused later (ADR-027 §1). The verifier is 32 bytes of the system's generator, through `expo-crypto` (ADR-027 §5).
 3. The app opens the API's sign-in start in the phone's own browser, never a WebView, so the bank's cookies stay out of the app.
 4. The browser asks `GET /auth/start` with the platform (`ios` or `android`), the bank chooser's language (`fi`, `sv` or `en`) and `code_challenge`, the verifier's SHA-256 as lowercase hex. Without a well-formed challenge the API answers 400 before anything is written (ADR-027 §2). An API with no broker answers 503, which the 5xx alarm sees (ADR-070 §4).
 5. The sign-in doors run first. Too many starts from this network within the minute (an IPv6 client is counted by its /56), or an attempts table whose every row the bank has answered: the browser goes back to the app with `auth_rate_limited` and `Retry-After`, nothing is written and nothing is signed (ADR-026 §4, §6). The app says the refusal.
@@ -85,7 +88,7 @@ sequenceDiagram
   alt Let in: a resume, the end of a break, or a new account
     api->>db: Resumes the account, or creates the identity or the account with birth_year and birth_month
     api->>db: Stores the SHA-256 of a one-time code on the attempt, 60 seconds to live
-    api-->>browser: 302 to kuutti://auth?code=…
+    api-->>browser: 302 with the one-time code, to the API's own /auth/return where the platform's links are served, to kuutti://auth?code=… otherwise
   else Refused from step 12 on, a state the claim did not take spends nothing
     api->>db: Spends the attempt, and counts a banned, suspended or cooldown refusal on the identity
     api-->>browser: 302 to kuutti://auth?error= with the refusal's code, and a ban's or a suspension's reason
@@ -103,7 +106,7 @@ sequenceDiagram
 17. The API looks up the identity by `hetu_hmac`, and its live account. The re-registration rule decides (TD-7): a banned identity, a suspended one (with the day it ends, if it has one) and one inside the 30 days after deleting an account (the cooldown, with its date) are refused: 21.
 18. A known identity with a live account resumes it, and an account on a break comes off it (ADR-022). A known identity without one gets a new account, with nothing restored, and a person never seen gets an identity and then an account, with `birth_year` and `birth_month`. The identity's latest bank login is rewritten: `sub`, the session index, the token id, `auth_time`, `acr` and `amr`. Two logins of one person at once are settled by applying the rule again, and so is an erasure that commits between the two reads: the account insert itself refuses an identity inside its cooldown, and the rule, applied again, reads the cooldown: 21.
 19. The API stores the SHA-256 of a new one-time code, 32 random bytes, on the attempt, with 60 seconds to live, and logs one line: the level, the method and the outcome, nothing of the person.
-20. The browser is sent to `kuutti://auth?code=…`: part 3.
+20. The browser is sent to the app with the code (ADR-074 §2): to `/auth/return?code=…` on the host of the registered redirect URI, over https, when the attempt's platform has its verified-links parameter (`IOS_TEAM_ID` for `ios`, `ANDROID_CERT_FINGERPRINTS` for `android`), and to `kuutti://auth?code=…` when it has not. Part 3.
 21. A refusal after the claim spends the attempt, so a replay is refused too, and a banned, suspended or cooldown refusal is counted on the identity.
 22. The browser is sent to `kuutti://auth?error=` with the refusal's code (`auth_state_mismatch`, `auth_cancelled`, `auth_provider_error`, `auth_under_18`, `auth_banned`, `auth_suspended`, `auth_cooldown`), and `&until=` for a cooldown and for a suspension with an end day, and `&reason=` for a ban and a suspension: the reason of the newest one open on the identity, a value of the closed list (ADR-073 §2), which the refusal's log line carries as a code. The app shows a reason only of that list. The app says each on its card: `auth_state_mismatch` and `auth_provider_error` by the card's title alone, over Try again, since nobody acts on which of them it was, and the others with a sentence of their own (#581).
 
@@ -112,13 +115,14 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
   accTitle: The bank login, part 3: back in the app
-  accDescr: The deep link brings the one-time code to the app, which takes its verifier from the pending mark and posts both to the API's exchange. The API verifies an iPhone's attestation if one came, which no build sends yet, spends the code only with the matching verifier, within its minute, and opens a session for this device, keeping only hashes. The app keeps the tokens in the secure store and records the answers given before the bank.
+  accDescr: The deep link, a verified https link or the app's own scheme, brings the one-time code to the app, which takes its verifier from the pending mark and posts both to the API's exchange. A browser that follows the https link itself is sent on to the scheme. The API verifies an iPhone's attestation if one came, spends the code only with the matching verifier, within its minute, and opens a session for this device, keeping only hashes. The app keeps the tokens in the secure store and records the answers given before the bank.
   autonumber 23
   participant browser as The phone's browser
   participant app as The app
   participant api as The API
   participant db as The database
-  browser->>app: Opens the deep link kuutti://auth?code=…
+  browser->>app: The phone hands over the return, the verified https link or kuutti://auth?code=…
+  Note over browser,api: A browser that follows the https link itself asks GET /auth/return, which looks nothing up and answers 302 to kuutti://auth
   app->>app: Takes the pending mark and its verifier, once, or refuses the link
   app->>api: POST /auth/exchange with the code, the verifier and, where its build can, an iPhone's attestation
   api->>db: Verifies an iPhone's attestation if one came, then spends the code if its hash, the verifier's SHA-256 and its minute match
@@ -130,9 +134,9 @@ sequenceDiagram
 
 ### Steps
 
-23. The phone opens the deep link `kuutti://auth?code=…` in the app.
+23. The phone hands the return to the app. A verified `https://…/auth/return?code=…` reaches the app alone, and the app reads it as the scheme's `/auth?code=…` before its router sees it (`signInReturnPath`); `kuutti://auth?code=…` opens the app as it always did. Where the phone did not hand the https link over (a build from before the links, a link that did not verify on this phone), the browser asks `GET /auth/return` itself: it looks nothing up and answers 302 with `no-store`, to `kuutti://auth?code=…` for a code that reads as one and to `kuutti://auth?error=auth_code_used` for anything else (ADR-074 §3). Nothing of the address is logged.
 24. The app takes the pending mark and its verifier, once: reading the mark spends it. No mark, a mark older than ten minutes, or a phone already signed in: the link is refused as `unexpected_link`, and nothing is sent. A code somebody else sent as a link stops here.
-25. On an iPhone whose build holds Expo's App Attest module (none yet, #184), the app first makes a key in the Secure Enclave and has Apple attest it with the code as the challenge, waiting ten seconds at most (`attest`, `apps/mobile/src/lib/app-attest.ts`); a failure, or anything the exchange would not take, means none is sent. Then it posts the code and the verifier, and the attestation if it has one, to `POST /auth/exchange`. The verifier travels only in this body.
+25. On an iPhone whose build holds Expo's App Attest module (a build since #184's native batch, ADR-074 §7), the app first makes a key in the Secure Enclave and has Apple attest it with the code as the challenge, waiting ten seconds at most (`attest`, `apps/mobile/src/lib/app-attest.ts`); a failure, or anything the exchange would not take, means none is sent. Then it posts the code and the verifier, and the attestation if it has one, to `POST /auth/exchange`. The verifier travels only in this body.
 26. The body may carry an iPhone's attestation (step 25, ADR-069 §2). When one comes and the environment has the team's id, the API verifies it by Apple's eleven steps before the code is touched; a refusal is 403 `attestation_refused` and the code stays unspent. Then one statement spends the code, and only when all hold: its hash matches, the attempt's `code_challenge` is the SHA-256 of the verifier, the attempt belongs to an account, the code is unused and within its minute. An attempt that said `ios` is spent without an attestation only where the environment does not require one, which none does yet, and an attempt that said `android` never with one. Anything else is 401 `auth_code_used`, and a wrong verifier leaves the code unspent (ADR-027 §3); an iPhone's good code refused for want of a required attestation is 403 `attestation_refused`. The exchange is no sign-in door, but the address's own limit can answer 429.
 27. The API opens this device's session: a new access token (15 minutes) of 256 random bits, and a refresh token of two such parts joined by a dot, the session's own secret, fixed for its life, and the part each refresh replaces (ADR-059). The database keeps only SHA-256 hashes: of the access token, of the refresh token, and of the secret, by which any earlier refresh token of the session, presented again, is recognised and ends the session. A session opened with an attestation also keeps the attested key's public half and a counter, and is refreshed from then on only with that key's assertion over the refresh token it presents (ADR-069 §3). The session ends ninety days on; each refresh moves the end to ninety days from the refresh, never past a year from this login (ADR-058).
 28. The app receives both tokens and the outcome: `created`, `resumed` or `unpaused`. A failure is said on the sign-in screen.
@@ -191,16 +195,16 @@ sequenceDiagram
 
 ## Where it lives
 
-- App: [SignInScreen.tsx](../../apps/mobile/src/features/identity/SignInScreen.tsx) (the start and the return), [verifier.ts](../../apps/mobile/src/features/identity/verifier.ts), [lib/session.ts](../../apps/mobile/src/lib/session.ts) (the pending mark, the stored session), [session.tsx](../../apps/mobile/src/features/identity/session.tsx) (the exchange), [app/auth.tsx](../../apps/mobile/app/auth.tsx) (the deep link's route); the rule in `.claude/rules/mobile.md`, Auth and network
-- API: `GET /auth/start`, `GET /auth/callback`, `POST /auth/exchange`, `GET /admin/auth/start`, `POST /admin/auth/exchange` in [routes.ts](../../apps/api/src/identity/routes.ts); [login.ts](../../apps/api/src/identity/login.ts) (start, callback, exchange), [hetu.ts](../../apps/api/src/identity/hetu.ts) (the HMAC and the age), [oidc-broker.ts](../../apps/api/src/identity/oidc-broker.ts) and [broker.ts](../../apps/api/src/identity/broker.ts) (the adapter and its seam), [registration.ts](../../apps/api/src/identity/registration.ts) (TD-7), [codes.ts](../../apps/api/src/identity/codes.ts), [sessions.ts](../../apps/api/src/identity/sessions.ts), [admin-session.ts](../../apps/api/src/identity/admin-session.ts), [repo.ts](../../apps/api/src/identity/repo.ts)
+- App: [SignInScreen.tsx](../../apps/mobile/src/features/identity/SignInScreen.tsx) (the start and the return), [verifier.ts](../../apps/mobile/src/features/identity/verifier.ts), [lib/session.ts](../../apps/mobile/src/lib/session.ts) (the pending mark, the stored session), [session.tsx](../../apps/mobile/src/features/identity/session.tsx) (the exchange), [app/auth.tsx](../../apps/mobile/app/auth.tsx) (the deep link's route), reached from an https return through [app/+native-intent.ts](../../apps/mobile/app/+native-intent.ts) and [return-link.ts](../../apps/mobile/src/features/identity/return-link.ts); the rule in `.claude/rules/mobile.md`, Auth and network
+- API: `GET /auth/start`, `GET /auth/callback`, `POST /auth/exchange`, `GET /admin/auth/start`, `POST /admin/auth/exchange` in [routes.ts](../../apps/api/src/identity/routes.ts); `GET /auth/return` and the two files of the verified links in [links.ts](../../apps/api/src/identity/links.ts); [login.ts](../../apps/api/src/identity/login.ts) (start, callback, exchange), [hetu.ts](../../apps/api/src/identity/hetu.ts) (the HMAC and the age), [oidc-broker.ts](../../apps/api/src/identity/oidc-broker.ts) and [broker.ts](../../apps/api/src/identity/broker.ts) (the adapter and its seam), [registration.ts](../../apps/api/src/identity/registration.ts) (TD-7), [codes.ts](../../apps/api/src/identity/codes.ts), [sessions.ts](../../apps/api/src/identity/sessions.ts), [admin-session.ts](../../apps/api/src/identity/admin-session.ts), [repo.ts](../../apps/api/src/identity/repo.ts)
 - The Telia dialect: `@kuutti-ry/tunnistus-oidc` from npm, its own repository kuutti-ry/tunnistus-oidc; the guide clause by clause in [docs/vendors/telia.md](../vendors/telia.md), Conformance
 - Panel: [features/identity/session.tsx](../../apps/admin/src/features/identity/session.tsx)
 - Contracts: [packages/schema/src/identity.ts](../../packages/schema/src/identity.ts), [admin.ts](../../packages/schema/src/admin.ts)
 - Configuration: the `oidc-*` parameters in [infra/envs/staging/main.tf](../../infra/envs/staging/main.tf); the two Telia keys and the HMAC key in SSM ([infra/README.md](../../infra/README.md), Secrets)
 - Locally: the mock bank in [services/mock-idp](../../services/mock-idp), the plain dialect of the same kit
 - Specs: [bank-login.feature](../../features/identity/bank-login.feature), [re-registration.feature](../../features/identity/re-registration.feature), [sessions.feature](../../features/identity/sessions.feature)
-- ADRs: [ADR-006](../adr/006-photo-moderation.md) §5, [ADR-010](../adr/010-onboarding-and-consents.md) §15, [ADR-014](../adr/014-demo-mode.md) §1, [ADR-016](../adr/016-fresh-bank-login.md), [ADR-017](../adr/017-tunnistus-oidc-package.md), [ADR-022](../adr/022-taking-a-break.md), [ADR-024](../adr/024-sanctions.md) §5, [ADR-073](../adr/073-telling-a-sanction.md) §2, [ADR-025](../adr/025-admin-host.md), [ADR-026](../adr/026-limits-per-person-and-sign-in-doors.md) §4, §6, §8, [ADR-027](../adr/027-sign-in-code-bound-to-the-device.md), [ADR-058](../adr/058-sessions-end-after-ninety-idle-days.md), [ADR-059](../adr/059-refresh-token-carries-its-session.md)
-- Issues: #32, #33 (the bank login), #35 (sessions), #36 (the app's side), #49 (staff), #186 (the bound code), #324 (a state answered once), #41 (the doors), #472 (the session's end), #490 (the refresh token's secret)
+- ADRs: [ADR-006](../adr/006-photo-moderation.md) §5, [ADR-010](../adr/010-onboarding-and-consents.md) §15, [ADR-014](../adr/014-demo-mode.md) §1, [ADR-016](../adr/016-fresh-bank-login.md), [ADR-017](../adr/017-tunnistus-oidc-package.md), [ADR-022](../adr/022-taking-a-break.md), [ADR-024](../adr/024-sanctions.md) §5, [ADR-073](../adr/073-telling-a-sanction.md) §2, [ADR-025](../adr/025-admin-host.md), [ADR-026](../adr/026-limits-per-person-and-sign-in-doors.md) §4, §6, §8, [ADR-027](../adr/027-sign-in-code-bound-to-the-device.md), [ADR-058](../adr/058-sessions-end-after-ninety-idle-days.md), [ADR-059](../adr/059-refresh-token-carries-its-session.md), [ADR-074](../adr/074-the-links-the-app-takes.md) §2, §3
+- Issues: #32, #33 (the bank login), #35 (sessions), #36 (the app's side), #184 (the https return), #49 (staff), #186 (the bound code), #324 (a state answered once), #41 (the doors), #472 (the session's end), #490 (the refresh token's secret)
 
 ## Open
 

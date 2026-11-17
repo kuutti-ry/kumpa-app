@@ -328,7 +328,7 @@ export const fi: Readonly<Record<string, string>> = {
   "mail.sanction.subject.warn": "Kumpa: varoitus moderaattorilta",
   "mail.sanction.why": "Saat tämän, koska vahvistit tämän osoitteen Kumpa-sovelluksessa. Tiliäsi koskeva päätös lähetetään sinulle aina, ilmoitusasetuksistasi riippumatta.",
   "mail.signature": "Kuutti ry",
-  "native.ios.NSFaceIDUsageDescription": "Kuutti käyttää Face ID:tä sovelluksen avaamiseen, kun olet ottanut lukituksen käyttöön.",
+  "native.ios.NSFaceIDUsageDescription": "Kumpa käyttää Face ID:tä sovelluksen avaamiseen, kun olet ottanut lukituksen käyttöön.",
   "notices.invitationCounted.body": "Joku kutsumasi on saanut profiilinsa valmiiksi. {fish, plural, =0 {Kiitos, että kutsuit hänet.} one {Ansaitsit kalan.} other {Ansaitsit # kalaa.}}",
   "notices.invitationCounted.title": "Yksi kutsuistasi laskettiin",
   "notices.invitationFriend.body": "Kutsu toi sinulle {fish, plural, one {kalan} other {# kalaa}}.",

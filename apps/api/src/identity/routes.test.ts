@@ -909,6 +909,63 @@ describe("the count of bank identifications (#471)", () => {
   });
 });
 
+describe("the return on the verified link (#184, ADR-074)", () => {
+  const FINGERPRINT = Array.from({ length: 32 }, () => "AB").join(":");
+  const TEAM = "HM4J7X495K";
+
+  /** A sign-in from `platform`, up to the callback's answer. */
+  async function returnOf(app: ReturnType<typeof createApp>, platform: "ios" | "android") {
+    const started = await app.request(
+      `/auth/start?platform=${platform}&locale=fi&code_challenge=${CHALLENGE}`,
+    );
+    const state = new URL(started.headers.get("location") ?? "").searchParams.get("state") ?? "";
+    return callback(app, state);
+  }
+
+  test.for([
+    [
+      "Android where the fingerprints are set",
+      { ANDROID_CERT_FINGERPRINTS: FINGERPRINT },
+      "android",
+      "ios",
+    ],
+    ["an iPhone where the team is set", { IOS_TEAM_ID: TEAM }, "ios", "android"],
+  ] as const)(
+    "%s returns on the https link of the callback's host, the other platform on the scheme",
+    async ([, config, verified, other], { ctx }) => {
+      const { app, logs } = await appWith(ctx, ADULT_HETU, { config });
+      const res = await returnOf(app, verified);
+      expect(res.status).toBe(302);
+      const location = new URL(res.headers.get("location") ?? "");
+      expect(`${location.origin}${location.pathname}`).toBe("https://api.test/auth/return");
+      expect([...location.searchParams.keys()]).toEqual(["code"]);
+      const code = location.searchParams.get("code") ?? "";
+      expect(code).toMatch(/^[A-Za-z0-9_-]{43}$/);
+
+      // A browser that kept the link is sent on to the scheme with the same
+      // code, and no line of either request holds it.
+      const kept = await app.request(`${location.pathname}${location.search}`);
+      expect(kept.headers.get("location")).toBe(`kuutti://auth?code=${code}`);
+      expect(JSON.stringify(logs())).not.toContain(code);
+      // The code is the attempt's own, whichever way it came.
+      expect((await exchange(app, code)).status).toBe(200);
+
+      await codeFrom(await returnOf(app, other));
+    },
+  );
+
+  test("a refusal returns on the scheme, whatever is set: it carries nothing to keep", async ({
+    ctx,
+  }) => {
+    const { app } = await appWith(ctx, MINOR_HETU, {
+      config: { ANDROID_CERT_FINGERPRINTS: FINGERPRINT, IOS_TEAM_ID: TEAM },
+    });
+    for (const platform of ["android", "ios"] as const) {
+      expect(refusal(await returnOf(app, platform)).error).toBe("auth_under_18");
+    }
+  });
+});
+
 describe("the exchange", () => {
   async function loggedIn(ctx: { client: Parameters<typeof createApp>[0]["db"] }) {
     const { app } = await appWith(ctx, ADULT_HETU);

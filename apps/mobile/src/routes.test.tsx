@@ -1,5 +1,6 @@
 import * as Sentry from "@sentry/react-native";
-import { render, screen } from "@testing-library/react-native";
+import { render, screen, waitFor } from "@testing-library/react-native";
+import * as SecureStore from "expo-secure-store";
 import type * as React from "react";
 import RootLayout from "../app/_layout";
 import { redirectSystemPath } from "../app/+native-intent";
@@ -73,6 +74,9 @@ jest.mock("@/features/identity", () => {
     SignInScreen: probe("SignInScreen"),
     SignedOutToStart: provider("SignedOutToStart"),
     SessionProvider: provider("SessionProvider"),
+    // The link hook's own part of the slice, as it is.
+    signInReturnPath: (jest.requireActual("@/features/identity") as { signInReturnPath: unknown })
+      .signInReturnPath,
   };
 });
 jest.mock("@/features/chat", () => {
@@ -505,5 +509,30 @@ describe("a link from outside the app", () => {
     expect(holdLinkWhileUnsaved).toHaveBeenLastCalledWith("kuutti://settings", true);
     expect(redirectSystemPath({ path: "kuutti://", initial: false })).toBe("kuutti://");
     expect(holdLinkWhileUnsaved).toHaveBeenLastCalledWith("kuutti://", false);
+  });
+
+  it("hands the bank login's return on its verified link to the sign-in's screen (#184)", () => {
+    const { holdLinkWhileUnsaved } = jest.requireMock("@/features/profile") as {
+      holdLinkWhileUnsaved: jest.Mock;
+    };
+    const link = "https://api.kumpa.fi/auth/return?code=abc";
+    expect(redirectSystemPath({ path: link, initial: true })).toBe("/auth?code=abc");
+    expect(holdLinkWhileUnsaved).toHaveBeenLastCalledWith("/auth?code=abc", true);
+    // The scheme's return is the path the router always took.
+    expect(redirectSystemPath({ path: "kuutti://auth?code=abc", initial: false })).toBe(
+      "kuutti://auth?code=abc",
+    );
+  });
+
+  it("keeps the code of an invitation's link and goes home (#184)", async () => {
+    const { holdLinkWhileUnsaved } = jest.requireMock("@/features/profile") as {
+      holdLinkWhileUnsaved: jest.Mock;
+    };
+    const { __store: store } = SecureStore as unknown as { __store: Map<string, string> };
+    expect(redirectSystemPath({ path: "https://api.kumpa.fi/i/ABCDE-FGHJK", initial: false })).toBe(
+      "/",
+    );
+    expect(holdLinkWhileUnsaved).toHaveBeenLastCalledWith("/", false);
+    await waitFor(() => expect(store.get("kuutti.preference.invitationCode")).toBe("ABCDEFGHJK"));
   });
 });

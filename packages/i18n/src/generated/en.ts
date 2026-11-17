@@ -700,7 +700,7 @@ export const en: Readonly<Record<string, string>> = {
   "mail.sanction.subject.warn": "Kumpa: a warning from a moderator",
   "mail.sanction.why": "You get this because you confirmed this address in the Kumpa app. A decision about your account is always sent to you, whatever your notification settings say.",
   "mail.signature": "Kuutti ry",
-  "native.ios.NSFaceIDUsageDescription": "Kuutti uses Face ID to unlock the app when you have turned the lock on.",
+  "native.ios.NSFaceIDUsageDescription": "Kumpa uses Face ID to unlock the app when you have turned the lock on.",
   "notices.invitationCounted.body": "Somebody you invited has finished their profile. {fish, plural, =0 {Thank you for inviting them.} one {You earned a fish.} other {You earned # fish.}}",
   "notices.invitationCounted.title": "An invitation of yours counted",
   "notices.invitationFriend.body": "The invitation earned you {fish, plural, one {a fish} other {# fish}}.",

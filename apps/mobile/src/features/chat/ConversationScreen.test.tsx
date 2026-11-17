@@ -1,16 +1,10 @@
 import type { ChatMessage, ChatPhoto, ConversationDetail } from "@kuutti/schema";
 import { act, fireEvent, screen, userEvent, waitFor } from "@testing-library/react-native";
+import { setStringAsync } from "expo-clipboard";
 import * as ImagePicker from "expo-image-picker";
 import { useLocales } from "expo-localization";
 import * as SecureStore from "expo-secure-store";
-import {
-  AccessibilityInfo,
-  AppState,
-  Clipboard,
-  Linking,
-  Platform,
-  ScrollView,
-} from "react-native";
+import { AccessibilityInfo, AppState, Linking, Platform, ScrollView } from "react-native";
 import { pickPrepared } from "@/features/media";
 import { clearSession, saveSession } from "@/lib/session";
 import { type HostNode, noProblems, pressables } from "@/test/a11y";
@@ -1251,7 +1245,8 @@ describe("contacts in a conversation (#103)", () => {
 
   it("Opening or copying a contact tells nobody", async () => {
     const open = jest.spyOn(Linking, "openURL").mockResolvedValue(true);
-    const copied = jest.spyOn(Clipboard, "setString").mockImplementation(() => undefined);
+    const copied = jest.mocked(setStringAsync);
+    copied.mockClear();
     const { calls } = contactsApi(
       detail({ contacts: { mine: [], theirs: [{ kind: "instagram", value: "ville.k" }] } }),
     );

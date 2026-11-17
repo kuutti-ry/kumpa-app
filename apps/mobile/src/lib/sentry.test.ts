@@ -25,12 +25,14 @@ describe("sentry options", () => {
     expect(on.enableAutoSessionTracking).toBe(false);
   });
 
-  it("drops the replay and feedback integrations from the defaults", () => {
+  it("drops the replay, feedback and deep-link integrations from the defaults", () => {
     const filter = on.integrations;
     if (typeof filter !== "function") throw new Error("integrations must be a filter function");
     const names = filter([
       { name: "MobileReplay" },
       { name: "Feedback" },
+      // A link's address holds a one-time code or an invitation's (#184).
+      { name: "DeepLink" },
       { name: "ReactNativeErrorHandlers" },
       { name: "NativeLinkedErrors" },
     ] as never[]).map((i) => i.name);
@@ -96,8 +98,8 @@ describe("sentry options", () => {
         data: { from: "settings/index", to: "settings/licenses" },
       };
       expect(stripBreadcrumb(licences)).toEqual(licences);
-      const log = { category: "console", message: "settings/support" };
-      expect(stripBreadcrumb(log)).toEqual(log);
+      const event = { category: "app.lifecycle", message: "settings/support" };
+      expect(stripBreadcrumb(event)).toEqual(event);
     });
 
     it("sends an event from the page without the view's name, the rest of its app context kept", () => {
@@ -211,7 +213,30 @@ describe("sentry options", () => {
   it("leaves a navigation breadcrumb without data, and any other category, as it was", () => {
     const bare = { category: "navigation", message: "opened" };
     expect(stripBreadcrumb(bare)).toBe(bare);
-    const logged = { category: "console", message: "warn", data: { arguments: ["x"] } };
-    expect(stripBreadcrumb(logged)).toBe(logged);
+    const turned = { category: "device.orientation", data: { position: "portrait" } };
+    expect(stripBreadcrumb(turned)).toBe(turned);
   });
+
+  it.each([
+    [
+      "the bank's return on the scheme",
+      "The navigation state parsed from the URL kuutti://auth?code=one-time",
+    ],
+    ["the bank's return on its verified link", "https://api.kumpa.fi/auth/return?code=one-time"],
+    ["the return as the router is handed it", "/auth?code=one-time"],
+    ["an invitation's link", "https://api.staging.kuutti.app/i/7K2MX-9QR4T"],
+    ["a line that quotes no link", "Require cycle: a.ts -> b.ts"],
+  ])(
+    "drops a console line whole, since a library's warning can quote a link: %s (#184)",
+    (_what, said) => {
+      expect(
+        stripBreadcrumb({
+          category: "console",
+          level: "warning",
+          message: said,
+          data: { arguments: [said] },
+        }),
+      ).toBeNull();
+    },
+  );
 });

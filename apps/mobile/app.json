@@ -1,9 +1,9 @@
 {
   "expo": {
-    "name": "Kuutti",
+    "name": "Kumpa",
     "slug": "kuutti",
     "scheme": "kuutti",
-    "version": "0.0.0",
+    "version": "0.127.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -13,6 +13,15 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "fi.kuutti.app",
+      "associatedDomains": [
+        "applinks:api.kumpa.fi",
+        "applinks:api.kuutti.app",
+        "applinks:api.staging.kumpa.fi",
+        "applinks:api.staging.kuutti.app"
+      ],
+      "entitlements": {
+        "com.apple.developer.devicecheck.appattest-environment": "production"
+      },
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "CFBundleAllowMixedLocalizations": true
@@ -26,7 +35,25 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "blockedPermissions": ["android.permission.SYSTEM_ALERT_WINDOW"],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            { "scheme": "https", "host": "api.kumpa.fi", "path": "/auth/return" },
+            { "scheme": "https", "host": "api.kumpa.fi", "pathPrefix": "/i/" },
+            { "scheme": "https", "host": "api.kuutti.app", "path": "/auth/return" },
+            { "scheme": "https", "host": "api.kuutti.app", "pathPrefix": "/i/" },
+            { "scheme": "https", "host": "api.staging.kumpa.fi", "path": "/auth/return" },
+            { "scheme": "https", "host": "api.staging.kumpa.fi", "pathPrefix": "/i/" },
+            { "scheme": "https", "host": "api.staging.kuutti.app", "path": "/auth/return" },
+            { "scheme": "https", "host": "api.staging.kuutti.app", "pathPrefix": "/i/" }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -64,7 +91,7 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Kuutti shows the photo you pick here on your profile. Nothing else in your library is read.",
+          "photosPermission": "Kumpa shows the photo you pick here on your profile. Nothing else in your library is read.",
           "cameraPermission": false,
           "microphonePermission": false
         }

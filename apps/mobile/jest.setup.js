@@ -19,6 +19,17 @@ jest.mock("expo-secure-store", () => {
     deleteItemAsync: jest.fn(async (key) => void store.delete(key)),
   };
 });
+// The system's random bytes, the clipboard and Play's install referrer are
+// native (#184): node's generator, a clipboard that takes what it is given,
+// and an install that came with no code, as Play says of one nobody referred,
+// unless a test says otherwise through these mocks.
+jest.mock("expo-crypto", () => ({
+  getRandomValues: jest.fn((array) => require("node:crypto").webcrypto.getRandomValues(array)),
+}));
+jest.mock("expo-clipboard", () => ({ setStringAsync: jest.fn(async () => true) }));
+jest.mock("expo-application", () => ({
+  getInstallReferrerAsync: jest.fn(async () => "utm_source=google-play&utm_medium=organic"),
+}));
 // The phone's face and fingerprint (#418) are native: a phone with neither
 // enrolled, unless a test says otherwise through these mocks.
 jest.mock("expo-local-authentication", () => ({
