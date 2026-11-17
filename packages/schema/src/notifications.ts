@@ -38,7 +38,7 @@ export type PutNotificationChoice = z.infer<typeof PutNotificationChoice>;
 
 /** What a notice is about. Mirrors the database's enum; #312 and M5 add theirs. */
 export const NoticeKind = z
-  .enum(["warning", "invitation_counted", "invitation_friend", "announcement"])
+  .enum(["warning", "invitation_counted", "invitation_friend", "announcement", "shadow_ban"])
   .meta({ id: "NoticeKind" });
 export type NoticeKind = z.infer<typeof NoticeKind>;
 
@@ -57,6 +57,15 @@ export const WarningNotice = NoticeBase.extend({
   kind: z.literal("warning"),
   reason: SanctionReason,
 }).meta({ id: "WarningNotice" });
+
+/**
+ * A moderator's shadow ban, told to its owner (#715, ADR-073 §2): its reason.
+ * An automatic rule's is never told (ADR-033). One lifted since is not shown.
+ */
+export const ShadowBanNotice = NoticeBase.extend({
+  kind: z.literal("shadow_ban"),
+  reason: SanctionReason,
+}).meta({ id: "ShadowBanNotice" });
 
 /**
  * An invitation of the person's that counted (#107, ADR-044 §9): what it
@@ -111,6 +120,7 @@ export const AnnouncementNotice = NoticeBase.extend({
 export const Notice = z
   .discriminatedUnion("kind", [
     WarningNotice,
+    ShadowBanNotice,
     InvitationCountedNotice,
     InvitationFriendNotice,
     AnnouncementNotice,

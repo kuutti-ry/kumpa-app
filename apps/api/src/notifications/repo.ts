@@ -4,6 +4,7 @@ import type {
   AnnouncementText,
   NoticeKind,
   NotificationKind,
+  SanctionKind,
   SanctionReason,
 } from "@kuutti/schema";
 
@@ -71,7 +72,7 @@ export type NoticeRow = {
   kind: NoticeKind;
   at: Date;
   readAt: Date | null;
-  /** A warning's; null for any other kind. */
+  /** A sanction's, a warning's or a shadow ban's; null for any other kind. */
   reason: SanctionReason | null;
   /** The units a counted invitation earned the person; nought for a warning. */
   fish: number;
@@ -91,8 +92,9 @@ function textsOf(r: Row): AnnouncementTexts {
 }
 
 /**
- * The person's notices, newest first; a warning lifted since is not one any
- * more, and the filter is a warning's alone: another kind has no sanction.
+ * The person's notices, newest first; a sanction lifted since, a warning or a
+ * shadow ban, is not one any more, and the filter is a sanction's alone:
+ * another kind has none.
  */
 export async function listNotices(
   db: Queryable,
@@ -135,14 +137,14 @@ export async function markRead(
   return (result.rowCount ?? 0) > 0;
 }
 
-/** A warning's notice, in the warning's transaction (ADR-024 §7). */
-export async function insertWarningNotice(
+/** A sanction's notice, a warning's or a shadow ban's, in the sanction's transaction (ADR-073 §2). */
+export async function insertSanctionNotice(
   db: Queryable,
-  input: { accountId: string; sanctionId: string; at: Date },
+  input: { accountId: string; kind: "warning" | "shadow_ban"; sanctionId: string; at: Date },
 ): Promise<void> {
   await db.query(
-    "INSERT INTO notice (account_id, kind, sanction_id, created_at) VALUES ($1, 'warning', $2, $3)",
-    [input.accountId, input.sanctionId, input.at],
+    "INSERT INTO notice (account_id, kind, sanction_id, created_at) VALUES ($1, $2, $3, $4)",
+    [input.accountId, input.kind, input.sanctionId, input.at],
   );
 }
 
@@ -371,4 +373,55 @@ export async function announcementMailOf(
   );
   const row = rows[0];
   return row ? { address: row.email, locale: row.locale } : null;
+}
+
+/** A sanction's statement as its email needs it (#715, ADR-073 §4). */
+export type SanctionMail = {
+  address: string;
+  /** The language the person read the terms in; null for none recorded. */
+  locale: string | null;
+  kind: SanctionKind;
+  reason: SanctionReason;
+  /** A suspension's end: the start of its chosen day in Finland. */
+  endsAt: Date | null;
+};
+
+/**
+ * What a sanction's email says and where it goes, read fresh after the
+ * sanction committed (#715, ADR-073 §4): the sanction's own keys, and its
+ * account's confirmed address with the language the terms were read in.
+ * Null when the sanction is lifted or gone, the account erased, or its
+ * address unconfirmed or gone. No switch is read: a decision about the
+ * account is told whatever the person turned off. Staff's note is never read.
+ */
+export async function sanctionMailOf(
+  db: Queryable,
+  input: { accountId: string; sanctionId: string },
+): Promise<SanctionMail | null> {
+  const { rows } = await db.query<{
+    email: string;
+    locale: string | null;
+    kind: SanctionKind;
+    reason: SanctionReason;
+    ends_at: Date | null;
+  }>(
+    `SELECT a.email, s.kind, s.reason, s.ends_at,
+            (SELECT c.locale_shown FROM consent c
+              WHERE c.account_id = a.id AND c.kind = 'terms'
+              ORDER BY c.given_at DESC LIMIT 1) AS locale
+       FROM sanction s
+       JOIN account a ON a.id = s.account_id
+      WHERE s.id = $1 AND s.account_id = $2 AND s.lifted_at IS NULL
+        AND a.state <> 'deleted' AND a.email IS NOT NULL AND a.email_confirmed_at IS NOT NULL`,
+    [input.sanctionId, input.accountId],
+  );
+  const row = rows[0];
+  if (!row) return null;
+  return {
+    address: row.email,
+    locale: row.locale,
+    kind: row.kind,
+    reason: row.reason,
+    endsAt: row.ends_at,
+  };
 }

@@ -150,6 +150,27 @@ export type Staff = {
 };
 
 /**
+ * A confirmed address, and the terms read in `locale`: what a mail to the
+ * person needs (ADR-043), in the language it goes in (ADR-068 §5, ADR-073 §4).
+ */
+export async function confirmedAddress(
+  db: Queryable,
+  who: { accountId: string },
+  address: string,
+  locale: string,
+): Promise<void> {
+  await db.query("UPDATE account SET email = $2, email_confirmed_at = now() WHERE id = $1", [
+    who.accountId,
+    address,
+  ]);
+  await db.query(
+    `INSERT INTO consent (account_id, kind, version, locale_shown)
+     VALUES ($1, 'terms', 'test', $2)`,
+    [who.accountId, locale],
+  );
+}
+
+/**
  * A member of staff (#49): an identity with a moderator_roles row and one
  * admin session, written straight into the test transaction. Plain SQL for
  * the same reason as signedInAccount.

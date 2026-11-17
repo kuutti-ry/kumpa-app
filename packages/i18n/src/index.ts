@@ -45,3 +45,4 @@ export {
   realLocale,
   resolveLocale,
 } from "./locales.ts";
+export { sanctionStatement } from "./sanction.ts";

@@ -280,7 +280,8 @@ export function createApp(deps: Deps) {
       socketsPerAccount: deps.config.WS_SOCKETS_PER_ACCOUNT,
     });
   // The pushes (#102, ADR-055): the notifications slice decides whom to tell,
-  // the chat and the round's routes only say when.
+  // the chat, the round's and the sanctions' routes only say when; a
+  // sanction staff applied is mailed to its person (#715, ADR-073 §4).
   const push =
     deps.push ??
     createPush({
@@ -326,7 +327,7 @@ export function createApp(deps: Deps) {
       },
     }),
   );
-  app.route("/", sanctionAdminRoutes(deps, moderators, admins));
+  app.route("/", sanctionAdminRoutes(deps, moderators, admins, push.sanction));
   app.route("/", configAdminRoutes(deps, admins));
   app.route("/", overviewAdminRoutes(deps, moderators));
   app.route("/", reportAdminRoutes(deps, moderators));

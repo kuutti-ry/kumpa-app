@@ -163,11 +163,20 @@ const sessionCount = async (ctx: { client: Queryable }) =>
   Number((await ctx.client.query<{ n: string }>("SELECT count(*) AS n FROM session")).rows[0]?.n);
 
 /** A refused callback sends the browser back into the app with the code. */
-function refusal(res: Response): { error: string | null; until: string | null } {
+function refusal(res: Response): {
+  error: string | null;
+  until: string | null;
+  reason?: string;
+} {
   expect(res.status).toBe(302);
   const location = new URL(res.headers.get("location") ?? "");
   expect(location.protocol).toBe("kuutti:");
-  return { error: location.searchParams.get("error"), until: location.searchParams.get("until") };
+  const reason = location.searchParams.get("reason");
+  return {
+    error: location.searchParams.get("error"),
+    until: location.searchParams.get("until"),
+    ...(reason === null ? {} : { reason }),
+  };
 }
 
 /**
@@ -507,6 +516,82 @@ describe("the callback's refusals and failures", () => {
       [id],
     );
     expect(rows.rows[0]).toMatchObject({ refused_attempts: 2, accounts: "0" });
+  });
+
+  test("A refusal names the reason of the sanction behind the standing, never a lifted one's or another person's", async ({
+    ctx,
+  }) => {
+    const { app, logs } = await appWith(ctx, ADULT_HETU);
+    const { hetuHmac } = deriveIdentity(ADULT_HETU, hmacKeyFromHex(KEY_HEX), NOW);
+    const personOf = async (hmac: string, standing: string) => {
+      const identity = await ctx.client.query<{ id: string }>(
+        "INSERT INTO identity (hetu_hmac, standing) VALUES ($1, $2) RETURNING id",
+        [hmac, standing],
+      );
+      const identityId = identity.rows[0]?.id as string;
+      const account = await ctx.client.query<{ id: string }>(
+        `INSERT INTO account (identity_id, state, birth_year, birth_month)
+         VALUES ($1, 'active', 1990, 6) RETURNING id`,
+        [identityId],
+      );
+      return { identityId, accountId: account.rows[0]?.id as string };
+    };
+    const sanction = (
+      who: { identityId: string; accountId: string },
+      kind: "ban" | "suspend",
+      reason: string,
+      at: { created: string; ends?: string; lifted?: string },
+    ) =>
+      ctx.client.query(
+        `INSERT INTO sanction (identity_id, account_id, kind, reason, note, created_at, ends_at, lifted_at)
+         VALUES ($1, $2, $3, $4, 'a note', $5, $6, $7)`,
+        [
+          who.identityId,
+          who.accountId,
+          kind,
+          reason,
+          at.created,
+          at.ends ?? null,
+          at.lifted ?? null,
+        ],
+      );
+    const a = await personOf(hetuHmac, "banned");
+    const other = await personOf("kuutti 715 another person", "banned");
+    await sanction(a, "ban", "misrepresentation", { created: "2026-10-01T09:00:00Z" });
+    await sanction(a, "ban", "under_age", {
+      created: "2026-10-02T09:00:00Z",
+      lifted: "2026-10-03T09:00:00Z",
+    });
+    await sanction(other, "ban", "commercial_use", { created: "2026-10-04T09:00:00Z" });
+    expect(refusal(await callback(app, await start(app)))).toEqual({
+      error: "auth_banned",
+      until: null,
+      reason: "misrepresentation",
+    });
+    // The reason reaches the log line by its code, never the note.
+    expect(refusalLine(logs, "auth_banned")).toMatchObject({
+      detail: { reason: "misrepresentation" },
+    });
+    expect(JSON.stringify(logs())).not.toContain("a note");
+
+    // A suspension says the one that ends last, as the standing's end is read.
+    await ctx.client.query(
+      "UPDATE identity SET standing = 'suspended', suspension_ends_at = '2026-10-24T21:00:00Z' WHERE id = $1",
+      [a.identityId],
+    );
+    await sanction(a, "suspend", "scraping", {
+      created: "2026-10-05T09:00:00Z",
+      ends: "2026-10-24T21:00:00Z",
+    });
+    await sanction(a, "suspend", "harassment", {
+      created: "2026-10-06T09:00:00Z",
+      ends: "2026-10-21T21:00:00Z",
+    });
+    expect(refusal(await callback(app, await start(app)))).toEqual({
+      error: "auth_suspended",
+      until: "2026-10-24T21:00:00.000Z",
+      reason: "scraping",
+    });
   });
 
   test("The adapter's refusal keeps its reason and anything else it throws is a provider error too", async ({

@@ -542,11 +542,11 @@ describe("the checks of invitations and their notices (#107, ADR-044)", () => {
     expect(checks("reward")).toEqual(["reward_spent_check"]);
   });
 
-  it("hold a warning to its sanction and a counted invitation's notice to its invitation", () => {
+  it("hold a sanction's notice to its sanction and a counted invitation's notice to its invitation", () => {
     expect(checks("notice")).toEqual([
       "notice_announcement_check",
       "notice_invitation_check",
-      "notice_warning_check",
+      "notice_sanction_check",
     ]);
   });
 

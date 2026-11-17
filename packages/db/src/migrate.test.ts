@@ -56,7 +56,7 @@ describe("migrate", () => {
     });
   });
 
-  it("carries matching_config's version 1, the same rows as the seed, and no later version", async () => {
+  it("carries matching_config's version 1, the same rows as the seed, and the later versions the migrations name", async () => {
     await withTemporaryDatabase(async (url) => {
       const pool = createPool({ connectionString: url, max: 2 });
       try {
@@ -69,7 +69,10 @@ describe("migrate", () => {
             rows.filter((r) => r.version === version).map((r) => [r.key, r.value]),
           );
         expect(at(1)).toEqual(MATCHING_CONFIG_V1);
-        expect(rows.filter((r) => r.version !== 1)).toEqual([]);
+        // A new value is a new version (ADR-033 History, the maintainer's of 17/11/2026).
+        expect(rows.filter((r) => r.version !== 1)).toEqual([
+          { key: "auto_shadow_ban_review_hours", value: 168, version: 2 },
+        ]);
       } finally {
         await pool.end();
       }
@@ -95,7 +98,8 @@ describe("migrate", () => {
           if (Number(rows[0]?.n) > 0) holding[table] = Number(rows[0]?.n);
         }
         expect(holding).toEqual({
-          matching_config: Object.keys(MATCHING_CONFIG_V1).length,
+          // Version 1 of every key, and the review hours' second (migration 0011).
+          matching_config: Object.keys(MATCHING_CONFIG_V1).length + 1,
         });
       } finally {
         await pool.end();
@@ -142,7 +146,8 @@ describe("migrate", () => {
            VALUES (2, 'inbox_stop', '25'::jsonb, 'admin', 'Smaller piles first')`,
         );
         const written = await pool.query<{ key: string; reason: string | null }>(
-          `SELECT key, reason FROM matching_config WHERE version = 2 ORDER BY key`,
+          `SELECT key, reason FROM matching_config
+            WHERE version = 2 AND key IN ('inbox_stop', 'stars_max') ORDER BY key`,
         );
         expect(written.rows).toEqual([
           { key: "inbox_stop", reason: "Smaller piles first" },

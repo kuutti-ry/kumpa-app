@@ -2241,7 +2241,8 @@
           "warning",
           "invitation_counted",
           "invitation_friend",
-          "announcement"
+          "announcement",
+          "shadow_ban"
         ]
       },
       "ExportedRounds": {
@@ -4297,6 +4298,9 @@
             "$ref": "#/components/schemas/WarningNotice"
           },
           {
+            "$ref": "#/components/schemas/ShadowBanNotice"
+          },
+          {
             "$ref": "#/components/schemas/InvitationCountedNotice"
           },
           {
@@ -4310,6 +4314,7 @@
           "propertyName": "kind",
           "mapping": {
             "warning": "#/components/schemas/WarningNotice",
+            "shadow_ban": "#/components/schemas/ShadowBanNotice",
             "invitation_counted": "#/components/schemas/InvitationCountedNotice",
             "invitation_friend": "#/components/schemas/InvitationFriendNotice",
             "announcement": "#/components/schemas/AnnouncementNotice"
@@ -4336,6 +4341,40 @@
             "type": "string",
             "enum": [
               "warning"
+            ]
+          },
+          "reason": {
+            "$ref": "#/components/schemas/SanctionReason"
+          }
+        },
+        "required": [
+          "id",
+          "at",
+          "readAt",
+          "kind",
+          "reason"
+        ]
+      },
+      "ShadowBanNotice": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "readAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "shadow_ban"
             ]
           },
           "reason": {
@@ -7401,7 +7440,7 @@
         ],
         "responses": {
           "302": {
-            "description": "Redirect to kuutti://auth?code=… on success, or to kuutti://auth?error=<code> (auth_state_mismatch, auth_cancelled, auth_under_18, auth_banned, auth_suspended with &until=<date> when the suspension has an end, auth_cooldown with &until=<date>, auth_provider_error) so the app shows the refusal."
+            "description": "Redirect to kuutti://auth?code=… on success, or to kuutti://auth?error=<code> (auth_state_mismatch, auth_cancelled, auth_under_18, auth_banned, auth_suspended with &until=<date> when the suspension has an end, auth_cooldown with &until=<date>, auth_provider_error; auth_banned and auth_suspended with &reason=<the sanction's reason> when a sanction is behind them) so the app shows the refusal."
           }
         }
       }

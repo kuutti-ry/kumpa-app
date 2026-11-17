@@ -19,6 +19,7 @@ import {
 } from "../lib/push.ts";
 import { mailAnnouncement } from "./announcements.ts";
 import { unreadAnnouncementAccounts } from "./repo.ts";
+import { mailSanction } from "./sanction-mail.ts";
 
 // The push (#102, ADR-055): that there is something, never what or from
 // whom. Each sender reads, fresh: the person's switch for its kind (ADR-032),
@@ -69,7 +70,7 @@ export type PushDeps = {
   now: () => Date;
   /** Absent where PUSH is off: nothing is sent, and nothing is read for it. */
   pusher?: Pusher;
-  /** An announcement's email goes with its push (ADR-068 §5); absent where MAIL is off. */
+  /** An announcement's email goes with its push (ADR-068 §5), a sanction's alone (ADR-073 §4); absent where MAIL is off. */
   mailer?: Mailer;
   /** Whether the account has a live socket now (#349): the chat's registry. */
   online: (accountId: string) => boolean;
@@ -331,7 +332,7 @@ export function createPush(deps: PushDeps) {
    * missing, the database gone) is logged, and nothing waits for it but
    * `settled`.
    */
-  function inTheBackground(kind: PushData["kind"], task: () => Promise<void>): void {
+  function inTheBackground(kind: Sender, task: () => Promise<void>): void {
     const running = task().catch((error: unknown) => {
       deps.logger.error({ ...failure(error, kind), err: error }, "push failed");
     });
@@ -428,6 +429,21 @@ export function createPush(deps: PushDeps) {
       });
     },
 
+    /**
+     * A sanction committed (#715, ADR-073 §4): its statement by email to the
+     * person's confirmed address, whatever their switches say; no push, since
+     * the notice or the bank login tells them in the app. After the answer
+     * that applied it, so no answer's time says whether anybody was mailed.
+     * Returns at once.
+     */
+    sanction(input: { accountId: string; sanctionId: string }): void {
+      const { mailer } = deps;
+      if (!mailer) return;
+      inTheBackground("sanction", async () => {
+        await mailSanction({ db: deps.db, logger: deps.logger, mailer }, input);
+      });
+    },
+
     /** Resolves once every push started in the background has settled: the tests, and a shutdown. */
     async settled(): Promise<void> {
       while (inFlight.size > 0) await Promise.all([...inFlight]);
@@ -437,8 +453,11 @@ export function createPush(deps: PushDeps) {
 
 export type Push = ReturnType<typeof createPush>;
 
+/** What the background sends: a push's kind, or a sanction's email (#715). */
+type Sender = PushData["kind"] | "sanction";
+
 /** A failure's kind for a log line: Expo's code or status, never a token. */
-function failure(error: unknown, kind: PushData["kind"]): Record<string, unknown> {
+function failure(error: unknown, kind: Sender): Record<string, unknown> {
   return error instanceof PushFailed
     ? { push: kind, reason: error.reason, status: error.status }
     : { push: kind, reason: errorName(error) };
