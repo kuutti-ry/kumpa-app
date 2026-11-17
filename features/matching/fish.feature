@@ -7,12 +7,12 @@ Feature: The fish, a like that says a little more
   of the other person's queue, ahead of ordinary likes, oldest first within
   each, labelled as a fish (ADR-062 §2). It is a like for every other rule:
   the day's likes, the expiry, the match, and the sender learns nothing
-  unless it becomes a match. The sender's own round says whether a fish can
+  unless it becomes a match. The sender's own queue says whether a fish can
   go today, and nothing of when the next comes: on Monday. Nobody can buy one, an
   invitation may earn one (earned.feature), and nothing counts how many a
   person received.
 
-  Scenario: A fish sent today is at the front of the recipient's next round, ahead of every ordinary like
+  Scenario: A fish sent today is at the front of the recipient's next queue, ahead of every ordinary like
     Given "B" liked "A" two days ago, and "C" sent "A" a fish yesterday
     When "A" reads the queue
     Then "A"'s queue opens with "C", labelled fish, then "B", labelled liked you
@@ -45,7 +45,7 @@ Feature: The fish, a like that says a little more
     When "A" sends a fish on a card of today
     Then the fish is sent
 
-  Scenario: A round read after the week's fish offers no other fish this week
+  Scenario: A queue read after the week's fish offers no other fish this week
     Given "A" sent a fish today
     When "A" reads the queue
     Then it says no fish can go today
@@ -66,6 +66,6 @@ Feature: The fish, a like that says a little more
     Then the answer says one like is left
 
   Scenario: A fish on a card of somebody whose like waits is a like
-    Given "B" liked "A" yesterday, and "B" is in "A"'s round today as liked you
+    Given "B" liked "A" yesterday, and "B" is in "A"'s queue today as liked you
     When "A" sends "B" a fish
     Then it is recorded as a like, no fish is spent, one of the day's likes is, and the two are a match

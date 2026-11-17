@@ -9,7 +9,7 @@ import {
   POPULATION_CONSENTS,
   type SyntheticPerson,
 } from "./population.ts";
-import type { WaitingLikes } from "./rounds.ts";
+import type { WaitingLikes } from "./queue.ts";
 import { DEMO_SUBJECT_PREFIX } from "./write-population.ts";
 
 /**
@@ -21,7 +21,7 @@ import { DEMO_SUBJECT_PREFIX } from "./write-population.ts";
  *
  * A card never shows whom its person seeks or their age window, so these are wide:
  * one man fits Sanna, Kerttu and Noa alike. What sets the number is Sanna, who
- * seeks only men. Nobody here fits Iida's window, so the round's flow keeps its
+ * seeks only men. Nobody here fits Iida's window, so the queue's flow keeps its
  * exact queue. A test holds all of it against the product's own filters
  * (apps/api/scripts/demo/demo-cast.test.ts).
  */

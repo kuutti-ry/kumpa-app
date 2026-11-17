@@ -1,10 +1,10 @@
 import { formatDate, type PlainMessageKey } from "@kuutti/i18n";
 import type {
   DealBreakerField,
+  QueueChoice,
+  QueueEntry,
+  QueueResponse,
   Relaxation,
-  RoundChoice,
-  RoundEntry,
-  RoundResponse,
 } from "@kuutti/schema";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -14,7 +14,7 @@ import { codeOf, statusOf } from "@/lib/api";
 import {
   clearStar,
   decide,
-  fetchRound,
+  fetchQueue,
   openStar,
   putStar,
   relaxToday,
@@ -22,7 +22,7 @@ import {
   undoRelaxation,
 } from "./client";
 
-type RoundView =
+type QueueView =
   | { status: "loading" }
   /** `error` says why, for the screen to say so (LoadFailed). */
   | { status: "failed"; error: unknown }
@@ -34,23 +34,23 @@ type RoundView =
   /** A star opened that the list no longer shows (#575, ADR-064 §6): said with no word why. */
   | { status: "gone" }
   /** The cards the phone holds; with none left to decide, the queue's end, or null entries before matching opens. */
-  | { status: "ready"; round: RoundResponse };
+  | { status: "ready"; queue: QueueResponse };
 
 /**
  * The queue past the cards the phone holds (ADR-062 §1): the next read still to
  * be asked, a read on its way or what became of it, or the end one found.
  */
-type More = { status: "ask" } | { status: "end" } | Exclude<RoundView, { status: "ready" }>;
+type More = { status: "ask" } | { status: "end" } | Exclude<QueueView, { status: "ready" }>;
 
 /**
  * What the screen says above the card, once, after something the person did
  * not see coming: a sentence of the catalogue, or the your-turn refusal
  * (ADR-062 §5), which says how many conversations wait.
  */
-export type RoundNotice =
+export type QueueNotice =
   | Extract<
       PlainMessageKey,
-      | "errors.round_expired"
+      | "errors.day_ended"
       | "errors.match_made"
       | "errors.like_budget_exceeded"
       | "errors.fish_budget_exceeded"
@@ -58,21 +58,21 @@ export type RoundNotice =
       | "errors.relaxations_changed"
       | "errors.card_budget_exceeded"
       | "errors.stars_full"
-      | "round.star.first"
+      | "queue.star.first"
       | "load.failed.press"
-      | "round.short.nobody"
-      | "round.gone"
+      | "queue.short.nobody"
+      | "queue.gone"
     >
   | { waiting: number };
 
-/** The card on the screen, with the day its round is of. */
-export type RoundCard = { day: string; entry: RoundEntry };
+/** The card on the screen, with the day its queue is of. */
+export type QueueCard = { day: string; entry: QueueEntry };
 
-/** The Finnish day of an instant, only ever compared: a round is Finland's day (ADR-034). */
+/** The Finnish day of an instant, only ever compared: a queue is Finland's day (ADR-034). */
 const finnishDay = (at: Date | number) => formatDate("fi", at, { timeZone: "Europe/Helsinki" });
 
 /** Each place once, in order, the later copy winning: a read's answer is the newer word on a card. */
-const byPosition = (entries: readonly RoundEntry[]): RoundEntry[] =>
+const byPosition = (entries: readonly QueueEntry[]): QueueEntry[] =>
   [...new Map(entries.map((entry) => [entry.position, entry])).values()].sort(
     (a, b) => a.position - b.position,
   );
@@ -93,7 +93,7 @@ const byPosition = (entries: readonly RoundEntry[]): RoundEntry[] =>
  * no card.
  *
  * A day that ended while the screen was open is read anew: the API refuses
- * the old day's writes (409 `round_expired`), and the screen says that a press
+ * the old day's writes (409 `day_ended`), and the screen says that a press
  * was lost; so is a queue that comes back in sight on another day, and one whose
  * next read finds another day, with no word, since nothing was lost and the next
  * card is simply there (#581). An answer to the old day's request that lands
@@ -105,36 +105,36 @@ const byPosition = (entries: readonly RoundEntry[]): RoundEntry[] =>
  * no read after it: its decision and its Undo are the queue's, and what comes next
  * is the way back to the list.
  */
-export function useRound(star?: string) {
+export function useQueue(star?: string) {
   // The cards the phone holds, of one day; null until a read answers.
-  const [round, setRound] = useState<RoundResponse | null>(null);
+  const [queue, setQueue] = useState<QueueResponse | null>(null);
   const [more, setMore] = useState<More>({ status: "loading" });
-  // A card brought back by Undo, by its place; null while the round goes on in order.
+  // A card brought back by Undo, by its place; null while the queue goes on in order.
   const [revisit, setRevisit] = useState<number | null>(null);
   // The place of the last decision that Undo may bring back.
   const [last, setLast] = useState<number | null>(null);
   // The conversation a like just opened (#100).
   const [match, setMatch] = useState<string | null>(null);
-  const [notice, setNotice] = useState<RoundNotice | null>(null);
+  const [notice, setNotice] = useState<QueueNotice | null>(null);
   const [busy, setBusy] = useState(false);
   const seen = useRef(new Set<string>());
   const mounted = useRef(true);
-  // The round on the screen as the last answer left it (null while none is),
+  // The queue on the screen as the last answer left it (null while none is),
   // and the phone's Finnish day when it was read. An answer looks here when
-  // it lands, not at the round its request went from: one to another day's
+  // it lands, not at the queue its request went from: one to another day's
   // request (a new day was read meanwhile) changes and says nothing.
-  const shown = useRef<RoundResponse | null>(null);
+  const shown = useRef<QueueResponse | null>(null);
   const readOn = useRef<string | null>(null);
   // Of two reads under way the later one speaks.
   const asked = useRef(0);
 
-  const showRound = useCallback((round: RoundResponse) => {
-    shown.current = round;
-    setRound(round);
+  const showQueue = useCallback((queue: QueueResponse) => {
+    shown.current = queue;
+    setQueue(queue);
   }, []);
 
   /** What belongs to the day on the screen goes, and `said` takes its place above the card. */
-  const leaveDay = useCallback((said: RoundNotice | null) => {
+  const leaveDay = useCallback((said: QueueNotice | null) => {
     setRevisit(null);
     setLast(null);
     setMatch(null);
@@ -151,14 +151,14 @@ export function useRound(star?: string) {
     asked.current += 1;
     const mine = asked.current;
     setMore({ status: "loading" });
-    (star ? openStar(star) : fetchRound()).then(
+    (star ? openStar(star) : fetchQueue()).then(
       (answer) => {
         if (mine !== asked.current) return;
         readOn.current = finnishDay(Date.now());
         const held = shown.current;
         if (held && held.day !== answer.day) leaveDay(null);
         const kept = held?.day === answer.day ? held.entries : null;
-        showRound({
+        showQueue({
           ...answer,
           entries: answer.entries && byPosition([...(kept ?? []), ...answer.entries]),
         });
@@ -179,14 +179,14 @@ export function useRound(star?: string) {
         );
       },
     );
-  }, [star, showRound, leaveDay]);
+  }, [star, showQueue, leaveDay]);
 
   // Never after the screen is gone: a read serves the cards again (ADR-008).
   const read = useCallback(
-    (said: RoundNotice | null) => {
+    (said: QueueNotice | null) => {
       if (!mounted.current) return;
       shown.current = null;
-      setRound(null);
+      setQueue(null);
       leaveDay(said);
       readCards();
     },
@@ -201,30 +201,30 @@ export function useRound(star?: string) {
     };
   }, [read]);
 
-  /** The round on the screen while it is `day`'s; null once another day was read. */
+  /** The queue on the screen while it is `day`'s; null once another day was read. */
   const onDay = useCallback((day: string) => {
-    const round = shown.current;
-    return round?.day === day ? round : null;
+    const queue = shown.current;
+    return queue?.day === day ? queue : null;
   }, []);
 
-  /** Rewrites the entries of the round on the screen, which has the card answered. */
+  /** Rewrites the entries of the queue on the screen, which has the card answered. */
   const rewrite = useCallback(
-    (round: RoundResponse, change: (entries: RoundEntry[]) => RoundEntry[]) =>
-      showRound({ ...round, entries: round.entries && change(round.entries) }),
-    [showRound],
+    (queue: QueueResponse, change: (entries: QueueEntry[]) => QueueEntry[]) =>
+      showQueue({ ...queue, entries: queue.entries && change(queue.entries) }),
+    [showQueue],
   );
 
   /**
    * A card gone meanwhile, or blocked or reported from the card (ADR-030
-   * §11): it leaves the screen, when its day's round is still there. It is
+   * §11): it leaves the screen, when its day's queue is still there. It is
    * the card on the screen, so never the last decision's, which Undo would
    * bring back.
    */
   const drop = useCallback(
     (day: string, position: number) => {
-      const round = onDay(day);
-      if (!round) return;
-      rewrite(round, (entries) => entries.filter((entry) => entry.position !== position));
+      const queue = onDay(day);
+      if (!queue) return;
+      rewrite(queue, (entries) => entries.filter((entry) => entry.position !== position));
       setRevisit((was) => (was === position ? null : was));
     },
     [onDay, rewrite],
@@ -243,11 +243,11 @@ export function useRound(star?: string) {
    */
   const freshen = useCallback(
     (backOnScreen: boolean) => {
-      const round = shown.current;
+      const queue = shown.current;
       const today = finnishDay(Date.now());
       if (
-        round &&
-        today !== finnishDay(new Date(`${round.day}T12:00:00Z`)) &&
+        queue &&
+        today !== finnishDay(new Date(`${queue.day}T12:00:00Z`)) &&
         today !== readOn.current
       ) {
         read(null);
@@ -259,7 +259,7 @@ export function useRound(star?: string) {
   );
 
   // In sight: the app in the foreground, and no conversation pushed over the
-  // round, under which a new day's card would be reported seen unseen.
+  // queue, under which a new day's card would be reported seen unseen.
   useFocusEffect(
     useCallback(() => {
       freshen(true);
@@ -271,15 +271,15 @@ export function useRound(star?: string) {
   );
 
   const entry =
-    round?.entries?.find((each) =>
+    queue?.entries?.find((each) =>
       revisit === null ? each.decision === null : each.position === revisit,
     ) ?? null;
-  const current: RoundCard | null = round && entry ? { day: round.day, entry } : null;
+  const current: QueueCard | null = queue && entry ? { day: queue.day, entry } : null;
 
   // The card on the screen, reported once (ADR-034 §2); not while a match
   // stands in front of it. The report gates nothing, so a failure is not
   // said, except what it tells about the card or the day.
-  const day = round?.day;
+  const day = queue?.day;
   const position = match === null ? entry?.position : undefined;
   useEffect(() => {
     if (day === undefined || position === undefined) return;
@@ -288,33 +288,33 @@ export function useRound(star?: string) {
     seen.current.add(key);
     reportSeen(day, position).catch((error: unknown) => {
       if (statusOf(error) === 404) drop(day, position);
-      else if (codeOf(error) === "round_expired" && onDay(day)) read(null);
+      else if (codeOf(error) === "day_ended" && onDay(day)) read(null);
     });
   }, [day, position, read, drop, onDay]);
 
   // No card left to decide and no end found: the next read. A match stands in
   // front of it as it stands in front of a seen report, and a read hands cards
   // over (ADR-008), so it waits until the match is closed.
-  const ask = !!round?.entries && !current && match === null && more.status === "ask";
+  const ask = !!queue?.entries && !current && match === null && more.status === "ask";
   useEffect(() => {
     if (ask) readCards();
   }, [ask, readCards]);
 
   // The cards while one is left, or a match in front of them. Past the last
   // one the read of the next speaks, and only its empty answer is the end.
-  const view: RoundView =
-    round && (current || match !== null || !round.entries || more.status === "end")
-      ? { status: "ready", round }
+  const view: QueueView =
+    queue && (current || match !== null || !queue.entries || more.status === "end")
+      ? { status: "ready", queue }
       : more.status === "ask" || more.status === "end"
         ? { status: "loading" }
         : more;
 
   const choose = useCallback(
-    async ({ day, entry }: RoundCard, decision: RoundChoice) => {
+    async ({ day, entry }: QueueCard, decision: QueueChoice) => {
       const { position } = entry;
       // A like or a pass takes the star off (ADR-064 §3); a skip decides nothing.
-      const decided = (round: RoundResponse, as: RoundChoice) =>
-        rewrite(round, (entries) =>
+      const decided = (queue: QueueResponse, as: QueueChoice) =>
+        rewrite(queue, (entries) =>
           entries.map((each) =>
             each.position === position
               ? { ...each, decision: as, star: as === "skip" ? each.star : null }
@@ -325,36 +325,36 @@ export function useRound(star?: string) {
       setNotice(null);
       try {
         const answer = await decide(day, position, decision);
-        const round = onDay(day);
-        if (!round) return;
+        const queue = onDay(day);
+        if (!queue) return;
         const { fishToSend, likesLeft, yourTurn } = answer;
-        decided({ ...round, fishToSend, likesLeft, yourTurn }, decision);
+        decided({ ...queue, fishToSend, likesLeft, yourTurn }, decision);
         setRevisit(null);
         setLast(answer.match ? null : position);
         setMatch(answer.match?.conversationId ?? null);
       } catch (error) {
-        // Nothing to say of another day's card: the new round was read already.
-        const round = onDay(day);
-        if (!round) return;
+        // Nothing to say of another day's card: the new queue was read already.
+        const queue = onDay(day);
+        if (!queue) return;
         const code = codeOf(error);
-        if (code === "round_expired") {
-          read("errors.round_expired");
+        if (code === "day_ended") {
+          read("errors.day_ended");
         } else if (code === "match_made") {
-          // The like stands, as it was, and the round goes on to the next card (ADR-038 §3).
-          decided(round, entry.decision ?? "like");
+          // The like stands, as it was, and the queue goes on to the next card (ADR-038 §3).
+          decided(queue, entry.decision ?? "like");
           setRevisit(null);
           setLast(null);
           setNotice("errors.match_made");
         } else if (statusOf(error) === 404) {
           drop(day, position);
-          setNotice("round.gone");
+          setNotice("queue.gone");
         } else if (code === "like_budget_exceeded") {
           // Another phone spent the day's last like meanwhile (#524): the line says so too.
-          showRound({ ...round, likesLeft: 0 });
+          showQueue({ ...queue, likesLeft: 0 });
           setNotice("errors.like_budget_exceeded");
         } else if (code === "fish_budget_exceeded") {
           // Another phone sent the week's fish meanwhile (#475): the fish leaves the bar.
-          showRound({ ...round, fishToSend: false });
+          showQueue({ ...queue, fishToSend: false });
           setNotice("errors.fish_budget_exceeded");
         } else if (code === "your_turn_limit") {
           // Nothing was saved: the card stays, for a pass or Later (ADR-062 §5). The
@@ -368,7 +368,7 @@ export function useRound(star?: string) {
           const held = onDay(day);
           if (!held) return;
           const waiting = now ?? held.yourTurn;
-          showRound({ ...held, yourTurn: waiting });
+          showQueue({ ...held, yourTurn: waiting });
           setNotice({ waiting });
         } else {
           setNotice("load.failed.press");
@@ -377,7 +377,7 @@ export function useRound(star?: string) {
         setBusy(false);
       }
     },
-    [rewrite, onDay, read, drop, showRound],
+    [rewrite, onDay, read, drop, showQueue],
   );
 
   /**
@@ -387,12 +387,12 @@ export function useRound(star?: string) {
    * star gone meanwhile is off; a card gone meanwhile leaves the screen.
    */
   const toggleStar = useCallback(
-    async ({ day, entry }: RoundCard) => {
+    async ({ day, entry }: QueueCard) => {
       const { position } = entry;
       const marked = (id: string | null) => {
-        const round = onDay(day);
-        if (!round) return;
-        rewrite(round, (entries) =>
+        const queue = onDay(day);
+        if (!queue) return;
+        rewrite(queue, (entries) =>
           entries.map((each) => (each.position === position ? { ...each, star: id } : each)),
         );
       };
@@ -405,17 +405,17 @@ export function useRound(star?: string) {
         } else {
           const answer = await putStar(day, position);
           marked(answer.id);
-          if (answer.first && onDay(day)) setNotice("round.star.first");
+          if (answer.first && onDay(day)) setNotice("queue.star.first");
         }
       } catch (error) {
         if (!onDay(day)) return;
         const code = codeOf(error);
-        if (code === "round_expired") read("errors.round_expired");
+        if (code === "day_ended") read("errors.day_ended");
         else if (code === "stars_full") setNotice("errors.stars_full");
         else if (statusOf(error) === 404 && entry.star) marked(null);
         else if (statusOf(error) === 404) {
           drop(day, position);
-          setNotice("round.gone");
+          setNotice("queue.gone");
         } else setNotice("load.failed.press");
       } finally {
         setBusy(false);
@@ -436,22 +436,22 @@ export function useRound(star?: string) {
       setNotice(null);
       try {
         const added = await relaxToday(day, relaxation);
-        const round = onDay(day);
-        if (!round) return;
+        const queue = onDay(day);
+        if (!queue) return;
         if (added.length === 0) {
-          setNotice("round.short.nobody");
+          setNotice("queue.short.nobody");
         } else {
-          rewrite(round, (entries) => byPosition([...entries, ...added]));
+          rewrite(queue, (entries) => byPosition([...entries, ...added]));
           setMore({ status: "ask" });
         }
       } catch (error) {
         if (!onDay(day)) return;
         const code = codeOf(error);
-        if (code === "round_expired") read("errors.round_expired");
+        if (code === "day_ended") read("errors.day_ended");
         else if (code === "already_relaxed") setNotice("errors.already_relaxed");
         // Another device relaxed or undid one meanwhile: the panel reads the offers again.
         else if (code === "relaxations_changed") setNotice("errors.relaxations_changed");
-        // Relaxed, its cards in the round: the day's cards ran out serving them.
+        // Relaxed, its cards in the queue: the day's cards ran out serving them.
         else if (code === "card_budget_exceeded") setNotice("errors.card_budget_exceeded");
         else setNotice("load.failed.press");
       } finally {
@@ -468,12 +468,12 @@ export function useRound(star?: string) {
       setNotice(null);
       try {
         const removed = new Set(await undoRelaxation(day, field));
-        const round = onDay(day);
-        if (!round) return;
-        rewrite(round, (entries) => entries.filter((entry) => !removed.has(entry.position)));
+        const queue = onDay(day);
+        if (!queue) return;
+        rewrite(queue, (entries) => entries.filter((entry) => !removed.has(entry.position)));
       } catch (error) {
         if (!onDay(day)) return;
-        if (codeOf(error) === "round_expired") read("errors.round_expired");
+        if (codeOf(error) === "day_ended") read("errors.day_ended");
         else setNotice("load.failed.press");
       } finally {
         setBusy(false);
@@ -491,7 +491,7 @@ export function useRound(star?: string) {
   return {
     view,
     /** A read past the cards the phone holds, not the first of the screen: what the screen says aloud. */
-    readingOn: round !== null && view.status === "loading",
+    readingOn: queue !== null && view.status === "loading",
     /** The card on the screen: the first undecided one, or the one Undo brought back, decided already. */
     current,
     canUndo: last !== null && !busy && match === null,

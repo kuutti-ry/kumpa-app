@@ -1,7 +1,7 @@
 # features/matching/preferences.feature
 Feature: The hard preferences of onboarding
   Whom a person seeks and the age window are hard filters (rule 7, TD-11):
-  rows of mode hard the round builder joins for both parties, never crossed
+  rows of mode hard the queue's builder joins for both parties, never crossed
   in either direction. Onboarding writes them (#46). Whom one seeks is an
   article 9 answer: it is saved only with the sensitive-answers consent of
   the current wording (ADR-019 §4, ADR-010 §16). The deal-breakers over

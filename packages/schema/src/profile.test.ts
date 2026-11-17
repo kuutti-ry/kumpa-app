@@ -281,7 +281,7 @@ describe("the card another person sees", () => {
     expect(ProfileCard.parse({ ...card, pond: { slug: "suomi" } })).not.toHaveProperty("pond");
   });
 
-  it("carries no band: a band is the round's, frozen on its entry (ADR-061 §5)", () => {
+  it("carries no band: a band is the queue's, frozen on its entry (ADR-061 §5)", () => {
     expect(ProfileCard.shape).not.toHaveProperty("distance");
   });
 

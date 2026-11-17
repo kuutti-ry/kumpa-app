@@ -71,7 +71,7 @@ function Row({ person, onClear }: { person: StarredPerson; onClear: () => void }
  * The Starred list (#575, ADR-064): the people the person put a star on, the
  * latest first and in no other order, each with their name, their age and a photo
  * they were shown. A row opens the card, with Like, the fish and Pass, spending
- * what those spend anywhere else (`RoundScreen`), and its star takes the star off.
+ * what those spend anywhere else (`QueueScreen`), and its star takes the star off.
  * Only the person ever sees it. Somebody the list leaves out goes with no word why,
  * and nothing counts them: no number and no order but when they were starred.
  */

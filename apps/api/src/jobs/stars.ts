@@ -11,7 +11,7 @@ import {
   heldFromStars,
   likeWaiting,
   needsOf,
-} from "./round-builder.ts";
+} from "./queue-builder.ts";
 
 /**
  * What the stars read across slices (#575, ADR-064), with the jobs for the reason

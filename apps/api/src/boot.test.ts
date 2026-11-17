@@ -230,7 +230,7 @@ describe("boot", () => {
       "end-suspensions",
       "pond-counter",
       "invitation-count",
-      "prune-rounds",
+      "prune-queue-days",
       "reject-unreviewed-photos",
       "prune-photo-check-notes",
       "prune-photo-access",
@@ -661,7 +661,7 @@ describe("boot: a deployed box", () => {
     },
   );
 
-  it("with its photos on CloudFront, staging and production both prune the rounds", async () => {
+  it("with its photos on CloudFront, staging and production both prune the queue days", async () => {
     const media = {
       S3_BUCKET: "kuutti-media-test",
       MEDIA_URL_BASE: "https://api.test",
@@ -676,8 +676,8 @@ describe("boot: a deployed box", () => {
       ...media,
     });
     expect(line(production.lines, "media")).toMatchObject({ mode: "cloudfront" });
-    // Rounds are kept a year, so production keeps them as staging does (ADR-062 §13).
-    expect(staging.jobs.map((j) => j.name)).toContain("prune-rounds");
-    expect(production.jobs.map((j) => j.name)).toContain("prune-rounds");
+    // Queue days are kept a year, so production keeps them as staging does (ADR-062 §13).
+    expect(staging.jobs.map((j) => j.name)).toContain("prune-queue-days");
+    expect(production.jobs.map((j) => j.name)).toContain("prune-queue-days");
   });
 });

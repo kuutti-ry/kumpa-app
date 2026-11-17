@@ -1,80 +1,75 @@
 # features/matching/decisions.feature
 Feature: The queue's cards, seen and decided
-  A round is the day's log of one person's queue on one Finnish calendar day
+  A queue day is the log of one person's queue on one Finnish calendar day
   (#96, TD-11, ADR-034, ADR-062): its cards in order, each with why it is there
   (TD-12). A read answers the next cards not yet decided, at most ten. The phone
   reports a card seen; the person likes it, passes it or skips it, and may change
   that until the day ends (the maintainer, 19/10/2026). A card of a day that has
-  ended can no longer be decided: its round expired with it. A card that can no
+  ended can no longer be decided: it ended with its day. A card that can no
   longer be shown, by a block either way or a sanction, is left out and cannot be
   decided; one that no longer fits is filters.feature's. Erasure removes the
-  person's rounds and every entry in which they are somebody's card, and the
+  person's queue days and every entry in which they are somebody's card, and the
   night removes what is past a year.
 
   Scenario: A read shows the undecided cards in order, each with its reason, at most ten
-    Given "A"'s round today holds "B", "C" and "D", and twelve more
+    Given "A"'s queue today holds "B", "C" and "D", and twelve more
     When "A" reads the queue
     Then ten cards come in their places, each with its reason, and none decided
 
   Scenario: A decided card is not read again
-    Given "A"'s round today holds "B", "C" and "D", and "A" decided "B" and "C"
+    Given "A"'s queue today holds "B", "C" and "D", and "A" decided "B" and "C"
     When "A" reads the queue
     Then "D" alone comes
 
   Scenario: A card that can no longer be shown is left out, and cannot be seen or decided
-    Given "A"'s round today holds "B" and "C"
+    Given "A"'s queue today holds "B" and "C"
     And "A" blocked "B" and "C" was suspended since
     When "A" reads the queue, reports both seen and likes both
     Then neither card is shown, and every write answers not_found with nothing written
 
   Scenario: A card seen is recorded once
-    Given "A"'s round today holds "B"
+    Given "A"'s queue today holds "B"
     When "A" reports the card seen twice
     Then its seen time is the first report's
 
   Scenario: A like is recorded, and the same decision again writes nothing
-    Given "A"'s round today holds "B"
+    Given "A"'s queue today holds "B"
     When "A" likes the card twice
     Then the card is liked at the first time
 
   Scenario: A decision may change until the day ends
-    Given "A"'s round today holds "B"
+    Given "A"'s queue today holds "B"
     When "A" likes the card, then passes it, then likes it again
     Then the card is liked, at the last time, and each decision had a time of its own
 
   Scenario: A card of a day that has ended cannot be seen or decided
-    Given "A"'s round of yesterday holds "B"
+    Given "A"'s queue of yesterday holds "B"
     When "A" reports yesterday's card seen and likes it
-    Then both answers are round_expired and nothing is written
-
-  Scenario: The round is complete once every card that can be shown is decided
-    Given "A"'s round today holds "B" and "C", and "C" was suspended since
-    When "A" passes "B"
-    Then the round is complete
+    Then both answers are day_ended and nothing is written
 
   Scenario: Two devices deciding the same card at once are taken one after the other
-    Given "A"'s round today holds "B"
+    Given "A"'s queue today holds "B"
     When one device likes the card while another passes it at the same moment
     Then the second waits for the first, and the card ends with the second's decision
 
-  Scenario: Only the person's own round is read or decided
-    Given "A" and "E" each have a round today
+  Scenario: Only the person's own queue is read or decided
+    Given "A" and "E" each have a queue today
     When "E" reports seen and decides at "A"'s places
     Then "E"'s own cards are written, and "A"'s are untouched
 
-  Scenario: Erasure removes the person's rounds and every entry in which they are somebody's card
-    Given "A" and "B" have rounds today, each the other's card
+  Scenario: Erasure removes the person's queue days and every entry in which they are somebody's card
+    Given "A" and "B" have queue days today, each the other's card
     When "B" deletes their account
-    Then "B"'s round is gone, and "A"'s round keeps its other cards without "B"
+    Then "B"'s queue is gone, and "A"'s queue keeps its other cards without "B"
 
-  Scenario: The person's export lists their own rounds, never whom
-    Given "A"'s round today holds "B", and "A" liked it
+  Scenario: The person's export lists their own queue days, never whom
+    Given "A"'s queue today holds "B", and "A" liked it
     When "A" downloads their data
-    Then the round is listed by its day with the card's place, reason and decision in words, and "B" is named nowhere
+    Then the queue is listed by its day with the card's place, reason and decision in words, and "B" is named nowhere
 
-  Scenario Outline: Rounds are kept a year, their entries and relaxations with them
-    Given a round of "A" with an entry and a relaxation, <days> days old
-    When the night prunes the rounds
+  Scenario Outline: Queue days are kept a year, their entries and relaxations with them
+    Given a queue of "A" with an entry and a relaxation, <days> days old
+    When the night prunes the queue days
     Then it <outcome>
 
     Examples:
@@ -88,7 +83,7 @@ Feature: The queue's cards, seen and decided
   # were.
 
   Scenario: A skip moves on and spends nothing
-    Given like_budget_balanced is 1, and "A"'s round today holds "B" and "C"
+    Given like_budget_balanced is 1, and "A"'s queue today holds "B" and "C"
     When "A" skips "B" and likes "C"
     Then both are decided, and "C" took the day's one like
 
@@ -98,12 +93,12 @@ Feature: The queue's cards, seen and decided
     Then "B" comes back, labelled seen before
 
   Scenario: A skip may be changed until midnight like any decision
-    Given like_budget_balanced is 1, and "A"'s round today holds "B" and "C"
+    Given like_budget_balanced is 1, and "A"'s queue today holds "B" and "C"
     When "A" likes "B", skips "B", likes "C", then skips "C" and passes "C"
     Then "B" stays skipped, "C" is passed, and the day's like is back
 
   Scenario: A skip on a liked-you card answers nothing, and the like keeps waiting
-    Given "B" liked "A" yesterday, and "B" is in "A"'s round today as liked you
+    Given "B" liked "A" yesterday, and "B" is in "A"'s queue today as liked you
     When "A" skips the card
     Then no match is made, and tomorrow's read opens with "B", labelled liked you, while the like has not expired
 
@@ -130,7 +125,7 @@ Feature: The queue's cards, seen and decided
       | liked "B" a hundred days ago           | a first  |
 
   Scenario: A pass changed back and forth the same day is one pass
-    Given "A"'s round today holds "B", and "A" never passed "B" before
+    Given "A"'s queue today holds "B", and "A" never passed "B" before
     When "A" passes "B", likes "B", and passes "B" again
     Then the pass is a first
 
@@ -140,7 +135,7 @@ Feature: The queue's cards, seen and decided
     Then the entry holds no mark
 
   Scenario: A pass whose earlier one has been pruned counts as a first
-    Given "A" passed "B" more than a year ago, and the night has pruned that round
+    Given "A" passed "B" more than a year ago, and the night has pruned that queue
     When "A" passes "B" today
     Then the pass is a first, and "B" returns after the first pass's clock
 
@@ -155,51 +150,51 @@ Feature: The queue's cards, seen and decided
   # like (#503; the maintainer, 30/10/2026); a pass or a skip is never counted.
 
   Scenario: The day's likes stop at the budget, and the next is refused with the time they come back
-    Given like_budget_balanced is 2 and "A"'s round today holds "B", "C" and "D"
+    Given like_budget_balanced is 2 and "A"'s queue today holds "B", "C" and "D"
     When "A" likes all three
     Then "B" and "C" are liked, and the like of "D" is refused with the wait until midnight, nothing of it written
 
   Scenario: A like back spends one of the day's likes
-    Given like_budget_balanced is 1 and "A"'s round today holds "B" who liked "A", and "C"
+    Given like_budget_balanced is 1 and "A"'s queue today holds "B" who liked "A", and "C"
     When "A" likes "B" and then "C"
     Then the two are a match, and the like of "C" is refused with the wait until midnight
 
   Scenario: A like back past the budget is refused, and the like it would answer keeps waiting
-    Given like_budget_balanced is 1 and "A"'s round today holds "B" who liked "A", and "C"
+    Given like_budget_balanced is 1 and "A"'s queue today holds "B" who liked "A", and "C"
     When "A" likes "C" and then "B"
     Then the like of "B" is refused with the wait until midnight, no match is made, and B's like still stands
 
   Scenario: A pass is never counted, and a like taken back gives its place back
-    Given like_budget_balanced is 1 and "A"'s round today holds "B", "C" and "D"
+    Given like_budget_balanced is 1 and "A"'s queue today holds "B", "C" and "D"
     When "A" passes "B", likes "C", is refused "D", then changes "C" to a pass
     Then "A" can like "D"
 
   Scenario: Two devices liking at once cannot pass the budget together
-    Given like_budget_balanced is 1 and "A"'s round today holds "B" and "C"
+    Given like_budget_balanced is 1 and "A"'s queue today holds "B" and "C"
     When one device likes "B" while another likes "C"
     Then the second waits for the first, and its like is refused
 
-  # What the round says of the day's likes (#524; the maintainer, 30/10/2026):
+  # What the queue says of the day's likes (#524; the maintainer, 30/10/2026):
   # how many are left, from like_budget_balanced down to zero, by the count
-  # the refusal uses, in the round's answer and in every decision's.
+  # the refusal uses, in the queue's answer and in every decision's.
 
-  Scenario: The round says how many of the day's likes are left, and each decision's answer says it again
-    Given like_budget_balanced is 2 and "A"'s round today holds "B", "C" and "D"
+  Scenario: The queue says how many of the day's likes are left, and each decision's answer says it again
+    Given like_budget_balanced is 2 and "A"'s queue today holds "B", "C" and "D"
     When "A" reads the queue, likes "B" and "C", and is refused "D"
-    Then the round says two are left, the two answers one and none, and the round read again none
+    Then the queue says two are left, the two answers one and none, and the queue read again none
 
   Scenario: Before the day's first read, all of the day's likes are left
-    Given like_budget_balanced is 3 and "A" has no round today
+    Given like_budget_balanced is 3 and "A" has no queue today
     When "A" reads the queue
     Then the answer says three are left
 
   Scenario: A pass leaves the likes left as they were, and a like taken back gives one back
-    Given like_budget_balanced is 2 and "A"'s round today holds "B" and "C"
+    Given like_budget_balanced is 2 and "A"'s queue today holds "B" and "C"
     When "A" passes "B", likes "C", then changes "C" to a pass
     Then the answers say two, one and two are left
 
   Scenario: A like back takes one off the likes left
-    Given like_budget_balanced is 2 and "A"'s round today holds "B" who liked "A"
+    Given like_budget_balanced is 2 and "A"'s queue today holds "B" who liked "A"
     When "A" likes "B"
     Then the answer says one is left
 

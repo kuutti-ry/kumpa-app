@@ -20,8 +20,8 @@ import { checkCharacter } from "@kuutti-ry/tunnistus-oidc/hetu";
  * and Ville, the pair of the chat's flows (#348, #101), Elina and Jussi, the
  * pair of the contact share's flow (#103), and Laura and Emmi, the pair of
  * the report's flow (#351), each pair with a conversation of its own so that
- * no flow changes what another reads; and the round's cast (#379): Iida, as
- * whom the round's flow signs in, and the four people of her round, Henna,
+ * no flow changes what another reads; and the queue's cast (#379): Iida, as
+ * whom the queue's flow signs in, and the four people of her queue, Henna,
  * Katja, Minna and Riikka, who are cards and nothing more: no demo signs in as them,
  * and of the flows only `short-pool`, as Riikka; and Ritva, What you seek's (#542), whose answers that
  * flow changes and puts back, which no other flow reads. Every test user of the bed whose code the
@@ -74,11 +74,11 @@ export type DemoPersona = {
   born: FixedBirth | RelativeBirth;
   /** 900 to 999: artificial, not given to a person by the population register. */
   individual: number;
-  /** `cards`: people a round shows, whom a demo does not sign in as (#379); off the page's list of names. */
+  /** `cards`: people a queue shows, whom a demo does not sign in as (#379); off the page's list of names. */
   group: "walkthrough" | "history" | "ages" | "cards";
   /** What the persona is for, shown under the name. */
   note: string;
-  /** Where the same person is on Telia's bed; absent for the ages, the three pairs of the conversations and the round's cast, who exist at the mock bank only. */
+  /** Where the same person is on Telia's bed; absent for the ages, the three pairs of the conversations and the queue's cast, who exist at the mock bank only. */
   bank?: TestBank;
 };
 
@@ -245,7 +245,7 @@ export const DEMO_PERSONAS: readonly DemoPersona[] = [
     born: { year: 1990, month: 3, day: 11 },
     individual: 968,
     group: "history",
-    note: "Onboarded, with a complete profile: a round for the day, four cards, the first of them Henna, who liked her. The round's flow likes, passes, likes back and blocks as her (#379).",
+    note: "Onboarded, with a complete profile: a queue for the day, four cards, the first of them Henna, who liked her. The queue's flow likes, passes, likes back and blocks as her (#379).",
   },
   {
     key: "henna",
@@ -254,7 +254,7 @@ export const DEMO_PERSONAS: readonly DemoPersona[] = [
     born: { year: 1989, month: 5, day: 27 },
     individual: 969,
     group: "cards",
-    note: "A card in Iida's round: she liked Iida yesterday, so she comes first, and Iida's like back is a match.",
+    note: "A card in Iida's queue: she liked Iida yesterday, so she comes first, and Iida's like back is a match.",
   },
   {
     key: "katja",
@@ -263,7 +263,7 @@ export const DEMO_PERSONAS: readonly DemoPersona[] = [
     born: { year: 1989, month: 11, day: 19 },
     individual: 970,
     group: "cards",
-    note: "A card in Iida's round.",
+    note: "A card in Iida's queue.",
   },
   {
     key: "minna",
@@ -272,7 +272,7 @@ export const DEMO_PERSONAS: readonly DemoPersona[] = [
     born: { year: 1990, month: 1, day: 8 },
     individual: 971,
     group: "cards",
-    note: "A card in Iida's round.",
+    note: "A card in Iida's queue.",
   },
   {
     key: "riikka",
@@ -281,7 +281,7 @@ export const DEMO_PERSONAS: readonly DemoPersona[] = [
     born: { year: 1989, month: 8, day: 30 },
     individual: 972,
     group: "cards",
-    note: "A card in Iida's round.",
+    note: "A card in Iida's queue.",
   },
   // What you seek's (#542): in nobody's pool, so its flow changes what nothing else reads.
   {

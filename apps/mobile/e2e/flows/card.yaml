@@ -6,7 +6,7 @@
 # the rest of the answers under the profile's section titles in place. Soft
 # fields (education, drinking) never show, and a finished profile has no list
 # of what is missing. Her home is a name, never digits, and how far is a
-# round's to say, so her own card has no band (ADR-061 §3, §5). A chip is one
+# queue's to say, so her own card has no band (ADR-061 §3, §5). A chip is one
 # element to a screen reader, heard with its question ("Looking for: ..."), so
 # on iOS its label carries the question and the patterns allow it. Sanna's
 # history after `pnpm demo:reset` (packages/db/src/seed/histories.ts); read only.

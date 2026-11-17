@@ -12,10 +12,10 @@ import { fetchRelaxations } from "./client";
 const WAYS = [
   {
     kind: "unanswered",
-    heading: "round.short.unanswered.title",
-    spoken: "round.short.unanswered",
+    heading: "queue.short.unanswered.title",
+    spoken: "queue.short.unanswered",
   },
-  { kind: "aside", heading: "round.short.aside.title", spoken: "round.short.aside" },
+  { kind: "aside", heading: "queue.short.aside.title", spoken: "queue.short.aside" },
 ] as const;
 
 /**
@@ -70,7 +70,7 @@ export function ShortPool({
       {pool.offers.length > 0 && (
         <>
           <Text variant="h3" accessibilityRole="header">
-            {t("round.short.title")}
+            {t("queue.short.title")}
           </Text>
           {WAYS.map(({ kind, heading, spoken }) => {
             const offers = pool.offers.filter((offer) => offer.kind === kind);
@@ -80,7 +80,7 @@ export function ShortPool({
                 <Text variant="title">{t(heading)}</Text>
                 {offers.map((offer) => {
                   const what = t(spoken, { field: field(offer.field) });
-                  const more = t("round.short.more", { more: offer.more });
+                  const more = t("queue.short.more", { more: offer.more });
                   return (
                     <Button
                       key={offer.field}
@@ -108,13 +108,13 @@ export function ShortPool({
           key={relaxation.field}
           variant="ghost"
           disabled={busy}
-          accessibilityLabel={t("round.relaxed.undo", { field: field(relaxation.field) })}
+          accessibilityLabel={t("queue.relaxed.undo", { field: field(relaxation.field) })}
           onPress={() => {
             tap();
             then(onUndo(relaxation.field));
           }}
         >
-          {t("round.relaxed.undo", { field: field(relaxation.field) })}
+          {t("queue.relaxed.undo", { field: field(relaxation.field) })}
         </Button>
       ))}
     </View>

@@ -62,9 +62,9 @@ export type DealBreakerRow = { field: string; value: unknown; include_unknown: b
  * Stored rows as the deal-breakers they still are: a field that left the
  * whitelist reads as none; so does an option that left the registry (ADR-009
  * §1), and a row with no option left: the next save removes it, since it is
- * not in the set sent. The caller's own read and the round builder's of many
+ * not in the set sent. The caller's own read and the queue's builder's of many
  * people at once (#87) read them alike. Nobody is unknown to a filter on
- * distance, so it lets them through whatever a row says: a short round then
+ * distance, so it lets them through whatever a row says: a short queue then
  * offers it set aside alone (ADR-061 §7).
  */
 export function dealBreakersFrom(rows: readonly DealBreakerRow[]): DealBreaker[] {

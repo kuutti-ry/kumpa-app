@@ -14,7 +14,7 @@ import { DAY_MS } from "../lib/finnish-day.ts";
 // the Queryable seam the test harness hands a rolled-back transaction through.
 // preferences(account_id, field, value, mode, include_unknown), rules/db.md:
 // one row per field, deal-breakers are mode = hard. Onboarding (#46) writes
-// the two hard rows nothing can start without; the round builder of M4 joins
+// the two hard rows nothing can start without; the queue's builder of M4 joins
 // both parties' hard rows. Every statement carries the caller's account id
 // (rule 6), and no log line here carries seeks (rule 5, checklist line 66).
 

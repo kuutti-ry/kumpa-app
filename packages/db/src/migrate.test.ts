@@ -393,14 +393,14 @@ describe("migrate", () => {
         await pool.query("DELETE FROM invitation WHERE id = $1", [joined.rows[0]?.id]);
 
         // A unit spent on an entry has its time, and outlives the entry without the link.
-        const { rows: rounds } = await pool.query<{ id: string }>(
-          "INSERT INTO rounds (account_id, day) VALUES ($1, '2026-10-22') RETURNING id",
+        const { rows: days } = await pool.query<{ id: string }>(
+          "INSERT INTO queue_day (account_id, day) VALUES ($1, '2026-10-22') RETURNING id",
           [inviter],
         );
         const { rows: entries } = await pool.query<{ id: string }>(
-          `INSERT INTO round_entries (round_id, position, candidate_id, reason, decision, decided_at)
+          `INSERT INTO queue_entry (queue_day_id, position, candidate_id, reason, decision, decided_at)
            VALUES ($1, 1, $2, 'matches_filters', 'like', $3) RETURNING id`,
-          [rounds[0]?.id, other, AT],
+          [days[0]?.id, other, AT],
         );
         const entryId = entries[0]?.id;
         await expect(
@@ -424,7 +424,7 @@ describe("migrate", () => {
             ]),
           ).rejects.toMatchObject({ code: "22P02" });
         }
-        await pool.query("DELETE FROM round_entries WHERE id = $1", [entryId]);
+        await pool.query("DELETE FROM queue_entry WHERE id = $1", [entryId]);
         const spent = await pool.query<{ kind: string; spent: boolean; entry: string | null }>(
           `SELECT kind, spent_at IS NOT NULL AS spent, spent_entry_id AS entry FROM reward
            ORDER BY spent_at NULLS LAST`,
@@ -491,28 +491,28 @@ describe("migrate", () => {
       try {
         await migrate(pool, MIGRATIONS);
         const [one, other] = [await accountOf(pool, "b"), await accountOf(pool, "c")];
-        const { rows: rounds } = await pool.query<{ id: string }>(
-          "INSERT INTO rounds (account_id, day) VALUES ($1, '2026-10-30') RETURNING id",
+        const { rows: days } = await pool.query<{ id: string }>(
+          "INSERT INTO queue_day (account_id, day) VALUES ($1, '2026-10-30') RETURNING id",
           [one],
         );
         await pool.query(
-          `INSERT INTO round_entries (round_id, position, candidate_id, reason, decision, decided_at)
+          `INSERT INTO queue_entry (queue_day_id, position, candidate_id, reason, decision, decided_at)
            VALUES ($1, 1, $2, 'matches_filters', 'pass', now())`,
-          [rounds[0]?.id, other],
+          [days[0]?.id, other],
         );
         // A pass is a first pass until it says otherwise.
-        const entries = await pool.query("SELECT second_pass FROM round_entries");
+        const entries = await pool.query("SELECT second_pass FROM queue_entry");
         expect(entries.rows).toEqual([{ second_pass: false }]);
         const mark = (value: boolean, decision: string) =>
           pool.query(
-            "UPDATE round_entries SET decision = $2::round_decision, second_pass = $1 RETURNING second_pass",
+            "UPDATE queue_entry SET decision = $2::queue_decision, second_pass = $1 RETURNING second_pass",
             [value, decision],
           );
         expect((await mark(true, "pass")).rows).toEqual([{ second_pass: true }]);
         expect((await mark(false, "skip")).rows).toEqual([{ second_pass: false }]);
         for (const decision of ["like", "skip"]) {
           await expect(mark(true, decision), decision).rejects.toThrow(
-            /round_entries_second_pass_check/,
+            /queue_entry_second_pass_check/,
           );
         }
       } finally {
@@ -728,6 +728,129 @@ describe("migrate", () => {
     }
   });
 
+  it("calls the round the queue in a database that held one: its days, entries and relaxations, a sanction of the read rule and the rule's tunables keep their rows, a day its start, and the other two times go (#695, ADR-062 §1)", async () => {
+    const withRounds = migrationsBefore("0012_queue_names_sql");
+    try {
+      await withTemporaryDatabase(async (url) => {
+        const pool = createPool({ connectionString: url, max: 2 });
+        try {
+          await migrate(pool, withRounds);
+          const [one, other] = [await accountOf(pool, "d"), await accountOf(pool, "e")];
+          const { rows: rounds } = await pool.query<{ id: string }>(
+            `INSERT INTO rounds (account_id, day, built_at, opened_at, completed_at)
+             VALUES ($1, '2026-11-16', $2, $2, $2) RETURNING id`,
+            [one, AT],
+          );
+          const day = rounds[0]?.id as string;
+          const { rows: entries } = await pool.query<{ id: string }>(
+            `INSERT INTO round_entries (round_id, position, candidate_id, reason, decision, decided_at)
+             VALUES ($1, 1, $2, 'matches_filters', 'like', $3) RETURNING id`,
+            [day, other, AT],
+          );
+          await pool.query(
+            "INSERT INTO round_relaxation (round_id, field, kind) VALUES ($1, 'smoking', 'aside')",
+            [day],
+          );
+          await pool.query(
+            `INSERT INTO sanction (identity_id, account_id, kind, reason, note, created_at,
+                                   rule, rule_count, rule_first_at)
+             SELECT identity_id, id, 'shadow_ban', 'scraping', 'Applied by the automatic rule.', $2,
+                    'round_reads', 30, $2
+               FROM account WHERE id = $1`,
+            [one, AT],
+          );
+          await pool.query(
+            `INSERT INTO matching_config (version, key, value, created_by, reason)
+             VALUES (2, 'auto_shadow_ban_round_reads', '20'::jsonb, 'staff:a', 'Fewer reads')`,
+          );
+
+          await migrate(pool, MIGRATIONS);
+
+          const { rows: days } = await pool.query(
+            "SELECT id, account_id, day::text AS day, started_at FROM queue_day",
+          );
+          expect(days).toEqual([
+            { id: day, account_id: one, day: "2026-11-16", started_at: new Date(AT) },
+          ]);
+          const { rows: columns } = await pool.query<{ column_name: string }>(
+            `SELECT column_name FROM information_schema.columns
+              WHERE table_name = 'queue_day' ORDER BY column_name`,
+          );
+          expect(columns.map((row) => row.column_name)).toEqual([
+            "account_id",
+            "day",
+            "id",
+            "last_position",
+            "started_at",
+          ]);
+          const { rows: kept } = await pool.query(
+            "SELECT id, queue_day_id, candidate_id, decision::text FROM queue_entry",
+          );
+          expect(kept).toEqual([
+            { id: entries[0]?.id, queue_day_id: day, candidate_id: other, decision: "like" },
+          ]);
+          const { rows: relaxations } = await pool.query(
+            "SELECT queue_day_id, field FROM queue_relaxation",
+          );
+          expect(relaxations).toEqual([{ queue_day_id: day, field: "smoking" }]);
+          const { rows: rules } = await pool.query("SELECT rule::text FROM sanction");
+          expect(rules).toEqual([{ rule: "queue_reads" }]);
+          const { rows: tunables } = await pool.query(
+            `SELECT key, version, value, created_by FROM matching_config
+              WHERE key LIKE 'auto_shadow_ban_%_reads%' ORDER BY key, version`,
+          );
+          expect(tunables).toEqual([
+            {
+              key: "auto_shadow_ban_queue_reads",
+              version: 1,
+              value: 30,
+              created_by: "migration:0001",
+            },
+            { key: "auto_shadow_ban_queue_reads", version: 2, value: 20, created_by: "staff:a" },
+            {
+              key: "auto_shadow_ban_queue_reads_minutes",
+              version: 1,
+              value: 1,
+              created_by: "migration:0001",
+            },
+          ]);
+          // The keys and the types carry the new names: none of the old is left.
+          const { rows: named } = await pool.query<{ name: string }>(
+            `SELECT conname AS name FROM pg_constraint
+              WHERE conrelid IN ('queue_day'::regclass, 'queue_entry'::regclass, 'queue_relaxation'::regclass)
+                AND contype = 'p' ORDER BY 1`,
+          );
+          expect(named.map((row) => row.name)).toEqual([
+            "queue_day_pkey",
+            "queue_entry_pkey",
+            "queue_relaxation_pkey",
+          ]);
+          const { rows: old } = await pool.query(
+            `SELECT name FROM (
+               SELECT conname AS name, connamespace AS space FROM pg_constraint
+               UNION ALL SELECT relname, relnamespace FROM pg_class
+               UNION ALL SELECT attname, relnamespace FROM pg_attribute JOIN pg_class ON oid = attrelid
+               UNION ALL SELECT typname, typnamespace FROM pg_type
+               UNION ALL SELECT enumlabel, typnamespace FROM pg_enum JOIN pg_type ON pg_type.oid = enumtypid
+             ) AS everything WHERE space = 'public'::regnamespace AND name ~ '(^|_)rounds?(_|$)'`,
+          );
+          expect(old).toEqual([]);
+          // The day still takes its entries and relaxations with it.
+          await pool.query("DELETE FROM queue_day WHERE id = $1", [day]);
+          const { rows: left } = await pool.query(
+            `SELECT (SELECT count(*) FROM queue_entry)::int AS entries,
+                    (SELECT count(*) FROM queue_relaxation)::int AS relaxations`,
+          );
+          expect(left).toEqual([{ entries: 0, relaxations: 0 }]);
+        } finally {
+          await pool.end();
+        }
+      });
+    } finally {
+      rmSync(withRounds, { recursive: true, force: true });
+    }
+  });
+
   it("is a no-op the second time", async () => {
     await withTemporaryDatabase(async (url) => {
       const pool = createPool({ connectionString: url, max: 2 });
@@ -771,12 +894,12 @@ describe("migrate", () => {
           "preferences",
           "profile",
           "push_token",
+          "queue_day",
+          "queue_entry",
+          "queue_relaxation",
           "report",
           "report_message",
           "reward",
-          "round_entries",
-          "round_relaxation",
-          "rounds",
           "sanction",
           "session",
           "star",

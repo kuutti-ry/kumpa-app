@@ -12,7 +12,7 @@ Feature: The home
   town of at least home_town_min_inhabitants people (20,000), or the area where
   an area is kept and the person asks for it. The home changes whenever the
   person likes: an entry keeps the band it was written with
-  (features/matching/rounds.feature), and a move works on the next read, as every
+  (features/matching/queue.feature), and a move works on the next read, as every
   change of what fits does; that a person can narrow down an area by moving, the
   maintainer accepted on 01/11/2026 (ADR-062 §8). A filter on distance is
   features/matching/filters.feature's. There is no pond to be in: a home is what

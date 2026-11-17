@@ -11,7 +11,7 @@ import { timeOf } from "./time";
  * The person's own messages in the primary colour, the other's in the
  * secondary, or in the designers' try's Glass (outside production) on a
  * frosted pane; `shape` is the style's corners, its tail the corner nearest
- * the speaker: Neobrutalism's ink outline, the pill styles' round bubble.
+ * the speaker: Neobrutalism's ink outline, the pill styles' queue bubble.
  */
 export function useBubble(mine: boolean): { box: string; text: string; shape: string } {
   const { ink, pill, glass } = useLookTraits();

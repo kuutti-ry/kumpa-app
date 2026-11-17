@@ -263,15 +263,13 @@ function anExport(): Record<string, unknown> {
       ],
       notices: [{ kind: "warning", at, readAt: null }],
     },
-    // The person's own rounds (#96): places, reasons and decisions, never whom.
-    rounds: {
-      about: "Your rounds",
+    // The person's own queue days (#96): places, reasons and decisions, never whom.
+    queue: {
+      about: "Your queue days",
       items: [
         {
           day: "2026-10-19",
-          builtAt: at,
-          openedAt: at,
-          completedAt: null,
+          startedAt: at,
           relaxations: [
             {
               field: "smoking",

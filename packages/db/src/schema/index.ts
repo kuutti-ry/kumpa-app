@@ -30,15 +30,15 @@ export {
   identity,
   identityStanding,
 } from "./identity.ts";
-// Today's round and its entries (#96, ADR-034), and the stars (#575, ADR-064).
+// Today's queue and its entries (#96, ADR-034), and the stars (#575, ADR-064).
 export {
   distanceBand,
+  queueDay,
+  queueDecision,
+  queueEntry,
+  queueReason,
+  queueRelaxation,
   relaxationKind,
-  roundDecision,
-  roundEntries,
-  roundReason,
-  roundRelaxation,
-  rounds,
   star,
 } from "./matching.ts";
 export { matchingConfig } from "./matching-config.ts";

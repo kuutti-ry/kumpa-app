@@ -114,7 +114,7 @@ export const ProfileUpdate = z
   .meta({ id: "ProfileUpdate" });
 export type ProfileUpdate = z.infer<typeof ProfileUpdate>;
 
-/** What is still missing before the profile can enter a round (#47; the tips of #56 read it). */
+/** What is still missing before the profile can enter a queue (#47; the tips of #56 read it). */
 export const CompletenessItem = z
   .enum(["display_name", "photos", "bio_or_prompts", "seeks", "age_window"])
   .meta({ id: "CompletenessItem" });

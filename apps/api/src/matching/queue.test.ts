@@ -3,9 +3,9 @@ import {
   ErrorResponse,
   type ProfileCard,
   QUEUE_PAGE,
-  RoundDecisionAnswer,
-  type RoundReason,
-  RoundResponse,
+  QueueDecisionAnswer,
+  type QueueReason,
+  QueueResponse,
 } from "@kuutti/schema";
 import { type App, createApp } from "../app.ts";
 import { eraseAccount, exportAccount } from "../identity/index.ts";
@@ -23,7 +23,6 @@ import {
   type TestContext,
   testConfig,
 } from "../test/harness.ts";
-import { pidOf, waitsFor, watched, withTwoConnections } from "../test/races.ts";
 import {
   block,
   fitsAt,
@@ -32,28 +31,29 @@ import {
   MATCHES,
   peopleWhoFit,
   shownAt,
-} from "../test/rounds.ts";
+} from "../test/queue.ts";
+import { pidOf, waitsFor, watched, withTwoConnections } from "../test/races.ts";
 import {
   addPlaces,
   type CardOf,
   decide,
-  exportRounds,
-  pruneRounds,
+  exportQueue,
+  pruneQueueDays,
   type Queue,
-  type RoundDeps,
+  type QueueDeps,
   readQueue,
-} from "./rounds.ts";
+} from "./queue.ts";
 
 // The queue's cards and the day's log of them (#96, #502,
 // features/matching/decisions.feature): the read, seen and decided, a decision
 // changed and the day's end, a skip and a second pass, a card that can no longer
-// be shown, completion, two devices at once, the caller's own round only,
+// be shown, completion, two devices at once, the caller's own queue only,
 // erasure of both sides, the export, the year the log is kept, and the log's
-// one writer. Who comes next is jobs/round-builder.test.ts;
+// one writer. Who comes next is jobs/queue-builder.test.ts;
 // the people here are in a pond nobody has opened, so a read serves what a test
 // wrote and adds nobody.
 
-/** 12:00 in Finland, one Friday: the round's day is 2026-10-16. */
+/** 12:00 in Finland, one Friday: the queue's day is 2026-10-16. */
 const TODAY = finnishDay(T);
 const YESTERDAY = "2026-10-15";
 const SECOND = 1000;
@@ -82,7 +82,7 @@ const test = base.extend<{ app: App }>({
   },
 });
 
-async function depsOn(db: Queryable, now: () => Date = () => T): Promise<RoundDeps> {
+async function depsOn(db: Queryable, now: () => Date = () => T): Promise<QueueDeps> {
   return { db, logger: (await captureLogger()).logger, now };
 }
 
@@ -92,27 +92,27 @@ async function cast(ctx: TestContext, count: number): Promise<Person[]> {
   return Promise.all(ids.map((id) => signInAs(ctx.client, id)));
 }
 
-const today = (app: App, who: Person) => app.request("/rounds/today", { headers: who.headers });
+const today = (app: App, who: Person) => app.request("/queue/today", { headers: who.headers });
 const seen = (app: App, who: Person, day: string, position: number) =>
-  app.request(`/rounds/${day}/entries/${position}/seen`, { method: "POST", headers: who.headers });
+  app.request(`/queue/${day}/entries/${position}/seen`, { method: "POST", headers: who.headers });
 const decideBy = (app: App, who: Person, day: string, position: number, decision: string) =>
-  app.request(`/rounds/${day}/entries/${position}/decision`, {
+  app.request(`/queue/${day}/entries/${position}/decision`, {
     method: "PUT",
     headers: { ...who.headers, "content-type": "application/json" },
     body: JSON.stringify({ decision }),
   });
 
-async function readToday(app: App, who: Person): Promise<RoundResponse> {
+async function readToday(app: App, who: Person): Promise<QueueResponse> {
   const answer = await today(app, who);
   expect(answer.status).toBe(200);
-  return RoundResponse.parse(await answer.json());
+  return QueueResponse.parse(await answer.json());
 }
 
 /** `owner`'s log of `day` with these cards, all matching every filter unless said; its id. */
-const roundFor = (
+const queueDayFor = (
   db: Queryable,
   owner: Person,
-  cards: (Person | { person: Person; reason: RoundReason })[],
+  cards: (Person | { person: Person; reason: QueueReason })[],
   day = TODAY,
 ) =>
   logged(
@@ -126,7 +126,7 @@ const roundFor = (
     ),
   );
 
-async function entriesOf(db: Queryable, roundId: string) {
+async function entriesOf(db: Queryable, queueDayId: string) {
   return (
     await db.query<{
       position: number;
@@ -135,9 +135,9 @@ async function entriesOf(db: Queryable, roundId: string) {
       decision: string | null;
       decided_at: Date | null;
     }>(
-      `SELECT position, candidate_id, seen_at, decision, decided_at FROM round_entries
-        WHERE round_id = $1 ORDER BY position`,
-      [roundId],
+      `SELECT position, candidate_id, seen_at, decision, decided_at FROM queue_entry
+        WHERE queue_day_id = $1 ORDER BY position`,
+      [queueDayId],
     )
   ).rows;
 }
@@ -149,30 +149,23 @@ describe("reading the queue", () => {
   }) => {
     const [a, b, c, d, ...more] = await cast(ctx, 4 + QUEUE_PAGE);
     if (!a || !b || !c || !d) throw new Error("cast not written");
-    const roundId = await roundFor(ctx.client, a, [
+    await queueDayFor(ctx.client, a, [
       b,
       { person: c, reason: "liked_you" },
       { person: d, reason: "seen_before" },
       ...more,
     ]);
-    const round = await readToday(app, a);
-    expect(round.day).toBe(TODAY);
-    expect(round.entries).toHaveLength(QUEUE_PAGE);
-    expect(round.entries?.map((e) => e.position)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
-    expect(round.entries?.slice(0, 4).map((e) => [e.reason, e.decision, e.card.accountId])).toEqual(
-      [
-        ["matches_filters", null, b.accountId],
-        ["liked_you", null, c.accountId],
-        ["seen_before", null, d.accountId],
-        ["matches_filters", null, more[0]?.accountId],
-      ],
-    );
-    // The first read opened the round; serving the cards wrote the shown record (ADR-008).
-    const opened = await ctx.client.query<{ opened_at: Date | null }>(
-      "SELECT opened_at FROM rounds WHERE id = $1",
-      [roundId],
-    );
-    expect(opened.rows[0]?.opened_at).not.toBeNull();
+    const read = await readToday(app, a);
+    expect(read.day).toBe(TODAY);
+    expect(read.entries).toHaveLength(QUEUE_PAGE);
+    expect(read.entries?.map((e) => e.position)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    expect(read.entries?.slice(0, 4).map((e) => [e.reason, e.decision, e.card.accountId])).toEqual([
+      ["matches_filters", null, b.accountId],
+      ["liked_you", null, c.accountId],
+      ["seen_before", null, d.accountId],
+      ["matches_filters", null, more[0]?.accountId],
+    ]);
+    // Serving the cards wrote the shown record (ADR-008).
     // Ten people's three photos, and nothing of the three who did not come.
     const shown = await ctx.client.query<{ n: number }>(
       "SELECT count(DISTINCT photo_id)::int AS n FROM card_shown WHERE account_id = $1",
@@ -184,19 +177,19 @@ describe("reading the queue", () => {
   test("A decided card is not read again", async ({ ctx, app }) => {
     const [a, b, c, d] = await cast(ctx, 4);
     if (!a || !b || !c || !d) throw new Error("cast not written");
-    await roundFor(ctx.client, a, [b, c, d]);
+    await queueDayFor(ctx.client, a, [b, c, d]);
     expect((await decideBy(app, a, TODAY, 1, "like")).status).toBe(200);
     expect((await decideBy(app, a, TODAY, 2, "skip")).status).toBe(200);
 
-    const round = await readToday(app, a);
+    const read = await readToday(app, a);
 
-    expect(round.entries?.map((e) => [e.position, e.card.accountId])).toEqual([[3, d.accountId]]);
+    expect(read.entries?.map((e) => [e.position, e.card.accountId])).toEqual([[3, d.accountId]]);
   });
 
-  test("yesterday's round is not today's", async ({ ctx, app }) => {
+  test("yesterday's queue is not today's", async ({ ctx, app }) => {
     const [a, b] = await cast(ctx, 2);
     if (!a || !b) throw new Error("cast not written");
-    await roundFor(ctx.client, a, [b], YESTERDAY);
+    await queueDayFor(ctx.client, a, [b], YESTERDAY);
     expect(await readToday(app, a)).toEqual({
       day: TODAY,
       entries: null,
@@ -206,10 +199,10 @@ describe("reading the queue", () => {
     });
   });
 
-  test("a round with no cards answers an empty list", async ({ ctx, app }) => {
+  test("a queue with no cards answers an empty list", async ({ ctx, app }) => {
     const [a] = await cast(ctx, 1);
     if (!a) throw new Error("cast not written");
-    await roundFor(ctx.client, a, []);
+    await queueDayFor(ctx.client, a, []);
     expect(await readToday(app, a)).toEqual({
       day: TODAY,
       entries: [],
@@ -225,7 +218,7 @@ describe("reading the queue", () => {
   }) => {
     const [a, ...others] = await cast(ctx, 1 + 3 * QUEUE_PAGE);
     if (!a) throw new Error("cast not written");
-    await roundFor(ctx.client, a, others);
+    await queueDayFor(ctx.client, a, others);
     for (let page = 0; page < 3; page += 1) {
       const { entries } = await readToday(app, a);
       expect(entries).toHaveLength(QUEUE_PAGE);
@@ -242,7 +235,7 @@ describe("reading the queue", () => {
   }) => {
     const [a, b, c] = await cast(ctx, 3);
     if (!a || !b || !c) throw new Error("cast not written");
-    await roundFor(ctx.client, a, [b, c]);
+    await queueDayFor(ctx.client, a, [b, c]);
     await withMatchingConfig(ctx.client, { exposure_cards_per_day: 1 });
     const answer = await today(app, a);
     expect(answer.status).toBe(429);
@@ -256,7 +249,7 @@ describe("reading the queue", () => {
   }) => {
     const [a, b, c] = await cast(ctx, 3);
     if (!a || !b || !c) throw new Error("cast not written");
-    const roundId = await roundFor(ctx.client, a, [b, c]);
+    const queueDayId = await queueDayFor(ctx.client, a, [b, c]);
     await block(ctx.client, a, b);
     await ctx.client.query("UPDATE account SET state = 'suspended' WHERE id = $1", [c.accountId]);
     expect((await readToday(app, a)).entries).toEqual([]);
@@ -270,7 +263,7 @@ describe("reading the queue", () => {
         expect(await errorCode(answer)).toBe("not_found");
       }
     }
-    expect((await entriesOf(ctx.client, roundId)).map((e) => [e.seen_at, e.decision])).toEqual([
+    expect((await entriesOf(ctx.client, queueDayId)).map((e) => [e.seen_at, e.decision])).toEqual([
       [null, null],
       [null, null],
     ]);
@@ -291,7 +284,7 @@ describe("reading the queue", () => {
   }) => {
     const [a] = await cast(ctx, 1);
     if (!a) throw new Error("cast not written");
-    await roundFor(ctx.client, a, []);
+    await queueDayFor(ctx.client, a, []);
     let fills = 0;
     const queue: Queue = {
       fill: async () => {
@@ -301,16 +294,16 @@ describe("reading the queue", () => {
       fits: everybodyFits,
     };
 
-    const round = await reading(ctx, queue, async () => null, a.accountId);
+    const read = await reading(ctx, queue, async () => null, a.accountId);
 
-    expect(round.entries).toEqual([]);
+    expect(read.entries).toEqual([]);
     expect(fills).toBe(3);
   });
 
   test("a read that adds nobody asks once, and undecided cards ask nobody", async ({ ctx }) => {
     const [a, b] = await cast(ctx, 2);
     if (!a || !b) throw new Error("cast not written");
-    await roundFor(ctx.client, a, []);
+    await queueDayFor(ctx.client, a, []);
     let fills = 0;
     const fill = async () => {
       fills += 1;
@@ -322,7 +315,7 @@ describe("reading the queue", () => {
     expect((await reading(ctx, queue, async () => null, a.accountId)).entries).toEqual([]);
     expect(fills).toBe(1);
 
-    await roundFor(ctx.client, a, [b]);
+    await queueDayFor(ctx.client, a, [b]);
     const read = await reading(ctx, queue, async () => aCard, a.accountId);
     expect(read.entries?.map((entry) => entry.position)).toEqual([1]);
     expect(fills).toBe(1);
@@ -333,36 +326,36 @@ describe("seen and decided", () => {
   test("A card seen is recorded once", async ({ ctx, app }) => {
     const [a, b] = await cast(ctx, 2);
     if (!a || !b) throw new Error("cast not written");
-    const roundId = await roundFor(ctx.client, a, [{ person: b, reason: "liked_you" }]);
+    const queueDayId = await queueDayFor(ctx.client, a, [{ person: b, reason: "liked_you" }]);
     expect((await seen(app, a, TODAY, 1)).status).toBe(204);
-    const first = (await entriesOf(ctx.client, roundId))[0]?.seen_at;
+    const first = (await entriesOf(ctx.client, queueDayId))[0]?.seen_at;
     expect(first).not.toBeNull();
     expect((await seen(app, a, TODAY, 1)).status).toBe(204);
-    expect((await entriesOf(ctx.client, roundId))[0]?.seen_at).toEqual(first);
+    expect((await entriesOf(ctx.client, queueDayId))[0]?.seen_at).toEqual(first);
   });
 
   test("A like is recorded, and the same decision again writes nothing", async ({ ctx, app }) => {
     const [a, b] = await cast(ctx, 2);
     if (!a || !b) throw new Error("cast not written");
-    const roundId = await roundFor(ctx.client, a, [b]);
+    const queueDayId = await queueDayFor(ctx.client, a, [b]);
     expect((await seen(app, a, TODAY, 1)).status).toBe(204);
     expect((await decideBy(app, a, TODAY, 1, "like")).status).toBe(200);
-    const first = (await entriesOf(ctx.client, roundId))[0];
+    const first = (await entriesOf(ctx.client, queueDayId))[0];
     expect(first?.decision).toBe("like");
     expect((await decideBy(app, a, TODAY, 1, "like")).status).toBe(200);
-    expect((await entriesOf(ctx.client, roundId))[0]?.decided_at).toEqual(first?.decided_at);
+    expect((await entriesOf(ctx.client, queueDayId))[0]?.decided_at).toEqual(first?.decided_at);
   });
 
   test("A decision may change until the day ends", async ({ ctx, app }) => {
     const [a, b] = await cast(ctx, 2);
     if (!a || !b) throw new Error("cast not written");
-    const roundId = await roundFor(ctx.client, a, [b]);
+    const queueDayId = await queueDayFor(ctx.client, a, [b]);
     const times: (Date | null | undefined)[] = [];
     for (const decision of ["like", "pass", "like"]) {
       expect((await decideBy(app, a, TODAY, 1, decision)).status).toBe(200);
-      times.push((await entriesOf(ctx.client, roundId))[0]?.decided_at);
+      times.push((await entriesOf(ctx.client, queueDayId))[0]?.decided_at);
     }
-    const [entry] = await entriesOf(ctx.client, roundId);
+    const [entry] = await entriesOf(ctx.client, queueDayId);
     expect(entry?.decision).toBe("like");
     expect(new Set(times.map(Number)).size).toBe(3);
   });
@@ -370,21 +363,21 @@ describe("seen and decided", () => {
   test("A card of a day that has ended cannot be seen or decided", async ({ ctx, app }) => {
     const [a, b] = await cast(ctx, 2);
     if (!a || !b) throw new Error("cast not written");
-    const roundId = await roundFor(ctx.client, a, [b], YESTERDAY);
+    const queueDayId = await queueDayFor(ctx.client, a, [b], YESTERDAY);
     for (const answer of [
       await seen(app, a, YESTERDAY, 1),
       await decideBy(app, a, YESTERDAY, 1, "like"),
     ]) {
       expect(answer.status).toBe(409);
-      expect(await errorCode(answer)).toBe("round_expired");
+      expect(await errorCode(answer)).toBe("day_ended");
     }
-    expect((await entriesOf(ctx.client, roundId))[0]).toMatchObject({
+    expect((await entriesOf(ctx.client, queueDayId))[0]).toMatchObject({
       seen_at: null,
       decision: null,
     });
   });
 
-  test("a day not begun, a place with no card and no round today are not found", async ({
+  test("a day not begun, a place with no card and no queue today are not found", async ({
     ctx,
     app,
   }) => {
@@ -393,7 +386,7 @@ describe("seen and decided", () => {
     for (const answer of [await decideBy(app, a, TODAY, 1, "like"), await seen(app, a, TODAY, 1)]) {
       expect(answer.status).toBe(404);
     }
-    await roundFor(ctx.client, a, [b]);
+    await queueDayFor(ctx.client, a, [b]);
     for (const answer of [
       await decideBy(app, a, "2026-10-17", 1, "like"),
       await seen(app, a, "2026-10-17", 1),
@@ -406,13 +399,13 @@ describe("seen and decided", () => {
   });
 
   test.for([
-    ["a day that is no date", "/rounds/2026-02-30/entries/1/decision", { decision: "like" }],
-    ["a word for the day", "/rounds/today/entries/1/decision", { decision: "like" }],
-    ["a place of zero", `/rounds/${TODAY}/entries/0/decision`, { decision: "like" }],
-    ["a place past the column's", `/rounds/${TODAY}/entries/32768/decision`, { decision: "like" }],
-    ["another decision", `/rounds/${TODAY}/entries/1/decision`, { decision: "superlike" }],
-    ["an extra key", `/rounds/${TODAY}/entries/1/decision`, { decision: "like", note: "x" }],
-    ["no decision", `/rounds/${TODAY}/entries/1/decision`, {}],
+    ["a day that is no date", "/queue/2026-02-30/entries/1/decision", { decision: "like" }],
+    ["a word for the day", "/queue/today/entries/1/decision", { decision: "like" }],
+    ["a place of zero", `/queue/${TODAY}/entries/0/decision`, { decision: "like" }],
+    ["a place past the column's", `/queue/${TODAY}/entries/32768/decision`, { decision: "like" }],
+    ["another decision", `/queue/${TODAY}/entries/1/decision`, { decision: "superlike" }],
+    ["an extra key", `/queue/${TODAY}/entries/1/decision`, { decision: "like", note: "x" }],
+    ["no decision", `/queue/${TODAY}/entries/1/decision`, {}],
   ] as const)("%s is refused with 400", async ([, path, body], { ctx, app }) => {
     const [a] = await cast(ctx, 1);
     if (!a) throw new Error("cast not written");
@@ -430,9 +423,9 @@ describe("seen and decided", () => {
   }) => {
     const [a, b] = await cast(ctx, 2);
     if (!a || !b) throw new Error("cast not written");
-    const roundId = await roundFor(ctx.client, a, [b]);
+    const queueDayId = await queueDayFor(ctx.client, a, [b]);
     // B blocks A just before the decision is written, as if it committed then.
-    const db = interleaved(ctx.client, /UPDATE round_entries e SET decision/, () =>
+    const db = interleaved(ctx.client, /UPDATE queue_entry e SET decision/, () =>
       block(ctx.client, b, a),
     );
     const app = await appOn(db);
@@ -440,15 +433,15 @@ describe("seen and decided", () => {
     expect(db.ran()).toBe(true);
     expect(answer.status).toBe(404);
     expect(await errorCode(answer)).toBe("not_found");
-    expect((await entriesOf(ctx.client, roundId))[0]).toMatchObject({ decision: null });
+    expect((await entriesOf(ctx.client, queueDayId))[0]).toMatchObject({ decision: null });
   });
 
   test.for([
-    ["a day that is no date", "/rounds/2026-02-30/entries/1/seen"],
-    ["a word for the day", "/rounds/today/entries/1/seen"],
-    ["a place of zero", `/rounds/${TODAY}/entries/0/seen`],
-    ["a place past the column's", `/rounds/${TODAY}/entries/32768/seen`],
-    ["a place that is no number", `/rounds/${TODAY}/entries/first/seen`],
+    ["a day that is no date", "/queue/2026-02-30/entries/1/seen"],
+    ["a word for the day", "/queue/today/entries/1/seen"],
+    ["a place of zero", `/queue/${TODAY}/entries/0/seen`],
+    ["a place past the column's", `/queue/${TODAY}/entries/32768/seen`],
+    ["a place that is no number", `/queue/${TODAY}/entries/first/seen`],
   ] as const)("a seen report with %s is refused with 400", async ([, path], { ctx, app }) => {
     const [a] = await cast(ctx, 1);
     if (!a) throw new Error("cast not written");
@@ -457,12 +450,12 @@ describe("seen and decided", () => {
     expect(await errorCode(answer)).toBe("validation_failed");
   });
 
-  test("a viewer erased while their round is read is served no card, and no shown record is written", async ({
+  test("a viewer erased while their queue is read is served no card, and no shown record is written", async ({
     ctx,
   }) => {
     const [a, b] = await cast(ctx, 2);
     if (!a || !b) throw new Error("cast not written");
-    await roundFor(ctx.client, a, [b]);
+    await queueDayFor(ctx.client, a, [b]);
     // A's erasure commits just before the card's shown record is written.
     const db = interleaved(ctx.client, /WITH live AS \(SELECT 1 FROM account/, async () =>
       eraseAccount(
@@ -472,40 +465,19 @@ describe("seen and decided", () => {
     );
     const answer = await today(await appOn(db), a);
     expect(db.ran()).toBe(true);
-    // The round went with the erasure; the read in flight serves nothing, and finds none.
-    expect(RoundResponse.parse(await answer.json()).entries).toBeNull();
+    // The queue went with the erasure; the read in flight serves nothing, and finds none.
+    expect(QueueResponse.parse(await answer.json()).entries).toBeNull();
     const shown = await ctx.client.query("SELECT 1 FROM card_shown WHERE account_id = $1", [
       a.accountId,
     ]);
     expect(shown.rowCount).toBe(0);
   });
 
-  test("The round is complete once every card that can be shown is decided", async ({
-    ctx,
-    app,
-  }) => {
-    const [a, b, c] = await cast(ctx, 3);
-    if (!a || !b || !c) throw new Error("cast not written");
-    const roundId = await roundFor(ctx.client, a, [b, c]);
-    const completed = async () =>
-      (
-        await ctx.client.query<{ completed_at: Date | null }>(
-          "SELECT completed_at FROM rounds WHERE id = $1",
-          [roundId],
-        )
-      ).rows[0]?.completed_at;
-    expect((await decideBy(app, a, TODAY, 1, "like")).status).toBe(200);
-    expect(await completed()).toBeNull();
-    await ctx.client.query("UPDATE account SET state = 'suspended' WHERE id = $1", [c.accountId]);
-    expect((await decideBy(app, a, TODAY, 1, "pass")).status).toBe(200);
-    expect(await completed()).not.toBeNull();
-  });
-
-  test("Only the person's own round is read or decided", async ({ ctx, app }) => {
+  test("Only the person's own queue is read or decided", async ({ ctx, app }) => {
     const [a, e, b, f] = await cast(ctx, 4);
     if (!a || !e || !b || !f) throw new Error("cast not written");
-    const ofA = await roundFor(ctx.client, a, [b]);
-    const ofE = await roundFor(ctx.client, e, [f, a]);
+    const ofA = await queueDayFor(ctx.client, a, [b]);
+    const ofE = await queueDayFor(ctx.client, e, [f, a]);
     expect((await seen(app, e, TODAY, 1)).status).toBe(204);
     expect((await decideBy(app, e, TODAY, 1, "pass")).status).toBe(200);
     expect((await entriesOf(ctx.client, ofE))[0]).toMatchObject({ decision: "pass" });
@@ -520,7 +492,7 @@ describe("seen and decided", () => {
       await today(app, nobody),
       await seen(app, nobody, TODAY, 1),
       await decideBy(app, nobody, TODAY, 1, "like"),
-      await app.request("/rounds/today"),
+      await app.request("/queue/today"),
     ]) {
       expect(answer.status).toBe(401);
       expect(await errorCode(answer)).toBe("unauthenticated");
@@ -540,7 +512,7 @@ describe("seen and decided", () => {
       const secondPid = await pidOf(second);
       await first.query("BEGIN");
       await second.query("BEGIN");
-      // One device's like holds the round's row; the other's pass waits for it.
+      // One device's like holds the queue's row; the other's pass waits for it.
       await decide({ ...deps, db: first }, MATCHES, FITS, {
         accountId: a,
         day: TODAY,
@@ -560,7 +532,7 @@ describe("seen and decided", () => {
       await racing.outcome;
       await second.query("COMMIT");
       const { rows } = await pool.query<{ decision: string; decided_at: Date }>(
-        "SELECT e.decision, e.decided_at FROM round_entries e JOIN rounds r ON r.id = e.round_id WHERE r.account_id = $1",
+        "SELECT e.decision, e.decided_at FROM queue_entry e JOIN queue_day r ON r.id = e.queue_day_id WHERE r.account_id = $1",
         [a],
       );
       expect(rows).toEqual([{ decision: "pass", decided_at: later(11) }]);
@@ -578,14 +550,14 @@ async function likeBudget(db: Queryable, likes: number) {
   );
 }
 
-/** `liker` liked `liked` yesterday; that round of theirs. */
+/** `liker` liked `liked` yesterday; that queue of theirs. */
 async function likedYesterday(db: Queryable, liker: Person, liked: Person) {
-  const roundId = await roundFor(db, liker, [liked], YESTERDAY);
+  const queueDayId = await queueDayFor(db, liker, [liked], YESTERDAY);
   await db.query(
-    "UPDATE round_entries SET decision = 'like', decided_at = $2 WHERE round_id = $1",
-    [roundId, T],
+    "UPDATE queue_entry SET decision = 'like', decided_at = $2 WHERE queue_day_id = $1",
+    [queueDayId, T],
   );
-  return roundId;
+  return queueDayId;
 }
 
 /** The people of the conversations these two are in, the earlier liker first (#100). */
@@ -612,7 +584,7 @@ describe("the day's likes (#98, ADR-036)", () => {
     await likeBudget(ctx.client, 2);
     const [a, b, c, d] = await cast(ctx, 4);
     if (!a || !b || !c || !d) throw new Error("cast not written");
-    const roundId = await roundFor(ctx.client, a, [b, c, d]);
+    const queueDayId = await queueDayFor(ctx.client, a, [b, c, d]);
 
     expect((await decideBy(app, a, TODAY, 1, "like")).status).toBe(200);
     expect((await decideBy(app, a, TODAY, 2, "like")).status).toBe(200);
@@ -621,7 +593,7 @@ describe("the day's likes (#98, ADR-036)", () => {
     expect(refused.status).toBe(429);
     expect(await errorCode(refused)).toBe("like_budget_exceeded");
     expectWaitUntilMidnight(refused);
-    expect((await entriesOf(ctx.client, roundId)).map((e) => e.decision)).toEqual([
+    expect((await entriesOf(ctx.client, queueDayId)).map((e) => e.decision)).toEqual([
       "like",
       "like",
       null,
@@ -632,8 +604,8 @@ describe("the day's likes (#98, ADR-036)", () => {
     await likeBudget(ctx.client, 0);
     const [a, b] = await cast(ctx, 2);
     if (!a || !b) throw new Error("cast not written");
-    await roundFor(ctx.client, a, [b]);
-    const refused = await app.request(`/rounds/${TODAY}/entries/1/decision`, {
+    await queueDayFor(ctx.client, a, [b]);
+    const refused = await app.request(`/queue/${TODAY}/entries/1/decision`, {
       method: "PUT",
       headers: { ...a.headers, "content-type": "application/json", "accept-language": "fi" },
       body: JSON.stringify({ decision: "like" }),
@@ -649,17 +621,20 @@ describe("the day's likes (#98, ADR-036)", () => {
     const [a, b, c] = await cast(ctx, 3);
     if (!a || !b || !c) throw new Error("cast not written");
     await likedYesterday(ctx.client, b, a);
-    const roundId = await roundFor(ctx.client, a, [{ person: b, reason: "liked_you" }, c]);
+    const queueDayId = await queueDayFor(ctx.client, a, [{ person: b, reason: "liked_you" }, c]);
 
     const answer = await decideBy(app, a, TODAY, 1, "like");
     expect(answer.status).toBe(200);
-    expect(RoundDecisionAnswer.parse(await answer.json()).match).not.toBeNull();
+    expect(QueueDecisionAnswer.parse(await answer.json()).match).not.toBeNull();
     const refused = await decideBy(app, a, TODAY, 2, "like");
 
     expect(refused.status).toBe(429);
     expect(await errorCode(refused)).toBe("like_budget_exceeded");
     expectWaitUntilMidnight(refused);
-    expect((await entriesOf(ctx.client, roundId)).map((e) => e.decision)).toEqual(["like", null]);
+    expect((await entriesOf(ctx.client, queueDayId)).map((e) => e.decision)).toEqual([
+      "like",
+      null,
+    ]);
     expect(await participantsOf(ctx.client, a, b)).toEqual([b.accountId, a.accountId]);
   });
 
@@ -671,7 +646,7 @@ describe("the day's likes (#98, ADR-036)", () => {
     const [a, b, c] = await cast(ctx, 3);
     if (!a || !b || !c) throw new Error("cast not written");
     const ofB = await likedYesterday(ctx.client, b, a);
-    const roundId = await roundFor(ctx.client, a, [{ person: b, reason: "liked_you" }, c]);
+    const queueDayId = await queueDayFor(ctx.client, a, [{ person: b, reason: "liked_you" }, c]);
 
     expect((await decideBy(app, a, TODAY, 2, "like")).status).toBe(200);
     const refused = await decideBy(app, a, TODAY, 1, "like");
@@ -681,7 +656,7 @@ describe("the day's likes (#98, ADR-036)", () => {
     expectWaitUntilMidnight(refused);
     // Nothing of it written: the card undecided, no conversation.
     expect(
-      (await entriesOf(ctx.client, roundId)).map((e) => [e.decision, e.decided_at !== null]),
+      (await entriesOf(ctx.client, queueDayId)).map((e) => [e.decision, e.decided_at !== null]),
     ).toEqual([
       [null, false],
       ["like", true],
@@ -694,7 +669,7 @@ describe("the day's likes (#98, ADR-036)", () => {
     expect((await decideBy(app, a, TODAY, 2, "pass")).status).toBe(200);
     const answer = await decideBy(app, a, TODAY, 1, "like");
     expect(answer.status).toBe(200);
-    expect(RoundDecisionAnswer.parse(await answer.json()).match).not.toBeNull();
+    expect(QueueDecisionAnswer.parse(await answer.json()).match).not.toBeNull();
   });
 
   test("A pass is never counted, and a like taken back gives its place back", async ({
@@ -704,7 +679,7 @@ describe("the day's likes (#98, ADR-036)", () => {
     await likeBudget(ctx.client, 1);
     const [a, b, c, d] = await cast(ctx, 4);
     if (!a || !b || !c || !d) throw new Error("cast not written");
-    const roundId = await roundFor(ctx.client, a, [b, c, d]);
+    const queueDayId = await queueDayFor(ctx.client, a, [b, c, d]);
 
     expect((await decideBy(app, a, TODAY, 1, "pass")).status).toBe(200);
     expect((await decideBy(app, a, TODAY, 2, "like")).status).toBe(200);
@@ -712,7 +687,7 @@ describe("the day's likes (#98, ADR-036)", () => {
     expect((await decideBy(app, a, TODAY, 2, "pass")).status).toBe(200);
     expect((await decideBy(app, a, TODAY, 3, "like")).status).toBe(200);
 
-    expect((await entriesOf(ctx.client, roundId)).map((e) => e.decision)).toEqual([
+    expect((await entriesOf(ctx.client, queueDayId)).map((e) => e.decision)).toEqual([
       "pass",
       "pass",
       "like",
@@ -726,7 +701,7 @@ describe("the day's likes (#98, ADR-036)", () => {
     await likeBudget(ctx.client, 1);
     const [a, b] = await cast(ctx, 2);
     if (!a || !b) throw new Error("cast not written");
-    await roundFor(ctx.client, a, [b]);
+    await queueDayFor(ctx.client, a, [b]);
     expect((await decideBy(app, a, TODAY, 1, "like")).status).toBe(200);
     expect((await decideBy(app, a, TODAY, 1, "like")).status).toBe(200);
   });
@@ -734,7 +709,7 @@ describe("the day's likes (#98, ADR-036)", () => {
   test("the day's likes are ten by the row the first cut wrote", async ({ ctx, app }) => {
     const [a, ...others] = await cast(ctx, 12);
     if (!a) throw new Error("cast not written");
-    await roundFor(ctx.client, a, others);
+    await queueDayFor(ctx.client, a, others);
     for (let position = 1; position <= 10; position += 1) {
       expect((await decideBy(app, a, TODAY, position, "like")).status).toBe(200);
     }
@@ -754,7 +729,7 @@ describe("the day's likes (#98, ADR-036)", () => {
       const secondPid = await pidOf(second);
       await first.query("BEGIN");
       await second.query("BEGIN");
-      // One device's like holds the round's row; the other's waits, then counts it.
+      // One device's like holds the queue's row; the other's waits, then counts it.
       await decide({ ...deps, db: first }, MATCHES, FITS, {
         accountId: a,
         day: TODAY,
@@ -774,7 +749,7 @@ describe("the day's likes (#98, ADR-036)", () => {
       expect(await racing.outcome).toBe("like_budget_exceeded");
       await second.query("COMMIT");
       const { rows } = await pool.query<{ position: number; decision: string | null }>(
-        `SELECT e.position, e.decision FROM round_entries e JOIN rounds r ON r.id = e.round_id
+        `SELECT e.position, e.decision FROM queue_entry e JOIN queue_day r ON r.id = e.queue_day_id
           WHERE r.account_id = $1 ORDER BY e.position`,
         [a],
       );
@@ -789,14 +764,14 @@ describe("the day's likes (#98, ADR-036)", () => {
 /** What a decision's answer says of the caller's likes after it (#524). */
 
 describe("the likes left (#524, ADR-036 §6)", () => {
-  test("The round says how many of the day's likes are left, and each decision's answer says it again", async ({
+  test("The queue says how many of the day's likes are left, and each decision's answer says it again", async ({
     ctx,
     app,
   }) => {
     await likeBudget(ctx.client, 2);
     const [a, b, c, d] = await cast(ctx, 4);
     if (!a || !b || !c || !d) throw new Error("cast not written");
-    await roundFor(ctx.client, a, [b, c, d]);
+    await queueDayFor(ctx.client, a, [b, c, d]);
 
     expect((await readToday(app, a)).likesLeft).toBe(2);
     expect(await likesLeftAfter(await decideBy(app, a, TODAY, 1, "like"))).toBe(1);
@@ -820,7 +795,7 @@ describe("the likes left (#524, ADR-036 §6)", () => {
     await likeBudget(ctx.client, 2);
     const [a, b, c] = await cast(ctx, 3);
     if (!a || !b || !c) throw new Error("cast not written");
-    await roundFor(ctx.client, a, [b, c]);
+    await queueDayFor(ctx.client, a, [b, c]);
 
     expect(await likesLeftAfter(await decideBy(app, a, TODAY, 1, "pass"))).toBe(2);
     expect(await likesLeftAfter(await decideBy(app, a, TODAY, 2, "like"))).toBe(1);
@@ -832,7 +807,7 @@ describe("the likes left (#524, ADR-036 §6)", () => {
     const [a, b] = await cast(ctx, 2);
     if (!a || !b) throw new Error("cast not written");
     await likedYesterday(ctx.client, b, a);
-    await roundFor(ctx.client, a, [{ person: b, reason: "liked_you" }]);
+    await queueDayFor(ctx.client, a, [{ person: b, reason: "liked_you" }]);
 
     expect(await likesLeftAfter(await decideBy(app, a, TODAY, 1, "like"))).toBe(1);
 
@@ -843,13 +818,13 @@ describe("the likes left (#524, ADR-036 §6)", () => {
     await likeBudget(ctx.client, 4);
     const [a, b, c, e] = await cast(ctx, 4);
     if (!a || !b || !c || !e) throw new Error("cast not written");
-    const yesterday = await roundFor(ctx.client, a, [b], YESTERDAY);
+    const yesterday = await queueDayFor(ctx.client, a, [b], YESTERDAY);
     await ctx.client.query(
-      "UPDATE round_entries SET decision = 'like', decided_at = $2 WHERE round_id = $1",
+      "UPDATE queue_entry SET decision = 'like', decided_at = $2 WHERE queue_day_id = $1",
       [yesterday, T],
     );
-    await roundFor(ctx.client, a, [c]);
-    await roundFor(ctx.client, e, [b]);
+    await queueDayFor(ctx.client, a, [c]);
+    await queueDayFor(ctx.client, e, [b]);
 
     expect(await likesLeftAfter(await decideBy(app, a, TODAY, 1, "like"))).toBe(3);
 
@@ -864,7 +839,7 @@ describe("the likes left (#524, ADR-036 §6)", () => {
     await likeBudget(ctx.client, 3);
     const [a, b] = await cast(ctx, 2);
     if (!a || !b) throw new Error("cast not written");
-    await roundFor(ctx.client, a, [b]);
+    await queueDayFor(ctx.client, a, [b]);
 
     expect(await likesLeftAfter(await decideBy(app, a, TODAY, 1, "like"))).toBe(2);
     expect(await likesLeftAfter(await decideBy(app, a, TODAY, 1, "like"))).toBe(2);
@@ -878,7 +853,7 @@ describe("the likes left (#524, ADR-036 §6)", () => {
     await likeBudget(ctx.client, 2);
     const [a, b, c] = await cast(ctx, 3);
     if (!a || !b || !c) throw new Error("cast not written");
-    await roundFor(ctx.client, a, [b, c]);
+    await queueDayFor(ctx.client, a, [b, c]);
     expect((await decideBy(app, a, TODAY, 1, "like")).status).toBe(200);
     expect((await decideBy(app, a, TODAY, 2, "like")).status).toBe(200);
 
@@ -889,28 +864,30 @@ describe("the likes left (#524, ADR-036 §6)", () => {
 });
 
 describe("erasure and the export", () => {
-  test("Erasure removes the person's rounds and every entry in which they are somebody's card", async ({
+  test("Erasure removes the person's queue days and every entry in which they are somebody's card", async ({
     ctx,
   }) => {
     const [a, b, c] = await cast(ctx, 3);
     if (!a || !b || !c) throw new Error("cast not written");
-    const ofA = await roundFor(ctx.client, a, [b, c]);
-    const ofB = await roundFor(ctx.client, b, [a]);
+    const ofA = await queueDayFor(ctx.client, a, [b, c]);
+    const ofB = await queueDayFor(ctx.client, b, [a]);
     const { logger } = await captureLogger();
     const summary = await eraseAccount({ db: ctx.client, logger, now: () => T }, b.accountId);
-    expect(summary).toMatchObject({ rounds: 1, roundEntriesAsCandidate: 1 });
-    expect((await ctx.client.query("SELECT 1 FROM rounds WHERE id = $1", [ofB])).rowCount).toBe(0);
+    expect(summary).toMatchObject({ queueDays: 1, queueEntriesAsCandidate: 1 });
+    expect((await ctx.client.query("SELECT 1 FROM queue_day WHERE id = $1", [ofB])).rowCount).toBe(
+      0,
+    );
     expect((await entriesOf(ctx.client, ofA)).map((e) => [e.position, e.candidate_id])).toEqual([
       [2, c.accountId],
     ]);
   });
 
-  test("The person's export lists their own rounds, never whom", async ({ ctx, app }) => {
+  test("The person's export lists their own queue days, never whom", async ({ ctx, app }) => {
     const [a, b] = await cast(ctx, 2);
     if (!a || !b) throw new Error("cast not written");
-    await roundFor(ctx.client, a, [{ person: b, reason: "liked_you" }]);
-    // B's own round, in which A is the card: not A's to see.
-    await roundFor(ctx.client, b, [a]);
+    await queueDayFor(ctx.client, a, [{ person: b, reason: "liked_you" }]);
+    // B's own queue, in which A is the card: not A's to see.
+    await queueDayFor(ctx.client, b, [a]);
     expect((await decideBy(app, a, TODAY, 1, "like")).status).toBe(200);
     const { logger } = await captureLogger();
     const { document } = await exportAccount(
@@ -918,13 +895,11 @@ describe("erasure and the export", () => {
       a.accountId,
       englishT,
     );
-    expect(document.rounds.about).toMatch(/is not written here/);
-    expect(document.rounds.items).toEqual([
+    expect(document.queue.about).toMatch(/is not written here/);
+    expect(document.queue.items).toEqual([
       {
         day: TODAY,
-        builtAt: T.toISOString(),
-        openedAt: null,
-        completedAt: expect.any(String),
+        startedAt: T.toISOString(),
         relaxations: [],
         entries: [
           {
@@ -944,7 +919,7 @@ describe("erasure and the export", () => {
         ],
       },
     ]);
-    expect(JSON.stringify(document.rounds)).not.toContain(b.accountId);
+    expect(JSON.stringify(document.queue)).not.toContain(b.accountId);
   });
 
   test("the export says which pass is a second one, and a skip in words", async ({ ctx, app }) => {
@@ -957,7 +932,7 @@ describe("erasure and the export", () => {
       b.accountId,
       "pass",
     );
-    await roundFor(ctx.client, a, [b, c]);
+    await queueDayFor(ctx.client, a, [b, c]);
     expect((await decideBy(app, a, TODAY, 1, "pass")).status).toBe(200);
     expect((await decideBy(app, a, TODAY, 2, "skip")).status).toBe(200);
     const { logger } = await captureLogger();
@@ -968,7 +943,7 @@ describe("erasure and the export", () => {
       englishT,
     );
 
-    const [today] = document.rounds.items;
+    const [today] = document.queue.items;
     expect(today?.day).toBe(TODAY);
     expect(
       today?.entries.map((e) => [e.position, e.decision, e.decisionInWords, e.secondPass]),
@@ -987,7 +962,7 @@ describe("the log's one writer (ADR-062 §1)", () => {
       distance: "nearby" as const,
     }));
 
-  test("a round is never written for an erased person, nor with a card erased, blocked or sanctioned", async ({
+  test("a queue is never written for an erased person, nor with a card erased, blocked or sanctioned", async ({
     ctx,
   }) => {
     const [a, b, c, d, e, gone] = await cast(ctx, 6);
@@ -1015,18 +990,18 @@ describe("the log's one writer (ADR-062 §1)", () => {
 
     expect(written).toBe(1);
     const { rows } = await ctx.client.query<{ id: string; last_position: number }>(
-      "SELECT id, last_position FROM rounds WHERE account_id = $1",
+      "SELECT id, last_position FROM queue_day WHERE account_id = $1",
       [a.accountId],
     );
-    const roundId = rows[0]?.id ?? "";
+    const queueDayId = rows[0]?.id ?? "";
     // Only B is written, at the place the list gave, and the places it dropped stay given.
-    expect((await entriesOf(ctx.client, roundId)).map((x) => [x.position, x.candidate_id])).toEqual(
-      [[1, b.accountId]],
-    );
+    expect(
+      (await entriesOf(ctx.client, queueDayId)).map((x) => [x.position, x.candidate_id]),
+    ).toEqual([[1, b.accountId]]);
     expect(rows[0]?.last_position).toBe(4);
   });
 
-  test("a round is never written for an owner paused or sanctioned since the pool was read", async ({
+  test("a queue is never written for an owner paused or sanctioned since the pool was read", async ({
     ctx,
   }) => {
     const [a, b, c] = await cast(ctx, 3);
@@ -1045,16 +1020,18 @@ describe("the log's one writer (ADR-062 §1)", () => {
       ).toBeNull();
     }
     const { rows } = await ctx.client.query(
-      "SELECT 1 FROM rounds WHERE account_id = ANY($1::uuid[])",
+      "SELECT 1 FROM queue_day WHERE account_id = ANY($1::uuid[])",
       [[a.accountId, b.accountId]],
     );
     expect(rows).toHaveLength(0);
   });
 
-  test("a person is never a card in their own round", async ({ ctx }) => {
+  test("a person is never a card in their own queue", async ({ ctx }) => {
     const [a] = await cast(ctx, 1);
     if (!a) throw new Error("cast not written");
-    await expect(roundFor(ctx.client, a, [a])).rejects.toThrow(/never a card in their own round/);
+    await expect(queueDayFor(ctx.client, a, [a])).rejects.toThrow(
+      /never a card in their own queue/,
+    );
   });
 
   test("somebody in the day's log is not added again, and the next places follow the highest given", async ({
@@ -1070,39 +1047,14 @@ describe("the log's one writer (ADR-062 §1)", () => {
     // Two of the three lost to a read beside this one: their places stay empty.
     expect(await write(b.accountId, c.accountId, d.accountId)).toBe(1);
 
-    const roundId = await roundFor(ctx.client, a, []);
-    expect((await entriesOf(ctx.client, roundId)).map((x) => [x.position, x.candidate_id])).toEqual(
-      [
-        [1, b.accountId],
-        [2, c.accountId],
-        [5, d.accountId],
-      ],
-    );
-  });
-
-  test("adding people reopens a day that was complete, and adding nobody leaves it so", async ({
-    ctx,
-    app,
-  }) => {
-    const [a, b, c] = await cast(ctx, 3);
-    if (!a || !b || !c) throw new Error("cast not written");
-    const roundId = await roundFor(ctx.client, a, [b]);
-    expect((await decideBy(app, a, TODAY, 1, "pass")).status).toBe(200);
-    const completed = async () =>
-      (
-        await ctx.client.query<{ completed_at: Date | null }>(
-          "SELECT completed_at FROM rounds WHERE id = $1",
-          [roundId],
-        )
-      ).rows[0]?.completed_at;
-    expect(await completed()).not.toBeNull();
-
-    await roundFor(ctx.client, a, []);
-    await roundFor(ctx.client, a, [b]);
-    expect(await completed()).not.toBeNull();
-
-    await roundFor(ctx.client, a, [c]);
-    expect(await completed()).toBeNull();
+    const queueDayId = await queueDayFor(ctx.client, a, []);
+    expect(
+      (await entriesOf(ctx.client, queueDayId)).map((x) => [x.position, x.candidate_id]),
+    ).toEqual([
+      [1, b.accountId],
+      [2, c.accountId],
+      [5, d.accountId],
+    ]);
   });
 
   test("a place's relaxations are written with it, the one that names its label first", async ({
@@ -1124,7 +1076,7 @@ describe("the log's one writer (ADR-062 §1)", () => {
     });
     const { rows } = await ctx.client.query(
       `SELECT e.relaxed_field, e.relaxed_with, e.distance
-         FROM round_entries e JOIN rounds r ON r.id = e.round_id WHERE r.account_id = $1`,
+         FROM queue_entry e JOIN queue_day r ON r.id = e.queue_day_id WHERE r.account_id = $1`,
       [a.accountId],
     );
     expect(rows).toEqual([
@@ -1138,32 +1090,35 @@ describe("a skip (ADR-062 §3)", () => {
     await likeBudget(ctx.client, 1);
     const [a, b, c] = await cast(ctx, 3);
     if (!a || !b || !c) throw new Error("cast not written");
-    const roundId = await roundFor(ctx.client, a, [b, c]);
+    const queueDayId = await queueDayFor(ctx.client, a, [b, c]);
 
     expect(await likesLeftAfter(await decideBy(app, a, TODAY, 1, "skip"))).toBe(1);
     expect(await likesLeftAfter(await decideBy(app, a, TODAY, 2, "like"))).toBe(0);
 
-    expect((await entriesOf(ctx.client, roundId)).map((e) => e.decision)).toEqual(["skip", "like"]);
+    expect((await entriesOf(ctx.client, queueDayId)).map((e) => e.decision)).toEqual([
+      "skip",
+      "like",
+    ]);
     expect((await readToday(app, a)).entries).toEqual([]);
   });
 
   test("the same skip again writes nothing", async ({ ctx, app }) => {
     const [a, b] = await cast(ctx, 2);
     if (!a || !b) throw new Error("cast not written");
-    const roundId = await roundFor(ctx.client, a, [b]);
+    const queueDayId = await queueDayFor(ctx.client, a, [b]);
     expect((await decideBy(app, a, TODAY, 1, "skip")).status).toBe(200);
-    const first = (await entriesOf(ctx.client, roundId))[0];
+    const first = (await entriesOf(ctx.client, queueDayId))[0];
 
     expect((await decideBy(app, a, TODAY, 1, "skip")).status).toBe(200);
 
-    expect((await entriesOf(ctx.client, roundId))[0]).toEqual(first);
+    expect((await entriesOf(ctx.client, queueDayId))[0]).toEqual(first);
   });
 
   test("A skip may be changed until midnight like any decision", async ({ ctx, app }) => {
     await likeBudget(ctx.client, 1);
     const [a, b, c] = await cast(ctx, 3);
     if (!a || !b || !c) throw new Error("cast not written");
-    const roundId = await roundFor(ctx.client, a, [b, c]);
+    const queueDayId = await queueDayFor(ctx.client, a, [b, c]);
 
     expect(await likesLeftAfter(await decideBy(app, a, TODAY, 1, "like"))).toBe(0);
     expect(await likesLeftAfter(await decideBy(app, a, TODAY, 1, "skip"))).toBe(1);
@@ -1171,7 +1126,10 @@ describe("a skip (ADR-062 §3)", () => {
     expect(await likesLeftAfter(await decideBy(app, a, TODAY, 2, "skip"))).toBe(1);
     expect(await likesLeftAfter(await decideBy(app, a, TODAY, 2, "pass"))).toBe(1);
 
-    expect((await entriesOf(ctx.client, roundId)).map((e) => e.decision)).toEqual(["skip", "pass"]);
+    expect((await entriesOf(ctx.client, queueDayId)).map((e) => e.decision)).toEqual([
+      "skip",
+      "pass",
+    ]);
   });
 
   test("a skip of an ended day is refused as any decision, and a phone past midnight writes nothing", async ({
@@ -1180,13 +1138,13 @@ describe("a skip (ADR-062 §3)", () => {
   }) => {
     const [a, b] = await cast(ctx, 2);
     if (!a || !b) throw new Error("cast not written");
-    const roundId = await roundFor(ctx.client, a, [b], YESTERDAY);
+    const queueDayId = await queueDayFor(ctx.client, a, [b], YESTERDAY);
 
     const answer = await decideBy(app, a, YESTERDAY, 1, "skip");
 
     expect(answer.status).toBe(409);
-    expect(await errorCode(answer)).toBe("round_expired");
-    expect((await entriesOf(ctx.client, roundId))[0]?.decision).toBeNull();
+    expect(await errorCode(answer)).toBe("day_ended");
+    expect((await entriesOf(ctx.client, queueDayId))[0]?.decision).toBeNull();
   });
 });
 
@@ -1194,10 +1152,10 @@ describe("a second pass (ADR-062 §6, §15)", () => {
   const before = (days: number) => new Date(T.getTime() - days * DAY_MS);
 
   /** Whether the entry at the place holds the mark. */
-  async function marked(db: Queryable, roundId: string, position = 1) {
+  async function marked(db: Queryable, queueDayId: string, position = 1) {
     const { rows } = await db.query<{ second_pass: boolean }>(
-      "SELECT second_pass FROM round_entries WHERE round_id = $1 AND position = $2",
-      [roundId, position],
+      "SELECT second_pass FROM queue_entry WHERE queue_day_id = $1 AND position = $2",
+      [queueDayId, position],
     );
     return rows[0]?.second_pass;
   }
@@ -1222,43 +1180,43 @@ describe("a second pass (ADR-062 §6, §15)", () => {
       for (const [days, decision] of past) {
         await shownAt(ctx.client, before(days), a.accountId, b.accountId, decision);
       }
-      const roundId = await roundFor(ctx.client, a, [b]);
+      const queueDayId = await queueDayFor(ctx.client, a, [b]);
 
       expect((await decideBy(app, a, TODAY, 1, "pass")).status).toBe(200);
 
-      expect(await marked(ctx.client, roundId)).toBe(outcome === "a second");
+      expect(await marked(ctx.client, queueDayId)).toBe(outcome === "a second");
     });
   });
 
   test("A pass changed back and forth the same day is one pass", async ({ ctx, app }) => {
     const [a, b] = await cast(ctx, 2);
     if (!a || !b) throw new Error("cast not written");
-    const roundId = await roundFor(ctx.client, a, [b]);
+    const queueDayId = await queueDayFor(ctx.client, a, [b]);
 
     for (const decision of ["pass", "like", "pass"]) {
       expect((await decideBy(app, a, TODAY, 1, decision)).status).toBe(200);
     }
 
-    expect(await marked(ctx.client, roundId)).toBe(false);
+    expect(await marked(ctx.client, queueDayId)).toBe(false);
   });
 
   test("Changing a second pass clears its mark", async ({ ctx, app }) => {
     const [a, b] = await cast(ctx, 2);
     if (!a || !b) throw new Error("cast not written");
     await shownAt(ctx.client, before(40), a.accountId, b.accountId, "pass");
-    const roundId = await roundFor(ctx.client, a, [b]);
+    const queueDayId = await queueDayFor(ctx.client, a, [b]);
     expect((await decideBy(app, a, TODAY, 1, "pass")).status).toBe(200);
-    expect(await marked(ctx.client, roundId)).toBe(true);
+    expect(await marked(ctx.client, queueDayId)).toBe(true);
 
     expect((await decideBy(app, a, TODAY, 1, "skip")).status).toBe(200);
-    expect(await marked(ctx.client, roundId)).toBe(false);
+    expect(await marked(ctx.client, queueDayId)).toBe(false);
 
     // Passed once more, the earlier day's pass still stands behind it.
     expect((await decideBy(app, a, TODAY, 1, "pass")).status).toBe(200);
-    expect(await marked(ctx.client, roundId)).toBe(true);
+    expect(await marked(ctx.client, queueDayId)).toBe(true);
 
     expect((await decideBy(app, a, TODAY, 1, "like")).status).toBe(200);
-    expect(await marked(ctx.client, roundId)).toBe(false);
+    expect(await marked(ctx.client, queueDayId)).toBe(false);
   });
 
   test("the mark reads another person's passes nowhere", async ({ ctx, app }) => {
@@ -1267,12 +1225,12 @@ describe("a second pass (ADR-062 §6, §15)", () => {
     // C passed B, and A passed somebody else: neither is A's pass of B.
     await shownAt(ctx.client, before(40), c.accountId, b.accountId, "pass");
     await shownAt(ctx.client, before(40), a.accountId, c.accountId, "pass");
-    const roundId = await roundFor(ctx.client, a, [b]);
+    const queueDayId = await queueDayFor(ctx.client, a, [b]);
 
     expect((await decideBy(app, a, TODAY, 1, "pass")).status).toBe(200);
 
-    expect(await marked(ctx.client, roundId)).toBe(false);
-    expect((await exportRounds(ctx.client, a.accountId, 1))[0]?.entries[0]?.secondPass).toBe(false);
+    expect(await marked(ctx.client, queueDayId)).toBe(false);
+    expect((await exportQueue(ctx.client, a.accountId, 1))[0]?.entries[0]?.secondPass).toBe(false);
   });
 });
 
@@ -1318,7 +1276,7 @@ describe("the filters on a decision (ADR-062 §8)", () => {
   test.for(["pass", "skip"] as const)("a %s asks nobody's filters", async (decision, { ctx }) => {
     const [a, b] = await cast(ctx, 2);
     if (!a || !b) throw new Error("cast not written");
-    await roundFor(ctx.client, a, [b]);
+    await queueDayFor(ctx.client, a, [b]);
     const { asked, queue } = asking(false);
 
     await decide(await depsOn(ctx.client), MATCHES, queue, choice(a.accountId, decision));
@@ -1329,49 +1287,49 @@ describe("the filters on a decision (ADR-062 §8)", () => {
   test("a like the fit refuses writes nothing and spends nothing", async ({ ctx }) => {
     const [a, b] = await cast(ctx, 2);
     if (!a || !b) throw new Error("cast not written");
-    const roundId = await roundFor(ctx.client, a, [b]);
+    const queueDayId = await queueDayFor(ctx.client, a, [b]);
     const { queue } = asking(false);
 
     await expect(
       decide(await depsOn(ctx.client), MATCHES, queue, choice(a.accountId, "fish")),
     ).rejects.toMatchObject({ status: 404, code: "not_found" });
 
-    expect((await entriesOf(ctx.client, roundId))[0]).toMatchObject({ decision: null });
+    expect((await entriesOf(ctx.client, queueDayId))[0]).toMatchObject({ decision: null });
     expect(
       await decide(await depsOn(ctx.client), MATCHES, FITS, choice(a.accountId, "fish")),
     ).toMatchObject({ fishToSend: false, likesLeft: 9 });
   });
 });
 
-describe("Rounds are kept a year, their entries and relaxations with them", () => {
+describe("Queue days are kept a year, their entries and relaxations with them", () => {
   test.for([
     { days: 365, outcome: "stays" },
     { days: 366, outcome: "is gone, with its entry and relaxation" },
   ])("$days days old: it $outcome", async ({ days, outcome }, { ctx }) => {
     const [a, b] = await cast(ctx, 2);
     if (!a || !b) throw new Error("cast not written");
-    const roundId = await roundFor(ctx.client, a, [b], addDays(TODAY, -days));
+    const queueDayId = await queueDayFor(ctx.client, a, [b], addDays(TODAY, -days));
     await ctx.client.query(
-      "INSERT INTO round_relaxation (round_id, field, kind) VALUES ($1, 'smoking', 'aside')",
-      [roundId],
+      "INSERT INTO queue_relaxation (queue_day_id, field, kind) VALUES ($1, 'smoking', 'aside')",
+      [queueDayId],
     );
 
-    const pruned = await pruneRounds(ctx.client, T);
+    const pruned = await pruneQueueDays(ctx.client, T);
 
     const kept = outcome === "stays";
     expect(pruned).toBe(kept ? 0 : 1);
-    expect((await entriesOf(ctx.client, roundId)).length).toBe(kept ? 1 : 0);
+    expect((await entriesOf(ctx.client, queueDayId)).length).toBe(kept ? 1 : 0);
     const left = await ctx.client.query(
-      `SELECT (SELECT count(*)::int FROM rounds WHERE id = $1) AS rounds,
-              (SELECT count(*)::int FROM round_relaxation WHERE round_id = $1) AS relaxations`,
-      [roundId],
+      `SELECT (SELECT count(*)::int FROM queue_day WHERE id = $1) AS days,
+              (SELECT count(*)::int FROM queue_relaxation WHERE queue_day_id = $1) AS relaxations`,
+      [queueDayId],
     );
-    expect(left.rows).toEqual([{ rounds: kept ? 1 : 0, relaxations: kept ? 1 : 0 }]);
+    expect(left.rows).toEqual([{ days: kept ? 1 : 0, relaxations: kept ? 1 : 0 }]);
   });
 });
 
 describe("the year's end", () => {
-  test("the year is counted in Finnish days, and a round of today is never touched", async ({
+  test("the year is counted in Finnish days, and a queue of today is never touched", async ({
     ctx,
   }) => {
     const [a, b] = await cast(ctx, 2);
@@ -1379,14 +1337,14 @@ describe("the year's end", () => {
     // 00:30 in Helsinki, still yesterday by the clock of Greenwich.
     const justAfterMidnight = new Date("2026-10-15T21:30:00.000Z");
     expect(finnishDay(justAfterMidnight)).toBe(TODAY);
-    const today = await roundFor(ctx.client, a, [b]);
-    const kept = await roundFor(ctx.client, a, [b], addDays(TODAY, -365));
-    const gone = await roundFor(ctx.client, a, [b], addDays(TODAY, -366));
+    const today = await queueDayFor(ctx.client, a, [b]);
+    const kept = await queueDayFor(ctx.client, a, [b], addDays(TODAY, -365));
+    const gone = await queueDayFor(ctx.client, a, [b], addDays(TODAY, -366));
 
-    expect(await pruneRounds(ctx.client, justAfterMidnight)).toBe(1);
+    expect(await pruneQueueDays(ctx.client, justAfterMidnight)).toBe(1);
 
     const { rows } = await ctx.client.query<{ id: string }>(
-      "SELECT id FROM rounds WHERE id = ANY($1::uuid[])",
+      "SELECT id FROM queue_day WHERE id = ANY($1::uuid[])",
       [[today, kept, gone]],
     );
     expect(new Set(rows.map((row) => row.id))).toEqual(new Set([today, kept]));

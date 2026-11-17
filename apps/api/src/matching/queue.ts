@@ -5,15 +5,15 @@ import {
   type DistanceBand,
   type ProfileCard,
   QUEUE_PAGE,
+  QUEUE_POSITION_MAX,
+  type QueueChoice,
+  type QueueDecision,
+  type QueueEntry,
+  type QueueReason,
+  type QueueResponse,
   type Relaxation,
   type RelaxationOffer,
   type RelaxationsResponse,
-  ROUND_POSITION_MAX,
-  type RoundChoice,
-  type RoundDecision,
-  type RoundEntry,
-  type RoundReason,
-  type RoundResponse,
 } from "@kuutti/schema";
 import { AppError } from "../lib/errors.ts";
 import { addDays, DAY_MS, finnishDay } from "../lib/finnish-day.ts";
@@ -22,18 +22,18 @@ import { matchingConfigNumber } from "../lib/matching-config.ts";
 import { dayWindow, secondsUntil } from "../media/index.ts";
 import { earnedFishWaiting, entriesPaidBy, releaseEarned, spendEarned } from "../rewards/index.ts";
 
-// The queue and the day's log of it, the round (#96, #502, TD-11, TD-12,
+// The queue and the day's log of it, the queue (#96, #502, TD-11, TD-12,
 // ADR-034, ADR-062): what one person goes through on one Finnish calendar day,
 // each card with why it is there, when the phone reported it seen, and the
 // person's own decision, which may change until the day ends (the maintainer,
-// 19/10/2026). Every statement names the caller's own round (rule 6), and every
+// 19/10/2026). Every statement names the caller's own queue (rule 6), and every
 // one that writes asks, in itself, that the candidate is still live and that no
 // block stands between the two (ADR-030 §2): a block that commits meanwhile
 // leaves nothing written. Raw parameterised SQL through Queryable, as the other
-// slices: the round row's lock, the stored decision and the predicate all sit
+// slices: the queue row's lock, the stored decision and the predicate all sit
 // in the statements that write.
 
-export type RoundDeps = { db: Queryable; logger: Logger; now: () => Date };
+export type QueueDeps = { db: Queryable; logger: Logger; now: () => Date };
 
 /** The card a person may be shown of another, or null where none may be: the profile slice's builder, handed in by app.ts. */
 export type CardOf = (
@@ -42,7 +42,7 @@ export type CardOf = (
 ) => Promise<ProfileCard | null>;
 
 /**
- * What the queue reads across slices, the round builder's (#95, #502, ADR-062),
+ * What the queue reads across slices, the queue's builder's (#95, #502, ADR-062),
  * which lives with the jobs, handed in by app.ts. `fill` adds the next people
  * to the day's log, opening it when the person's matching is open, and says
  * whether it added anybody. `fits` says which of these people are in each
@@ -87,7 +87,7 @@ export type Matches = {
  * (#100, ADR-038): the second like reads the first, committed, and a like
  * is never taken back while another makes a match of it. A transaction-scoped
  * advisory lock on the pair, the same whichever of the two decides; taken
- * after the decider's round lock, never before, so no two wait for each
+ * after the decider's queue lock, never before, so no two wait for each
  * other. Two pairs whose keys collide wait for each other a moment, no more.
  */
 const PAIR_LOCK = `SELECT pg_advisory_xact_lock(
@@ -101,46 +101,46 @@ const YOUR_TURN_LIMIT_KEY = "your_turn_limit";
 /** How many times one read goes on past an empty page: what was added fits as it is written, so a second empty page is a card refused meanwhile, and more would be a loop. */
 const FILL_TRIES = 3;
 
-/** An entry `e` of round `r` whose candidate can still be shown to the round's owner. */
+/** An entry `e` of queue `r` whose candidate can still be shown to the queue's owner. */
 export const SERVABLE = `EXISTS (SELECT 1 FROM account c WHERE c.id = e.candidate_id AND c.state = 'active')
   AND NOT blocked_between(r.account_id, e.candidate_id)`;
 
 /**
- * The highest place a round `r` ever gave: `last_position`, or the highest entry
- * of a round written before it was kept. A place an undo freed stays given
+ * The highest place a queue `r` ever gave: `last_position`, or the highest entry
+ * of a queue written before it was kept. A place an undo freed stays given
  * (ADR-042 §5).
  */
 const PLACES = `greatest(r.last_position,
-           coalesce((SELECT max(e.position) FROM round_entries e WHERE e.round_id = r.id), 0))::int`;
+           coalesce((SELECT max(e.position) FROM queue_entry e WHERE e.queue_day_id = r.id), 0))::int`;
 
-export const notFound = () => new AppError(404, "not_found", "No such card in today's round");
+export const notFound = () => new AppError(404, "not_found", "No such card in today's queue");
 
-/** The round's owner's own star on an entry `e`'s person, for `entriesOf` (#575, ADR-064). */
+/** The queue's owner's own star on an entry `e`'s person, for `entriesOf` (#575, ADR-064). */
 const STAR_OF_ENTRY = `(SELECT s.id FROM star s
       WHERE s.account_id = r.account_id AND s.candidate_id = e.candidate_id) AS star`;
 
-/** An entry `e` of a round `r` as `EntryRow` reads it, its owner's star included. */
+/** An entry `e` of a queue `r` as `EntryRow` reads it, its owner's star included. */
 export const ENTRY_COLUMNS = `e.position, e.candidate_id, e.reason, e.decision, e.fish, e.relaxed_field, e.distance,
             ${STAR_OF_ENTRY}`;
 
 /**
  * Today's card at `position`, locked as a decision takes it. The two accounts
- * first, shared and in id order, before any row of a round: erasure and a
- * sanction take an account FOR UPDATE before they touch rounds or
+ * first, shared and in id order, before any row of a queue: erasure and a
+ * sanction take an account FOR UPDATE before they touch queue days or
  * conversations, so one under way finishes before this decision reads, and
  * one that comes later waits for it to commit; an erasure or a ban then
  * closes the match it opened, and a warning, a shadow ban or a suspension
  * leaves it as it leaves every conversation (ADR-024, ADR-031 §2). Taken
- * after the round, they deadlocked with an erasure, and a sanction could slip
- * a match past its own check (ADR-038 §2). Then the round's row. `notFound`
- * when the card or the round is not there.
+ * after the queue, they deadlocked with an erasure, and a sanction could slip
+ * a match past its own check (ADR-038 §2). Then the queue's row. `notFound`
+ * when the card or the queue is not there.
  */
 export async function lockCard(
   tx: Queryable,
   input: { accountId: string; today: string; position: number },
-): Promise<{ candidateId: string; roundId: string }> {
+): Promise<{ candidateId: string; queueDayId: string }> {
   const card = await tx.query<{ candidate_id: string }>(
-    `SELECT e.candidate_id FROM round_entries e JOIN rounds r ON r.id = e.round_id
+    `SELECT e.candidate_id FROM queue_entry e JOIN queue_day r ON r.id = e.queue_day_id
         WHERE r.account_id = $1 AND r.day = $2 AND e.position = $3`,
     [input.accountId, input.today, input.position],
   );
@@ -149,39 +149,39 @@ export async function lockCard(
   await tx.query("SELECT 1 FROM account WHERE id = ANY($1::uuid[]) ORDER BY id FOR SHARE", [
     [input.accountId, candidateId],
   ]);
-  const round = await tx.query<{ id: string }>(
-    "SELECT id FROM rounds WHERE account_id = $1 AND day = $2 FOR UPDATE",
+  const day = await tx.query<{ id: string }>(
+    "SELECT id FROM queue_day WHERE account_id = $1 AND day = $2 FOR UPDATE",
     [input.accountId, input.today],
   );
-  const roundId = round.rows[0]?.id;
-  if (!roundId) throw notFound();
-  return { candidateId, roundId };
+  const queueDayId = day.rows[0]?.id;
+  if (!queueDayId) throw notFound();
+  return { candidateId, queueDayId };
 }
 
-/** The round's places now end at `last`, and it is open again: what was added is still to decide. */
+/** The day's places now end at `last`: what was added is still to decide. */
 async function givePlaces(
   tx: Queryable,
-  roundId: string,
+  queueDayId: string,
   accountId: string,
   last: number,
 ): Promise<void> {
-  await tx.query(
-    `UPDATE rounds SET completed_at = NULL, last_position = $3
-      WHERE id = $1 AND account_id = $2`,
-    [roundId, accountId, last],
-  );
+  await tx.query("UPDATE queue_day SET last_position = $3 WHERE id = $1 AND account_id = $2", [
+    queueDayId,
+    accountId,
+    last,
+  ]);
 }
 
-/** Today's round of the person, locked for a change of its relaxations, its owner's account held first; `noRound` when there is none. */
-async function lockRoundToday(tx: Queryable, accountId: string, today: string): Promise<string> {
+/** Today's queue of the person, locked for a change of its relaxations, its owner's account held first; `noQueueDay` when there is none. */
+async function lockQueueDayToday(tx: Queryable, accountId: string, today: string): Promise<string> {
   await tx.query("SELECT 1 FROM account WHERE id = $1 FOR SHARE", [accountId]);
-  const round = await tx.query<{ id: string }>(
-    "SELECT id FROM rounds WHERE account_id = $1 AND day = $2 FOR UPDATE",
+  const day = await tx.query<{ id: string }>(
+    "SELECT id FROM queue_day WHERE account_id = $1 AND day = $2 FOR UPDATE",
     [accountId, today],
   );
-  const roundId = round.rows[0]?.id;
-  if (!roundId) throw noRound();
-  return roundId;
+  const queueDayId = day.rows[0]?.id;
+  if (!queueDayId) throw noQueueDay();
+  return queueDayId;
 }
 
 /**
@@ -193,11 +193,11 @@ async function lockRoundToday(tx: Queryable, accountId: string, today: string): 
 const LIKE_BUDGET_KEY = "like_budget_balanced";
 
 /** The cards whose like answers somebody's: a fish on one is a like (ADR-039 §2). */
-const ANSWERS_A_LIKE: readonly RoundReason[] = ["liked_you", "fish"];
+const ANSWERS_A_LIKE: readonly QueueReason[] = ["liked_you", "fish"];
 
 /**
  * The person's likes of the day against the budget: one count for the refusal
- * and for the number the round says (#524), so the two never disagree.
+ * and for the number the queue says (#524), so the two never disagree.
  */
 async function likesSent(
   db: Queryable,
@@ -207,7 +207,7 @@ async function likesSent(
   const budget = await matchingConfigNumber(db, LIKE_BUDGET_KEY);
   const { rows } = await db.query<{ n: number }>(
     `SELECT count(*)::int AS n
-       FROM round_entries e JOIN rounds r ON r.id = e.round_id
+       FROM queue_entry e JOIN queue_day r ON r.id = e.queue_day_id
       WHERE r.account_id = $1 AND r.day = $2 AND e.decision = 'like'`,
     [accountId, today],
   );
@@ -228,7 +228,7 @@ async function likesLeftOf(db: Queryable, accountId: string, today: string): Pro
  * mark, `fish_budget` of them in each period of `fish_window_days` counted
  * from a Monday, so 7 is the calendar week, Monday to Sunday in Finland (the
  * maintainer's of 29/10/2026, #475; a rolling window until then). Counted
- * from the person's standing fish under the round's lock, so one changed back
+ * from the person's standing fish under the queue's lock, so one changed back
  * the same day is given back. A fish is a like for every other rule: the
  * day's likes, the expiry, the match. On a card of somebody whose like or
  * fish waits on the person it would answer a like, and is a like. Past the
@@ -244,7 +244,7 @@ const FISH_PERIODS_FROM = Date.parse("1970-01-05");
 /**
  * The person's standing fish of the period that holds today against the
  * budget, those an earned fish paid for left out, and the day the next period
- * begins: one count for the refusal's wait and for whether the round offers a
+ * begins: one count for the refusal's wait and for whether the queue offers a
  * fish (#475), so the two never disagree. A window of 0, which the panel
  * allows, reads as a day. A card's own fish is never counted against it,
  * since a fish is counted only for a card that holds none.
@@ -260,7 +260,7 @@ async function fishSent(
   const from = addDays(today, -into);
   const { rows } = await db.query<{ n: number }>(
     `SELECT count(*)::int AS n
-       FROM round_entries e JOIN rounds r ON r.id = e.round_id
+       FROM queue_entry e JOIN queue_day r ON r.id = e.queue_day_id
       WHERE r.account_id = $1 AND e.fish AND r.day >= $2::date AND e.id <> ALL($3::uuid[])`,
     [accountId, from, await entriesPaidBy(db, accountId)],
   );
@@ -278,7 +278,7 @@ async function fishToSendOf(db: Queryable, accountId: string, today: string): Pr
   return sent < budget || (await earnedFishWaiting(db, accountId));
 }
 
-/** What the round and each decision's answer say of the person's own budgets and turn, one read for both. */
+/** What the queue and each decision's answer say of the person's own budgets and turn, one read for both. */
 export async function budgetsOf(
   db: Queryable,
   matches: Pick<Matches, "yourTurn">,
@@ -293,13 +293,13 @@ export async function budgetsOf(
 }
 
 /** What a person reads back of their own decision: a like with the mark is a fish. */
-const choiceOf = (decision: RoundDecision | null, fish: boolean): RoundChoice | null =>
+const choiceOf = (decision: QueueDecision | null, fish: boolean): QueueChoice | null =>
   decision === "like" && fish ? "fish" : decision;
 
 /** Somebody the queue adds to the day's log, with why, and how far they live as measured now (ADR-061 §5). */
 export type Place = {
   candidateId: string;
-  reason: RoundReason;
+  reason: QueueReason;
   distance: DistanceBand;
   /** On a `relaxed` place: every relaxation of the day it needs, the one that names its label first (ADR-042 §5). */
   relaxedWith?: readonly string[];
@@ -308,7 +308,7 @@ export type Place = {
 /**
  * The queue's one writer (#95, #502, ADR-062 §1): the day's log, opened if this
  * is the day's first read, and these places after the highest it ever gave.
- * Under the round's lock; somebody a read beside this one added first is not
+ * Under the queue's lock; somebody a read beside this one added first is not
  * added twice. Opening the day also deletes what earlier days queued and never
  * showed (§2). A candidate is never the owner and never twice in one day. Each
  * statement asks for itself, holding the rows FOR SHARE, that the owner is still
@@ -320,11 +320,11 @@ export type Place = {
  * how many places it wrote.
  */
 export async function addPlaces(
-  deps: RoundDeps,
+  deps: QueueDeps,
   input: { accountId: string; day: string; places: readonly Place[] },
 ): Promise<number | null> {
   if (input.places.some((place) => place.candidateId === input.accountId)) {
-    throw new Error("addPlaces: a person is never a card in their own round");
+    throw new Error("addPlaces: a person is never a card in their own queue");
   }
   return transaction(deps.db, async (tx) => {
     const owner = await tx.query(
@@ -333,29 +333,29 @@ export async function addPlaces(
     );
     if (owner.rows.length === 0) return null;
     const opened = await tx.query(
-      `INSERT INTO rounds (account_id, day, built_at) VALUES ($1, $2, $3)
+      `INSERT INTO queue_day (account_id, day, started_at) VALUES ($1, $2, $3)
        ON CONFLICT (account_id, day) DO NOTHING`,
       [input.accountId, input.day, deps.now()],
     );
-    const round = await tx.query<{ id: string; last: number }>(
-      `SELECT r.id, ${PLACES} AS last FROM rounds r
+    const today = await tx.query<{ id: string; last: number }>(
+      `SELECT r.id, ${PLACES} AS last FROM queue_day r
         WHERE r.account_id = $1 AND r.day = $2 FOR UPDATE OF r`,
       [input.accountId, input.day],
     );
-    const stands = round.rows[0];
-    if (!stands) throw new Error("addPlaces: the day's round is not there");
+    const stands = today.rows[0];
+    if (!stands) throw new Error("addPlaces: the day's queue is not there");
     const written = await tx.query<{ position: number }>(
-      `INSERT INTO round_entries
-         (round_id, position, candidate_id, reason, distance, relaxed_field, relaxed_with)
-       SELECT $1, $5 + e.ordinality, e.candidate, e.reason::round_reason,
+      `INSERT INTO queue_entry
+         (queue_day_id, position, candidate_id, reason, distance, relaxed_field, relaxed_with)
+       SELECT $1, $5 + e.ordinality, e.candidate, e.reason::queue_reason,
               e.distance::distance_band, nullif(split_part(e.relaxed, ',', 1), ''),
               string_to_array(e.relaxed, ',')
          FROM unnest($2::uuid[], $3::text[], $6::text[], $7::text[])
               WITH ORDINALITY AS e(candidate, reason, distance, relaxed, ordinality)
          JOIN account c ON c.id = e.candidate
         WHERE c.state = 'active' AND NOT blocked_between($4, e.candidate)
-          AND NOT EXISTS (SELECT 1 FROM round_entries x
-                           WHERE x.round_id = $1 AND x.candidate_id = e.candidate)
+          AND NOT EXISTS (SELECT 1 FROM queue_entry x
+                           WHERE x.queue_day_id = $1 AND x.candidate_id = e.candidate)
           FOR SHARE OF c
        RETURNING position`,
       [
@@ -379,8 +379,8 @@ export async function addPlaces(
     // would leave each waiting for the other.
     if (opened.rowCount === 1) {
       await tx.query(
-        `DELETE FROM round_entries e USING rounds r
-          WHERE r.id = e.round_id AND r.account_id = $1 AND r.day < $2::date
+        `DELETE FROM queue_entry e USING queue_day r
+          WHERE r.id = e.queue_day_id AND r.account_id = $1 AND r.day < $2::date
             AND e.seen_at IS NULL AND e.decision IS NULL`,
         [input.accountId, input.day],
       );
@@ -389,12 +389,12 @@ export async function addPlaces(
   });
 }
 
-/** A row of a round's entry as the read takes it. */
+/** A row of a queue's entry as the read takes it. */
 export type EntryRow = {
   position: number | null;
   candidate_id: string | null;
-  reason: RoundReason | null;
-  decision: RoundDecision | null;
+  reason: QueueReason | null;
+  decision: QueueDecision | null;
   fish: boolean | null;
   relaxed_field: DealBreakerField | null;
   distance: DistanceBand | null;
@@ -417,8 +417,8 @@ export async function entriesOf(
   rows: readonly EntryRow[],
   cardOf: CardOf,
   dealBreakers: readonly DealBreaker[],
-): Promise<RoundEntry[]> {
-  const entries: RoundEntry[] = [];
+): Promise<QueueEntry[]> {
+  const entries: QueueEntry[] = [];
   for (const row of rows) {
     if (entries.length === QUEUE_PAGE) break;
     if (row.position === null || row.candidate_id === null || row.reason === null) continue;
@@ -447,21 +447,20 @@ export async function entriesOf(
  * lift, those queued before the ban too (ADR-037 §7): a like back would make no
  * match, and so tell them of it (ADR-024 §7). A starred card comes through the list
  * alone, unless somebody's like waits on it, which a star does not touch (ADR-064
- * §4). Null with no log for the day. The first read that finds the round stamps
- * `opened_at`.
+ * §4). Null with no log for the day.
  */
 async function nextCards(
-  deps: RoundDeps,
+  deps: QueueDeps,
   queue: Pick<Queue, "fits">,
   accountId: string,
   day: string,
   cardOf: CardOf,
   dealBreakers: readonly DealBreaker[],
-): Promise<RoundEntry[] | null> {
-  const { rows } = await deps.db.query<EntryRow & { id: string }>(
-    `SELECT r.id, ${ENTRY_COLUMNS}
-       FROM rounds r JOIN account me ON me.id = r.account_id
-       LEFT JOIN round_entries e ON e.round_id = r.id AND e.decision IS NULL
+): Promise<QueueEntry[] | null> {
+  const { rows } = await deps.db.query<EntryRow>(
+    `SELECT ${ENTRY_COLUMNS}
+       FROM queue_day r JOIN account me ON me.id = r.account_id
+       LEFT JOIN queue_entry e ON e.queue_day_id = r.id AND e.decision IS NULL
         AND NOT (me.state = 'shadow_banned' AND e.reason IN ('liked_you', 'fish'))
         AND (e.reason IN ('liked_you', 'fish') OR NOT EXISTS (
               SELECT 1 FROM star s
@@ -470,12 +469,7 @@ async function nextCards(
       ORDER BY e.position`,
     [accountId, day],
   );
-  const round = rows[0];
-  if (!round) return null;
-  await deps.db.query(
-    "UPDATE rounds SET opened_at = $3 WHERE id = $1 AND account_id = $2 AND opened_at IS NULL",
-    [round.id, accountId, deps.now()],
-  );
+  if (rows.length === 0) return null;
   const queued = rows.flatMap((row) => (row.candidate_id ? [row.candidate_id] : []));
   if (queued.length === 0) return [];
   const fitting = await queue.fits(deps.db, accountId, queued);
@@ -494,13 +488,13 @@ async function nextCards(
  * `dealBreakers` are the person's own, not paused.
  */
 export async function readQueue(
-  deps: RoundDeps,
+  deps: QueueDeps,
   matches: Pick<Matches, "yourTurn">,
   queue: Queue,
   accountId: string,
   cardOf: CardOf,
   dealBreakers: readonly DealBreaker[] = [],
-): Promise<RoundResponse> {
+): Promise<QueueResponse> {
   const day = finnishDay(deps.now());
   let entries = await nextCards(deps, queue, accountId, day, cardOf, dealBreakers);
   for (let tries = 0; !entries?.length && tries < FILL_TRIES; tries += 1) {
@@ -511,12 +505,12 @@ export async function readQueue(
   return { day, entries, ...(await budgetsOf(deps.db, matches, accountId, day)) };
 }
 
-/** The day named, checked against today before anything is read: an ended day's round answers round_expired, a later one is nobody's yet. */
-export function todayOrRefuse(deps: RoundDeps, day: string): { at: Date; today: string } {
+/** The day named, checked against today before anything is read: an ended day's queue answers day_ended, a later one is nobody's yet. */
+export function todayOrRefuse(deps: QueueDeps, day: string): { at: Date; today: string } {
   const at = deps.now();
   const today = finnishDay(at);
   if (day < today) {
-    throw new AppError(409, "round_expired", "That round ended with its day");
+    throw new AppError(409, "day_ended", "That queue ended with its day");
   }
   if (day > today) throw notFound();
   return { at, today };
@@ -528,21 +522,21 @@ export function todayOrRefuse(deps: RoundDeps, day: string): { at: Date; today: 
  * writes it.
  */
 export async function markSeen(
-  deps: RoundDeps,
+  deps: QueueDeps,
   input: { accountId: string; day: string; position: number },
 ): Promise<void> {
   const { at, today } = todayOrRefuse(deps, input.day);
   const marked = await deps.db.query(
-    `UPDATE round_entries e SET seen_at = $4
-       FROM rounds r
-      WHERE r.id = e.round_id AND r.account_id = $1 AND r.day = $2 AND e.position = $3
+    `UPDATE queue_entry e SET seen_at = $4
+       FROM queue_day r
+      WHERE r.id = e.queue_day_id AND r.account_id = $1 AND r.day = $2 AND e.position = $3
         AND e.seen_at IS NULL AND ${SERVABLE}`,
     [input.accountId, today, input.position, at],
   );
   if ((marked.rowCount ?? 0) > 0) return;
   // Seen before, or not there at all: told apart only to answer 404.
   const { rows } = await deps.db.query(
-    `SELECT 1 FROM round_entries e JOIN rounds r ON r.id = e.round_id
+    `SELECT 1 FROM queue_entry e JOIN queue_day r ON r.id = e.queue_day_id
       WHERE r.account_id = $1 AND r.day = $2 AND e.position = $3 AND ${SERVABLE}`,
     [input.accountId, today, input.position],
   );
@@ -551,10 +545,9 @@ export async function markSeen(
 
 /**
  * A like, a pass or a skip on today's card, changeable until the day ends:
- * under the round row's lock, which serialises the person's day across devices
+ * under the queue day's lock, which serialises the person's day across devices
  * and which the day's likes are counted under. The same decision again writes
- * nothing. The round is complete once nothing that can still be shown is
- * undecided.
+ * nothing.
  *
  * A new like asks two things, in this order (ADR-062 §5, §8): the conversations
  * on the person's turn, before anything is read of the other person, so that
@@ -578,15 +571,15 @@ export async function markSeen(
  * transaction after the write.
  */
 export async function decide(
-  deps: RoundDeps,
+  deps: QueueDeps,
   matches: Matches,
   queue: Pick<Queue, "fits">,
-  input: { accountId: string; day: string; position: number; decision: RoundChoice },
+  input: { accountId: string; day: string; position: number; decision: QueueChoice },
 ): Promise<{ match: string | null; fishToSend: boolean; likesLeft: number; yourTurn: number }> {
   const { at, today } = todayOrRefuse(deps, input.day);
-  const decision: RoundDecision = input.decision === "fish" ? "like" : input.decision;
+  const decision: QueueDecision = input.decision === "fish" ? "like" : input.decision;
   const written = await transaction(deps.db, async (tx) => {
-    const { roundId } = await lockCard(tx, {
+    const { queueDayId } = await lockCard(tx, {
       accountId: input.accountId,
       today,
       position: input.position,
@@ -594,14 +587,14 @@ export async function decide(
     const found = await tx.query<{
       id: string;
       candidate_id: string;
-      reason: RoundReason;
-      decision: RoundDecision | null;
+      reason: QueueReason;
+      decision: QueueDecision | null;
       fish: boolean;
     }>(
       `SELECT e.id, e.candidate_id, e.reason, e.decision, e.fish
-         FROM round_entries e JOIN rounds r ON r.id = e.round_id
+         FROM queue_entry e JOIN queue_day r ON r.id = e.queue_day_id
         WHERE r.id = $1 AND r.account_id = $2 AND e.position = $3 AND ${SERVABLE}`,
-      [roundId, input.accountId, input.position],
+      [queueDayId, input.accountId, input.position],
     );
     const entry = found.rows[0];
     if (!entry) throw notFound();
@@ -632,7 +625,7 @@ export async function decide(
       const fitting = await queue.fits(tx, input.accountId, [entry.candidate_id]);
       if (!fitting.has(entry.candidate_id)) throw notFound();
     }
-    // Counted under the round's lock from the day's standing decisions, so a
+    // Counted under the queue's lock from the day's standing decisions, so a
     // like taken back gives its place back and two devices cannot both pass
     // the count; the refusal writes nothing. A like made a fish was counted.
     if (decision === "like" && entry.decision !== "like") {
@@ -643,7 +636,7 @@ export async function decide(
         });
       }
     }
-    // The person's fish of the period, under the round's lock; past the
+    // The person's fish of the period, under the queue's lock; past the
     // budget the fish takes an earned one, and with none the next can go at
     // the midnight that begins the next period, a Monday's with a week.
     if (fish && !entry.fish) {
@@ -665,14 +658,15 @@ export async function decide(
     // The mark that holds a year (ADR-062 §6), read from the person's own earlier
     // days: the same day's pass changed back and forth is one pass.
     const secondPass =
-      decision === "pass" && (await passedBefore(tx, input.accountId, entry.candidate_id, roundId));
+      decision === "pass" &&
+      (await passedBefore(tx, input.accountId, entry.candidate_id, queueDayId));
     // The predicate again where it writes: a block or an erasure that
     // committed since the read leaves nothing written.
     const updated = await tx.query(
-      `UPDATE round_entries e SET decision = $4, decided_at = $5, fish = $6, second_pass = $7
-         FROM rounds r
-        WHERE r.id = e.round_id AND r.id = $1 AND r.account_id = $2 AND e.id = $3 AND ${SERVABLE}`,
-      [roundId, input.accountId, entry.id, decision, at, fish, secondPass],
+      `UPDATE queue_entry e SET decision = $4, decided_at = $5, fish = $6, second_pass = $7
+         FROM queue_day r
+        WHERE r.id = e.queue_day_id AND r.id = $1 AND r.account_id = $2 AND e.id = $3 AND ${SERVABLE}`,
+      [queueDayId, input.accountId, entry.id, decision, at, fish, secondPass],
     );
     if (updated.rowCount !== 1) throw notFound();
     // A like or a pass takes the star off (ADR-064 §3), so the list holds only the
@@ -683,13 +677,6 @@ export async function decide(
         entry.candidate_id,
       ]);
     }
-    await tx.query(
-      `UPDATE rounds r SET completed_at = $3
-        WHERE r.id = $1 AND r.account_id = $2 AND r.completed_at IS NULL
-          AND NOT EXISTS (SELECT 1 FROM round_entries e
-                           WHERE e.round_id = r.id AND e.decision IS NULL AND ${SERVABLE})`,
-      [roundId, input.accountId, at],
-    );
     let match = decision === "like" ? standing : null;
     let opened = false;
     if (decision === "like" && entry.decision !== "like" && !standing) {
@@ -698,7 +685,7 @@ export async function decide(
       // expired, today's included: under the pair's lock it is committed or it is
       // not there.
       const mutual = await tx.query(
-        `SELECT 1 FROM round_entries e JOIN rounds r ON r.id = e.round_id
+        `SELECT 1 FROM queue_entry e JOIN queue_day r ON r.id = e.queue_day_id
           WHERE r.account_id = $1 AND e.candidate_id = $2 AND e.decision = 'like'
             AND r.day > $3::date - $4::int
             AND EXISTS (SELECT 1 FROM account me WHERE me.id = $2 AND me.state = 'active')
@@ -722,7 +709,7 @@ export async function decide(
     }
     return {
       match,
-      // After this decision's write, under the round's lock: the answer says
+      // After this decision's write, under the queue's lock: the answer says
       // what it left, and is known before any push of the match starts (ADR-055 §5).
       ...(await budgetsOf(tx, matches, input.accountId, today)),
       matchedWith: opened ? entry.candidate_id : null,
@@ -743,13 +730,13 @@ async function passedBefore(
   tx: Queryable,
   accountId: string,
   candidateId: string,
-  roundId: string,
+  queueDayId: string,
 ): Promise<boolean> {
   const { rows } = await tx.query(
-    `SELECT 1 FROM round_entries e JOIN rounds r ON r.id = e.round_id
+    `SELECT 1 FROM queue_entry e JOIN queue_day r ON r.id = e.queue_day_id
       WHERE r.account_id = $1 AND e.candidate_id = $2 AND e.decision = 'pass' AND r.id <> $3
       LIMIT 1`,
-    [accountId, candidateId, roundId],
+    [accountId, candidateId, queueDayId],
   );
   return rows.length > 0;
 }
@@ -763,9 +750,9 @@ export type RelaxedCandidate = {
 
 /**
  * The short pool's side that reads across slices (#99, ADR-042 §4, §5): the
- * round builder's, which lives with the jobs and reads the pond as it does,
+ * queue's builder's, which lives with the jobs and reads the pond as it does,
  * handed in by app.ts. `offers` is what the queue may relax today, null with no
- * round today; `candidates` whom a relaxation lets in today, in the order they
+ * queue today; `candidates` whom a relaxation lets in today, in the order they
  * would come, null for one the offers would not list.
  */
 export type ShortPool = {
@@ -781,8 +768,8 @@ export type ShortPool = {
 };
 
 /**
- * Today's relaxations of the person's round (ADR-042 §3) and the highest place
- * it gave; null with no round for the day.
+ * Today's relaxations of the person's queue (ADR-042 §3) and the highest place
+ * it gave; null with no queue for the day.
  */
 export async function relaxationsOf(
   db: Queryable,
@@ -793,8 +780,8 @@ export async function relaxationsOf(
     `SELECT ${PLACES} AS last,
             coalesce((SELECT json_agg(json_build_object('field', x.field, 'kind', x.kind)
                                       ORDER BY x.field)
-                        FROM round_relaxation x WHERE x.round_id = r.id), '[]') AS relaxed
-       FROM rounds r WHERE r.account_id = $1 AND r.day = $2`,
+                        FROM queue_relaxation x WHERE x.queue_day_id = r.id), '[]') AS relaxed
+       FROM queue_day r WHERE r.account_id = $1 AND r.day = $2`,
     [accountId, day],
   );
   return rows[0] ?? null;
@@ -807,23 +794,23 @@ const sameRelaxations = (a: readonly Relaxation[], b: readonly Relaxation[]) => 
 };
 
 /**
- * A relaxation tapped (ADR-042 §5, ADR-062 §10): recorded on today's round, and
- * the first of the people it lets in added after the highest place the round
+ * A relaxation tapped (ADR-042 §5, ADR-062 §10): recorded on today's queue, and
+ * the first of the people it lets in added after the highest place the queue
  * ever gave (`last_position`, so a place an undo freed never names somebody
  * else), a page of them, in the order given, reason `relaxed` with the field,
  * and with the relaxations of the day each needs (`relaxed_with`, the tapped one
  * first), so undoing one of them takes the card back and a like waives them all;
- * the queue goes on to the rest once those are read. Under the round's
+ * the queue goes on to the rest once those are read. Under the queue's
  * lock, after the owner's account shared as a decision takes it; the day's
  * relaxations are held to those the candidates were counted under (`basis`),
  * so one undone or made meanwhile refuses the write, 409
  * `relaxations_changed`; each candidate is asked where it is written to be
- * still active, with no block between the two, and not in the round yet.
- * `completed_at` is cleared when a place is added. The places written, in
+ * still active, with no block between the two, and not in the queue yet.
+ * The places written, in
  * order; 409 `already_relaxed` for a field relaxed today, nothing written.
  */
 export async function appendRelaxed(
-  deps: RoundDeps,
+  deps: QueueDeps,
   input: {
     accountId: string;
     day: string;
@@ -834,10 +821,10 @@ export async function appendRelaxed(
 ): Promise<number[]> {
   const { today } = todayOrRefuse(deps, input.day);
   return transaction(deps.db, async (tx) => {
-    const roundId = await lockRoundToday(tx, input.accountId, today);
+    const queueDayId = await lockQueueDayToday(tx, input.accountId, today);
     const standing = await tx.query<Relaxation>(
-      "SELECT field, kind FROM round_relaxation WHERE round_id = $1",
-      [roundId],
+      "SELECT field, kind FROM queue_relaxation WHERE queue_day_id = $1",
+      [queueDayId],
     );
     if (standing.rows.some((r) => r.field === input.relaxation.field)) {
       throw new AppError(409, "already_relaxed", "That deal-breaker is relaxed today");
@@ -845,39 +832,39 @@ export async function appendRelaxed(
     if (!sameRelaxations(standing.rows, input.basis)) {
       throw new AppError(409, "relaxations_changed", "The day's relaxations changed meanwhile");
     }
-    // Read under the round's lock above, so the same field cannot have come in meanwhile.
+    // Read under the queue's lock above, so the same field cannot have come in meanwhile.
     await tx.query(
-      "INSERT INTO round_relaxation (round_id, field, kind, created_at) VALUES ($1, $2, $3, $4)",
-      [roundId, input.relaxation.field, input.relaxation.kind, deps.now()],
+      "INSERT INTO queue_relaxation (queue_day_id, field, kind, created_at) VALUES ($1, $2, $3, $4)",
+      [queueDayId, input.relaxation.field, input.relaxation.kind, deps.now()],
     );
     const placed = await tx.query<{ last: number }>(
-      `SELECT ${PLACES} AS last FROM rounds r WHERE r.id = $1 AND r.account_id = $2`,
-      [roundId, input.accountId],
+      `SELECT ${PLACES} AS last FROM queue_day r WHERE r.id = $1 AND r.account_id = $2`,
+      [queueDayId, input.accountId],
     );
     const last = placed.rows[0]?.last ?? 0;
-    const room = Math.min(QUEUE_PAGE, ROUND_POSITION_MAX - last);
+    const room = Math.min(QUEUE_PAGE, QUEUE_POSITION_MAX - last);
     if (room <= 0 || input.candidates.length === 0) return [];
     const taken = await tx.query<{ candidate: string }>(
       `SELECT e.candidate FROM unnest($1::uuid[]) WITH ORDINALITY AS e(candidate, ordinality)
          JOIN account c ON c.id = e.candidate
         WHERE c.state = 'active' AND NOT blocked_between($2, e.candidate)
-          AND NOT EXISTS (SELECT 1 FROM round_entries x WHERE x.round_id = $3 AND x.candidate_id = e.candidate)
+          AND NOT EXISTS (SELECT 1 FROM queue_entry x WHERE x.queue_day_id = $3 AND x.candidate_id = e.candidate)
           AND e.candidate <> $2
         ORDER BY e.ordinality LIMIT $4
         FOR SHARE OF c`,
-      [input.candidates.map((c) => c.candidateId), input.accountId, roundId, room],
+      [input.candidates.map((c) => c.candidateId), input.accountId, queueDayId, room],
     );
     const positions = taken.rows.map((_, index) => last + index + 1);
     if (positions.length === 0) return [];
     const candidates = new Map(input.candidates.map((c) => [c.candidateId, c]));
     await tx.query(
-      `INSERT INTO round_entries (round_id, position, candidate_id, reason, relaxed_field, relaxed_with, distance)
+      `INSERT INTO queue_entry (queue_day_id, position, candidate_id, reason, relaxed_field, relaxed_with, distance)
        SELECT $1, e.position, e.candidate, 'relaxed', $4, string_to_array(e.relaxed_with, ','),
               e.distance::distance_band
          FROM unnest($2::smallint[], $3::uuid[], $5::text[], $6::text[])
               AS e(position, candidate, relaxed_with, distance)`,
       [
-        roundId,
+        queueDayId,
         positions,
         taken.rows.map((row) => row.candidate),
         input.relaxation.field,
@@ -888,7 +875,7 @@ export async function appendRelaxed(
         taken.rows.map((row) => candidates.get(row.candidate)?.distance),
       ],
     );
-    await givePlaces(tx, roundId, input.accountId, last + positions.length);
+    await givePlaces(tx, queueDayId, input.accountId, last + positions.length);
     return positions;
   });
 }
@@ -896,55 +883,44 @@ export async function appendRelaxed(
 /**
  * A relaxation undone (ADR-042 §6): its row deleted, and with it today's
  * cards that need it and are still undecided, a later relaxation's that
- * needed it too, under the round's lock; a decided one stays. The round is
- * complete again, when the person decided on something, once nothing that
- * can still be shown is undecided. The places removed; 404 for a field not
- * relaxed today.
+ * needed it too, under the queue's lock; a decided one stays. The places
+ * removed; 404 for a field not relaxed today.
  */
 export async function undoRelaxation(
-  deps: RoundDeps,
+  deps: QueueDeps,
   input: { accountId: string; day: string; field: DealBreakerField },
 ): Promise<number[]> {
-  const { at, today } = todayOrRefuse(deps, input.day);
+  const { today } = todayOrRefuse(deps, input.day);
   return transaction(deps.db, async (tx) => {
-    const roundId = await lockRoundToday(tx, input.accountId, today);
+    const queueDayId = await lockQueueDayToday(tx, input.accountId, today);
     const undone = await tx.query(
-      "DELETE FROM round_relaxation WHERE round_id = $1 AND field = $2",
-      [roundId, input.field],
+      "DELETE FROM queue_relaxation WHERE queue_day_id = $1 AND field = $2",
+      [queueDayId, input.field],
     );
     if (undone.rowCount !== 1) throw new AppError(404, "not_found", "Not relaxed today");
     const removed = await tx.query<{ position: number }>(
-      `DELETE FROM round_entries WHERE round_id = $1 AND $2 = ANY(relaxed_with) AND decision IS NULL
+      `DELETE FROM queue_entry WHERE queue_day_id = $1 AND $2 = ANY(relaxed_with) AND decision IS NULL
        RETURNING position`,
-      [roundId, input.field],
-    );
-    await tx.query(
-      `UPDATE rounds r SET completed_at = $3
-        WHERE r.id = $1 AND r.account_id = $2 AND r.completed_at IS NULL
-          AND EXISTS (SELECT 1 FROM round_entries e
-                       WHERE e.round_id = r.id AND e.decision IS NOT NULL)
-          AND NOT EXISTS (SELECT 1 FROM round_entries e
-                           WHERE e.round_id = r.id AND e.decision IS NULL AND ${SERVABLE})`,
-      [roundId, input.accountId, at],
+      [queueDayId, input.field],
     );
     return removed.rows.map((row) => row.position).sort((a, b) => a - b);
   });
 }
 
-const noRound = () => new AppError(404, "not_found", "No round today");
+const noQueueDay = () => new AppError(404, "not_found", "No queue today");
 
 /**
  * What the person may relax today and what they have (ADR-042 §4), for the
- * day named: an ended day answers round_expired, a day with no round 404.
+ * day named: an ended day answers day_ended, a day with no queue 404.
  */
 export async function readRelaxations(
-  deps: RoundDeps,
+  deps: QueueDeps,
   shortPool: ShortPool,
   input: { accountId: string; day: string },
 ): Promise<RelaxationsResponse> {
   const { today } = todayOrRefuse(deps, input.day);
   const now = await relaxationsOf(deps.db, input.accountId, today);
-  if (!now) throw noRound();
+  if (!now) throw noQueueDay();
   const offered = await shortPool.offers(input.accountId);
   return { short: offered?.short ?? false, offers: offered?.offers ?? [], relaxed: now.relaxed };
 }
@@ -955,13 +931,13 @@ export async function readRelaxations(
  * in, added (`appendRelaxed`). The places written.
  */
 export async function relax(
-  deps: RoundDeps,
+  deps: QueueDeps,
   shortPool: ShortPool,
   input: { accountId: string; day: string; relaxation: Relaxation },
 ): Promise<number[]> {
   const { today } = todayOrRefuse(deps, input.day);
   const now = await relaxationsOf(deps.db, input.accountId, today);
-  if (!now) throw noRound();
+  if (!now) throw noQueueDay();
   if (now.relaxed.some((r) => r.field === input.relaxation.field)) {
     throw new AppError(409, "already_relaxed", "That deal-breaker is relaxed today");
   }
@@ -971,23 +947,23 @@ export async function relax(
 }
 
 /**
- * The cards at these places of today's round, as the read gives them
+ * The cards at these places of today's queue, as the read gives them
  * (`entriesOf`), for the answer of a relaxation, those that fit now: somebody may
  * have narrowed their filters since the pool was walked (ADR-062 §8).
  */
 export async function readAdded(
-  deps: RoundDeps,
+  deps: QueueDeps,
   queue: Pick<Queue, "fits">,
   accountId: string,
   day: string,
   positions: readonly number[],
   cardOf: CardOf,
   dealBreakers: readonly DealBreaker[],
-): Promise<RoundEntry[]> {
+): Promise<QueueEntry[]> {
   if (positions.length === 0) return [];
   const { rows } = await deps.db.query<EntryRow>(
     `SELECT ${ENTRY_COLUMNS}
-       FROM round_entries e JOIN rounds r ON r.id = e.round_id
+       FROM queue_entry e JOIN queue_day r ON r.id = e.queue_day_id
       WHERE r.account_id = $1 AND r.day = $2 AND e.position = ANY($3::smallint[])
       ORDER BY e.position`,
     [accountId, day, positions],
@@ -1002,8 +978,8 @@ export async function readAdded(
   );
 }
 
-/** How long a round and its entries are kept (ADR-062 §13, the maintainer's of 01/11/2026): the longest clock of the ladder reads them this far back. */
-export const ROUND_RETENTION_DAYS = 365;
+/** How long a queue and its entries are kept (ADR-062 §13, the maintainer's of 01/11/2026): the longest clock of the ladder reads them this far back. */
+export const QUEUE_RETENTION_DAYS = 365;
 
 /**
  * The tunables counted back over the log: past the kept year each would end
@@ -1020,10 +996,10 @@ export const KEPT_YEAR_KEYS: ReadonlySet<string> = new Set([
   FISH_WINDOW_KEY,
 ]);
 
-/** The night's prune: rounds past the kept year, their entries and relaxations with them. */
-export async function pruneRounds(db: Queryable, at: Date): Promise<number> {
-  const { rowCount } = await db.query("DELETE FROM rounds WHERE day < $1::date", [
-    addDays(finnishDay(at), -ROUND_RETENTION_DAYS),
+/** The night's prune: queue days past the kept year, their entries and relaxations with them. */
+export async function pruneQueueDays(db: Queryable, at: Date): Promise<number> {
+  const { rowCount } = await db.query("DELETE FROM queue_day WHERE day < $1::date", [
+    addDays(finnishDay(at), -QUEUE_RETENTION_DAYS),
   ]);
   return rowCount ?? 0;
 }
@@ -1031,101 +1007,95 @@ export async function pruneRounds(db: Queryable, at: Date): Promise<number> {
 /**
  * Erasure's part (TD-7, ADR-007 §4), inside its transaction: the entries in
  * which the person is somebody's card, others' decisions on them included,
- * and the person's own rounds, their entries with them.
+ * and the person's own queue days, their entries with them.
  */
-export async function eraseRoundsOf(
+export async function eraseQueueOf(
   tx: Queryable,
   accountId: string,
-): Promise<{ rounds: number; entriesAsCandidate: number }> {
-  const asCandidate = await tx.query("DELETE FROM round_entries WHERE candidate_id = $1", [
+): Promise<{ days: number; entriesAsCandidate: number }> {
+  const asCandidate = await tx.query("DELETE FROM queue_entry WHERE candidate_id = $1", [
     accountId,
   ]);
-  const own = await tx.query("DELETE FROM rounds WHERE account_id = $1", [accountId]);
-  return { rounds: own.rowCount ?? 0, entriesAsCandidate: asCandidate.rowCount ?? 0 };
+  const own = await tx.query("DELETE FROM queue_day WHERE account_id = $1", [accountId]);
+  return { days: own.rowCount ?? 0, entriesAsCandidate: asCandidate.rowCount ?? 0 };
 }
 
-export type OwnRound = {
+export type OwnQueueDay = {
   day: string;
-  builtAt: Date;
-  openedAt: Date | null;
-  completedAt: Date | null;
+  startedAt: Date;
   /** The day's relaxations (ADR-042 §10), the oldest first. */
   relaxations: { field: DealBreakerField; kind: Relaxation["kind"]; createdAt: Date }[];
   entries: {
     position: number;
-    reason: RoundReason;
+    reason: QueueReason;
     relaxedField: DealBreakerField | null;
     seenAt: Date | null;
-    decision: RoundChoice | null;
+    decision: QueueChoice | null;
     decidedAt: Date | null;
     secondPass: boolean;
     distance: DistanceBand | null;
   }[];
 };
 
-/** The person's own rounds for their export, newest day first: places, reasons and decisions, never whom. */
-export async function exportRounds(
+/** The person's own queue days for their export, newest day first: places, reasons and decisions, never whom. */
+export async function exportQueue(
   db: Queryable,
   accountId: string,
   limit: number,
-): Promise<OwnRound[]> {
+): Promise<OwnQueueDay[]> {
   const { rows } = await db.query<{
     id: string;
     day: string;
-    built_at: Date;
-    opened_at: Date | null;
-    completed_at: Date | null;
+    started_at: Date;
   }>(
-    `SELECT id, day::text AS day, built_at, opened_at, completed_at FROM rounds
+    `SELECT id, day::text AS day, started_at FROM queue_day
       WHERE account_id = $1 ORDER BY day DESC LIMIT $2`,
     [accountId, limit],
   );
   if (rows.length === 0) return [];
   const entries = await db.query<{
-    round_id: string;
+    queue_day_id: string;
     position: number;
-    reason: RoundReason;
+    reason: QueueReason;
     relaxed_field: DealBreakerField | null;
     seen_at: Date | null;
-    decision: RoundDecision | null;
+    decision: QueueDecision | null;
     fish: boolean;
     second_pass: boolean;
     decided_at: Date | null;
     distance: DistanceBand | null;
   }>(
-    `SELECT e.round_id, e.position, e.reason, e.relaxed_field, e.seen_at, e.decision, e.fish,
+    `SELECT e.queue_day_id, e.position, e.reason, e.relaxed_field, e.seen_at, e.decision, e.fish,
             e.second_pass, e.decided_at, e.distance
-       FROM round_entries e JOIN rounds r ON r.id = e.round_id
+       FROM queue_entry e JOIN queue_day r ON r.id = e.queue_day_id
       WHERE r.account_id = $1 AND r.id = ANY($2::uuid[])
       ORDER BY e.position`,
     [accountId, rows.map((row) => row.id)],
   );
   const relaxations = await db.query<{
-    round_id: string;
+    queue_day_id: string;
     field: DealBreakerField;
     kind: Relaxation["kind"];
     created_at: Date;
   }>(
-    `SELECT x.round_id, x.field, x.kind, x.created_at
-       FROM round_relaxation x JOIN rounds r ON r.id = x.round_id
+    `SELECT x.queue_day_id, x.field, x.kind, x.created_at
+       FROM queue_relaxation x JOIN queue_day r ON r.id = x.queue_day_id
       WHERE r.account_id = $1 AND r.id = ANY($2::uuid[])
       ORDER BY x.created_at, x.field`,
     [accountId, rows.map((row) => row.id)],
   );
   return rows.map((row) => ({
     day: row.day,
-    builtAt: row.built_at,
-    openedAt: row.opened_at,
-    completedAt: row.completed_at,
+    startedAt: row.started_at,
     relaxations: relaxations.rows
-      .filter((relaxation) => relaxation.round_id === row.id)
+      .filter((relaxation) => relaxation.queue_day_id === row.id)
       .map((relaxation) => ({
         field: relaxation.field,
         kind: relaxation.kind,
         createdAt: relaxation.created_at,
       })),
     entries: entries.rows
-      .filter((entry) => entry.round_id === row.id)
+      .filter((entry) => entry.queue_day_id === row.id)
       .map((entry) => ({
         position: entry.position,
         reason: entry.reason,

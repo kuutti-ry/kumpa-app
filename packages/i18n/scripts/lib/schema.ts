@@ -77,8 +77,8 @@ const wordsOf = (key: string) => key.replace(/([a-z])([A-Z])/g, "$1.$2");
 /** True for keys of the English-only moderation panel (TD-17). */
 export const isAdminKey = (key: string): boolean => key.startsWith("admin.");
 
-// Where a joke is harmless (#521): the round, home, the profile editor, settings.
-const SLANG_NAMESPACE = /^(round|home|profile|settings)\./;
+// Where a joke is harmless (#521): the queue, home, the profile editor, settings.
+const SLANG_NAMESPACE = /^(queue|home|profile|settings)\./;
 // Inside them, what stays plain: what has to be understood the first time (a
 // failure), consent and a person's data, their way out of danger or of a
 // session, and the answers that say who somebody is.

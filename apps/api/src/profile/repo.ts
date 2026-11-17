@@ -167,7 +167,7 @@ export type CardSubject = {
 /**
  * The account and profile behind a card. Read by the subject's id: the
  * viewer's right to see it is decided by the caller (the owner previewing
- * themselves, or M4's round after the matching rules), and recorded by
+ * themselves, or M4's queue after the matching rules), and recorded by
  * recordCardServed in the media slice for anyone but the owner. The viewer
  * is named in the statement for the one thing that is theirs to know here,
  * whether a block stands between the two (`blocked_between`).

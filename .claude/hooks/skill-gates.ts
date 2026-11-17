@@ -537,7 +537,7 @@ function selfTest(): void {
   same("open-pr on docs", refusal(skills("open-pr"), docs), null);
   const everything = () => [
     "packages/db/src/schema/profile.ts",
-    "apps/api/src/matching/rounds.ts",
+    "apps/api/src/matching/queue.ts",
     "apps/mobile/src/features/chat/Thread.tsx",
   ];
   same(
@@ -557,18 +557,18 @@ function selfTest(): void {
     ["packages/db/src/schema/profile.ts", "personal-data"],
     ["packages/db/drizzle/0090_x.sql", "personal-data"],
     ["/Users/x/kuutti-app/packages/db/src/schema/chat.ts", "personal-data"],
-    ["apps/api/src/matching/rounds.ts", "change-rule"],
+    ["apps/api/src/matching/queue.ts", "change-rule"],
     ["apps/api/src/pond/routes.ts", "change-rule"],
     ["apps/api/src/rewards/repo.ts", "change-rule"],
     ["apps/api/src/notifications/push.ts", "change-rule"],
-    ["apps/api/src/jobs/round-builder.ts", "change-rule"],
-    ["apps/api/src/jobs/round-builder.test.ts", null],
-    ["apps/mobile/src/features/matching/Round.tsx", "change-rule"],
+    ["apps/api/src/jobs/queue-builder.ts", "change-rule"],
+    ["apps/api/src/jobs/queue-builder.test.ts", null],
+    ["apps/mobile/src/features/matching/Queue.tsx", "change-rule"],
     ["apps/mobile/src/features/profile/Card.tsx", "change-rule"],
-    ["features/matching/rounds.feature", "change-rule"],
+    ["features/matching/queue.feature", "change-rule"],
     ["docs/decisions.md", "change-rule"],
-    ["/Users/x/.claude/worktrees/a/apps/api/src/matching/rounds.ts", "change-rule"],
-    ["apps/api/src/matching/rounds.test.ts", null],
+    ["/Users/x/.claude/worktrees/a/apps/api/src/matching/queue.ts", "change-rule"],
+    ["apps/api/src/matching/queue.test.ts", null],
     ["apps/mobile/src/features/profile/Card.test.tsx", null],
     ["apps/api/src/chat/repo.ts", null],
     ["apps/api/src/identity/erasure.ts", null],
@@ -580,9 +580,9 @@ function selfTest(): void {
     // control: the panel's part of a slice that holds no rule
     ["apps/admin/src/features/safety/Queue.tsx", null],
     // attack: a spec's file in a rule's folder is passed over as a test's is
-    ["apps/mobile/src/features/matching/Round.spec.tsx", "change-rule"],
+    ["apps/mobile/src/features/matching/Queue.spec.tsx", "change-rule"],
     // control: the test's file beside it
-    ["apps/mobile/src/features/matching/Round.test.tsx", null],
+    ["apps/mobile/src/features/matching/Queue.test.tsx", null],
     // attack: a test's file in the schema's folder is passed over as a rule's test is
     ["packages/db/src/schema/profile.test.ts", "personal-data"],
     // control: a test's file beside the folder
@@ -596,7 +596,7 @@ function selfTest(): void {
   }
   same(
     "an edit once its skill has run",
-    editRefusal(skills("change-rule"), "apps/api/src/matching/rounds.ts"),
+    editRefusal(skills("change-rule"), "apps/api/src/matching/queue.ts"),
     null,
   );
   for (const [file, expected] of [
@@ -861,7 +861,7 @@ function selfTest(): void {
 
   const editing = {
     ...asked,
-    tool_input: { file_path: join(repo, "apps/api/src/matching/rounds.ts") },
+    tool_input: { file_path: join(repo, "apps/api/src/matching/queue.ts") },
   };
   const ruleFirst = "Run the change-rule skill before editing this file (CLAUDE.md).";
   writeFileSync(transcript, "");

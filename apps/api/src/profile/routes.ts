@@ -15,7 +15,7 @@ const readRoute = createRoute({
   path: "/profile",
   summary: "The caller's profile and what it still needs",
   description:
-    "The profile as saved (null before the first save), the completeness rule's verdict (what is missing before the profile can enter a round), and the home in names, which PUT /account/home writes and this document never does.",
+    "The profile as saved (null before the first save), the completeness rule's verdict (what is missing before the profile can enter a queue), and the home in names, which PUT /account/home writes and this document never does.",
   ...bearer,
   responses: {
     200: { description: "The profile.", ...json(ProfileResponse) },
@@ -52,7 +52,7 @@ const cardRoute = createRoute({
   path: "/profile/card",
   summary: "The caller's own card, as others will see it",
   description:
-    "The card built the way a round builds it for someone else, with the age from the bank-verified year and month, the approved photos in order (bytes through GET /photos/{id}/{variant}) and what is still missing. Nothing is recorded: this is the owner looking at themselves.",
+    "The card built the way a queue builds it for someone else, with the age from the bank-verified year and month, the approved photos in order (bytes through GET /photos/{id}/{variant}) and what is still missing. Nothing is recorded: this is the owner looking at themselves.",
   ...bearer,
   responses: {
     200: { description: "The card, or null before the first save.", ...json(CardPreviewResponse) },

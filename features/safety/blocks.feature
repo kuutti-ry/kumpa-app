@@ -4,7 +4,7 @@ Feature: Blocking somebody from a card or a conversation
   the other person of a conversation (#351), which ends it for both. From
   then on neither is shown to the other, in either direction, anywhere a
   person is shown to a person: the pool, the card and its
-  photos, and the rounds, likes and matches when they come (rule 7). The
+  photos, and the queue days, likes and matches when they come (rule 7). The
   block is between the two identities, so it holds for a later account of
   either, and it is final: no list and no unblock. Nobody is told, and
   nothing counts blocks: they are a filter, never a signal. A report blocks
@@ -26,10 +26,10 @@ Feature: Blocking somebody from a card or a conversation
     When "A" blocks "B"
     Then neither is issued the other's photo in any variant, and each owner still reads their own
 
-  Scenario: The round leaves a blocked pair out of each other's cards
+  Scenario: The queue leaves a blocked pair out of each other's cards
     Given an open pond of people who all fit
     When one of them blocks another and everybody reads their queue
-    Then neither of the two is a card in the other's round, and everybody else has both
+    Then neither of the two is a card in the other's queue, and everybody else has both
 
   Scenario: Blocking again, or blocking somebody who blocked first, answers the same
     Given "A" and "B" were shown each other's cards

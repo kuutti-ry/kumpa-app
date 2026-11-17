@@ -33,7 +33,7 @@ describe("the notification choices", () => {
     expect(NotificationKind.options).toEqual(["message", "match", "moderation", "announcement"]);
     expect(NotificationKindParams.parse({ kind: "match" })).toEqual({ kind: "match" });
     expect(codes(NotificationKindParams, { kind: "push" })).toEqual(["invalid_value"]);
-    // The round's went with its push (ADR-062 §12).
+    // The queue's went with its push (ADR-062 §12).
     expect(codes(NotificationKindParams, { kind: "round" })).toEqual(["invalid_value"]);
   });
 

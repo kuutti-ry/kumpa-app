@@ -43,7 +43,7 @@ import {
   giveCastStories,
   giveConversations,
   givePhotoMessages,
-  giveRounds,
+  giveQueueDays,
 } from "./demo/histories.ts";
 import { loadAssets } from "./demo/photos.ts";
 import { giveStories, viaServices } from "./demo/services.ts";
@@ -127,9 +127,9 @@ try {
   console.log(JSON.stringify({ msg: "demo stories: counter recounted", ...counted }));
   const opened = await openMatching(pool, "demo-stories");
   console.log(JSON.stringify({ msg: "demo stories: matching opened", opened }));
-  // Iida's round for the day (#379), once matching is open; told before, it stays.
-  const rounds = await giveRounds({ db: pool, logger, now }, results);
-  console.log(JSON.stringify({ msg: "demo stories: rounds", ...rounds }));
+  // Iida's queue for the day (#379), once matching is open; told before, it stays.
+  const days = await giveQueueDays({ db: pool, logger, now }, results);
+  console.log(JSON.stringify({ msg: "demo stories: queue days", ...days }));
   const cast = await giveCastStories(pool, results, now());
   console.log(JSON.stringify({ msg: "demo stories: the cast's stories", ...cast }));
 } catch (error) {

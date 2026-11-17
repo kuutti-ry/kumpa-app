@@ -6,7 +6,7 @@ apps/api/src/boot.ts
 infra/modules/observability/
 -->
 
-What the API does at night, from the system's side: the timer that runs inside the API's own process at 04:00 in Helsinki, the thirteen jobs it runs one after another, what each reads and writes, and how a failed job reaches the maintainer's mailbox through the log and an alarm. It is written for a contributor who adds or changes a job, and for whoever answers the alarm. There is no cron and no second process: the jobs are listed in the API's boot and run by a timer in the same process as HTTP and the socket. This view draws ADR-006 §2, ADR-008 (the fetch log's year), ADR-013, ADR-015, ADR-024 §5, ADR-030 §8, ADR-031 §8, ADR-044 §7 and ADR-062 §1 and §13. Nothing of the queue is built at night: the first read of a Finnish day opens a person's log, and what the night does for rounds is delete those past their year.
+What the API does at night, from the system's side: the timer that runs inside the API's own process at 04:00 in Helsinki, the thirteen jobs it runs one after another, what each reads and writes, and how a failed job reaches the maintainer's mailbox through the log and an alarm. It is written for a contributor who adds or changes a job, and for whoever answers the alarm. There is no cron and no second process: the jobs are listed in the API's boot and run by a timer in the same process as HTTP and the socket. This view draws ADR-006 §2, ADR-008 (the fetch log's year), ADR-013, ADR-015, ADR-024 §5, ADR-030 §8, ADR-031 §8, ADR-044 §7 and ADR-062 §1 and §13. Nothing of the queue is built at night: the first read of a Finnish day opens a person's log, and what the night does for queue days is delete those past their year.
 
 In these diagrams every arrow is built. Mermaid's sequence diagrams take a message's words as they are, so the labels are not in quotes, and they name an environment as `{env}`, staging or prod.
 
@@ -21,7 +21,7 @@ In these diagrams every arrow is built. Mermaid's sequence diagrams take a messa
 | 3 | `end-suspensions` | safety | sanctions | lifts each suspension past its day, settles the account | everywhere |
 | 4 | `pond-counter` | jobs | accounts, profiles, photos, preferences | the day's figures, one row | everywhere |
 | 5 | `invitation-count` | rewards | invitations, accounts, consents, profiles, photos, preferences | invitations counted, both people's reward units, the notices | everywhere |
-| 6 | `prune-rounds` | matching | rounds | deletes the rounds of days over 365 days back, their entries and relaxations with them | everywhere |
+| 6 | `prune-queue-days` | matching | queue days | deletes the queue days of days over 365 days back, their entries and relaxations with them | everywhere |
 | 7 | `reject-unreviewed-photos` | media | profile photos in the human queue | rejects those waiting past `photo_queue_reject_days` as not reviewed | everywhere |
 | 8 | `prune-photo-check-notes` | safety | the photo check's notes | deletes notes older than twelve calendar months | everywhere |
 | 9 | `prune-photo-access` | media | the fetch log of signed photo URLs | deletes rows older than 365 days, every account's | everywhere |
@@ -84,19 +84,19 @@ sequenceDiagram
 9. `sweep-sessions` (identity, #35): deletes the sessions revoked more than 30 days ago, those past their expiry, and those of erased accounts; and the sign-in attempts past their time. A deleted session also closes any socket it still had (see Chat, step 42).
 10. `sweep-admin-sessions` (identity, #49): deletes staff sessions that expired or were revoked, keeping each member of staff's newest.
 
-## Part 3: the pond, and the rounds past their year
+## Part 3: the pond, and the queue days past their year
 
 ```mermaid
 sequenceDiagram
-  accTitle: The night's jobs, part 3: the pond, and the rounds past their year
-  accDescr: Suspensions past their day end first, so a person let back in is counted the same night. Then the counter's figures, the invitations whose redeemer is complete, and the rounds past the year they are kept, their entries and relaxations with them.
+  accTitle: The night's jobs, part 3: the pond, and the queue days past their year
+  accDescr: Suspensions past their day end first, so a person let back in is counted the same night. Then the counter's figures, the invitations whose redeemer is complete, and the queue days past the year they are kept, their entries and relaxations with them.
   autonumber 11
   participant api as The API's nightly run
   participant db as PostgreSQL
   api->>db: end-suspensions. Lift each suspension past its day and settle its account, one account per transaction
   api->>db: pond-counter. Under its lock, count everybody with a home, and move the figures when k people came or went
   api->>db: invitation-count. Count each invitation whose redeemer is complete now, give the inviter and the friend their units, write the notices
-  api->>db: prune-rounds. Delete the rounds of days over 365 days back, their entries and relaxations with them
+  api->>db: prune-queue-days. Delete the queue days of days over 365 days back, their entries and relaxations with them
 ```
 
 ### Steps
@@ -104,7 +104,7 @@ sequenceDiagram
 11. `end-suspensions` (safety, #307, ADR-024 §5): every suspension still open past its day is lifted by nobody, and its account's state settled from the sanctions still open, one account per transaction. A failure is collected while the remaining accounts are still attempted, then reported through the runner. It runs before the counts so that a person let back in is counted the same night. A login on the end day before 04:00 is still refused: a `shortcut:` in `safety/sanctions.ts`.
 12. `pond-counter` (`jobs/`, #54, ADR-013): under its own advisory lock, counts the finished profiles: live, bank-verified accounts with a home that stand as active and have a complete profile, reading nobody's gender (#581). The number moves only when at least k people have come or gone since it was taken, and the bands of whom the finished profiles seek on their own (#507). One row holds what stands (#607). The counter's route serves the number all day, and to the session of somebody with a home the bands, as shares. A database with no figures gets its first ones at boot.
 13. `invitation-count` (rewards, #107, ADR-044 §7, ADR-060 §7): in one transaction, each invitation not counted yet whose redeemer's profile and onboarding are complete now is counted once; its inviter and the friend who used it get the units `matching_config invitation_reward` says tonight, with both people locked first. The inviter gets one notice in the app even of nothing, and the friend one only of a fish (ADR-032). Its line says how many and of what, never who.
-14. `prune-rounds` (matching, #502, ADR-062 §13): the rounds of Finnish days more than 365 days back are deleted, and their entries and relaxations go with them by the cascade. The year covers the longest clock of the queue's ladder, a second pass. Nothing else is done for the round at night: `GET /rounds/today` opens a person's log at their first read of the day and adds the next people as they read (ADR-062 §1), and no push tells of it (ADR-062 §12).
+14. `prune-queue-days` (matching, #502, ADR-062 §13): the queue days of Finnish days more than 365 days back are deleted, and their entries and relaxations go with them by the cascade. The year covers the longest clock of the queue's ladder, a second pass. Nothing else is done for the queue at night: `GET /queue/today` opens a person's log at their first read of the day and adds the next people as they read (ADR-062 §1), and no push tells of it (ADR-062 §12).
 
 ## Part 4: photos, reports and silent conversations
 
@@ -159,10 +159,10 @@ sequenceDiagram
 ## Where it lives
 
 - The timer and the list: `apps/api/src/jobs/nightly.ts` (`msUntilNightly` over `msUntilFinnishHour`, which a push's time to live uses too, `runNightly`, `scheduleNightly`), `apps/api/src/boot.ts` (the jobs, in order), `apps/api/src/index.ts` (`scheduleNightly` at start)
-- The jobs: `apps/api/src/identity/sessions.ts` and `admin-session.ts`; `apps/api/src/safety/sanctions.ts` (`endSuspensions`), `photo-check.ts`, `reports.ts` (`pruneReports`); `apps/api/src/jobs/pond-counter.ts`, `pool.ts`, `invitation-count.ts` with `apps/api/src/rewards/invitations.ts`; `apps/api/src/matching/rounds.ts` (`pruneRounds`); `apps/api/src/media/moderation.ts` (`rejectUnreviewedPhotos`, `sweepPendingPhotos`), `repo.ts` (`prunePhotoAccess`); `apps/api/src/chat/archive.ts`; `apps/api/src/media/erasure.ts` (`sweepOrphanedObjects`).
+- The jobs: `apps/api/src/identity/sessions.ts` and `admin-session.ts`; `apps/api/src/safety/sanctions.ts` (`endSuspensions`), `photo-check.ts`, `reports.ts` (`pruneReports`); `apps/api/src/jobs/pond-counter.ts`, `pool.ts`, `invitation-count.ts` with `apps/api/src/rewards/invitations.ts`; `apps/api/src/matching/queue.ts` (`pruneQueueDays`); `apps/api/src/media/moderation.ts` (`rejectUnreviewedPhotos`, `sweepPendingPhotos`), `repo.ts` (`prunePhotoAccess`); `apps/api/src/chat/archive.ts`; `apps/api/src/media/erasure.ts` (`sweepOrphanedObjects`).
 - The alarm: `infra/modules/observability/main.tf` (the topic, the e-mail subscription, the metric filter `nightly-failures`, the alarm `nightly-job-failed`), `infra/modules/compute/main.tf` and `templates/user_data.sh.tpl` (the log group and the `awslogs` driver), `infra/envs/staging/main.tf` and `infra/envs/prod/main.tf` (each composes it), `docs/runbooks/alerts.md`
 - Specs: `features/identity/erasure.feature` (the sweep), `features/safety/sanctions.feature` (the night lifts a suspension), `features/pond/opening.feature`, `features/pond/counter.feature`, `features/matching/decisions.feature`, `features/media/moderation.feature`, `features/chat/conversations.feature`
-- ADRs: [ADR-007](../adr/007-erasure-and-export.md) (the sweep), [ADR-008](../adr/008-exposure-budget-and-client-address.md) History 16/11/2026 (the fetch log's year), [ADR-006](../adr/006-photo-moderation.md) §2 and §4, [ADR-013](../adr/013-waitlist-counter.md), [ADR-060](../adr/060-no-waiting-at-the-pond.md), [ADR-022](../adr/022-taking-a-break.md) §4, [ADR-024](../adr/024-sanctions.md) §5, [ADR-030](../adr/030-reports-and-blocks.md) §8 and §12, [ADR-031](../adr/031-chat.md) §8, [ADR-032](../adr/032-notification-choices-and-notices.md), [ADR-034](../adr/034-the-round-record.md) §7, [ADR-044](../adr/044-invitations.md) §7, [ADR-062](../adr/062-one-queue.md) §1 and §13
+- ADRs: [ADR-007](../adr/007-erasure-and-export.md) (the sweep), [ADR-008](../adr/008-exposure-budget-and-client-address.md) History 16/11/2026 (the fetch log's year), [ADR-006](../adr/006-photo-moderation.md) §2 and §4, [ADR-013](../adr/013-waitlist-counter.md), [ADR-060](../adr/060-no-waiting-at-the-pond.md), [ADR-022](../adr/022-taking-a-break.md) §4, [ADR-024](../adr/024-sanctions.md) §5, [ADR-030](../adr/030-reports-and-blocks.md) §8 and §12, [ADR-031](../adr/031-chat.md) §8, [ADR-032](../adr/032-notification-choices-and-notices.md), [ADR-034](../adr/034-the-queue-record.md) §7, [ADR-044](../adr/044-invitations.md) §7, [ADR-062](../adr/062-one-queue.md) §1 and §13
 - Issues: #35, #49, #54, #84, #107, #253, #307, #348, #351, #376, #500, #502, #636, #688; the alarm #11
 
 ## Open

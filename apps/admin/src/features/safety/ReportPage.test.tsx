@@ -1022,7 +1022,7 @@ describe("the photo a card's report points at", () => {
     [2, true],
     [3, false],
   ])(
-    "with %i approved photos, the step says the person drops out of every round: %s",
+    "with %i approved photos, the step says the person drops out of every queue: %s",
     async (n, says) => {
       fetchMock([theReport(cardReport(pointed({ approvedPhotos: n })))]);
       show();

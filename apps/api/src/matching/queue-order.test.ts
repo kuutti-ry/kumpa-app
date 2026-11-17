@@ -16,17 +16,17 @@ import {
   hiddenByField,
   likedYouPlaces,
   mayMeet,
+  type QueueCandidate,
+  queueOrder,
   type Return,
-  type RoundCandidate,
-  roundOrder,
-} from "./round-order.ts";
+} from "./queue-order.ts";
 import { softMatches } from "./soft.ts";
 
 // The order of the queue past the likes waiting (#95, #502, ADR-035, ADR-062 §2;
-// features/matching/rounds.feature): the pool both ways, a hidden field, the
+// features/matching/queue.feature): the pool both ways, a hidden field, the
 // nearest band first, then the soft matches, ties in an order of the day's and
 // the owner's, and the four groups people come back in. The builder over a
-// database is jobs/round-builder.test.ts.
+// database is jobs/queue-builder.test.ts.
 
 const DAY = "2026-10-20";
 const FIELDS = PROFILE_FIELDS.field.options;
@@ -37,13 +37,13 @@ const SOFT = PROFILE_FIELD_KEYS.filter(
 const EDGES = { nearby: 5, close: 15, around: 50 };
 /** A home this many kilometres along one line; everybody of these tests lives at 0 unless told. */
 const homeAt = (km: number): PoolHome => ({ x: km * 1000, y: 0, edges: EDGES });
-const livingAt = <T extends RoundCandidate>(candidate: T, km: number): T => ({
+const livingAt = <T extends QueueCandidate>(candidate: T, km: number): T => ({
   ...candidate,
   person: { ...candidate.person, home: homeAt(km) },
 });
 
 /** A woman of 30 who seeks men of 25 to 40, open to either, with these answers. */
-const woman = (id: string, fields: ProfileFields = {}): RoundCandidate => ({
+const woman = (id: string, fields: ProfileFields = {}): QueueCandidate => ({
   id,
   person: {
     gender: "woman",
@@ -60,12 +60,12 @@ const woman = (id: string, fields: ProfileFields = {}): RoundCandidate => ({
 });
 
 /** A man of 30 who seeks women of 25 to 40: in the pool of every `woman`. */
-const man = (id: string, fields: ProfileFields = {}): RoundCandidate => {
+const man = (id: string, fields: ProfileFields = {}): QueueCandidate => {
   const her = woman(id, fields);
   return { id, person: { ...her.person, gender: "man", seeks: ["woman"] } };
 };
 
-const ids = (round: readonly RoundCandidate[]) => round.map((candidate) => candidate.id);
+const ids = (picked: readonly QueueCandidate[]) => picked.map((candidate) => candidate.id);
 
 describe("the order of new people", () => {
   const owner = woman("owner", { education: "amk", drinking: "rarely", drugsAttitude: "never" });
@@ -77,8 +77,8 @@ describe("the order of new people", () => {
   it("Within a band the most soft matches come first", () => {
     expect(softMatches(owner.person.fields, two.person.fields)).toBe(2);
     expect(softMatches(owner.person.fields, one.person.fields)).toBe(1);
-    expect(ids(roundOrder(owner, [none, one, two], { day: DAY, size: 2 }))).toEqual(["two", "one"]);
-    expect(ids(roundOrder(owner, [none, one, two], { day: DAY, size: 10 }))).toEqual([
+    expect(ids(queueOrder(owner, [none, one, two], { day: DAY, size: 2 }))).toEqual(["two", "one"]);
+    expect(ids(queueOrder(owner, [none, one, two], { day: DAY, size: 10 }))).toEqual([
       "two",
       "one",
       "none",
@@ -86,20 +86,20 @@ describe("the order of new people", () => {
   });
 
   it("is empty for a size of nothing, or below it", () => {
-    expect(roundOrder(owner, [two, one], { day: DAY, size: 0 })).toEqual([]);
-    expect(roundOrder(owner, [two, one], { day: DAY, size: -1 })).toEqual([]);
+    expect(queueOrder(owner, [two, one], { day: DAY, size: 0 })).toEqual([]);
+    expect(queueOrder(owner, [two, one], { day: DAY, size: -1 })).toEqual([]);
   });
 
   it("never holds the owner, nor anybody out of their pool", () => {
     const sameGender = woman("same");
     const tooOld = { ...man("old"), person: { ...man("old").person, age: 50 } };
     expect(
-      ids(roundOrder(owner, [owner, sameGender, tooOld, one], { day: DAY, size: 10 })),
+      ids(queueOrder(owner, [owner, sameGender, tooOld, one], { day: DAY, size: 10 })),
     ).toEqual(["one"]);
   });
 
   it("is empty when nobody is in the pool", () => {
-    expect(roundOrder(owner, [], { day: DAY, size: 10 })).toEqual([]);
+    expect(queueOrder(owner, [], { day: DAY, size: 10 })).toEqual([]);
   });
 });
 
@@ -123,7 +123,7 @@ describe("the nearest band (ADR-061 §6)", () => {
     const d = livingAt(similar("d", 2), 10);
     const e = livingAt(similar("e", 0), 1);
     expect(softMatches(owner.person.fields, b.person.fields)).toBe(3);
-    expect(ids(roundOrder(owner, [b, c, d, e], { day: DAY, size: 10 }))).toEqual([
+    expect(ids(queueOrder(owner, [b, c, d, e], { day: DAY, size: 10 }))).toEqual([
       "e",
       "d",
       "c",
@@ -131,10 +131,10 @@ describe("the nearest band (ADR-061 §6)", () => {
     ]);
     // Level on both, two stand in an order of the day's and the owner's: the same when asked again.
     const level = [livingAt(similar("x", 1), 10), livingAt(similar("y", 1), 12)];
-    const today = ids(roundOrder(owner, level, { day: DAY, size: 2 }));
-    expect(ids(roundOrder(owner, [...level].reverse(), { day: DAY, size: 2 }))).toEqual(today);
+    const today = ids(queueOrder(owner, level, { day: DAY, size: 2 }));
+    expect(ids(queueOrder(owner, [...level].reverse(), { day: DAY, size: 2 }))).toEqual(today);
     const orders = ["2026-10-20", "2026-10-21", "2026-10-22", "2026-10-23", "2026-10-24"].map(
-      (day) => ids(roundOrder(owner, level, { day, size: 2 })).join(),
+      (day) => ids(queueOrder(owner, level, { day, size: 2 })).join(),
     );
     expect(new Set(orders).size).toBe(2);
   });
@@ -144,7 +144,7 @@ describe("the nearest band (ADR-061 §6)", () => {
     const close = livingAt(similar("close", 1), 6);
     const around = livingAt(similar("around", 2), 20);
     const far = livingAt(similar("far", 3), 60);
-    expect(ids(roundOrder(owner, [far, around, close, near], { day: DAY, size: 3 }))).toEqual([
+    expect(ids(queueOrder(owner, [far, around, close, near], { day: DAY, size: 3 }))).toEqual([
       "near",
       "close",
       "around",
@@ -153,14 +153,14 @@ describe("the nearest band (ADR-061 §6)", () => {
 
   it("reads the band from the owner's home, whoever the candidates are near", () => {
     const candidates = [livingAt(man("a"), 0), livingAt(man("b"), 200)];
-    expect(ids(roundOrder(livingAt(owner, 195), candidates, { day: DAY, size: 2 }))).toEqual([
+    expect(ids(queueOrder(livingAt(owner, 195), candidates, { day: DAY, size: 2 }))).toEqual([
       "b",
       "a",
     ]);
   });
 
   it("is told by the edges the home carries, whatever order they stand in", () => {
-    const shifted = (candidate: RoundCandidate, km: number): RoundCandidate => ({
+    const shifted = (candidate: QueueCandidate, km: number): QueueCandidate => ({
       ...candidate,
       person: {
         ...candidate.person,
@@ -171,7 +171,7 @@ describe("the nearest band (ADR-061 §6)", () => {
     expect(bandBetween(here.person.home, shifted(man("a"), 4).person.home)).toBe("far");
     expect(
       ids(
-        roundOrder(here, [shifted(man("a"), 4), shifted(man("b"), 0.5)], {
+        queueOrder(here, [shifted(man("a"), 4), shifted(man("b"), 0.5)], {
           day: DAY,
           size: 2,
         }),
@@ -185,7 +185,7 @@ describe("the nearest band (ADR-061 §6)", () => {
     const far = livingAt(man("far"), 900);
     const near = livingAt(man("near"), 0);
     expect(ids(likedYouPlaces(owner, [far, near]))).toEqual(["far", "near"]);
-    const back = (candidate: RoundCandidate, lastShown: string): ComingBack => ({
+    const back = (candidate: QueueCandidate, lastShown: string): ComingBack => ({
       ...candidate,
       lastShown,
       from: "skipped",
@@ -233,16 +233,16 @@ describe("ties between equal counts", () => {
   const owner = woman("owner");
   const others = Array.from({ length: 12 }, (_, i) => man(`m${i}`));
 
-  it("are in the same order whenever the day's round is built, whatever order the people come in", () => {
-    const once = ids(roundOrder(owner, others, { day: DAY, size: 12 }));
-    expect(ids(roundOrder(owner, [...others].reverse(), { day: DAY, size: 12 }))).toEqual(once);
+  it("are in the same order whenever the day's queue is built, whatever order the people come in", () => {
+    const once = ids(queueOrder(owner, others, { day: DAY, size: 12 }));
+    expect(ids(queueOrder(owner, [...others].reverse(), { day: DAY, size: 12 }))).toEqual(once);
     expect(new Set(once)).toEqual(new Set(ids(others)));
   });
 
   it("are in another order on another day, and for another owner", () => {
-    const today = ids(roundOrder(owner, others, { day: DAY, size: 12 }));
-    expect(ids(roundOrder(owner, others, { day: "2026-10-21", size: 12 }))).not.toEqual(today);
-    expect(ids(roundOrder(woman("another"), others, { day: DAY, size: 12 }))).not.toEqual(today);
+    const today = ids(queueOrder(owner, others, { day: DAY, size: 12 }));
+    expect(ids(queueOrder(owner, others, { day: "2026-10-21", size: 12 }))).not.toEqual(today);
+    expect(ids(queueOrder(woman("another"), others, { day: DAY, size: 12 }))).not.toEqual(today);
   });
 
   it("never put fewer matches ahead of more", () => {
@@ -250,7 +250,7 @@ describe("ties between equal counts", () => {
     const similar = man("similar", { education: "kandi" });
     // Among twelve equal ones, the one similar person is first whatever the day.
     for (const day of ["2026-10-20", "2026-10-21", "2026-12-24"]) {
-      expect(ids(roundOrder(owner, [...others, similar], { day, size: 3 }))[0]).toBe("similar");
+      expect(ids(queueOrder(owner, [...others, similar], { day, size: 3 }))[0]).toBe("similar");
     }
   });
 });
@@ -293,15 +293,15 @@ describe("A person who hides from their own field never meets it, asked from eit
       const kept = apart === "kept";
       expect(hiddenByField(a.person.fields, b.person.fields)).toBe(kept);
       expect(hiddenByField(b.person.fields, a.person.fields)).toBe(kept);
-      // And so the round: nobody's round holds the other while they are kept apart.
-      expect(ids(roundOrder(a, [b], { day: DAY, size: 10 }))).toEqual(kept ? [] : ["b"]);
-      expect(ids(roundOrder(b, [a], { day: DAY, size: 10 }))).toEqual(kept ? [] : ["a"]);
+      // And so the queue: nobody's queue holds the other while they are kept apart.
+      expect(ids(queueOrder(a, [b], { day: DAY, size: 10 }))).toEqual(kept ? [] : ["b"]);
+      expect(ids(queueOrder(b, [a], { day: DAY, size: 10 }))).toEqual(kept ? [] : ["a"]);
     },
   );
 });
 
 // Any people at all: genders, seeks, ages, intents, soft answers and fields drawn.
-const personArb = (id: string): fc.Arbitrary<RoundCandidate> =>
+const personArb = (id: string): fc.Arbitrary<QueueCandidate> =>
   fc
     .record({
       gender: fc.constantFrom(...GENDERS),
@@ -358,10 +358,10 @@ describe("the order, for any people", () => {
         crowdArb,
         fc.integer({ min: 0, max: 15 }),
         (owner, crowd, size) => {
-          const round = roundOrder(owner, [owner, ...crowd], { day: DAY, size });
-          expect(round.length).toBeLessThanOrEqual(size);
-          expect(new Set(ids(round)).size).toBe(round.length);
-          for (const candidate of round) {
+          const picked = queueOrder(owner, [owner, ...crowd], { day: DAY, size });
+          expect(picked.length).toBeLessThanOrEqual(size);
+          expect(new Set(ids(picked)).size).toBe(picked.length);
+          for (const candidate of picked) {
             expect(candidate.id).not.toBe(owner.id);
             expect(inEachOthersPool(owner.person, candidate.person)).toBe(true);
             expect(inEachOthersPool(candidate.person, owner.person)).toBe(true);
@@ -379,18 +379,18 @@ describe("the order, for any people", () => {
         crowdArb,
         fc.integer({ min: 0, max: 15 }),
         (owner, crowd, size) => {
-          const round = roundOrder(owner, crowd, { day: DAY, size });
+          const picked = queueOrder(owner, crowd, { day: DAY, size });
           const may = crowd.filter(
             (other) =>
               inEachOthersPool(owner.person, other.person) &&
               !hiddenByField(owner.person.fields, other.person.fields),
           );
-          expect(round.length).toBe(Math.min(size, may.length));
-          const counts = round.map((c) => softMatches(owner.person.fields, c.person.fields));
+          expect(picked.length).toBe(Math.min(size, may.length));
+          const counts = picked.map((c) => softMatches(owner.person.fields, c.person.fields));
           // The most soft matches first, and nobody left out who has more than the last one taken.
           expect([...counts].sort((x, y) => y - x)).toEqual(counts);
           const last = counts.at(-1) ?? Number.POSITIVE_INFINITY;
-          const taken = new Set(ids(round));
+          const taken = new Set(ids(picked));
           for (const other of may) {
             if (taken.has(other.id)) continue;
             expect(softMatches(owner.person.fields, other.person.fields)).toBeLessThanOrEqual(last);
@@ -427,8 +427,8 @@ describe("the order, for any people", () => {
   it("is the same whatever order the people come in", () => {
     fc.assert(
       fc.property(personArb("owner"), crowdArb, (owner, crowd) => {
-        const once = ids(roundOrder(owner, crowd, { day: DAY, size: 10 }));
-        expect(ids(roundOrder(owner, [...crowd].reverse(), { day: DAY, size: 10 }))).toEqual(once);
+        const once = ids(queueOrder(owner, crowd, { day: DAY, size: 10 }));
+        expect(ids(queueOrder(owner, [...crowd].reverse(), { day: DAY, size: 10 }))).toEqual(once);
       }),
     );
   });
@@ -436,7 +436,7 @@ describe("the order, for any people", () => {
 
 describe("the order, for any homes (ADR-061 §6)", () => {
   /** The band's place in the order and the soft count, nearest and most first. */
-  const standing = (owner: RoundCandidate, candidate: RoundCandidate) =>
+  const standing = (owner: QueueCandidate, candidate: QueueCandidate) =>
     [
       ["nearby", "close", "around", "far"].indexOf(
         bandBetween(owner.person.home, candidate.person.home),
@@ -452,9 +452,9 @@ describe("the order, for any homes (ADR-061 §6)", () => {
         fc.array(fc.integer({ min: 0, max: 80 }), { minLength: 30, maxLength: 30 }),
         (owner, crowd, kms) => {
           const placed = crowd.map((candidate, i) => livingAt(candidate, kms[i] ?? 0));
-          const round = roundOrder(owner, placed, { day: DAY, size: 30 });
-          for (const [i, candidate] of round.entries()) {
-            const next = round[i + 1];
+          const picked = queueOrder(owner, placed, { day: DAY, size: 30 });
+          for (const [i, candidate] of picked.entries()) {
+            const next = picked[i + 1];
             if (!next) break;
             const [band, count] = standing(owner, candidate);
             const [nextBand, nextCount] = standing(owner, next);

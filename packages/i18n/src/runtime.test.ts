@@ -248,8 +248,8 @@ describe("Stadi", () => {
   const stadi = tIn("fi-x-stadi");
 
   it("speaks slang where a key has a slangi text", () => {
-    expect(stadi("round.like")).toBe("Digaan");
-    expect(tIn("fi")("round.like")).toBe("Tykkää");
+    expect(stadi("queue.like")).toBe("Digaan");
+    expect(tIn("fi")("queue.like")).toBe("Tykkää");
   });
 
   it.each([["load.retry"], ["legal.terms.title"], ["push.match"]] as const)(
@@ -279,7 +279,7 @@ describe("Stadi", () => {
 
   it("is the same for a t fixed to it on an instance in another language (the API's)", () => {
     const fixed = typedT(createI18n({ locale: "en" }), "fi-x-stadi");
-    expect(fixed("round.like")).toBe("Digaan");
+    expect(fixed("queue.like")).toBe("Digaan");
     expect(fixed("load.retry")).toBe("Yritä uudelleen");
   });
 

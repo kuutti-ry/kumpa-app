@@ -6,13 +6,13 @@ import {
   ErrorResponse,
   type ProfileFields,
   QUEUE_PAGE,
-  RoundDecisionAnswer,
-  RoundResponse,
+  QueueDecisionAnswer,
+  QueueResponse,
 } from "@kuutti/schema";
 import { type App, createApp } from "../app.ts";
 import { eraseAccount } from "../identity/index.ts";
 import { addDays, finnishDay } from "../lib/finnish-day.ts";
-import { exportRounds, inEachOthersPool, pruneRounds } from "../matching/index.ts";
+import { exportQueue, inEachOthersPool, pruneQueueDays } from "../matching/index.ts";
 import { openMatchingHere, signInAs, withMatchingConfig } from "../test/account.ts";
 import { cardShown } from "../test/cards.ts";
 import { conversationBetween, interleaved } from "../test/chat.ts";
@@ -25,18 +25,18 @@ import {
   testConfig,
 } from "../test/harness.ts";
 import { HOME, HOMES, type PeopleOptions, people } from "../test/people.ts";
+import { endedConversation, logged, shownAt } from "../test/queue.ts";
 import { pidOf, waitsFor, watched, withTwoConnections } from "../test/races.ts";
-import { endedConversation, logged, shownAt } from "../test/rounds.ts";
 import { subjectsOfPond } from "./pool.ts";
-import { fillQueue, fitsNow } from "./round-builder.ts";
+import { fillQueue, fitsNow } from "./queue-builder.ts";
 
 // The queue's builder (#95, #502, ADR-035, ADR-062,
-// features/matching/rounds.feature): who has a queue and whom it holds, a page at
+// features/matching/queue.feature): who has a queue and whom it holds, a page at
 // a time from the day's first read, the ladder of clocks, a conversation, the
 // likes waiting, the inbox stop, the filters on every read, a block and a
 // deal-breaker across the pond, and the whole synthetic population. The order's
-// rule alone is matching/round-order.test.ts, and a card's decision
-// matching/rounds.test.ts.
+// rule alone is matching/queue-order.test.ts, and a card's decision
+// matching/queue.test.ts.
 
 /** Noon in Helsinki, 2026-10-20: nothing here runs at night. */
 const NOON = new Date("2026-10-20T09:00:00.000Z");
@@ -73,11 +73,11 @@ async function pondOf(ctx: TestContext, women: number, men: number) {
 
 type Card = { candidate_id: string; reason: string };
 
-/** The cards of a person's round on a day, in order; null when they have no round. */
-async function roundOf(db: Queryable, accountId: string, day = DAY): Promise<Card[] | null> {
+/** The cards of a person's queue on a day, in order; null when they have no queue. */
+async function queueDayOf(db: Queryable, accountId: string, day = DAY): Promise<Card[] | null> {
   const { rows } = await db.query<{ candidate_id: string | null; reason: string | null }>(
-    `SELECT e.candidate_id, e.reason FROM rounds r
-       LEFT JOIN round_entries e ON e.round_id = r.id
+    `SELECT e.candidate_id, e.reason FROM queue_day r
+       LEFT JOIN queue_entry e ON e.queue_day_id = r.id
       WHERE r.account_id = $1 AND r.day = $2 ORDER BY e.position`,
     [accountId, day],
   );
@@ -87,7 +87,7 @@ async function roundOf(db: Queryable, accountId: string, day = DAY): Promise<Car
   );
 }
 
-const candidates = (round: Card[] | null) => (round ?? []).map((card) => card.candidate_id);
+const candidates = (picked: Card[] | null) => (picked ?? []).map((card) => card.candidate_id);
 
 const daysAgo = (days: number) => new Date(NOON.getTime() - days * DAY_MS);
 const daysOn = (days: number) => new Date(NOON.getTime() + days * DAY_MS);
@@ -107,11 +107,11 @@ async function appAt(db: Queryable, now: Date = NOON): Promise<App> {
   return createApp({ config: testConfig(), logger, db, now: () => now });
 }
 
-async function readToday(app: App, db: Queryable, accountId: string): Promise<RoundResponse> {
+async function readToday(app: App, db: Queryable, accountId: string): Promise<QueueResponse> {
   const who = await signInAs(db, accountId);
-  const answer = await app.request("/rounds/today", { headers: who.headers });
+  const answer = await app.request("/queue/today", { headers: who.headers });
   expect(answer.status).toBe(200);
-  return RoundResponse.parse(await answer.json());
+  return QueueResponse.parse(await answer.json());
 }
 
 async function decideAs(
@@ -123,7 +123,7 @@ async function decideAs(
   day = DAY,
 ) {
   const who = await signInAs(db, accountId);
-  return app.request(`/rounds/${day}/entries/${position}/decision`, {
+  return app.request(`/queue/${day}/entries/${position}/decision`, {
     method: "PUT",
     headers: { ...who.headers, "content-type": "application/json" },
     body: JSON.stringify({ decision }),
@@ -131,13 +131,13 @@ async function decideAs(
 }
 
 /** Every card the read gave, passed. */
-async function passAll(app: App, db: Queryable, accountId: string, read: RoundResponse) {
+async function passAll(app: App, db: Queryable, accountId: string, read: QueueResponse) {
   for (const entry of read.entries ?? []) {
     expect((await decideAs(app, db, accountId, entry.position, "pass", read.day)).status).toBe(200);
   }
 }
 
-const accountsOf = (read: RoundResponse) => read.entries?.map((entry) => entry.card.accountId);
+const accountsOf = (read: QueueResponse) => read.entries?.map((entry) => entry.card.accountId);
 
 /** A block through the route, as a person sets one from a card they were shown. */
 async function blocks(app: App, db: Queryable, blocker: string, blocked: string) {
@@ -158,22 +158,22 @@ describe("who has a queue", () => {
     const { women, men } = await pondOf(ctx, 1, 12);
     const [a] = women;
     if (!a) throw new Error("people not written");
-    expect(await roundOf(ctx.client, a)).toBeNull();
+    expect(await queueDayOf(ctx.client, a)).toBeNull();
 
     const first = await readToday(await appAt(ctx.client), ctx.client, a);
 
     expect(first.day).toBe(DAY);
     expect(first.entries?.map((entry) => entry.position)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
-    const log = await roundOf(ctx.client, a);
+    const log = await queueDayOf(ctx.client, a);
     expect(candidates(log)).toEqual(accountsOf(first));
     expect(new Set(candidates(log)).size).toBe(QUEUE_PAGE);
     for (const card of log ?? []) expect(men).toContain(card.candidate_id);
     expect(new Set(log?.map((card) => card.reason))).toEqual(new Set(["matches_filters"]));
-    const { rows } = await ctx.client.query<{ opened_at: Date | null; built_at: Date }>(
-      "SELECT opened_at, built_at FROM rounds WHERE account_id = $1",
+    const { rows } = await ctx.client.query<{ started_at: Date }>(
+      "SELECT started_at FROM queue_day WHERE account_id = $1",
       [a],
     );
-    expect(rows).toEqual([{ opened_at: NOON, built_at: NOON }]);
+    expect(rows).toEqual([{ started_at: NOON }]);
   });
 
   test("Only somebody complete in an open pond opens a day", async ({ ctx }) => {
@@ -184,14 +184,14 @@ describe("who has a queue", () => {
 
     // Before the switch is on, somebody complete with people in their pool opens no day.
     expect(await fill(ctx.client, c)).toBe(false);
-    expect(await roundOf(ctx.client, c)).toBeNull();
+    expect(await queueDayOf(ctx.client, c)).toBeNull();
 
     await openMatchingHere(ctx.client);
     expect(await fill(ctx.client, a)).toBe(true);
     expect(await fill(ctx.client, b)).toBe(false);
 
-    expect(candidates(await roundOf(ctx.client, a)).sort()).toEqual([...men].sort());
-    expect(await roundOf(ctx.client, b)).toBeNull();
+    expect(candidates(await queueDayOf(ctx.client, a)).sort()).toEqual([...men].sort());
+    expect(await queueDayOf(ctx.client, b)).toBeNull();
   });
 
   test("Somebody hidden from others, or not complete, is nobody's card", async ({ ctx }) => {
@@ -206,12 +206,12 @@ describe("who has a queue", () => {
 
     await fillAll(ctx.client, [a, b]);
 
-    const round = candidates(await roundOf(ctx.client, a));
-    expect(round).toHaveLength(1);
-    expect(round).not.toContain(b);
-    expect(round).not.toContain(c);
+    const picked = candidates(await queueDayOf(ctx.client, a));
+    expect(picked).toHaveLength(1);
+    expect(picked).not.toContain(b);
+    expect(picked).not.toContain(c);
     // B, shadow-banned, still has a queue of their own: the ban shows them nothing different.
-    expect(candidates(await roundOf(ctx.client, b))).toEqual([a]);
+    expect(candidates(await queueDayOf(ctx.client, b))).toEqual([a]);
   });
 
   test("Nobody to show makes an empty queue, never a filler", async ({ ctx }) => {
@@ -224,10 +224,10 @@ describe("who has a queue", () => {
     const read = await readToday(await appAt(ctx.client), ctx.client, a);
 
     expect(read.entries).toEqual([]);
-    expect(await roundOf(ctx.client, a)).toEqual([]);
+    expect(await queueDayOf(ctx.client, a)).toEqual([]);
   });
 
-  test("A person whose matching has not opened reads no round", async ({ ctx }) => {
+  test("A person whose matching has not opened reads no queue", async ({ ctx }) => {
     const [a] = await people(ctx.client, 1, WOMEN);
     await people(ctx.client, 2, MEN);
     if (!a) throw new Error("people not written");
@@ -241,7 +241,7 @@ describe("who has a queue", () => {
       likesLeft: 10,
       yourTurn: 0,
     });
-    expect(await roundOf(ctx.client, a)).toBeNull();
+    expect(await queueDayOf(ctx.client, a)).toBeNull();
   });
 
   test("in production a read fills the queue as anywhere, the switch being what holds it (ADR-062 §13)", async ({
@@ -258,7 +258,7 @@ describe("who has a queue", () => {
       now: () => NOON,
     });
     expect(accountsOf(await readToday(app, ctx.client, a))).toEqual(men);
-    expect(candidates(await roundOf(ctx.client, a))).toEqual(men);
+    expect(candidates(await queueDayOf(ctx.client, a))).toEqual(men);
   });
 
   test("somebody erased or paused opens no day, and adding to a day already open adds what is left", async ({
@@ -271,12 +271,12 @@ describe("who has a queue", () => {
     expect(await fill(ctx.client, a)).toBe(true);
     // Asked again, with nobody left: nothing is written.
     expect(await fill(ctx.client, a)).toBe(false);
-    const { rows } = await ctx.client.query("SELECT 1 FROM rounds WHERE account_id = $1", [a]);
+    const { rows } = await ctx.client.query("SELECT 1 FROM queue_day WHERE account_id = $1", [a]);
     expect(rows).toHaveLength(1);
     await ctx.client.query("UPDATE account SET state = 'paused' WHERE id = $1", [paused]);
     expect(await fill(ctx.client, paused)).toBe(false);
     expect(await fill(ctx.client, "00000000-0000-4000-8000-000000000000")).toBe(false);
-    expect(candidates(await roundOf(ctx.client, a))).toEqual([b]);
+    expect(candidates(await queueDayOf(ctx.client, a))).toEqual([b]);
   });
 
   test("nobody's day opens whose profile is no longer complete, and the pond is never read for them", async ({
@@ -298,7 +298,7 @@ describe("who has a queue", () => {
       asked.some((text) => /SELECT id FROM account\s+WHERE home_place IS NOT NULL/.test(text));
     expect(await fillQueue({ ...(await deps(ctx.client)), db }, a)).toBe(false);
     expect(readsThePond()).toBe(false);
-    expect(await roundOf(ctx.client, a)).toBeNull();
+    expect(await queueDayOf(ctx.client, a)).toBeNull();
     // And for somebody complete it is read: the statement above is the one the walk makes.
     expect(await fillQueue({ ...(await deps(ctx.client)), db }, whole)).toBe(true);
     expect(readsThePond()).toBe(true);
@@ -319,7 +319,7 @@ describe("a page at a time (ADR-062 §1)", () => {
     const again = await readToday(app, ctx.client, a);
 
     expect(again.entries?.map((entry) => entry.position)).toEqual([left.position]);
-    expect(await roundOf(ctx.client, a)).toHaveLength(QUEUE_PAGE);
+    expect(await queueDayOf(ctx.client, a)).toHaveLength(QUEUE_PAGE);
   });
 
   test("The eleventh person comes once ten are decided", async ({ ctx }) => {
@@ -373,7 +373,7 @@ describe("a page at a time (ADR-062 §1)", () => {
       await second.query("COMMIT");
 
       const { rows } = await pool.query<{ position: number; candidate_id: string }>(
-        `SELECT e.position, e.candidate_id FROM round_entries e JOIN rounds r ON r.id = e.round_id
+        `SELECT e.position, e.candidate_id FROM queue_entry e JOIN queue_day r ON r.id = e.queue_day_id
           WHERE r.account_id = $1 ORDER BY e.position`,
         [a],
       );
@@ -390,8 +390,8 @@ describe("a page at a time (ADR-062 §1)", () => {
       if (!a) throw new Error("people not written");
       await fill(pool, a);
       await pool.query(
-        `UPDATE round_entries SET decision = 'pass', decided_at = now()
-          WHERE round_id = (SELECT id FROM rounds WHERE account_id = $1)`,
+        `UPDATE queue_entry SET decision = 'pass', decided_at = now()
+          WHERE queue_day_id = (SELECT id FROM queue_day WHERE account_id = $1)`,
         [a],
       );
       const firstPid = await pidOf(first);
@@ -407,7 +407,7 @@ describe("a page at a time (ADR-062 §1)", () => {
 
       const { rows } = await pool.query<{ last_position: number; n: number; people: number }>(
         `SELECT r.last_position, count(*)::int AS n, count(DISTINCT e.candidate_id)::int AS people
-           FROM rounds r JOIN round_entries e ON e.round_id = r.id
+           FROM queue_day r JOIN queue_entry e ON e.queue_day_id = r.id
           WHERE r.account_id = $1 GROUP BY r.last_position`,
         [a],
       );
@@ -423,19 +423,19 @@ describe("a page at a time (ADR-062 §1)", () => {
     if (!a) throw new Error("people not written");
     const who = await signInAs(ctx.client, a);
     // Both reads pass every look; the other writes first, and this one's places find it done.
-    const db = interleaved(ctx.client, /INSERT INTO rounds/, () => fill(ctx.client, a));
+    const db = interleaved(ctx.client, /INSERT INTO queue_day/, () => fill(ctx.client, a));
     const { logger } = await captureLogger();
     const app = createApp({ config: testConfig(), logger, db, now: () => NOON });
 
-    const answer = await app.request("/rounds/today", { headers: who.headers });
+    const answer = await app.request("/queue/today", { headers: who.headers });
 
     expect(db.ran()).toBe(true);
     expect(answer.status).toBe(200);
-    expect(accountsOf(RoundResponse.parse(await answer.json()))).toEqual(men);
+    expect(accountsOf(QueueResponse.parse(await answer.json()))).toEqual(men);
     expect(
-      (await ctx.client.query("SELECT 1 FROM rounds WHERE account_id = $1", [a])).rows,
+      (await ctx.client.query("SELECT 1 FROM queue_day WHERE account_id = $1", [a])).rows,
     ).toHaveLength(1);
-    expect(candidates(await roundOf(ctx.client, a))).toEqual(men);
+    expect(candidates(await queueDayOf(ctx.client, a))).toEqual(men);
   });
 
   test("the first read after midnight opens the new day", async ({ ctx }) => {
@@ -448,7 +448,7 @@ describe("a page at a time (ADR-062 §1)", () => {
     expect((await readToday(await appAt(ctx.client, early), ctx.client, a)).entries).toHaveLength(
       1,
     );
-    expect(await roundOf(ctx.client, a)).toHaveLength(1);
+    expect(await queueDayOf(ctx.client, a)).toHaveLength(1);
   });
 
   test("a person paused while their read walks the pool opens no day", async ({ ctx }) => {
@@ -457,14 +457,14 @@ describe("a page at a time (ADR-062 §1)", () => {
     if (!a) throw new Error("people not written");
     const db = interleaved(
       ctx.client,
-      /INSERT INTO rounds|state IN \('active', 'shadow_banned'\) FOR SHARE/,
+      /INSERT INTO queue_day|state IN \('active', 'shadow_banned'\) FOR SHARE/,
       () => ctx.client.query("UPDATE account SET state = 'paused' WHERE id = $1", [a]),
     );
 
     expect(await fillQueue({ ...(await deps(ctx.client)), db }, a)).toBe(false);
 
     expect(db.ran()).toBe(true);
-    expect(await roundOf(ctx.client, a)).toBeNull();
+    expect(await queueDayOf(ctx.client, a)).toBeNull();
   });
 
   test("a card that cannot be served makes a read go on to the next people", async ({ ctx }) => {
@@ -480,7 +480,7 @@ describe("a page at a time (ADR-062 §1)", () => {
 
     expect(accountsOf(read)).toEqual([c]);
     expect(read.entries?.map((entry) => entry.position)).toEqual([2]);
-    expect(candidates(await roundOf(ctx.client, a))).toEqual([b, c]);
+    expect(candidates(await queueDayOf(ctx.client, a))).toEqual([b, c]);
   });
 });
 
@@ -505,7 +505,7 @@ describe("whom the queue holds", () => {
 
     await fill(ctx.client, a);
 
-    expect(await roundOf(ctx.client, a)).toEqual([
+    expect(await queueDayOf(ctx.client, a)).toEqual([
       { candidate_id: two, reason: "matches_filters" },
       { candidate_id: one, reason: "matches_filters" },
       { candidate_id: none, reason: "matches_filters" },
@@ -547,7 +547,7 @@ describe("whom the queue holds", () => {
 
       await fill(ctx.client, a);
 
-      expect(await roundOf(ctx.client, a)).toEqual(
+      expect(await queueDayOf(ctx.client, a)).toEqual(
         outcome.startsWith("in") ? [{ candidate_id: b, reason: "seen_before" }] : [],
       );
     });
@@ -578,10 +578,10 @@ describe("whom the queue holds", () => {
       await fillAll(ctx.client, [a, b]);
 
       const back = outcome.startsWith("in");
-      expect(await roundOf(ctx.client, a)).toEqual(
+      expect(await queueDayOf(ctx.client, a)).toEqual(
         back ? [{ candidate_id: b, reason: "seen_before" }] : [],
       );
-      expect(await roundOf(ctx.client, b)).toEqual(
+      expect(await queueDayOf(ctx.client, b)).toEqual(
         back ? [{ candidate_id: a, reason: "seen_before" }] : [],
       );
     });
@@ -599,7 +599,7 @@ describe("whom the queue holds", () => {
 
     await fill(ctx.client, a);
 
-    expect(await roundOf(ctx.client, a)).toEqual([]);
+    expect(await queueDayOf(ctx.client, a)).toEqual([]);
   });
 
   test("Two people with a conversation between them are never each other's cards", async ({
@@ -613,8 +613,8 @@ describe("whom the queue holds", () => {
 
     await fillAll(ctx.client, [a, b]);
 
-    expect(candidates(await roundOf(ctx.client, a))).toEqual([other]);
-    expect(candidates(await roundOf(ctx.client, b))).toEqual([]);
+    expect(candidates(await queueDayOf(ctx.client, a))).toEqual([other]);
+    expect(candidates(await queueDayOf(ctx.client, b))).toEqual([]);
   });
 
   test("A block never runs out", async ({ ctx }) => {
@@ -627,11 +627,11 @@ describe("whom the queue holds", () => {
 
     await fillAll(ctx.client, [a, b]);
 
-    expect(candidates(await roundOf(ctx.client, a))).toEqual([other]);
-    expect(candidates(await roundOf(ctx.client, b))).toEqual([]);
+    expect(candidates(await queueDayOf(ctx.client, a))).toEqual([other]);
+    expect(candidates(await queueDayOf(ctx.client, b))).toEqual([]);
   });
 
-  test("a person who hides from their own field is in no round of somebody of it, nor they in hers", async ({
+  test("a person who hides from their own field is in no queue of somebody of it, nor they in hers", async ({
     ctx,
   }) => {
     const [a] = await people(ctx.client, 1, {
@@ -645,8 +645,8 @@ describe("whom the queue holds", () => {
 
     await fillAll(ctx.client, [a, same]);
 
-    expect(candidates(await roundOf(ctx.client, a))).toEqual([apart]);
-    expect(candidates(await roundOf(ctx.client, same))).toEqual([]);
+    expect(candidates(await queueDayOf(ctx.client, a))).toEqual([apart]);
+    expect(candidates(await queueDayOf(ctx.client, same))).toEqual([]);
   });
 });
 
@@ -662,7 +662,9 @@ describe("what seen means (ADR-062 §2)", () => {
 
     await fill(ctx.client, a);
 
-    expect(await roundOf(ctx.client, a)).toEqual([{ candidate_id: b, reason: "matches_filters" }]);
+    expect(await queueDayOf(ctx.client, a)).toEqual([
+      { candidate_id: b, reason: "matches_filters" },
+    ]);
   });
 
   test("a decision needs no seen report: seen means displayed or decided", async ({ ctx }) => {
@@ -675,7 +677,7 @@ describe("what seen means (ADR-062 §2)", () => {
 
     await fill(ctx.client, a);
 
-    expect(await roundOf(ctx.client, a)).toEqual([
+    expect(await queueDayOf(ctx.client, a)).toEqual([
       { candidate_id: skipped, reason: "seen_before" },
     ]);
   });
@@ -691,7 +693,7 @@ describe("what seen means (ADR-062 §2)", () => {
     const [shown, onlyServed] = accountsOf(read) ?? [];
     if (!shown || !onlyServed || men.length !== 2) throw new Error("no cards");
     const who = await signInAs(ctx.client, a);
-    const seen = await app.request(`/rounds/${DAY}/entries/1/seen`, {
+    const seen = await app.request(`/queue/${DAY}/entries/1/seen`, {
       method: "POST",
       headers: who.headers,
     });
@@ -700,7 +702,7 @@ describe("what seen means (ADR-062 §2)", () => {
     await fill(ctx.client, a, NEXT_NOON);
 
     // Served and never reported is new again, and new comes first.
-    expect(await roundOf(ctx.client, a, NEXT_DAY)).toEqual([
+    expect(await queueDayOf(ctx.client, a, NEXT_DAY)).toEqual([
       { candidate_id: onlyServed, reason: "matches_filters" },
       { candidate_id: shown, reason: "seen_before" },
     ]);
@@ -709,7 +711,7 @@ describe("what seen means (ADR-062 §2)", () => {
   /** Whom the person's logs of earlier days still hold. */
   async function earlierEntries(db: Queryable, accountId: string) {
     const { rows } = await db.query<{ candidate_id: string }>(
-      `SELECT e.candidate_id FROM round_entries e JOIN rounds r ON r.id = e.round_id
+      `SELECT e.candidate_id FROM queue_entry e JOIN queue_day r ON r.id = e.queue_day_id
         WHERE r.account_id = $1 AND r.day < $2`,
       [accountId, DAY],
     );
@@ -743,8 +745,8 @@ describe("what seen means (ADR-062 §2)", () => {
     if (!a || !b) throw new Error("people not written");
     await shownBefore(ctx.client, a, b, 1, null, { displayed: false });
     let heldFirst: string[] = [];
-    const db = interleaved(ctx.client, /DELETE FROM round_entries/, async () => {
-      heldFirst = candidates(await roundOf(ctx.client, a));
+    const db = interleaved(ctx.client, /DELETE FROM queue_entry/, async () => {
+      heldFirst = candidates(await queueDayOf(ctx.client, a));
     });
 
     await fillQueue({ ...(await deps(ctx.client)), db }, a);
@@ -806,7 +808,7 @@ describe("what seen means (ADR-062 §2)", () => {
 
     await fill(ctx.client, a);
 
-    expect(await roundOf(ctx.client, a)).toEqual([
+    expect(await queueDayOf(ctx.client, a)).toEqual([
       { candidate_id: c, reason: "seen_before" },
       { candidate_id: b, reason: "seen_before" },
       { candidate_id: d, reason: "seen_before" },
@@ -828,16 +830,18 @@ describe("what seen means (ADR-062 §2)", () => {
     const skipped = await decideAs(app, ctx.client, a, 1, "skip");
 
     expect(skipped.status).toBe(200);
-    expect(RoundDecisionAnswer.parse(await skipped.json()).match).toBeNull();
+    expect(QueueDecisionAnswer.parse(await skipped.json()).match).toBeNull();
     const talking = await ctx.client.query("SELECT 1 FROM conversation");
     expect(talking.rows).toEqual([]);
     const tomorrow = await readToday(await appAt(ctx.client, NEXT_NOON), ctx.client, a);
     expect(tomorrow.entries?.map((entry) => entry.reason)).toEqual(["liked_you"]);
     // Its last day, and the day after, when it has expired and the skip alone is left.
     await readToday(await appAt(ctx.client, daysOn(12)), ctx.client, a);
-    expect((await roundOf(ctx.client, a, finnishDay(daysOn(12))))?.[0]?.reason).toBe("liked_you");
+    expect((await queueDayOf(ctx.client, a, finnishDay(daysOn(12))))?.[0]?.reason).toBe(
+      "liked_you",
+    );
     await fill(ctx.client, a, daysOn(13));
-    expect(await roundOf(ctx.client, a, finnishDay(daysOn(13)))).toEqual([
+    expect(await queueDayOf(ctx.client, a, finnishDay(daysOn(13)))).toEqual([
       { candidate_id: b, reason: "seen_before" },
     ]);
   });
@@ -848,7 +852,7 @@ describe("what seen means (ADR-062 §2)", () => {
     const [b] = men;
     if (!a || !b) throw new Error("people not written");
     await shownBefore(ctx.client, a, b, 366, "pass");
-    expect(await pruneRounds(ctx.client, NOON)).toBe(1);
+    expect(await pruneQueueDays(ctx.client, NOON)).toBe(1);
     const app = await appAt(ctx.client);
 
     const read = await readToday(app, ctx.client, a);
@@ -856,15 +860,15 @@ describe("what seen means (ADR-062 §2)", () => {
     expect((await decideAs(app, ctx.client, a, 1, "pass")).status).toBe(200);
 
     const { rows } = await ctx.client.query(
-      `SELECT e.second_pass FROM round_entries e JOIN rounds r ON r.id = e.round_id
+      `SELECT e.second_pass FROM queue_entry e JOIN queue_day r ON r.id = e.queue_day_id
         WHERE r.account_id = $1`,
       [a],
     );
     expect(rows).toEqual([{ second_pass: false }]);
     await fill(ctx.client, a, daysOn(29));
-    expect(await roundOf(ctx.client, a, finnishDay(daysOn(29)))).toEqual([]);
+    expect(await queueDayOf(ctx.client, a, finnishDay(daysOn(29)))).toEqual([]);
     await fill(ctx.client, a, daysOn(30));
-    expect(await roundOf(ctx.client, a, finnishDay(daysOn(30)))).toEqual([
+    expect(await queueDayOf(ctx.client, a, finnishDay(daysOn(30)))).toEqual([
       { candidate_id: b, reason: "seen_before" },
     ]);
   });
@@ -885,11 +889,11 @@ describe("what seen means (ADR-062 §2)", () => {
 
     // Three hundred days on the first pass is pruned, and the mark alone says a year.
     const later = daysOn(330);
-    expect(await pruneRounds(ctx.client, later)).toBe(1);
+    expect(await pruneQueueDays(ctx.client, later)).toBe(1);
     await fill(ctx.client, a, later);
-    expect(await roundOf(ctx.client, a, finnishDay(later))).toEqual([]);
+    expect(await queueDayOf(ctx.client, a, finnishDay(later))).toEqual([]);
     await fill(ctx.client, a, daysOn(365));
-    expect(await roundOf(ctx.client, a, finnishDay(daysOn(365)))).toEqual([
+    expect(await queueDayOf(ctx.client, a, finnishDay(daysOn(365)))).toEqual([
       { candidate_id: b, reason: "seen_before" },
     ]);
   });
@@ -909,15 +913,15 @@ describe("what seen means (ADR-062 §2)", () => {
     expect((await decideAs(app, ctx.client, a, 1, "pass")).status).toBe(200);
 
     const { rows } = await ctx.client.query(
-      `SELECT e.second_pass FROM round_entries e JOIN rounds r ON r.id = e.round_id
+      `SELECT e.second_pass FROM queue_entry e JOIN queue_day r ON r.id = e.queue_day_id
         WHERE r.account_id = $1 AND r.day = $2`,
       [a, DAY],
     );
     expect(rows).toEqual([{ second_pass: true }]);
     await fill(ctx.client, a, daysOn(364));
-    expect(await roundOf(ctx.client, a, finnishDay(daysOn(364)))).toEqual([]);
+    expect(await queueDayOf(ctx.client, a, finnishDay(daysOn(364)))).toEqual([]);
     await fill(ctx.client, a, daysOn(365));
-    expect(await roundOf(ctx.client, a, finnishDay(daysOn(365)))).toEqual([
+    expect(await queueDayOf(ctx.client, a, finnishDay(daysOn(365)))).toEqual([
       { candidate_id: b, reason: "seen_before" },
     ]);
   });
@@ -935,15 +939,15 @@ describe("what seen means (ADR-062 §2)", () => {
 
     await fill(ctx.client, a);
 
-    expect(await roundOf(ctx.client, a)).toEqual([]);
+    expect(await queueDayOf(ctx.client, a)).toEqual([]);
   });
 });
 
 describe("distance (#514, ADR-061 §5 to §7)", () => {
-  /** Each card of a person's round with the band written on it, in order. */
+  /** Each card of a person's queue with the band written on it, in order. */
   async function bandsOf(db: Queryable, accountId: string, day = DAY) {
     const { rows } = await db.query<{ candidate_id: string; distance: string | null }>(
-      `SELECT e.candidate_id, e.distance FROM rounds r JOIN round_entries e ON e.round_id = r.id
+      `SELECT e.candidate_id, e.distance FROM queue_day r JOIN queue_entry e ON e.queue_day_id = r.id
         WHERE r.account_id = $1 AND r.day = $2 ORDER BY e.position`,
       [accountId, day],
     );
@@ -996,7 +1000,7 @@ describe("distance (#514, ADR-061 §5 to §7)", () => {
     ]);
   });
 
-  test("A distance deal-breaker keeps the two out of each other's rounds", async ({ ctx }) => {
+  test("A distance deal-breaker keeps the two out of each other's queue days", async ({ ctx }) => {
     const { a, men } = await around(ctx, [HOMES.nearby, HOMES.close]);
     const [b, c] = men;
     if (!b || !c) throw new Error("people not written");
@@ -1008,9 +1012,9 @@ describe("distance (#514, ADR-061 §5 to §7)", () => {
 
     await fillAll(ctx.client, [a, b, c]);
 
-    expect(candidates(await roundOf(ctx.client, a))).toEqual([b]);
-    expect(candidates(await roundOf(ctx.client, b))).toEqual([a]);
-    expect(candidates(await roundOf(ctx.client, c))).toEqual([]);
+    expect(candidates(await queueDayOf(ctx.client, a))).toEqual([b]);
+    expect(candidates(await queueDayOf(ctx.client, b))).toEqual([a]);
+    expect(candidates(await queueDayOf(ctx.client, c))).toEqual([]);
   });
 
   test("The liked-you places keep their order, whatever the band", async ({ ctx }) => {
@@ -1022,7 +1026,7 @@ describe("distance (#514, ADR-061 §5 to §7)", () => {
 
     await fill(ctx.client, a);
 
-    expect(await roundOf(ctx.client, a)).toEqual([
+    expect(await queueDayOf(ctx.client, a)).toEqual([
       { candidate_id: b, reason: "liked_you" },
       { candidate_id: c, reason: "liked_you" },
     ]);
@@ -1041,7 +1045,7 @@ describe("distance (#514, ADR-061 §5 to §7)", () => {
 
     await fill(ctx.client, a);
 
-    expect(await roundOf(ctx.client, a)).toEqual([
+    expect(await queueDayOf(ctx.client, a)).toEqual([
       { candidate_id: c, reason: "seen_before" },
       { candidate_id: d, reason: "seen_before" },
     ]);
@@ -1095,16 +1099,16 @@ describe("distance (#514, ADR-061 §5 to §7)", () => {
     ]);
   });
 
-  test("Only a round's entry says a band, and as a word", async ({ ctx }) => {
+  test("Only a queue's entry says a band, and as a word", async ({ ctx }) => {
     const { a, men } = await around(ctx, [HOMES.close]);
     const [b] = men;
     if (!b) throw new Error("people not written");
     const app = await appAt(ctx.client);
     const who = await signInAs(ctx.client, a);
 
-    const round = await app.request("/rounds/today", { headers: who.headers });
-    const text = await round.text();
-    const [entry] = RoundResponse.parse(JSON.parse(text)).entries ?? [];
+    const picked = await app.request("/queue/today", { headers: who.headers });
+    const text = await picked.text();
+    const [entry] = QueueResponse.parse(JSON.parse(text)).entries ?? [];
     expect(entry?.distance).toBe("close");
     expect(entry?.card).not.toHaveProperty("distance");
 
@@ -1118,27 +1122,27 @@ describe("distance (#514, ADR-061 §5 to §7)", () => {
     }
   });
 
-  test("a person whose home left the list is in nobody's round, and gets none", async ({ ctx }) => {
+  test("a person whose home left the list is in nobody's queue, and gets none", async ({ ctx }) => {
     const { a, men } = await around(ctx, [HOMES.nearby, "12345"]);
     const [b, gone] = men;
     if (!b || !gone) throw new Error("people not written");
 
     await fillAll(ctx.client, [a, gone]);
 
-    expect(candidates(await roundOf(ctx.client, a))).toEqual([b]);
-    expect(await roundOf(ctx.client, gone)).toBeNull();
+    expect(candidates(await queueDayOf(ctx.client, a))).toEqual([b]);
+    expect(await queueDayOf(ctx.client, gone)).toBeNull();
   });
 
   test("an entry from before distance reads as no band", async ({ ctx }) => {
     const { a } = await around(ctx, [HOMES.nearby]);
     await fill(ctx.client, a);
     await ctx.client.query(
-      `UPDATE round_entries SET distance = NULL
-        WHERE round_id IN (SELECT id FROM rounds WHERE account_id = $1)`,
+      `UPDATE queue_entry SET distance = NULL
+        WHERE queue_day_id IN (SELECT id FROM queue_day WHERE account_id = $1)`,
       [a],
     );
-    const round = await readToday(await appAt(ctx.client), ctx.client, a);
-    expect(round.entries?.map((entry) => entry.distance)).toEqual([null]);
+    const picked = await readToday(await appAt(ctx.client), ctx.client, a);
+    expect(picked.entries?.map((entry) => entry.distance)).toEqual([null]);
   });
 });
 
@@ -1154,13 +1158,13 @@ describe("liked-you (#97, ADR-037, ADR-062 §2)", () => {
 
     await fill(ctx.client, a);
 
-    const round = await roundOf(ctx.client, a);
-    expect(round?.[0]).toEqual({ candidate_id: b, reason: "liked_you" });
-    expect(round?.slice(1).map((card) => card.reason)).toEqual([
+    const picked = await queueDayOf(ctx.client, a);
+    expect(picked?.[0]).toEqual({ candidate_id: b, reason: "liked_you" });
+    expect(picked?.slice(1).map((card) => card.reason)).toEqual([
       "matches_filters",
       "matches_filters",
     ]);
-    expect(new Set(candidates(round).slice(1))).toEqual(new Set([c, d]));
+    expect(new Set(candidates(picked).slice(1))).toEqual(new Set([c, d]));
   });
 
   test("More likes than a page all come, the oldest first and ahead of anybody new", async ({
@@ -1201,7 +1205,7 @@ describe("liked-you (#97, ADR-037, ADR-062 §2)", () => {
 
     await fill(ctx.client, a);
 
-    expect(candidates(await roundOf(ctx.client, a))).toEqual([b, c]);
+    expect(candidates(await queueDayOf(ctx.client, a))).toEqual([b, c]);
   });
 
   describe("A like waits until it is answered or expires", () => {
@@ -1241,13 +1245,13 @@ describe("liked-you (#97, ADR-037, ADR-062 §2)", () => {
 
       await fill(ctx.client, a);
 
-      const round = await roundOf(ctx.client, a);
+      const picked = await queueDayOf(ctx.client, a);
       if (outcome.startsWith("first")) {
-        expect(round?.[0]).toEqual({ candidate_id: b, reason: "liked_you" });
+        expect(picked?.[0]).toEqual({ candidate_id: b, reason: "liked_you" });
       } else if (outcome.includes("ordinary")) {
-        expect(round).toEqual([{ candidate_id: b, reason: "matches_filters" }]);
+        expect(picked).toEqual([{ candidate_id: b, reason: "matches_filters" }]);
       } else {
-        expect(round).toEqual([]);
+        expect(picked).toEqual([]);
       }
     });
   });
@@ -1262,7 +1266,9 @@ describe("liked-you (#97, ADR-037, ADR-062 §2)", () => {
     const read = await readToday(await appAt(ctx.client), ctx.client, a);
 
     expect(read.entries?.map((entry) => entry.reason)).not.toContain("liked_you");
-    expect(await roundOf(ctx.client, a)).toEqual([{ candidate_id: b, reason: "matches_filters" }]);
+    expect(await queueDayOf(ctx.client, a)).toEqual([
+      { candidate_id: b, reason: "matches_filters" },
+    ]);
   });
 
   test("A like never reaches the queue from somebody the person passed, or who no longer passes the filters", async ({
@@ -1282,7 +1288,7 @@ describe("liked-you (#97, ADR-037, ADR-062 §2)", () => {
 
     await fill(ctx.client, a);
 
-    expect(await roundOf(ctx.client, a)).toEqual([]);
+    expect(await queueDayOf(ctx.client, a)).toEqual([]);
   });
 
   test("a like from somebody erased, shadow-banned or with a conversation with the person never comes", async ({
@@ -1302,7 +1308,7 @@ describe("liked-you (#97, ADR-037, ADR-062 §2)", () => {
 
     await fill(ctx.client, a);
 
-    expect(await roundOf(ctx.client, a)).toEqual([{ candidate_id: kept, reason: "liked_you" }]);
+    expect(await queueDayOf(ctx.client, a)).toEqual([{ candidate_id: kept, reason: "liked_you" }]);
   });
 
   test("A shadow-banned person's queue holds no liked-you places, and the likes wait for the lift", async ({
@@ -1318,12 +1324,14 @@ describe("liked-you (#97, ADR-037, ADR-062 §2)", () => {
     await fill(ctx.client, a);
 
     // A like back would make no match and tell A of the ban (ADR-024 §7): B is in no place.
-    expect(await roundOf(ctx.client, a)).toEqual([{ candidate_id: c, reason: "matches_filters" }]);
+    expect(await queueDayOf(ctx.client, a)).toEqual([
+      { candidate_id: c, reason: "matches_filters" },
+    ]);
 
     // The ban lifted, the next day's read opens with B's like, still within its days.
     await ctx.client.query("UPDATE account SET state = 'active' WHERE id = $1", [a]);
     await fill(ctx.client, a, NEXT_NOON);
-    expect((await roundOf(ctx.client, a, NEXT_DAY))?.[0]).toEqual({
+    expect((await queueDayOf(ctx.client, a, NEXT_DAY))?.[0]).toEqual({
       candidate_id: b,
       reason: "liked_you",
     });
@@ -1366,13 +1374,13 @@ describe("liked-you (#97, ADR-037, ADR-062 §2)", () => {
     const app = await appAt(ctx.client);
     const before = {
       today: await readToday(app, ctx.client, b),
-      history: await exportRounds(ctx.client, b, 10),
+      history: await exportQueue(ctx.client, b, 10),
     };
 
     expect((await decideAs(app, ctx.client, a, 1, "pass")).status).toBe(200);
 
     expect(await readToday(app, ctx.client, b)).toEqual(before.today);
-    expect(await exportRounds(ctx.client, b, 10)).toEqual(before.history);
+    expect(await exportQueue(ctx.client, b, 10)).toEqual(before.history);
   });
 });
 
@@ -1381,7 +1389,7 @@ const fishBefore = (db: Queryable, sender: string, liked: string, days: number) 
   shownBefore(db, sender, liked, days, "like", { fish: true });
 
 describe("the fish (#378, ADR-039)", () => {
-  test("A fish sent today is at the front of the recipient's next round, ahead of every ordinary like", async ({
+  test("A fish sent today is at the front of the recipient's next queue, ahead of every ordinary like", async ({
     ctx,
   }) => {
     const { women, men } = await pondOf(ctx, 1, 2);
@@ -1393,7 +1401,7 @@ describe("the fish (#378, ADR-039)", () => {
 
     await fill(ctx.client, a);
 
-    expect(await roundOf(ctx.client, a)).toEqual([
+    expect(await queueDayOf(ctx.client, a)).toEqual([
       { candidate_id: c, reason: "fish" },
       { candidate_id: b, reason: "liked_you" },
     ]);
@@ -1420,8 +1428,8 @@ describe("the fish (#378, ADR-039)", () => {
 
       await fill(ctx.client, a);
 
-      const round = await roundOf(ctx.client, a);
-      expect(round?.[place - 1]).toEqual({
+      const picked = await queueDayOf(ctx.client, a);
+      expect(picked?.[place - 1]).toEqual({
         candidate_id: who,
         reason: label === "fish" ? "fish" : "liked_you",
       });
@@ -1459,7 +1467,7 @@ describe("the inbox stop (ADR-062 §4)", () => {
 
       await fill(ctx.client, a);
 
-      expect(await roundOf(ctx.client, a)).toEqual(
+      expect(await queueDayOf(ctx.client, a)).toEqual(
         outcome.startsWith("in") ? [{ candidate_id: b, reason: "matches_filters" }] : [],
       );
     });
@@ -1493,7 +1501,7 @@ describe("the inbox stop (ADR-062 §4)", () => {
 
       await fill(ctx.client, a);
 
-      expect(candidates(await roundOf(ctx.client, a))).toEqual([b]);
+      expect(candidates(await queueDayOf(ctx.client, a))).toEqual([b]);
     });
   });
 
@@ -1511,7 +1519,9 @@ describe("the inbox stop (ADR-062 §4)", () => {
       expect((await decideAs(app, ctx.client, b, 1, decision)).status).toBe(200);
       await fill(ctx.client, a);
 
-      expect(candidates(await roundOf(ctx.client, a))).toEqual(outcome.startsWith("in") ? [b] : []);
+      expect(candidates(await queueDayOf(ctx.client, a))).toEqual(
+        outcome.startsWith("in") ? [b] : [],
+      );
     });
   });
 
@@ -1520,7 +1530,7 @@ describe("the inbox stop (ADR-062 §4)", () => {
     const app = await appAt(ctx.client);
     await readToday(app, ctx.client, b);
     const who = await signInAs(ctx.client, b);
-    const seen = await app.request(`/rounds/${DAY}/entries/1/seen`, {
+    const seen = await app.request(`/queue/${DAY}/entries/1/seen`, {
       method: "POST",
       headers: who.headers,
     });
@@ -1528,7 +1538,7 @@ describe("the inbox stop (ADR-062 §4)", () => {
 
     await fill(ctx.client, a);
 
-    expect(candidates(await roundOf(ctx.client, a))).toEqual([]);
+    expect(candidates(await queueDayOf(ctx.client, a))).toEqual([]);
   });
 
   test("The stop holds a person out of seen-before cards too", async ({ ctx }) => {
@@ -1537,7 +1547,7 @@ describe("the inbox stop (ADR-062 §4)", () => {
 
     await fill(ctx.client, a);
 
-    expect(await roundOf(ctx.client, a)).toEqual([]);
+    expect(await queueDayOf(ctx.client, a)).toEqual([]);
   });
 
   test("the stop lifted, the person comes back in the queue the next read adds to", async ({
@@ -1561,7 +1571,7 @@ describe("the inbox stop (ADR-062 §4)", () => {
 
     await fill(ctx.client, c);
 
-    expect(await roundOf(ctx.client, c)).toEqual([{ candidate_id: b, reason: "liked_you" }]);
+    expect(await queueDayOf(ctx.client, c)).toEqual([{ candidate_id: b, reason: "liked_you" }]);
   });
 
   test("An entry queued already stays when the stop comes", async ({ ctx }) => {
@@ -1578,14 +1588,14 @@ describe("the inbox stop (ADR-062 §4)", () => {
     const app = await appAt(ctx.client);
     const who = await signInAs(ctx.client, b);
 
-    const asHeld = await (await app.request("/rounds/today", { headers: who.headers })).text();
+    const asHeld = await (await app.request("/queue/today", { headers: who.headers })).text();
     const toOther = await readToday(app, ctx.client, a);
 
     expect(JSON.stringify(toOther)).not.toContain(b);
     for (const answer of [asHeld, JSON.stringify(toOther)]) {
       expect(answer).not.toMatch(/stop|pile|held|waiting|inbox/i);
     }
-    const keys = Object.keys(RoundResponse.parse(JSON.parse(asHeld))).sort();
+    const keys = Object.keys(QueueResponse.parse(JSON.parse(asHeld))).sort();
     expect(keys).toEqual(["day", "entries", "fishToSend", "likesLeft", "yourTurn"]);
     expect(Object.keys(toOther).sort()).toEqual(keys);
   });
@@ -1596,7 +1606,7 @@ describe("the inbox stop (ADR-062 §4)", () => {
 
     await fill(ctx.client, a);
 
-    expect(candidates(await roundOf(ctx.client, a))).toEqual([b]);
+    expect(candidates(await queueDayOf(ctx.client, a))).toEqual([b]);
   });
 
   test("a queue goes on past the people held, past a page of them", async ({ ctx }) => {
@@ -1607,18 +1617,18 @@ describe("the inbox stop (ADR-062 §4)", () => {
     const held = await people(ctx.client, QUEUE_PAGE + 1, { ...MEN, home: HOMES.nearby });
     const [far] = await people(ctx.client, 1, { ...MEN, home: HOMES.far });
     if (!far) throw new Error("people not written");
-    // Each of them liked all of those men yesterday, in one round each: three hundred likes.
+    // Each of them liked all of those men yesterday, in one queue each: three hundred likes.
     for (const liker of await people(ctx.client, STOP, WOMEN)) {
-      const roundId = await logged(ctx.client, liker, finnishDay(daysAgo(1)), held);
+      const queueDayId = await logged(ctx.client, liker, finnishDay(daysAgo(1)), held);
       await ctx.client.query(
-        "UPDATE round_entries SET decision = 'like', decided_at = $2 WHERE round_id = $1",
-        [roundId, daysAgo(1)],
+        "UPDATE queue_entry SET decision = 'like', decided_at = $2 WHERE queue_day_id = $1",
+        [queueDayId, daysAgo(1)],
       );
     }
 
     await fill(ctx.client, a);
 
-    expect(candidates(await roundOf(ctx.client, a))).toEqual([far]);
+    expect(candidates(await queueDayOf(ctx.client, a))).toEqual([far]);
   });
 });
 
@@ -1651,10 +1661,10 @@ describe("over the synthetic population", () => {
     for (const accountId of everybody.keys()) await fill(ctx.client, accountId);
 
     for (const [accountId, owner] of everybody) {
-      const round = await roundOf(ctx.client, accountId);
-      expect(round).not.toBeNull();
-      expect((round ?? []).length).toBeLessThanOrEqual(QUEUE_PAGE);
-      for (const card of round ?? []) {
+      const picked = await queueDayOf(ctx.client, accountId);
+      expect(picked).not.toBeNull();
+      expect((picked ?? []).length).toBeLessThanOrEqual(QUEUE_PAGE);
+      for (const card of picked ?? []) {
         const candidate = everybody.get(card.candidate_id);
         expect(candidate?.visible).toBe(true);
         if (!candidate) continue;
@@ -1677,7 +1687,7 @@ describe("the filters across a pond's queues", () => {
     return { ids: await people(ctx.client, count, ALIKE) };
   }
 
-  test("The round leaves a blocked pair out of each other's cards", async ({ ctx }) => {
+  test("The queue leaves a blocked pair out of each other's cards", async ({ ctx }) => {
     const { ids } = await alikePond(ctx, 4);
     const [she, her, x, y] = ids;
     if (!she || !her || !x || !y) throw new Error("people not written");
@@ -1685,9 +1695,9 @@ describe("the filters across a pond's queues", () => {
 
     await fillAll(ctx.client, ids);
 
-    expect(candidates(await roundOf(ctx.client, she)).sort()).toEqual([x, y].sort());
-    expect(candidates(await roundOf(ctx.client, her)).sort()).toEqual([x, y].sort());
-    expect(candidates(await roundOf(ctx.client, x)).sort()).toEqual([she, her, y].sort());
+    expect(candidates(await queueDayOf(ctx.client, she)).sort()).toEqual([x, y].sort());
+    expect(candidates(await queueDayOf(ctx.client, her)).sort()).toEqual([x, y].sort());
+    expect(candidates(await queueDayOf(ctx.client, x)).sort()).toEqual([she, her, y].sort());
   });
 
   test("A block holds for a later account of either identity", async ({ ctx }) => {
@@ -1707,8 +1717,8 @@ describe("the filters across a pond's queues", () => {
 
     await fillAll(ctx.client, [a, again]);
 
-    expect(candidates(await roundOf(ctx.client, a))).toEqual([c]);
-    expect(candidates(await roundOf(ctx.client, again))).toEqual([c]);
+    expect(candidates(await queueDayOf(ctx.client, a))).toEqual([c]);
+    expect(candidates(await queueDayOf(ctx.client, again))).toEqual([c]);
     // The card and the photos ask the same of the identities, both ways; the
     // card builder and the photo route are held to it across a later account
     // of either in profile/service.test.ts and media/budget.test.ts.
@@ -1724,7 +1734,7 @@ describe("the filters across a pond's queues", () => {
     expect(await between(c, again)).toBe(false);
   });
 
-  test("The round leaves a pair a deal-breaker excludes out of each other's cards", async ({
+  test("The queue leaves a pair a deal-breaker excludes out of each other's cards", async ({
     ctx,
   }) => {
     await openMatchingHere(ctx.client);
@@ -1750,8 +1760,8 @@ describe("the filters across a pond's queues", () => {
     await fillQueue({ db: ctx.client, logger, now: () => NOON }, holder);
     await fillQueue({ db: ctx.client, logger, now: () => NOON }, smoker);
 
-    expect(candidates(await roundOf(ctx.client, holder)).sort()).toEqual([open, never].sort());
-    expect(candidates(await roundOf(ctx.client, smoker)).sort()).toEqual([open, never].sort());
+    expect(candidates(await queueDayOf(ctx.client, holder)).sort()).toEqual([open, never].sort());
+    expect(candidates(await queueDayOf(ctx.client, smoker)).sort()).toEqual([open, never].sort());
     // Nothing of anybody's answers or filters reaches a log line.
     expect(JSON.stringify(lines())).not.toMatch(/smoking|never|regularly/);
 
@@ -1760,7 +1770,7 @@ describe("the filters across a pond's queues", () => {
       holder,
     ]);
     await fill(ctx.client, smoker, NEXT_NOON);
-    expect(candidates(await roundOf(ctx.client, smoker, NEXT_DAY))).toContain(holder);
+    expect(candidates(await queueDayOf(ctx.client, smoker, NEXT_DAY))).toContain(holder);
   });
 
   test("a deal-breaker on an option the registry no longer has, or a field off the whitelist, filters nothing", async ({
@@ -1787,7 +1797,7 @@ describe("the filters across a pond's queues", () => {
 
     await fill(ctx.client, holder);
 
-    expect(candidates(await roundOf(ctx.client, holder)).sort()).toEqual([x, y].sort());
+    expect(candidates(await queueDayOf(ctx.client, holder)).sort()).toEqual([x, y].sort());
   });
 
   test("an answer the registry no longer has is read as none, by the holder's deal-breaker and by the other's", async ({
@@ -1824,8 +1834,8 @@ describe("the filters across a pond's queues", () => {
 
     await fillAll(ctx.client, [h, p]);
 
-    expect(candidates(await roundOf(ctx.client, h))).toContain(c);
-    expect(candidates(await roundOf(ctx.client, p))).toContain(smoker);
+    expect(candidates(await queueDayOf(ctx.client, h))).toContain(c);
+    expect(candidates(await queueDayOf(ctx.client, p))).toContain(smoker);
     // The holder's own screen says the same of P's deal-breaker.
     const who = await signInAs(ctx.client, p);
     const app = await appAt(ctx.client);
@@ -1842,8 +1852,8 @@ describe("the filters across a pond's queues", () => {
 
     await fillAll(ctx.client, [dancer, either]);
 
-    expect(candidates(await roundOf(ctx.client, dancer))).toEqual([partner]);
-    expect(await roundOf(ctx.client, either)).toEqual([]);
+    expect(candidates(await queueDayOf(ctx.client, dancer))).toEqual([partner]);
+    expect(await queueDayOf(ctx.client, either)).toEqual([]);
   });
 });
 
@@ -1932,7 +1942,7 @@ describe("filters at once (ADR-062 §8)", () => {
 
   const logHolds = async (db: Queryable, accountId: string, candidateId: string) => {
     const { rows } = await db.query<{ decision: string | null }>(
-      `SELECT e.decision FROM round_entries e JOIN rounds r ON r.id = e.round_id
+      `SELECT e.decision FROM queue_entry e JOIN queue_day r ON r.id = e.queue_day_id
         WHERE r.account_id = $1 AND e.candidate_id = $2`,
       [accountId, candidateId],
     );
@@ -1979,7 +1989,7 @@ describe("filters at once (ADR-062 §8)", () => {
     const read = await readToday(app, ctx.client, a);
 
     expect(accountsOf(read)).toEqual(accountsOf(first)?.slice(1));
-    expect(await roundOf(ctx.client, a)).toHaveLength(QUEUE_PAGE);
+    expect(await queueDayOf(ctx.client, a)).toHaveLength(QUEUE_PAGE);
   });
 
   test("One change narrows and widens at once, and both work on the next read", async ({ ctx }) => {
@@ -2087,12 +2097,12 @@ describe("filters at once (ADR-062 §8)", () => {
     if (!a || !b || !c) throw new Error("people not written");
     await dealBreaker(ctx.client, b, "smoking", ["never"]);
     await dealBreaker(ctx.client, c, "smoking", ["never"]);
-    const roundId = await logged(ctx.client, b, addDays(DAY, -1), [
+    const queueDayId = await logged(ctx.client, b, addDays(DAY, -1), [
       { candidateId: a, reason: "relaxed", relaxedWith: ["smoking"] },
     ]);
     await ctx.client.query(
-      "UPDATE round_entries SET decision = 'like', decided_at = $2 WHERE round_id = $1",
-      [roundId, daysAgo(1)],
+      "UPDATE queue_entry SET decision = 'like', decided_at = $2 WHERE queue_day_id = $1",
+      [queueDayId, daysAgo(1)],
     );
     const app = await appAt(ctx.client);
 
@@ -2103,7 +2113,7 @@ describe("filters at once (ADR-062 §8)", () => {
     ]);
     const liked = await decideAs(app, ctx.client, a, 1, "like");
     expect(liked.status).toBe(200);
-    expect(RoundDecisionAnswer.parse(await liked.json()).match).not.toBeNull();
+    expect(QueueDecisionAnswer.parse(await liked.json()).match).not.toBeNull();
   });
 
   test("a like waived on an expired day waives nothing any more", async ({ ctx }) => {
@@ -2112,12 +2122,12 @@ describe("filters at once (ADR-062 §8)", () => {
     const [b] = await people(ctx.client, 1, { ...MEN, fields: { smoking: "never" } });
     if (!a || !b) throw new Error("people not written");
     await dealBreaker(ctx.client, b, "smoking", ["never"]);
-    const roundId = await logged(ctx.client, b, addDays(DAY, -14), [
+    const queueDayId = await logged(ctx.client, b, addDays(DAY, -14), [
       { candidateId: a, reason: "relaxed", relaxedWith: ["smoking"] },
     ]);
     await ctx.client.query(
-      "UPDATE round_entries SET decision = 'like', decided_at = $2 WHERE round_id = $1",
-      [roundId, daysAgo(14)],
+      "UPDATE queue_entry SET decision = 'like', decided_at = $2 WHERE queue_day_id = $1",
+      [queueDayId, daysAgo(14)],
     );
 
     expect(await fitsNow({ now: () => NOON }, ctx.client, a, [b])).toEqual(new Set());

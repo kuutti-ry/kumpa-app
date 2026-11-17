@@ -5,7 +5,7 @@ import { readersOf, withoutComments } from "../test/sources.ts";
 import { softMatches } from "./soft.ts";
 
 // features/matching/filters.feature (#87): the soft preferences, which only
-// order a round. Whether they leave anybody out of a pool is pool.test.ts's.
+// order a queue. Whether they leave anybody out of a pool is pool.test.ts's.
 
 /** "education=kandi,drinking=rarely" as answers; "nothing" as none. */
 const answers = (text: string): ProfileFields =>
@@ -89,11 +89,11 @@ describe("the soft count, for any two people", () => {
 });
 
 describe("the soft count's readers", () => {
-  it("The soft count is read by the round's order alone", () => {
+  it("The soft count is read by the queue's order alone", () => {
     // Never a card, an event, a log line or a route: the matching document's
-    // invariant 6. The round builder (#95) orders a round's places with it.
+    // invariant 6. The queue's builder (#95) orders a queue's places with it.
     expect(readersOf((source) => /\bsoftMatches\b/.test(withoutComments(source)))).toEqual([
-      "apps/api/src/matching/round-order.ts",
+      "apps/api/src/matching/queue-order.ts",
       "apps/api/src/matching/soft.ts",
     ]);
   });

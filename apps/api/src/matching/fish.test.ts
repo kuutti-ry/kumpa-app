@@ -1,19 +1,19 @@
 import type { Queryable } from "@kuutti/db";
-import { ErrorResponse, RoundDecisionAnswer, RoundResponse } from "@kuutti/schema";
+import { ErrorResponse, QueueDecisionAnswer, QueueResponse } from "@kuutti/schema";
 import type { App } from "../app.ts";
 import { finnishDay } from "../lib/finnish-day.ts";
 import { withMatchingConfig } from "../test/account.ts";
 import { errorCode as codeOf } from "../test/answers.ts";
 import { STOPPED_CLOCK as T } from "../test/global-setup.ts";
 import { describe, expect, test } from "../test/harness.ts";
-import { appAt, cast, fishToSendAfter, logged } from "../test/rounds.ts";
-import { exportRounds } from "./rounds.ts";
+import { appAt, cast, fishToSendAfter, logged } from "../test/queue.ts";
+import { exportQueue } from "./queue.ts";
 
 // The fish (#378, ADR-039, features/matching/fish.feature): its budget in a
 // calendar week, Monday to Sunday (#475), and the wait a refusal names, given back the same day, a
 // like for the day's likes and the match, a like on a card that answers one,
 // the event, and what the sender and the export read. Its place in the other
-// person's queue is jobs/round-builder.test.ts.
+// person's queue is jobs/queue-builder.test.ts.
 
 /** 12:00 in Finland, one Friday; its week began on Monday 12 October. */
 /** The midnight in Helsinki that begins the next Monday, 19 October. */
@@ -25,8 +25,8 @@ type Person = { accountId: string; headers: { authorization: string } };
 
 const daysBefore = (days: number) => new Date(T.getTime() - days * DAY_MS);
 
-/** A round for `owner` `days` before today with these cards, each of the reason given or matching every filter. */
-const roundOf = (
+/** A queue for `owner` `days` before today with these cards, each of the reason given or matching every filter. */
+const queueDayOf = (
   db: Queryable,
   owner: Person,
   cards: (Person | { person: Person; reason: "liked_you" | "fish" })[],
@@ -43,36 +43,36 @@ const roundOf = (
     ),
   );
 
-/** `sender` sent `to` a fish, or a like, on a round of `days` before today. */
+/** `sender` sent `to` a fish, or a like, on a queue of `days` before today. */
 async function sentBefore(db: Queryable, sender: Person, to: Person, days: number, fish: boolean) {
-  const roundId = await roundOf(db, sender, [to], days);
+  const queueDayId = await queueDayOf(db, sender, [to], days);
   await db.query(
-    "UPDATE round_entries SET decision = 'like', decided_at = $2, fish = $3 WHERE round_id = $1",
-    [roundId, daysBefore(days), fish],
+    "UPDATE queue_entry SET decision = 'like', decided_at = $2, fish = $3 WHERE queue_day_id = $1",
+    [queueDayId, daysBefore(days), fish],
   );
 }
 
 const choose = (app: App, who: Person, position: number, decision: string, day = TODAY) =>
-  app.request(`/rounds/${day}/entries/${position}/decision`, {
+  app.request(`/queue/${day}/entries/${position}/decision`, {
     method: "PUT",
     headers: { ...who.headers, "content-type": "application/json" },
     body: JSON.stringify({ decision }),
   });
 
-async function entriesOf(db: Queryable, roundId: string) {
+async function entriesOf(db: Queryable, queueDayId: string) {
   return (
     await db.query<{ decision: string | null; fish: boolean }>(
-      "SELECT decision, fish FROM round_entries WHERE round_id = $1 ORDER BY position",
-      [roundId],
+      "SELECT decision, fish FROM queue_entry WHERE queue_day_id = $1 ORDER BY position",
+      [queueDayId],
     )
   ).rows;
 }
 
-/** What today's round says of the caller's fish (#475). */
+/** What today's queue says of the caller's fish (#475). */
 async function fishToSendOn(app: App, who: Person) {
-  const read = await app.request("/rounds/today", { headers: who.headers });
+  const read = await app.request("/queue/today", { headers: who.headers });
   expect(read.status).toBe(200);
-  return RoundResponse.parse(await read.json()).fishToSend;
+  return QueueResponse.parse(await read.json()).fishToSend;
 }
 
 /** What a decision's answer says of the caller's fish after it (#475). */
@@ -80,7 +80,7 @@ async function fishToSendOn(app: App, who: Person) {
 /** What a decision's answer says of the caller's two budgets after it. */
 async function budgetsAfter(answer: Response) {
   expect(answer.status).toBe(200);
-  const { fishToSend, likesLeft } = RoundDecisionAnswer.parse(await answer.json());
+  const { fishToSend, likesLeft } = QueueDecisionAnswer.parse(await answer.json());
   return { fishToSend, likesLeft };
 }
 
@@ -90,14 +90,14 @@ describe("the fish", () => {
   }) => {
     const [a, b] = await cast(ctx.client, 2);
     if (!a || !b) throw new Error("cast not written");
-    const roundId = await roundOf(ctx.client, a, [b]);
+    const queueDayId = await queueDayOf(ctx.client, a, [b]);
     const app = await appAt(ctx.client);
 
     expect((await choose(app, a, 1, "fish")).status).toBe(200);
 
-    expect(await entriesOf(ctx.client, roundId)).toEqual([{ decision: "like", fish: true }]);
-    const [round] = await exportRounds(ctx.client, a.accountId, 10);
-    expect(round?.entries.map((entry) => entry.decision)).toEqual(["fish"]);
+    expect(await entriesOf(ctx.client, queueDayId)).toEqual([{ decision: "like", fish: true }]);
+    const [exported] = await exportQueue(ctx.client, a.accountId, 10);
+    expect(exported?.entries.map((entry) => entry.decision)).toEqual(["fish"]);
   });
 
   test("A second fish in the same calendar week is refused until Monday, and nothing is written", async ({
@@ -107,7 +107,7 @@ describe("the fish", () => {
     if (!a || !b || !c) throw new Error("cast not written");
     // Tuesday, 13 October.
     await sentBefore(ctx.client, a, b, 3, true);
-    const roundId = await roundOf(ctx.client, a, [c]);
+    const queueDayId = await queueDayOf(ctx.client, a, [c]);
     const app = await appAt(ctx.client);
 
     expect(await fishToSendOn(app, a)).toBe(false);
@@ -118,7 +118,7 @@ describe("the fish", () => {
     expect(Number(refused.headers.get("retry-after"))).toBe(
       (NEXT_MONDAY.getTime() - T.getTime()) / 1000,
     );
-    expect(await entriesOf(ctx.client, roundId)).toEqual([{ decision: null, fish: false }]);
+    expect(await entriesOf(ctx.client, queueDayId)).toEqual([{ decision: null, fish: false }]);
   });
 
   test("Last week's fish is behind Monday's midnight, and a fish goes at 00:01", async ({
@@ -126,9 +126,9 @@ describe("the fish", () => {
   }) => {
     const [a, b, c] = await cast(ctx.client, 3);
     if (!a || !b || !c) throw new Error("cast not written");
-    // Sunday, 18 October, then a round of Monday, 19 October.
+    // Sunday, 18 October, then a queue of Monday, 19 October.
     await sentBefore(ctx.client, a, b, -2, true);
-    await roundOf(ctx.client, a, [c], -3);
+    await queueDayOf(ctx.client, a, [c], -3);
     const app = await appAt(ctx.client, new Date(NEXT_MONDAY.getTime() + 60_000));
 
     expect(await fishToSendOn(app, a)).toBe(true);
@@ -142,7 +142,7 @@ describe("the fish", () => {
     if (!a || !b || !c) throw new Error("cast not written");
     // Sunday, 11 October: five days ago, in the week before.
     await sentBefore(ctx.client, a, b, 5, true);
-    await roundOf(ctx.client, a, [c]);
+    await queueDayOf(ctx.client, a, [c]);
     const app = await appAt(ctx.client);
     expect(await fishToSendOn(app, a)).toBe(true);
     expect((await choose(app, a, 1, "fish")).status).toBe(200);
@@ -158,7 +158,7 @@ describe("the fish", () => {
       const [a, b, c, d] = await cast(ctx.client, 4);
       if (!a || !b || !c || !d) throw new Error("cast not written");
       await sentBefore(ctx.client, a, b, 1, true);
-      await roundOf(ctx.client, a, [c, d]);
+      await queueDayOf(ctx.client, a, [c, d]);
       const app = await appAt(ctx.client);
 
       expect(await fishToSendAfter(await choose(app, a, 1, "fish"))).toBe(false);
@@ -175,8 +175,8 @@ describe("the fish", () => {
     await withMatchingConfig(ctx.client, { fish_budget: 0 });
     const [a, b] = await cast(ctx.client, 2);
     if (!a || !b) throw new Error("cast not written");
-    await roundOf(ctx.client, a, [b]);
-    const refused = await (await appAt(ctx.client)).request(`/rounds/${TODAY}/entries/1/decision`, {
+    await queueDayOf(ctx.client, a, [b]);
+    const refused = await (await appAt(ctx.client)).request(`/queue/${TODAY}/entries/1/decision`, {
       method: "PUT",
       headers: { ...a.headers, "content-type": "application/json", "accept-language": "sv" },
       body: JSON.stringify({ decision: "fish" }),
@@ -193,7 +193,7 @@ describe("the fish", () => {
   test("A fish changed to a like or a pass the same day is given back", async ({ ctx }) => {
     const [a, b, c, d] = await cast(ctx.client, 4);
     if (!a || !b || !c || !d) throw new Error("cast not written");
-    const roundId = await roundOf(ctx.client, a, [b, c, d]);
+    const queueDayId = await queueDayOf(ctx.client, a, [b, c, d]);
     const app = await appAt(ctx.client);
 
     expect((await choose(app, a, 1, "fish")).status).toBe(200);
@@ -203,7 +203,7 @@ describe("the fish", () => {
     expect((await choose(app, a, 2, "pass")).status).toBe(200);
     expect((await choose(app, a, 3, "fish")).status).toBe(200);
 
-    expect(await entriesOf(ctx.client, roundId)).toEqual([
+    expect(await entriesOf(ctx.client, queueDayId)).toEqual([
       { decision: "like", fish: false },
       { decision: "pass", fish: false },
       { decision: "like", fish: true },
@@ -213,7 +213,7 @@ describe("the fish", () => {
   test("the same fish again writes nothing and is never refused", async ({ ctx }) => {
     const [a, b] = await cast(ctx.client, 2);
     if (!a || !b) throw new Error("cast not written");
-    await roundOf(ctx.client, a, [b]);
+    await queueDayOf(ctx.client, a, [b]);
     const app = await appAt(ctx.client);
     expect((await choose(app, a, 1, "fish")).status).toBe(200);
     expect((await choose(app, a, 1, "fish")).status).toBe(200);
@@ -223,20 +223,20 @@ describe("the fish", () => {
     await withMatchingConfig(ctx.client, { like_budget_balanced: 2 });
     const [a, b] = await cast(ctx.client, 2);
     if (!a || !b) throw new Error("cast not written");
-    await roundOf(ctx.client, a, [b]);
+    await queueDayOf(ctx.client, a, [b]);
     const app = await appAt(ctx.client);
 
     const answer = await choose(app, a, 1, "fish");
 
     expect(answer.status).toBe(200);
-    expect(RoundDecisionAnswer.parse(await answer.json()).likesLeft).toBe(1);
+    expect(QueueDecisionAnswer.parse(await answer.json()).likesLeft).toBe(1);
   });
 
   test("A fish counts against the day's like budget", async ({ ctx }) => {
     await withMatchingConfig(ctx.client, { like_budget_balanced: 1 });
     const [a, b, c] = await cast(ctx.client, 3);
     if (!a || !b || !c) throw new Error("cast not written");
-    await roundOf(ctx.client, a, [b, c]);
+    await queueDayOf(ctx.client, a, [b, c]);
     const app = await appAt(ctx.client);
 
     expect((await choose(app, a, 1, "fish")).status).toBe(200);
@@ -252,11 +252,11 @@ describe("the fish", () => {
     await withMatchingConfig(ctx.client, { like_budget_balanced: 1 });
     const [a, b] = await cast(ctx.client, 2);
     if (!a || !b) throw new Error("cast not written");
-    const roundId = await roundOf(ctx.client, a, [b]);
+    const queueDayId = await queueDayOf(ctx.client, a, [b]);
     const app = await appAt(ctx.client);
     expect((await choose(app, a, 1, "like")).status).toBe(200);
     expect((await choose(app, a, 1, "fish")).status).toBe(200);
-    expect(await entriesOf(ctx.client, roundId)).toEqual([{ decision: "like", fish: true }]);
+    expect(await entriesOf(ctx.client, queueDayId)).toEqual([{ decision: "like", fish: true }]);
   });
 
   test("A fish on a card of somebody whose like waits is a like", async ({ ctx }) => {
@@ -264,19 +264,19 @@ describe("the fish", () => {
     const [a, b, c] = await cast(ctx.client, 3);
     if (!a || !b || !c) throw new Error("cast not written");
     await sentBefore(ctx.client, b, a, 1, false);
-    const roundId = await roundOf(ctx.client, a, [{ person: b, reason: "liked_you" }, c]);
+    const queueDayId = await queueDayOf(ctx.client, a, [{ person: b, reason: "liked_you" }, c]);
     const app = await appAt(ctx.client);
 
     const answer = await choose(app, a, 1, "fish");
 
     expect(answer.status).toBe(200);
-    const { match, fishToSend, likesLeft } = RoundDecisionAnswer.parse(await answer.json());
+    const { match, fishToSend, likesLeft } = QueueDecisionAnswer.parse(await answer.json());
     expect(match).not.toBeNull();
     // One of the day's likes spent and no fish: the next goes.
     expect(likesLeft).toBe(1);
     expect(fishToSend).toBe(true);
     expect((await choose(app, a, 2, "fish")).status).toBe(200);
-    expect(await entriesOf(ctx.client, roundId)).toEqual([
+    expect(await entriesOf(ctx.client, queueDayId)).toEqual([
       { decision: "like", fish: false },
       { decision: "like", fish: true },
     ]);
@@ -290,7 +290,7 @@ describe("the fish", () => {
     if (!a || !b || !c || !d) throw new Error("cast not written");
     await sentBefore(ctx.client, b, a, 1, true);
     await sentBefore(ctx.client, c, a, 1, true);
-    const roundId = await roundOf(ctx.client, a, [
+    const queueDayId = await queueDayOf(ctx.client, a, [
       { person: b, reason: "fish" },
       { person: c, reason: "fish" },
       d,
@@ -309,7 +309,7 @@ describe("the fish", () => {
 
     expect(refused.status).toBe(429);
     expect(await codeOf(refused)).toBe("like_budget_exceeded");
-    expect(await entriesOf(ctx.client, roundId)).toEqual([
+    expect(await entriesOf(ctx.client, queueDayId)).toEqual([
       { decision: "like", fish: false },
       { decision: "like", fish: false },
       { decision: null, fish: false },
@@ -328,7 +328,7 @@ describe("the fish", () => {
       const [a, b, c] = await cast(ctx.client, 3);
       if (!a || !b || !c) throw new Error("cast not written");
       await sentBefore(ctx.client, b, a, 1, reason === "fish");
-      const roundId = await roundOf(ctx.client, a, [{ person: b, reason }, c]);
+      const queueDayId = await queueDayOf(ctx.client, a, [{ person: b, reason }, c]);
       const app = await appAt(ctx.client);
       expect((await choose(app, a, 2, "like")).status).toBe(200);
 
@@ -337,7 +337,7 @@ describe("the fish", () => {
       expect(refused.status).toBe(429);
       expect(await codeOf(refused)).toBe("like_budget_exceeded");
       expect(Number(refused.headers.get("retry-after"))).toBe(12 * 3600);
-      expect(await entriesOf(ctx.client, roundId)).toEqual([
+      expect(await entriesOf(ctx.client, queueDayId)).toEqual([
         { decision: null, fish: false },
         { decision: "like", fish: false },
       ]);
@@ -357,7 +357,7 @@ describe("the fish", () => {
     const [a, b, c, x] = await cast(ctx.client, 4);
     if (!a || !b || !c || !x) throw new Error("cast not written");
     await sentBefore(ctx.client, a, x, 3, true);
-    const roundId = await roundOf(ctx.client, a, [b, c]);
+    const queueDayId = await queueDayOf(ctx.client, a, [b, c]);
     const app = await appAt(ctx.client);
     expect((await choose(app, a, 1, "like")).status).toBe(200);
 
@@ -366,7 +366,7 @@ describe("the fish", () => {
     expect(refused.status).toBe(429);
     expect(await codeOf(refused)).toBe("like_budget_exceeded");
     expect(Number(refused.headers.get("retry-after"))).toBe(12 * 3600);
-    expect(await entriesOf(ctx.client, roundId)).toEqual([
+    expect(await entriesOf(ctx.client, queueDayId)).toEqual([
       { decision: "like", fish: false },
       { decision: null, fish: false },
     ]);
@@ -376,17 +376,17 @@ describe("the fish", () => {
     const [a, b] = await cast(ctx.client, 2);
     if (!a || !b) throw new Error("cast not written");
     await sentBefore(ctx.client, b, a, 2, false);
-    await roundOf(ctx.client, a, [b]);
+    await queueDayOf(ctx.client, a, [b]);
     const answer = await choose(await appAt(ctx.client), a, 1, "fish");
-    expect(RoundDecisionAnswer.parse(await answer.json()).match).not.toBeNull();
+    expect(QueueDecisionAnswer.parse(await answer.json()).match).not.toBeNull();
   });
 });
 
 describe("whether a fish can go today (#475)", () => {
-  test("A round read after the week's fish offers no other fish this week", async ({ ctx }) => {
+  test("A queue read after the week's fish offers no other fish this week", async ({ ctx }) => {
     const [a, b, c] = await cast(ctx.client, 3);
     if (!a || !b || !c) throw new Error("cast not written");
-    await roundOf(ctx.client, a, [b, c]);
+    await queueDayOf(ctx.client, a, [b, c]);
     const app = await appAt(ctx.client);
     expect(await fishToSendOn(app, a)).toBe(true);
 
@@ -406,7 +406,7 @@ describe("whether a fish can go today (#475)", () => {
     async ([, decision], { ctx }) => {
       const [a, b] = await cast(ctx.client, 2);
       if (!a || !b) throw new Error("cast not written");
-      await roundOf(ctx.client, a, [b]);
+      await queueDayOf(ctx.client, a, [b]);
       const app = await appAt(ctx.client);
       expect(await fishToSendAfter(await choose(app, a, 1, "fish"))).toBe(false);
 
@@ -421,7 +421,7 @@ describe("whether a fish can go today (#475)", () => {
     const [a, b] = await cast(ctx.client, 2);
     if (!a || !b) throw new Error("cast not written");
     await sentBefore(ctx.client, b, a, 1, false);
-    await roundOf(ctx.client, a, [{ person: b, reason: "liked_you" }]);
+    await queueDayOf(ctx.client, a, [{ person: b, reason: "liked_you" }]);
     const app = await appAt(ctx.client);
     expect(await fishToSendAfter(await choose(app, a, 1, "fish"))).toBe(true);
   });
@@ -432,7 +432,7 @@ describe("whether a fish can go today (#475)", () => {
     await withMatchingConfig(ctx.client, { like_budget_balanced: 1 });
     const [a, b] = await cast(ctx.client, 2);
     if (!a || !b) throw new Error("cast not written");
-    const roundId = await roundOf(ctx.client, a, [b]);
+    const queueDayId = await queueDayOf(ctx.client, a, [b]);
     const app = await appAt(ctx.client);
 
     expect(await budgetsAfter(await choose(app, a, 1, "like"))).toEqual({
@@ -445,7 +445,7 @@ describe("whether a fish can go today (#475)", () => {
       fishToSend: false,
       likesLeft: 0,
     });
-    expect(await entriesOf(ctx.client, roundId)).toEqual([{ decision: "like", fish: true }]);
+    expect(await entriesOf(ctx.client, queueDayId)).toEqual([{ decision: "like", fish: true }]);
   });
 
   test("a fish on a card liked back already is the same like, with no likes left too", async ({
@@ -455,7 +455,7 @@ describe("whether a fish can go today (#475)", () => {
     const [a, b] = await cast(ctx.client, 2);
     if (!a || !b) throw new Error("cast not written");
     await sentBefore(ctx.client, b, a, 1, false);
-    const roundId = await roundOf(ctx.client, a, [{ person: b, reason: "liked_you" }]);
+    const queueDayId = await queueDayOf(ctx.client, a, [{ person: b, reason: "liked_you" }]);
     const app = await appAt(ctx.client);
     expect((await choose(app, a, 1, "like")).status).toBe(200);
 
@@ -464,7 +464,7 @@ describe("whether a fish can go today (#475)", () => {
       likesLeft: 0,
     });
 
-    expect(await entriesOf(ctx.client, roundId)).toEqual([{ decision: "like", fish: false }]);
+    expect(await entriesOf(ctx.client, queueDayId)).toEqual([{ decision: "like", fish: false }]);
   });
 
   test("with fish switched off none can go, whether or not the day is open", async ({ ctx }) => {
@@ -472,12 +472,12 @@ describe("whether a fish can go today (#475)", () => {
     const [a, b] = await cast(ctx.client, 2);
     if (!a || !b) throw new Error("cast not written");
     const app = await appAt(ctx.client);
-    // No round yet, and matching not open: nothing opens one.
-    const unopened = RoundResponse.parse(
-      await (await app.request("/rounds/today", { headers: a.headers })).json(),
+    // No queue yet, and matching not open: nothing opens one.
+    const unopened = QueueResponse.parse(
+      await (await app.request("/queue/today", { headers: a.headers })).json(),
     );
     expect(unopened).toMatchObject({ entries: null, fishToSend: false });
-    await roundOf(ctx.client, a, [b]);
+    await queueDayOf(ctx.client, a, [b]);
     expect(await fishToSendOn(app, a)).toBe(false);
     expect(await fishToSendAfter(await choose(app, a, 1, "like"))).toBe(false);
   });
@@ -485,9 +485,9 @@ describe("whether a fish can go today (#475)", () => {
   test("says only the caller's own: a fish another sent them changes nothing", async ({ ctx }) => {
     const [a, b, c] = await cast(ctx.client, 3);
     if (!a || !b || !c) throw new Error("cast not written");
-    // "B"'s fish of today waits on "A", in "A"'s round as a fish.
+    // "B"'s fish of today waits on "A", in "A"'s queue as a fish.
     await sentBefore(ctx.client, b, a, 0, true);
-    await roundOf(ctx.client, a, [{ person: b, reason: "fish" }, c]);
+    await queueDayOf(ctx.client, a, [{ person: b, reason: "fish" }, c]);
     const app = await appAt(ctx.client);
     expect(await fishToSendOn(app, a)).toBe(true);
     expect(await fishToSendOn(app, b)).toBe(false);

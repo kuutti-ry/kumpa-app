@@ -67,8 +67,8 @@ describe("blocks and reports", () => {
       "apps/api/src/chat/repo.ts",
       // Who is complete, and what their pools ask (ADR-060 §5).
       "apps/api/src/jobs/pool.ts",
-      // Today's round: seen and the decision ask at the write (ADR-030 §2, ADR-034).
-      "apps/api/src/matching/rounds.ts",
+      // Today's queue: seen and the decision ask at the write (ADR-030 §2, ADR-034).
+      "apps/api/src/matching/queue.ts",
       // The photos a card showed (ADR-008 §3).
       "apps/api/src/media/repo.ts",
       // The card (ADR-009 §6).
@@ -103,11 +103,11 @@ describe("blocks and reports", () => {
   it("a star is read by its owner's list and queue alone", () => {
     expect(readersOf(readsStar)).toEqual([
       // Whom the person's own queue leaves out as ordinary cards.
-      "apps/api/src/jobs/round-builder.ts",
+      "apps/api/src/jobs/queue-builder.ts",
       // The person's own list.
       "apps/api/src/jobs/stars.ts",
       // The person's own card says it, leaves their queue, and a like or a pass takes it off.
-      "apps/api/src/matching/rounds.ts",
+      "apps/api/src/matching/queue.ts",
       // Putting, clearing and opening one, its erasure and the person's own export.
       "apps/api/src/matching/stars.ts",
       // The demo's reset and the synthetic population's removal.

@@ -3,7 +3,7 @@ import { z } from "zod";
 /**
  * How far two homes are, in the only words Kuutti has for it (ADR-061 §5):
  * the straight line between two kept places' centres, said as a band, never
- * in kilometres (ADR-019 §8). The band is written on a round's entry when the
+ * in kilometres (ADR-019 §8). The band is written on a queue's entry when the
  * entry is, and a card's line reads it from there. A closed list, mirrored in
  * the database's distance_band.
  */

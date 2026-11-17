@@ -2,7 +2,7 @@ import { MATCHING_CONFIG_V1 } from "@kuutti/db";
 import {
   PERSONA_CONVERSATIONS,
   PERSONA_HISTORIES,
-  PERSONA_ROUNDS,
+  PERSONA_QUEUE_DAYS,
   type PersonaHistory,
   personaBirth,
   personaOf,
@@ -14,9 +14,9 @@ import { ageInYears, contactDetailsIn } from "../../src/profile/index.ts";
 
 // The stories' conversations (#348) are matches the product's own rules
 // allow: each pair in the other's pool, both ways (rule 7), and every message
-// one the send would take; so is the round of the stories (#379). Their shape
+// one the send would take; so is the queue of the stories (#379). Their shape
 // and their writers are tested in packages/db (conversations.test.ts,
-// rounds.test.ts).
+// queue.test.ts).
 
 // The demo's season, and two years on: the windows are wide enough for both.
 const DAYS = [new Date(Date.UTC(2026, 9, 17)), new Date(Date.UTC(2028, 11, 31))];
@@ -118,9 +118,9 @@ describe("the stories' conversations", () => {
   });
 });
 
-describe("the round of the stories (#379)", () => {
+describe("the queue of the stories (#379)", () => {
   it("shows every band, a card to each, from where its owner lives (ADR-061 §5)", () => {
-    for (const story of PERSONA_ROUNDS) {
+    for (const story of PERSONA_QUEUE_DAYS) {
       const cards = PERSONA_HISTORIES.filter((h) => personaOf(h).group === "cards").map((h) => [
         h.key,
         bandBetween(homeOf(story.of), homeOf(h.key)),
@@ -135,8 +135,8 @@ describe("the round of the stories (#379)", () => {
   });
 
   it("holds people in each other's pool, both ways, and in no other persona's, on every day of the demo", () => {
-    for (const story of PERSONA_ROUNDS) {
-      // The round's owner and everybody of her cast, who are each other's people only.
+    for (const story of PERSONA_QUEUE_DAYS) {
+      // The queue's owner and everybody of her cast, who are each other's people only.
       const cast = PERSONA_HISTORIES.filter(
         (h) => h.key === story.of || personaOf(h).group === "cards",
       ).map((h) => h.key);

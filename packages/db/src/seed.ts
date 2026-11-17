@@ -127,8 +127,8 @@ export const MATCHING_CONFIG_V1 = {
   auto_shadow_ban_photo_fetches_minutes: 60,
   auto_shadow_ban_cards_served: 300,
   auto_shadow_ban_cards_served_minutes: 10,
-  auto_shadow_ban_round_reads: 30,
-  auto_shadow_ban_round_reads_minutes: 1,
+  auto_shadow_ban_queue_reads: 30,
+  auto_shadow_ban_queue_reads_minutes: 1,
   // #348 (ADR-031 §6): the longest message, in characters
   // after trimming, and the messages one account may send in a minute; the
   // send reads both on each request.

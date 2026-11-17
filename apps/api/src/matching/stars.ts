@@ -1,7 +1,7 @@
 import { type Queryable, transaction } from "@kuutti/db";
 import {
   type DealBreaker,
-  type RoundResponse,
+  type QueueResponse,
   STARS_CEILING,
   type StarAnswer,
   type StarredPerson,
@@ -21,10 +21,10 @@ import {
   type Matches,
   notFound,
   type Place,
-  type RoundDeps,
+  type QueueDeps,
   SERVABLE,
   todayOrRefuse,
-} from "./rounds.ts";
+} from "./queue.ts";
 
 // The stars (#575, ADR-064): somebody marked for later, without a like or a pass.
 // A star is the person's own and nothing else reads it: the queue leaves a starred
@@ -33,7 +33,7 @@ import {
 // and no event. Every statement names the caller (rule 6), and no route takes
 // another person's id: a star is put on a card by its place, and read, opened and
 // cleared by its own id, which answers 404 to anybody but its owner. Raw
-// parameterised SQL through Queryable, as `rounds.ts`, under whose locks it writes.
+// parameterised SQL through Queryable, as `queue.ts`, under whose locks it writes.
 
 /** The most stars a person's list may hold (ADR-064 §5); 0 is off, and STARS_CEILING stands either way. */
 const STARS_MAX_KEY = "stars_max";
@@ -59,7 +59,7 @@ const full = () => new AppError(409, "stars_full", "The person's list of stars i
 /**
  * A star on today's card (ADR-064 §1): it spends nothing and moves no card, and
  * the same star again answers the one that stands. Like a decision it holds the
- * two accounts in id order and then the round's row, so an erasure under way
+ * two accounts in id order and then the queue's row, so an erasure under way
  * finishes first, one that comes later waits, and two devices cannot both pass
  * the count. A card holding a like or a pass takes none, since those take the star
  * off (§3), one that can no longer be shown takes none, and neither does one the
@@ -69,7 +69,7 @@ const full = () => new AppError(409, "stars_full", "The person's list of stars i
  * who sees fewer.
  */
 export async function putStar(
-  deps: RoundDeps,
+  deps: QueueDeps,
   stars: Pick<Stars, "shown">,
   input: { accountId: string; day: string; position: number },
 ): Promise<StarAnswer> {
@@ -81,7 +81,7 @@ export async function putStar(
       position: input.position,
     });
     const open = await tx.query(
-      `SELECT 1 FROM round_entries e JOIN rounds r ON r.id = e.round_id
+      `SELECT 1 FROM queue_entry e JOIN queue_day r ON r.id = e.queue_day_id
         WHERE r.account_id = $1 AND r.day = $2 AND e.position = $3
           AND (e.decision IS NULL OR e.decision = 'skip') AND ${SERVABLE}`,
       [input.accountId, today, input.position],
@@ -137,7 +137,7 @@ async function entryOfCandidate(
 ): Promise<EntryRow | null> {
   const { rows } = await db.query<EntryRow>(
     `SELECT ${ENTRY_COLUMNS}
-       FROM round_entries e JOIN rounds r ON r.id = e.round_id
+       FROM queue_entry e JOIN queue_day r ON r.id = e.queue_day_id
       WHERE r.account_id = $1 AND r.day = $2 AND e.candidate_id = $3`,
     [accountId, day, candidateId],
   );
@@ -153,13 +153,13 @@ async function entryOfCandidate(
  * for a star that is not the caller's, or for somebody the list leaves out now.
  */
 export async function openStar(
-  deps: RoundDeps,
+  deps: QueueDeps,
   matches: Pick<Matches, "yourTurn">,
   stars: Pick<Stars, "shown" | "place">,
   cardOf: CardOf,
   dealBreakers: readonly DealBreaker[],
   input: { accountId: string; id: string },
-): Promise<RoundResponse> {
+): Promise<QueueResponse> {
   const day = finnishDay(deps.now());
   const { accountId } = input;
   const { rows } = await deps.db.query<{ candidate_id: string }>(
@@ -179,10 +179,6 @@ export async function openStar(
     row = await entryOfCandidate(deps.db, accountId, day, candidateId);
   }
   if (!row) throw notFound();
-  await deps.db.query(
-    "UPDATE rounds SET opened_at = $3 WHERE account_id = $1 AND day = $2 AND opened_at IS NULL",
-    [accountId, day, deps.now()],
-  );
   const entries = await entriesOf(accountId, [row], cardOf, dealBreakers);
   if (entries.length === 0) throw notFound();
   return { day, entries, ...(await budgetsOf(deps.db, matches, accountId, day)) };

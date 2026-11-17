@@ -16,7 +16,7 @@ import { BIO_MIN_FOR_COMPLETENESS, PreferencesUpdate, ProfileUpdate } from "@kuu
 import { it } from "vitest";
 import { CURRENT_CONSENT_VERSIONS, hmacKeyFromHex } from "../../src/identity/index.ts";
 import { subjectsAmong } from "../../src/jobs/pool.ts";
-import { fillQueue } from "../../src/jobs/round-builder.ts";
+import { fillQueue } from "../../src/jobs/queue-builder.ts";
 import { finnishDay } from "../../src/lib/finnish-day.ts";
 import { inEachOthersPool, type PoolPerson } from "../../src/matching/index.ts";
 import { keptPlace, pointOf } from "../../src/pond/index.ts";
@@ -32,9 +32,9 @@ import { giveStories, viaServices } from "./services.ts";
 
 // The cast (#560) against the product's own rules: everybody a person's answers
 // could be, every card one the filters allow both ways (rule 7), on every month
-// of the demo, and nobody among the cards of Iida's round, which the round's flow
+// of the demo, and nobody among the cards of Iida's queue, which the queue's flow
 // reads exactly. Their shape and their writers are tested in packages/db
-// (cast.test.ts, rounds.test.ts).
+// (cast.test.ts, queue.test.ts).
 
 // The first and last day of every month to the end of 2028: an age turns at a month's end (TD-14).
 const MONTHS = Array.from({ length: 26 }, (_, i) => [
@@ -233,7 +233,7 @@ describe("the cast", () => {
   );
 
   it.each(["iida", "henna", "katja", "minna", "riikka"])(
-    "stay out of %s's pool, which the round's flow reads exactly",
+    "stay out of %s's pool, which the queue's flow reads exactly",
     (key) => {
       for (const at of MONTHS) {
         const person = memberOf(key, at);
@@ -301,7 +301,7 @@ describe("what the cast gives the members", () => {
     }
     const { rows } = await ctx.client.query<{ subject: string; reason: string; gender: string }>(
       `SELECT i.broker_subject AS subject, e.reason, a.gender
-         FROM rounds r JOIN round_entries e ON e.round_id = r.id
+         FROM queue_day r JOIN queue_entry e ON e.queue_day_id = r.id
          JOIN account a ON a.id = e.candidate_id JOIN identity i ON i.id = a.identity_id
         WHERE r.account_id = $1 AND r.day = $2 ORDER BY e.position`,
       [sanna, finnishDay(now())],

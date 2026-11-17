@@ -3,10 +3,10 @@ import {
   DealBreakersResponse,
   type ProfileFields,
   QUEUE_PAGE,
+  QueueResponse,
   RelaxationAnswer,
   RelaxationsResponse,
   RelaxationUndone,
-  RoundResponse,
 } from "@kuutti/schema";
 import { vi } from "vitest";
 import { type App, createApp } from "../app.ts";
@@ -25,15 +25,15 @@ import {
   testConfig,
 } from "../test/harness.ts";
 import { HOME, HOMES, type PeopleOptions, people } from "../test/people.ts";
-import { endedConversation, shownAt } from "../test/rounds.ts";
-import { fillQueue } from "./round-builder.ts";
+import { endedConversation, shownAt } from "../test/queue.ts";
+import { fillQueue } from "./queue-builder.ts";
 
 // The short pool (#99, ADR-042, ADR-062 §10,
-// features/matching/short-pool.feature): the order of coming back, when a round
+// features/matching/short-pool.feature): the order of coming back, when a queue
 // is short, the offers and their steps, a relaxation and its undo at the routes,
 // a page at a time, the next day's queue, rule 7, a relaxed like, a move, and
 // "did not answer"; then the routes' edges. The pure rules are
-// matching/pool.test.ts (relaxedBy) and matching/round-order.test.ts
+// matching/pool.test.ts (relaxedBy) and matching/queue-order.test.ts
 // (comingBackOrder).
 
 /** Noon in Helsinki, 2026-10-20. */
@@ -104,10 +104,10 @@ async function pondWith(
 
 type Card = { candidate_id: string; reason: string; relaxed_field: string | null };
 
-async function roundOf(db: Queryable, accountId: string, day = DAY): Promise<Card[]> {
+async function queueDayOf(db: Queryable, accountId: string, day = DAY): Promise<Card[]> {
   const { rows } = await db.query<Card>(
-    `SELECT e.candidate_id, e.reason, e.relaxed_field FROM rounds r
-       JOIN round_entries e ON e.round_id = r.id
+    `SELECT e.candidate_id, e.reason, e.relaxed_field FROM queue_day r
+       JOIN queue_entry e ON e.queue_day_id = r.id
       WHERE r.account_id = $1 AND r.day = $2 ORDER BY e.position`,
     [accountId, day],
   );
@@ -132,34 +132,34 @@ async function appAt(db: Queryable, now = NOON): Promise<App> {
 
 type Headers = Record<string, string>;
 
-async function readToday(app: App, headers: Headers): Promise<RoundResponse> {
-  const answer = await app.request("/rounds/today", { headers });
+async function readToday(app: App, headers: Headers): Promise<QueueResponse> {
+  const answer = await app.request("/queue/today", { headers });
   expect(answer.status).toBe(200);
-  return RoundResponse.parse(await answer.json());
+  return QueueResponse.parse(await answer.json());
 }
 
 const decide = (app: App, headers: Headers, position: number, decision: string) =>
-  app.request(`/rounds/${DAY}/entries/${position}/decision`, {
+  app.request(`/queue/${DAY}/entries/${position}/decision`, {
     method: "PUT",
     headers: jsonHeaders(headers),
     body: JSON.stringify({ decision }),
   });
 
 /** Every card of a read or an answer, passed. */
-async function passAll(app: App, headers: Headers, entries: RoundResponse["entries"]) {
+async function passAll(app: App, headers: Headers, entries: QueueResponse["entries"]) {
   for (const entry of entries ?? []) {
     expect((await decide(app, headers, entry.position, "pass")).status).toBe(200);
   }
 }
 
 async function offers(app: App, headers: Headers, day = DAY): Promise<RelaxationsResponse> {
-  const answer = await app.request(`/rounds/${day}/relaxations`, { headers });
+  const answer = await app.request(`/queue/${day}/relaxations`, { headers });
   expect(answer.status).toBe(200);
   return RelaxationsResponse.parse(await answer.json());
 }
 
 const relax = (app: App, headers: Headers, body: unknown, day = DAY) =>
-  app.request(`/rounds/${day}/relaxations`, {
+  app.request(`/queue/${day}/relaxations`, {
     method: "POST",
     headers: jsonHeaders(headers),
     body: JSON.stringify(body),
@@ -173,7 +173,7 @@ const putHome = (app: App, headers: Headers, body: unknown) =>
   });
 
 const undo = (app: App, headers: Headers, field: string, day = DAY) =>
-  app.request(`/rounds/${day}/relaxations/${field}`, { method: "DELETE", headers });
+  app.request(`/queue/${day}/relaxations/${field}`, { method: "DELETE", headers });
 
 async function added(response: Response) {
   expect(response.status).toBe(200);
@@ -193,7 +193,7 @@ describe("coming back", () => {
 
     await opens(ctx.client, a);
 
-    expect((await roundOf(ctx.client, a)).map((e) => [e.candidate_id, e.reason])).toEqual([
+    expect((await queueDayOf(ctx.client, a)).map((e) => [e.candidate_id, e.reason])).toEqual([
       [b, "matches_filters"],
       [c, "seen_before"],
       [d, "seen_before"],
@@ -233,7 +233,7 @@ describe("coming back", () => {
 
     await opens(ctx.client, a);
 
-    expect((await roundOf(ctx.client, a)).map((x) => [x.candidate_id, x.reason])).toEqual(
+    expect((await queueDayOf(ctx.client, a)).map((x) => [x.candidate_id, x.reason])).toEqual(
       [
         skippedFirst,
         skippedLater,
@@ -247,7 +247,7 @@ describe("coming back", () => {
     );
   });
 
-  test("a former conversation whose rounds have gone comes back by the day it ended, and stays one", async ({
+  test("a former conversation whose queue days have gone comes back by the day it ended, and stays one", async ({
     ctx,
   }) => {
     const { a, of } = await pondWith(ctx, [{ fields: { smoking: "never" }, count: 3 }]);
@@ -259,8 +259,8 @@ describe("coming back", () => {
 
     await opens(ctx.client, a);
 
-    // Nothing of them is left in the rounds, and they are no new people.
-    expect((await roundOf(ctx.client, a)).map((x) => [x.candidate_id, x.reason])).toEqual([
+    // Nothing of them is left in the queue days, and they are no new people.
+    expect((await queueDayOf(ctx.client, a)).map((x) => [x.candidate_id, x.reason])).toEqual([
       [liked, "seen_before"],
       [first, "seen_before"],
       [later, "seen_before"],
@@ -278,12 +278,12 @@ describe("coming back", () => {
 
     await opens(ctx.client, a);
 
-    expect((await roundOf(ctx.client, a)).map((e) => e.candidate_id)).toEqual([c, d]);
+    expect((await queueDayOf(ctx.client, a)).map((e) => e.candidate_id)).toEqual([c, d]);
   });
 });
 
 describe("relaxing a deal-breaker for the day", () => {
-  test("A round is short once no new person is left in the queue", async ({ ctx }) => {
+  test("A queue is short once no new person is left in the queue", async ({ ctx }) => {
     const { a } = await pondWith(ctx, [
       { fields: { smoking: "never" }, count: QUEUE_PAGE + 1 },
       { fields: {}, count: 1 },
@@ -309,7 +309,7 @@ describe("relaxing a deal-breaker for the day", () => {
     });
   });
 
-  test("somebody seen before keeps no round from being short", async ({ ctx }) => {
+  test("somebody seen before keeps no queue from being short", async ({ ctx }) => {
     const { a, of } = await pondWith(ctx, [
       { fields: { smoking: "never" }, count: 11 },
       { fields: {}, count: 1 },
@@ -321,10 +321,10 @@ describe("relaxing a deal-breaker for the day", () => {
 
     expect((await offers(app, headers)).short).toBe(true);
     // One of the eleven is left out of the log, and comes as seen before once these are read.
-    expect(await roundOf(ctx.client, a)).toHaveLength(QUEUE_PAGE);
+    expect(await queueDayOf(ctx.client, a)).toHaveLength(QUEUE_PAGE);
   });
 
-  test("A short round offers each deal-breaker relaxed, with the pool's growth in steps", async ({
+  test("A short queue offers each deal-breaker relaxed, with the pool's growth in steps", async ({
     ctx,
   }) => {
     const { a } = await pondWith(ctx, [
@@ -351,7 +351,7 @@ describe("relaxing a deal-breaker for the day", () => {
     const app = await appAt(ctx.client);
     const { headers } = await signInAs(ctx.client, a);
     const before = {
-      round: await roundOf(ctx.client, a),
+      picked: await queueDayOf(ctx.client, a),
       preferences: (
         await ctx.client.query("SELECT * FROM preferences WHERE account_id = $1 ORDER BY field", [
           a,
@@ -362,7 +362,7 @@ describe("relaxing a deal-breaker for the day", () => {
     await offers(app, headers);
     await offers(app, headers);
 
-    expect(await roundOf(ctx.client, a)).toEqual(before.round);
+    expect(await queueDayOf(ctx.client, a)).toEqual(before.picked);
     expect(
       (
         await ctx.client.query("SELECT * FROM preferences WHERE account_id = $1 ORDER BY field", [
@@ -370,7 +370,7 @@ describe("relaxing a deal-breaker for the day", () => {
         ])
       ).rows,
     ).toEqual(before.preferences);
-    expect((await ctx.client.query("SELECT 1 FROM round_relaxation")).rows).toEqual([]);
+    expect((await ctx.client.query("SELECT 1 FROM queue_relaxation")).rows).toEqual([]);
   });
 
   test("A relaxation adds a page of the people it lets in, labelled with the field, and the queue goes on to the rest", async ({
@@ -390,9 +390,9 @@ describe("relaxing a deal-breaker for the day", () => {
     expect(entries.map((e) => [e.position, e.reason, e.relaxedField, e.decision])).toEqual(
       Array.from({ length: QUEUE_PAGE }, (_, i) => [i + 2, "relaxed", "smoking", null]),
     );
-    const round = await roundOf(ctx.client, a);
-    expect(round.slice(1).every((e) => unanswered.has(e.candidate_id))).toBe(true);
-    // The answer's cards are the round's own, as its read serves them.
+    const picked = await queueDayOf(ctx.client, a);
+    expect(picked.slice(1).every((e) => unanswered.has(e.candidate_id))).toBe(true);
+    // The answer's cards are the queue's own, as its read serves them.
     expect((await readToday(app, headers)).entries).toEqual(entries);
     expect(await offers(app, headers)).toEqual({ short: false, offers: [], relaxed: [UNANSWERED] });
 
@@ -403,7 +403,7 @@ describe("relaxing a deal-breaker for the day", () => {
       [12, "relaxed", "smoking"],
       [13, "relaxed", "smoking"],
     ]);
-    expect((await roundOf(ctx.client, a)).slice(-2).map((e) => e.relaxed_field)).toEqual([
+    expect((await queueDayOf(ctx.client, a)).slice(-2).map((e) => e.relaxed_field)).toEqual([
       "smoking",
       "smoking",
     ]);
@@ -425,7 +425,7 @@ describe("relaxing a deal-breaker for the day", () => {
 
     expect((await readToday(app, headers)).entries).toHaveLength(1);
     const { rows } = await ctx.client.query<{ relaxed_with: string[] }>(
-      `SELECT e.relaxed_with FROM round_entries e JOIN rounds r ON r.id = e.round_id
+      `SELECT e.relaxed_with FROM queue_entry e JOIN queue_day r ON r.id = e.queue_day_id
         WHERE r.account_id = $1 AND e.candidate_id = ANY($2::uuid[]) AND e.decision IS NULL`,
       [a, of[0]],
     );
@@ -458,7 +458,10 @@ describe("relaxing a deal-breaker for the day", () => {
     expect((await readToday(app, headers)).entries?.map((e) => [e.position, e.decision])).toEqual([
       [1, null],
     ]);
-    expect((await roundOf(ctx.client, a)).map((e) => e.relaxed_field)).toEqual([null, "smoking"]);
+    expect((await queueDayOf(ctx.client, a)).map((e) => e.relaxed_field)).toEqual([
+      null,
+      "smoking",
+    ]);
     // Their places stay given: tapped again, the three come after the highest.
     const again = await added(await relax(app, headers, ASIDE));
     expect(again.map((card) => card.position)).toEqual([6, 7, 8]);
@@ -493,7 +496,7 @@ describe("relaxing a deal-breaker for the day", () => {
     expect(await codeOf(again)).toBe("already_relaxed");
 
     await opens(ctx.client, a, NEXT_NOON);
-    const tomorrow = await roundOf(ctx.client, a, NEXT_DAY);
+    const tomorrow = await queueDayOf(ctx.client, a, NEXT_DAY);
     expect(tomorrow.map((e) => e.candidate_id)).not.toContain(b);
   });
 
@@ -510,7 +513,7 @@ describe("relaxing a deal-breaker for the day", () => {
     await opens(ctx.client, a, NEXT_NOON);
 
     const unanswered = new Set(of[1]);
-    const tomorrow = await roundOf(ctx.client, a, NEXT_DAY);
+    const tomorrow = await queueDayOf(ctx.client, a, NEXT_DAY);
     expect(tomorrow.filter((e) => unanswered.has(e.candidate_id))).toEqual([]);
     expect(tomorrow.map((e) => e.reason)).toEqual(["matches_filters"]);
   });
@@ -533,12 +536,12 @@ describe("relaxing a deal-breaker for the day", () => {
     expect(await added(await relax(app, headers, UNANSWERED))).toHaveLength(1);
     const both = await added(await relax(app, headers, { field: "hasKids", kind: "aside" }));
     expect(both.map((e) => e.relaxedField)).toEqual(["hasKids"]);
-    expect((await roundOf(ctx.client, a)).map((e) => e.candidate_id)).toEqual([c, b]);
+    expect((await queueDayOf(ctx.client, a)).map((e) => e.candidate_id)).toEqual([c, b]);
 
     const undone = await undo(app, headers, "smoking");
 
     expect(RelaxationUndone.parse(await undone.json()).removed).toHaveLength(2);
-    expect(await roundOf(ctx.client, a)).toEqual([]);
+    expect(await queueDayOf(ctx.client, a)).toEqual([]);
     expect((await offers(app, headers)).relaxed).toEqual([{ field: "hasKids", kind: "aside" }]);
   });
 
@@ -564,7 +567,7 @@ describe("relaxing a deal-breaker for the day", () => {
 
     await undo(app, headers, "smoking");
 
-    expect((await roundOf(ctx.client, a)).map((e) => e.candidate_id)).toEqual([d]);
+    expect((await queueDayOf(ctx.client, a)).map((e) => e.candidate_id)).toEqual([d]);
   });
 
   test("a person whose profile no longer counts as complete is offered nothing, and relaxes nothing", async ({
@@ -586,7 +589,7 @@ describe("relaxing a deal-breaker for the day", () => {
     expect((await relax(app, headers, { field: "hasKids", kind: "aside" })).status).toBe(404);
   });
 
-  test("a round in a pond closed since is offered nothing, and relaxes nothing (ADR-060 §1)", async ({
+  test("a queue in a pond closed since is offered nothing, and relaxes nothing (ADR-060 §1)", async ({
     ctx,
   }) => {
     const { a } = await pondWith(ctx, [{ fields: {}, count: 2 }]);
@@ -616,7 +619,7 @@ describe("relaxing a deal-breaker for the day", () => {
 
     await opens(ctx.client, b, NEXT_NOON);
 
-    expect(await roundOf(ctx.client, b, NEXT_DAY)).toEqual([
+    expect(await queueDayOf(ctx.client, b, NEXT_DAY)).toEqual([
       { candidate_id: a, reason: "liked_you", relaxed_field: null },
     ]);
   });
@@ -632,11 +635,11 @@ describe("relaxing a deal-breaker for the day", () => {
     await opens(ctx.client, a);
     const app = await appAt(ctx.client);
     const { headers } = await signInAs(ctx.client, a);
-    expect(await roundOf(ctx.client, a)).toEqual([]);
+    expect(await queueDayOf(ctx.client, a)).toEqual([]);
 
     await added(await relax(app, headers, UNANSWERED));
 
-    expect((await roundOf(ctx.client, a)).map((e) => e.candidate_id)).toEqual([other]);
+    expect((await queueDayOf(ctx.client, a)).map((e) => e.candidate_id)).toEqual([other]);
   });
 
   test("a relaxation adds nobody within their clock, and new people before those seen", async ({
@@ -654,7 +657,7 @@ describe("relaxing a deal-breaker for the day", () => {
 
     await added(await relax(app, headers, UNANSWERED));
 
-    expect((await roundOf(ctx.client, a)).map((e) => e.candidate_id)).toEqual([fresh, skipped]);
+    expect((await queueDayOf(ctx.client, a)).map((e) => e.candidate_id)).toEqual([fresh, skipped]);
   });
 
   test("A relaxation never lets in somebody whose own filters exclude the person", async ({
@@ -675,7 +678,7 @@ describe("relaxing a deal-breaker for the day", () => {
 
     await added(await relax(app, headers, ASIDE));
 
-    expect((await roundOf(ctx.client, a)).map((e) => e.candidate_id)).toEqual([c]);
+    expect((await queueDayOf(ctx.client, a)).map((e) => e.candidate_id)).toEqual([c]);
   });
 
   test("A like on a relaxed card reaches its person", async ({ ctx }) => {
@@ -690,11 +693,11 @@ describe("relaxing a deal-breaker for the day", () => {
     expect((await decide(app, headers, card.position, "like")).status).toBe(200);
     // Without the like's waiver, A's stored deal-breaker keeps B away from A.
     await opens(ctx.client, b);
-    expect((await roundOf(ctx.client, b)).map((e) => e.candidate_id)).toEqual([]);
+    expect((await queueDayOf(ctx.client, b)).map((e) => e.candidate_id)).toEqual([]);
 
     await opens(ctx.client, b, NEXT_NOON);
 
-    expect(await roundOf(ctx.client, b, NEXT_DAY)).toEqual([
+    expect(await queueDayOf(ctx.client, b, NEXT_DAY)).toEqual([
       { candidate_id: a, reason: "liked_you", relaxed_field: null },
     ]);
   });
@@ -739,13 +742,13 @@ describe("relaxing a deal-breaker for the day", () => {
     const app = await appAt(ctx.client);
     const { headers } = await signInAs(ctx.client, a);
     expect(await added(await relax(app, headers, UNANSWERED))).toHaveLength(4);
-    const before = await roundOf(ctx.client, a);
+    const before = await queueDayOf(ctx.client, a);
 
     const again = await relax(app, headers, ASIDE);
 
     expect(again.status).toBe(409);
     expect(await codeOf(again)).toBe("already_relaxed");
-    expect(await roundOf(ctx.client, a)).toEqual(before);
+    expect(await queueDayOf(ctx.client, a)).toEqual(before);
   });
 
   test("A card says which of the person's deal-breakers its person did not answer", async ({
@@ -843,11 +846,11 @@ describe("the inbox stop and the short pool (ADR-062 §4)", () => {
     await passAll(app, headers, page);
     await passAll(app, headers, (await readToday(app, headers)).entries);
     expect((await readToday(app, headers)).entries).toEqual([]);
-    const log = (await roundOf(ctx.client, a)).map((e) => e.candidate_id);
+    const log = (await queueDayOf(ctx.client, a)).map((e) => e.candidate_id);
     expect(new Set(log)).toEqual(new Set(others));
   });
 
-  test("somebody held is no new person left: the round is short, and offers", async ({ ctx }) => {
+  test("somebody held is no new person left: the queue is short, and offers", async ({ ctx }) => {
     const { a, of } = await pondWith(ctx, [
       { fields: { smoking: "never" }, count: 1 },
       { fields: {}, count: 1 },
@@ -903,7 +906,7 @@ describe("A hidden answer counts under a deal-breaker as a shown one does", () =
 
     await opens(ctx.client, a);
 
-    expect((await roundOf(ctx.client, a)).map((e) => e.candidate_id)).toEqual([c]);
+    expect((await queueDayOf(ctx.client, a)).map((e) => e.candidate_id)).toEqual([c]);
   });
 });
 
@@ -924,7 +927,7 @@ describe("a person's own hidden answer", () => {
     expect(DealBreakersResponse.parse(await stored.json()).dealBreakers).toMatchObject([
       { field: "smoking", paused: false },
     ]);
-    expect((await roundOf(ctx.client, a)).map((e) => e.candidate_id)).toEqual([c]);
+    expect((await queueDayOf(ctx.client, a)).map((e) => e.candidate_id)).toEqual([c]);
   });
 });
 
@@ -942,17 +945,17 @@ describe("a deal-breaker on height through the night (#508)", () => {
     return { a, tall, same, open };
   }
 
-  test("holds in the round both ways, and a card says a person did not answer height", async ({
+  test("holds in the queue both ways, and a card says a person did not answer height", async ({
     ctx,
   }) => {
     const { a, tall, same, open } = await taller(ctx);
     for (const id of [a, same, tall]) await opens(ctx.client, id);
 
-    const hers = (await roundOf(ctx.client, a)).map((e) => e.candidate_id);
+    const hers = (await queueDayOf(ctx.client, a)).map((e) => e.candidate_id);
     expect(new Set(hers)).toEqual(new Set([tall, open]));
-    // Both ways: she is the one woman of the pond, and her filter keeps her off his round.
-    expect((await roundOf(ctx.client, same)).map((e) => e.candidate_id)).toEqual([]);
-    expect((await roundOf(ctx.client, tall)).map((e) => e.candidate_id)).toEqual([a]);
+    // Both ways: she is the one woman of the pond, and her filter keeps her off his queue.
+    expect((await queueDayOf(ctx.client, same)).map((e) => e.candidate_id)).toEqual([]);
+    expect((await queueDayOf(ctx.client, tall)).map((e) => e.candidate_id)).toEqual([a]);
 
     const app = await appAt(ctx.client);
     const { headers } = await signInAs(ctx.client, a);
@@ -967,7 +970,7 @@ describe("a deal-breaker on height through the night (#508)", () => {
     await hidden(ctx.client, [tall, same], "height");
     await opens(ctx.client, a);
 
-    const hers = (await roundOf(ctx.client, a)).map((e) => e.candidate_id);
+    const hers = (await queueDayOf(ctx.client, a)).map((e) => e.candidate_id);
     expect(new Set(hers)).toEqual(new Set([tall, open]));
 
     const app = await appAt(ctx.client);
@@ -978,7 +981,7 @@ describe("a deal-breaker on height through the night (#508)", () => {
     expect(byPerson.get(tall)?.notAnswered).toEqual(["height"]);
   });
 
-  test("a short round offers to set it aside for the day", async ({ ctx }) => {
+  test("a short queue offers to set it aside for the day", async ({ ctx }) => {
     const { a, same } = await taller(ctx);
     await opens(ctx.client, a);
     const app = await appAt(ctx.client);
@@ -988,7 +991,7 @@ describe("a deal-breaker on height through the night (#508)", () => {
     const { offers: offered } = await offers(app, headers);
     expect(offered.map(({ field, kind }) => ({ field, kind }))).toEqual([aside]);
     await added(await relax(app, headers, aside));
-    const relaxed = (await roundOf(ctx.client, a)).find((e) => e.candidate_id === same);
+    const relaxed = (await queueDayOf(ctx.client, a)).find((e) => e.candidate_id === same);
     expect(relaxed).toMatchObject({ reason: "relaxed", relaxed_field: "height" });
   });
 });
@@ -1011,7 +1014,7 @@ describe("a deal-breaker on distance through the night (#514, ADR-061 §7)", () 
     return { a, men };
   }
 
-  test("A short round offers a distance deal-breaker set aside, never for those who did not answer", async ({
+  test("A short queue offers a distance deal-breaker set aside, never for those who did not answer", async ({
     ctx,
   }) => {
     const { a } = await nearbyOnly(
@@ -1030,8 +1033,8 @@ describe("a deal-breaker on distance through the night (#514, ADR-061 §7)", () 
     const refused = await relax(app, headers, { field: "distance", kind: "unanswered" });
     expect(refused.status).toBe(404);
     expect(await codeOf(refused)).toBe("not_found");
-    expect(await roundOf(ctx.client, a)).toEqual([]);
-    const { rows } = await ctx.client.query("SELECT 1 FROM round_relaxation");
+    expect(await queueDayOf(ctx.client, a)).toEqual([]);
+    const { rows } = await ctx.client.query("SELECT 1 FROM queue_relaxation");
     expect(rows).toEqual([]);
   });
 
@@ -1051,7 +1054,7 @@ describe("a deal-breaker on distance through the night (#514, ADR-061 §7)", () 
     expect(cards.map((card) => [card.card.accountId, card.distance, card.relaxedField])).toEqual([
       [c, "around", "distance"],
     ]);
-    expect(await roundOf(ctx.client, a)).toEqual([
+    expect(await queueDayOf(ctx.client, a)).toEqual([
       { candidate_id: c, reason: "relaxed", relaxed_field: "distance" },
     ]);
   });
@@ -1079,7 +1082,7 @@ describe("a deal-breaker on distance through the night (#514, ADR-061 §7)", () 
     expect(await added(await relax(app, headers, UNANSWERED))).toHaveLength(1);
   });
 
-  test("set aside, it is undone as any other, and tomorrow's round filters again", async ({
+  test("set aside, it is undone as any other, and tomorrow's queue filters again", async ({
     ctx,
   }) => {
     const { a, men } = await nearbyOnly(ctx, [HOMES.close]);
@@ -1088,14 +1091,14 @@ describe("a deal-breaker on distance through the night (#514, ADR-061 §7)", () 
     const app = await appAt(ctx.client);
     const { headers } = await signInAs(ctx.client, a);
     await added(await relax(app, headers, SET_ASIDE));
-    expect((await roundOf(ctx.client, a)).map((e) => e.candidate_id)).toEqual([b]);
+    expect((await queueDayOf(ctx.client, a)).map((e) => e.candidate_id)).toEqual([b]);
 
     const undone = await undo(app, headers, "distance");
     expect(RelaxationUndone.parse(await undone.json()).removed).toEqual([1]);
-    expect(await roundOf(ctx.client, a)).toEqual([]);
+    expect(await queueDayOf(ctx.client, a)).toEqual([]);
 
     await opens(ctx.client, a, NEXT_NOON);
-    expect(await roundOf(ctx.client, a, NEXT_DAY)).toEqual([]);
+    expect(await queueDayOf(ctx.client, a, NEXT_DAY)).toEqual([]);
   });
 
   test("a like on a card a distance set aside let in reaches its person", async ({ ctx }) => {
@@ -1111,7 +1114,7 @@ describe("a deal-breaker on distance through the night (#514, ADR-061 §7)", () 
 
     await opens(ctx.client, b, NEXT_NOON);
 
-    expect(await roundOf(ctx.client, b, NEXT_DAY)).toEqual([
+    expect(await queueDayOf(ctx.client, b, NEXT_DAY)).toEqual([
       { candidate_id: a, reason: "liked_you", relaxed_field: null },
     ]);
   });
@@ -1129,7 +1132,7 @@ describe("a deal-breaker on distance through the night (#514, ADR-061 §7)", () 
     expect(entries?.[0]?.notAnswered).toEqual([]);
   });
 
-  test("Every entry is written with its band, whichever way it came into the round", async ({
+  test("Every entry is written with its band, whichever way it came into the queue", async ({
     ctx,
   }) => {
     const [a] = await people(ctx.client, 1, HER);
@@ -1178,9 +1181,9 @@ describe("the routes' edges", () => {
   test("the relaxation routes need a session", async ({ ctx }) => {
     const app = await appAt(ctx.client);
     for (const [method, path] of [
-      ["GET", `/rounds/${DAY}/relaxations`],
-      ["POST", `/rounds/${DAY}/relaxations`],
-      ["DELETE", `/rounds/${DAY}/relaxations/smoking`],
+      ["GET", `/queue/${DAY}/relaxations`],
+      ["POST", `/queue/${DAY}/relaxations`],
+      ["DELETE", `/queue/${DAY}/relaxations/smoking`],
     ] as const) {
       const response = await app.request(path, {
         method,
@@ -1207,11 +1210,11 @@ describe("the routes' edges", () => {
       const response = await relax(app, headers, body);
 
       expect(response.status).toBe(400);
-      expect((await ctx.client.query("SELECT 1 FROM round_relaxation")).rows).toEqual([]);
+      expect((await ctx.client.query("SELECT 1 FROM queue_relaxation")).rows).toEqual([]);
     },
   );
 
-  test("a day that has ended answers round_expired, and one not begun is not found", async ({
+  test("a day that has ended answers day_ended, and one not begun is not found", async ({
     ctx,
   }) => {
     const { a } = await pondWith(ctx, [{ fields: {}, count: 1 }]);
@@ -1220,25 +1223,25 @@ describe("the routes' edges", () => {
     const { headers } = await signInAs(ctx.client, a);
 
     for (const response of [
-      await later.request(`/rounds/${DAY}/relaxations`, { headers }),
+      await later.request(`/queue/${DAY}/relaxations`, { headers }),
       await relax(later, headers, UNANSWERED),
       await undo(later, headers, "smoking"),
     ]) {
       expect(response.status).toBe(409);
-      expect(await codeOf(response)).toBe("round_expired");
+      expect(await codeOf(response)).toBe("day_ended");
     }
     const app = await appAt(ctx.client);
-    expect((await app.request(`/rounds/${NEXT_DAY}/relaxations`, { headers })).status).toBe(404);
+    expect((await app.request(`/queue/${NEXT_DAY}/relaxations`, { headers })).status).toBe(404);
   });
 
-  test("with no round today, nothing is offered, relaxed or undone", async ({ ctx }) => {
+  test("with no queue today, nothing is offered, relaxed or undone", async ({ ctx }) => {
     const [a] = await people(ctx.client, 1, HER);
     if (!a) throw new Error("A not written");
     await dealBreaker(ctx.client, a, "smoking", ["never"], false);
     const app = await appAt(ctx.client);
     const { headers } = await signInAs(ctx.client, a);
 
-    expect((await app.request(`/rounds/${DAY}/relaxations`, { headers })).status).toBe(404);
+    expect((await app.request(`/queue/${DAY}/relaxations`, { headers })).status).toBe(404);
     expect((await relax(app, headers, UNANSWERED)).status).toBe(404);
     expect((await undo(app, headers, "smoking")).status).toBe(404);
   });
@@ -1261,18 +1264,18 @@ describe("the routes' edges", () => {
       await opens(ctx.client, a);
       const app = await appAt(ctx.client);
       const { headers } = await signInAs(ctx.client, a);
-      const before = await roundOf(ctx.client, a);
+      const before = await queueDayOf(ctx.client, a);
 
       const response = await relax(app, headers, { field, kind });
 
       expect(response.status).toBe(404);
       expect(await codeOf(response)).toBe("not_found");
-      expect(await roundOf(ctx.client, a)).toEqual(before);
-      expect((await ctx.client.query("SELECT 1 FROM round_relaxation")).rows).toEqual([]);
+      expect(await queueDayOf(ctx.client, a)).toEqual(before);
+      expect((await ctx.client.query("SELECT 1 FROM queue_relaxation")).rows).toEqual([]);
     },
   );
 
-  test("a round that is not short offers nothing, and a relaxation that finds nobody adds no card", async ({
+  test("a queue that is not short offers nothing, and a relaxation that finds nobody adds no card", async ({
     ctx,
   }) => {
     const { a } = await pondWith(ctx, [{ fields: { smoking: "never" }, count: QUEUE_PAGE + 1 }]);
@@ -1313,7 +1316,7 @@ describe("the routes' edges", () => {
     ]);
   });
 
-  test("a relaxation past a ceiling set in the panel is kept, its cards in the round, and says so with the wait", async ({
+  test("a relaxation past a ceiling set in the panel is kept, its cards in the queue, and says so with the wait", async ({
     ctx,
   }) => {
     const { a } = await pondWith(ctx, [{ fields: {}, count: 2 }]);
@@ -1327,18 +1330,18 @@ describe("the routes' edges", () => {
     expect(response.status).toBe(429);
     expect(await codeOf(response)).toBe("card_budget_exceeded");
     expect(Number(response.headers.get("retry-after"))).toBeGreaterThan(0);
-    expect((await roundOf(ctx.client, a)).map((e) => e.reason)).toEqual(["relaxed", "relaxed"]);
+    expect((await queueDayOf(ctx.client, a)).map((e) => e.reason)).toEqual(["relaxed", "relaxed"]);
   });
 
   test("the routes take the clock of the day when the app is given none", async ({ ctx }) => {
     const { a } = await pondWith(ctx, [{ fields: {}, count: 1 }]);
     await opens(ctx.client, a);
     const { headers } = await signInAs(ctx.client, a);
-    // The harness's app passes no now, so the routes read the clock: frozen at noon of the round's day.
+    // The harness's app passes no now, so the routes read the clock: frozen at noon of the queue's day.
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(NOON);
     try {
-      const response = await ctx.app.request(`/rounds/${DAY}/relaxations`, { headers });
+      const response = await ctx.app.request(`/queue/${DAY}/relaxations`, { headers });
       expect(response.status).toBe(200);
       expect(RelaxationsResponse.parse(await response.json()).short).toBe(true);
     } finally {
@@ -1347,11 +1350,11 @@ describe("the routes' edges", () => {
   });
 
   test.for([
-    ["GET", "/rounds/2026-02-30/relaxations"],
-    ["GET", "/rounds/today/relaxations"],
-    ["POST", "/rounds/today/relaxations"],
-    ["DELETE", `/rounds/${DAY}/relaxations/intent`],
-    ["DELETE", "/rounds/today/relaxations/smoking"],
+    ["GET", "/queue/2026-02-30/relaxations"],
+    ["GET", "/queue/today/relaxations"],
+    ["POST", "/queue/today/relaxations"],
+    ["DELETE", `/queue/${DAY}/relaxations/intent`],
+    ["DELETE", "/queue/today/relaxations/smoking"],
   ] as const)("%s %s is refused before anything is read", async ([method, path], { ctx }) => {
     const { a } = await pondWith(ctx, [{ fields: {}, count: 1 }]);
     await opens(ctx.client, a);
@@ -1366,10 +1369,10 @@ describe("the routes' edges", () => {
 
     expect(response.status).toBe(400);
     expect(await codeOf(response)).toBe("validation_failed");
-    expect((await ctx.client.query("SELECT 1 FROM round_relaxation")).rows).toEqual([]);
+    expect((await ctx.client.query("SELECT 1 FROM queue_relaxation")).rows).toEqual([]);
   });
 
-  test("a paused person's round offers nothing, and nothing in it can be relaxed", async ({
+  test("a paused person's queue offers nothing, and nothing in it can be relaxed", async ({
     ctx,
   }) => {
     const { a } = await pondWith(ctx, [{ fields: {}, count: 2 }]);
@@ -1380,7 +1383,7 @@ describe("the routes' edges", () => {
 
     expect(await offers(app, headers)).toEqual({ short: false, offers: [], relaxed: [] });
     expect((await relax(app, headers, UNANSWERED)).status).toBe(404);
-    expect((await ctx.client.query("SELECT 1 FROM round_relaxation")).rows).toEqual([]);
+    expect((await ctx.client.query("SELECT 1 FROM queue_relaxation")).rows).toEqual([]);
   });
 
   test("undoing what was not relaxed today is not found", async ({ ctx }) => {
@@ -1395,7 +1398,7 @@ describe("the routes' edges", () => {
     expect(await codeOf(response)).toBe("not_found");
   });
 
-  test("a person's relaxation changes only their own round", async ({ ctx }) => {
+  test("a person's relaxation changes only their own queue", async ({ ctx }) => {
     const { a, of } = await pondWith(ctx, [{ fields: {}, count: 3 }]);
     const [other] = await people(ctx.client, 1, HER);
     if (!other) throw new Error("other not written");
@@ -1405,11 +1408,11 @@ describe("the routes' edges", () => {
     await opens(ctx.client, other);
     const app = await appAt(ctx.client);
     const { headers } = await signInAs(ctx.client, a);
-    const theirs = await roundOf(ctx.client, other);
+    const theirs = await queueDayOf(ctx.client, other);
 
     expect(await added(await relax(app, headers, UNANSWERED))).toHaveLength(of[0]?.length ?? 0);
 
-    expect(await roundOf(ctx.client, other)).toEqual(theirs);
+    expect(await queueDayOf(ctx.client, other)).toEqual(theirs);
     const otherHeaders = (await signInAs(ctx.client, other)).headers;
     expect((await offers(app, otherHeaders)).relaxed).toEqual([]);
     expect((await undo(app, otherHeaders, "smoking")).status).toBe(404);
@@ -1429,7 +1432,7 @@ describe("the routes' edges", () => {
     );
 
     expect(
-      document.rounds.items[0]?.entries.map((e) => [
+      document.queue.items[0]?.entries.map((e) => [
         e.reason,
         e.relaxedField,
         e.relaxedFieldInWords,
@@ -1437,7 +1440,7 @@ describe("the routes' edges", () => {
         e.distanceInWords,
       ]),
     ).toEqual([["relaxed", "smoking", "Smoking", "nearby", "Nearby"]]);
-    expect(document.rounds.items[0]?.relaxations).toEqual([
+    expect(document.queue.items[0]?.relaxations).toEqual([
       {
         field: "smoking",
         fieldInWords: "Smoking",

@@ -1,12 +1,12 @@
 import { createRoute, OpenAPIHono } from "@hono/zod-openapi";
-import { RoundEntryParams, RoundResponse, StarAnswer, StarList, StarParams } from "@kuutti/schema";
+import { QueueEntryParams, QueueResponse, StarAnswer, StarList, StarParams } from "@kuutti/schema";
 import type { MiddlewareHandler } from "hono";
 import type { Deps } from "../app.ts";
 import { callerOf } from "../lib/auth-middleware.ts";
 import type { AppEnv } from "../lib/env.ts";
 import { bearer, errorContent, json, unauthenticated } from "../lib/openapi.ts";
 import { filteringDealBreakers, type OwnFieldsReader } from "./deal-breakers.ts";
-import type { CardOf, Matches, RoundDeps } from "./rounds.ts";
+import type { CardOf, Matches, QueueDeps } from "./queue.ts";
 import { clearStar, openStar, putStar, type Stars } from "./stars.ts";
 
 // The stars for the app (#575, ADR-064). A star is put on a card by its place, and
@@ -31,21 +31,21 @@ const listRoute = createRoute({
 
 const putRoute = createRoute({
   method: "put",
-  path: "/rounds/{day}/entries/{position}/star",
+  path: "/queue/{day}/entries/{position}/star",
   summary: "Put a star on a card",
   description:
     "Marks the card's person for later: it spends nothing and decides nothing, and the same star again answers the one that stands. It reaches nobody. A card holding a like or a pass takes none. first says this is the only star the list shows.",
   ...bearer,
-  request: { params: RoundEntryParams },
+  request: { params: QueueEntryParams },
   responses: {
     200: { description: "The star, and whether it is the first.", ...json(StarAnswer) },
     400: errorContent("Validation failed."),
     401: unauthenticated,
     404: errorContent(
-      "not_found: no such card in today's round, one that can no longer be shown, or one holding a like or a pass.",
+      "not_found: no such card in today's queue, one that can no longer be shown, or one holding a like or a pass.",
     ),
     409: errorContent(
-      "round_expired: the day named has ended; stars_full: the list shows matching_config stars_max people. Nothing was written.",
+      "day_ended: the day named has ended; stars_full: the list shows matching_config stars_max people. Nothing was written.",
     ),
   },
 });
@@ -75,7 +75,7 @@ const openRoute = createRoute({
   ...bearer,
   request: { params: StarParams },
   responses: {
-    200: { description: "The card.", ...json(RoundResponse) },
+    200: { description: "The card.", ...json(QueueResponse) },
     400: errorContent("Validation failed."),
     401: unauthenticated,
     404: noStar,
@@ -102,7 +102,7 @@ export function starRoutes(
   for (const route of [listRoute, putRoute, clearRoute, openRoute]) {
     app.use(route.getRoutingPath(), requireSession);
   }
-  const rounds = (): RoundDeps => ({
+  const queueDeps = (): QueueDeps => ({
     db: deps.db,
     logger: deps.logger,
     now: deps.now ?? (() => new Date()),
@@ -114,7 +114,7 @@ export function starRoutes(
 
   app.openapi(putRoute, async (c) => {
     const { day, position } = c.req.valid("param");
-    const star = await putStar(rounds(), stars, {
+    const star = await putStar(queueDeps(), stars, {
       accountId: callerOf(c).accountId,
       day,
       position,
@@ -131,7 +131,7 @@ export function starRoutes(
     const { accountId } = callerOf(c);
     // The caller's own deal-breakers that filter now, for the card's "did not answer" (ADR-042 §8).
     const dealBreakers = await filteringDealBreakers(deps.db, accountId, readOwnFields);
-    const answer = await openStar(rounds(), matches, stars, cardOf, dealBreakers, {
+    const answer = await openStar(queueDeps(), matches, stars, cardOf, dealBreakers, {
       accountId,
       id: c.req.valid("param").id,
     });

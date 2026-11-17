@@ -1,9 +1,9 @@
 // Public surface of the matching slice in apps/api. Other slices import from here only.
 // #46 brings the two hard rows of onboarding; #94 what they mean between two
-// people; the queue and its rounds (#96, #502), the stars (#575) and their
+// people; the queue and its days (#96, #502), the stars (#575) and their
 // rules are the rest.
 
-// The round builder reads every person's deal-breakers as the person's own read does (#87).
+// The queue's builder reads every person's deal-breakers as the person's own read does (#87).
 export {
   type DealBreakerRow,
   dealBreakersFrom,
@@ -20,32 +20,32 @@ export {
   readPreferences,
   savePreferences,
 } from "./preferences.ts";
-// The round builder (#95, ADR-035) reads across slices and lives with the
+// The queue and the day's log of it (#96, #502, ADR-034, ADR-062): the routes,
+// the one writer, and the halves erasure, the export and the night call.
+export {
+  addPlaces,
+  eraseQueueOf,
+  exportQueue,
+  // The panel holds the log's clocks to the kept year (#687).
+  KEPT_YEAR_KEYS,
+  type Place,
+  pruneQueueDays,
+  QUEUE_RETENTION_DAYS,
+  type Queue,
+  type RelaxedCandidate,
+  relaxationsOf,
+} from "./queue.ts";
+// The queue's builder (#95, ADR-035) reads across slices and lives with the
 // jobs; its order and its one writer are this slice's.
 export {
   comingBackOrder,
   likedYouPlaces,
   mayMeet,
+  type QueueCandidate,
+  queueOrder,
   type Return,
-  type RoundCandidate,
-  roundOrder,
-} from "./round-order.ts";
-export { roundRoutes } from "./round-routes.ts";
-// The queue and the day's log of it (#96, #502, ADR-034, ADR-062): the routes,
-// the one writer, and the halves erasure, the export and the night call.
-export {
-  addPlaces,
-  eraseRoundsOf,
-  exportRounds,
-  // The panel holds the log's clocks to the kept year (#687).
-  KEPT_YEAR_KEYS,
-  type Place,
-  pruneRounds,
-  type Queue,
-  type RelaxedCandidate,
-  ROUND_RETENTION_DAYS,
-  relaxationsOf,
-} from "./rounds.ts";
+} from "./queue-order.ts";
+export { queueRoutes } from "./queue-routes.ts";
 export { preferencesRoutes } from "./routes.ts";
 // The stars (#575, ADR-064): the routes, and the halves erasure and the export call.
 export { starRoutes } from "./star-routes.ts";

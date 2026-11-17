@@ -3,13 +3,13 @@ Feature: Velocity rules
   The half of TD-6's protection against harvesting that notices an account
   taking in other people faster than a person does (#86, ADR-041): URLs of
   other people's photos in the card and full sizes, different people's cards
-  served, and reads of the day's round. Each is a rule of ADR-033's seam: a
+  served, and reads of the day's queue. Each is a rule of ADR-033's seam: a
   shadow ban by nobody, for the reason scraping, on the moderators' list,
   checked after what the request that can trigger it wrote has committed,
   before it answers, and changing no answer. A thumb, a person's own photos and a conversation's photos never
-  count. The round's reads are counted in memory, so nothing about them is
+  count. The queue's reads are counted in memory, so nothing about them is
   stored. The thresholds are the maintainer's, matching_config rows like every
-  other rule's: 30 reads of the round in one minute (21/10/2026), and, with no
+  other rule's: 30 reads of the queue in one minute (21/10/2026), and, with no
   ceiling on cards, 1,500 photos in 60 minutes and 300 different people's cards
   in 10, the alarms that stand instead (01/11/2026, ADR-062 §9).
 
@@ -41,38 +41,38 @@ Feature: Velocity rules
     When "A" fetches a thumb, and then a photo in the card size
     Then "A" is not sanctioned after the thumb, and shadow-banned by the rule photo_fetches counting 1501 after the card
 
-  Scenario Outline: Reads of the round within a minute shadow-ban the reader at the threshold
-    Given auto_shadow_ban_round_reads is 30 and auto_shadow_ban_round_reads_minutes is 1
-    And "A" read today's round <earlier> times in the last 59 seconds
+  Scenario Outline: Reads of the queue within a minute shadow-ban the reader at the threshold
+    Given auto_shadow_ban_queue_reads is 30 and auto_shadow_ban_queue_reads_minutes is 1
+    And "A" read today's queue <earlier> times in the last 59 seconds
     When "A" reads it once more
-    Then the read answers 200 with the round as before and "A" is <outcome>
+    Then the read answers 200 with the queue as before and "A" is <outcome>
 
     Examples:
       | earlier | outcome                                                                              |
       | 28      | not sanctioned                                                                       |
-      | 29      | shadow-banned by nobody for the reason scraping, by the rule round_reads counting 30 |
+      | 29      | shadow-banned by nobody for the reason scraping, by the rule queue_reads counting 30 |
 
-  Scenario: A read of the round as old as the window is forgotten
-    Given auto_shadow_ban_round_reads is 30 and auto_shadow_ban_round_reads_minutes is 1
-    And "A" read today's round 29 times, the first of them exactly a minute before the next
+  Scenario: A read of the queue as old as the window is forgotten
+    Given auto_shadow_ban_queue_reads is 30 and auto_shadow_ban_queue_reads_minutes is 1
+    And "A" read today's queue 29 times, the first of them exactly a minute before the next
     When "A" reads it once more
     Then "A" is not sanctioned
 
   Scenario: A read refused over the day's cards is not counted
-    Given auto_shadow_ban_round_reads is 30, a ceiling on cards is set in the panel, and "A" has used up the day's cards
-    When "A" reads today's round 30 times within the minute
+    Given auto_shadow_ban_queue_reads is 30, a ceiling on cards is set in the panel, and "A" has used up the day's cards
+    When "A" reads today's queue 30 times within the minute
     Then each read answers 429 card_budget_exceeded and "A" is not sanctioned
 
   Scenario: Cards served counts for nothing while its threshold is zero
     Given an admin set auto_shadow_ban_cards_served to 0
     And "A" was served the cards of 299 people in the last ten minutes
-    When "A" reads today's round, which serves the card of one more
+    When "A" reads today's queue, which serves the card of one more
     Then "A" is not sanctioned
 
   Scenario Outline: Cards served within ten minutes shadow-ban the viewer at the threshold
     Given auto_shadow_ban_cards_served is 300 and auto_shadow_ban_cards_served_minutes is 10
     And "A" was served the cards of <earlier> people in the last ten minutes
-    When "A" reads today's round, which serves the card of one more
+    When "A" reads today's queue, which serves the card of one more
     Then "A" is <outcome>
 
     Examples:
@@ -81,7 +81,7 @@ Feature: Velocity rules
       | 299     | shadow-banned by nobody for the reason scraping, by the rule cards_served counting 300 |
 
   Scenario: When cards served and the reads are both met, cards served is recorded
-    Given auto_shadow_ban_round_reads is 30 within 1 minute and "A" read today's round 29 times in the last 59 seconds
+    Given auto_shadow_ban_queue_reads is 30 within 1 minute and "A" read today's queue 29 times in the last 59 seconds
     And "A" was served the cards of 300 people in the last ten minutes, with auto_shadow_ban_cards_served at 300
     When "A" reads it once more
     Then "A" is shadow-banned by the rule cards_served counting 300
@@ -95,7 +95,7 @@ Feature: Velocity rules
     Examples:
       | standing                                |
       | shadow-banned by a moderator            |
-      | shadow-banned by the round reads rule   |
+      | shadow-banned by the queue reads rule   |
       | a moderator                             |
 
   Scenario: Two fetches at the threshold at the same moment shadow-ban the person once
@@ -105,7 +105,7 @@ Feature: Velocity rules
 
   Scenario: A person a velocity rule shadow-banned gets the answers they got before
     Given a rule shadow-banned "A" at their 1500th fetch of another person's photo
-    When "A" fetches the same photo again and reads today's round
+    When "A" fetches the same photo again and reads today's queue
     Then every answer is as before the ban
 
   Scenario: After a reversal only the fetches that follow count
@@ -120,5 +120,5 @@ Feature: Velocity rules
 
   Scenario: No line of a velocity check names a person or carries a fixture
     Given "A" was handed 1499 URLs of other people's photos
-    When "A" fetches one more and "B" reads today's round 30 times within the minute, each request carrying the fixtures
+    When "A" fetches one more and "B" reads today's queue 30 times within the minute, each request carrying the fixtures
     Then the checks' lines carry the rule and its count only, and no line carries a fixture or the photos' owners

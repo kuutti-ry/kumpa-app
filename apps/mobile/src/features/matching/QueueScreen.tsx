@@ -1,5 +1,5 @@
 import type { PlainMessageKey } from "@kuutti/i18n";
-import type { RoundChoice, RoundReason } from "@kuutti/schema";
+import type { QueueChoice, QueueReason } from "@kuutti/schema";
 import { useFocusEffect, useRouter } from "expo-router";
 import ArrowRight from "lucide-react-native/icons/arrow-right";
 import Fish from "lucide-react-native/icons/fish";
@@ -28,30 +28,30 @@ import { DECISION_ICONS, type DecisionIcons } from "./faceButtons";
 import { MatchHello } from "./MatchHello";
 import { MatchPop } from "./MatchPop";
 import { ShortPool } from "./ShortPool";
-import { type RoundCard, useRound } from "./useRound";
+import { type QueueCard, useQueue } from "./useQueue";
 
 /**
- * Why a card is in the round, in words (TD-12): the label every card carries,
+ * Why a card is in the queue, in words (TD-12): the label every card carries,
  * never a score. A relaxed card says the deal-breaker it came in by instead,
- * which the database holds it to (round_entries' check, #581).
+ * which the database holds it to (queue_entry' check, #581).
  */
-const REASON: Readonly<Record<Exclude<RoundReason, "relaxed">, PlainMessageKey>> = {
-  matches_filters: "round.reason.matches_filters",
-  liked_you: "round.reason.liked_you",
-  seen_before: "round.reason.seen_before",
-  fish: "round.reason.fish",
+const REASON: Readonly<Record<Exclude<QueueReason, "relaxed">, PlainMessageKey>> = {
+  matches_filters: "queue.reason.matches_filters",
+  liked_you: "queue.reason.liked_you",
+  seen_before: "queue.reason.seen_before",
+  fish: "queue.reason.fish",
 };
 
 /** The line above a card Undo brought back, by the decision it holds (ADR-034 §5). */
-const REVISIT: Readonly<Record<RoundChoice, PlainMessageKey>> = {
-  like: "round.revisit.like",
-  pass: "round.revisit.pass",
-  skip: "round.revisit.skip",
-  fish: "round.revisit.fish",
+const REVISIT: Readonly<Record<QueueChoice, PlainMessageKey>> = {
+  like: "queue.revisit.like",
+  pass: "queue.revisit.pass",
+  skip: "queue.revisit.skip",
+  fish: "queue.revisit.fish",
 };
 
 /** A card that answers somebody's like takes a like back, never a fish (ADR-039 §2). */
-const ANSWERS_A_LIKE: ReadonlySet<RoundReason> = new Set(["liked_you", "fish"]);
+const ANSWERS_A_LIKE: ReadonlySet<QueueReason> = new Set(["liked_you", "fish"]);
 
 /**
  * From this OS font scale, Undo in the header is its icon alone (#467, the
@@ -101,23 +101,23 @@ const WORDLESS_UNDO_FONT_SCALE = 1.3;
  * that is gone, to the way back (#581); a notice is spoken where it appears,
  * under the header, in sight however far the card was scrolled.
  */
-export function RoundScreen({ star }: { star?: string }) {
+export function QueueScreen({ star }: { star?: string }) {
   const { t } = useT();
   const router = useRouter();
   const tap = useHapticTap();
-  const round = useRound(star);
-  const { view, current, notice, match } = round;
+  const queue = useQueue(star);
+  const { view, current, notice, match } = queue;
   // A photo URL the API refused (the day's photos, #52), for the card it was
   // refused on, by its day and place: a new day's card there starts without it.
   const [refused, setRefused] = useState<{ day: string; position: number; code: string } | null>(
     null,
   );
 
-  // The conversation is pushed over the round, which stays mounted under it:
-  // the match stays in front of the next card until the round is in sight
+  // The conversation is pushed over the queue, which stays mounted under it:
+  // the match stays in front of the next card until the queue is in sight
   // again, so that card is neither shown nor reported seen meanwhile (ADR-034 §2).
   const away = useRef(false);
-  const { closeMatch } = round;
+  const { closeMatch } = queue;
   useFocusEffect(
     useCallback(() => {
       if (!away.current) return;
@@ -131,21 +131,21 @@ export function RoundScreen({ star }: { star?: string }) {
       ? null
       : typeof notice === "string"
         ? t(notice)
-        : t("round.yourTurn.refused", notice);
+        : t("queue.yourTurn.refused", notice);
   useSpokenOnIos(words);
   // A read past the last card takes the place of the button the focus was on: iOS
   // has no live region for the line to speak through.
-  useSpokenOnIos(round.readingOn ? t("load.loading") : null);
+  useSpokenOnIos(queue.readingOn ? t("load.loading") : null);
 
-  const entries = view.status === "ready" ? view.round.entries : undefined;
+  const entries = view.status === "ready" ? view.queue.entries : undefined;
   const entry = current?.entry;
   // The card the last like or fish went to: the one a match is with, for the
   // try's hello, which shows its person beside the reader.
-  const [liked, setLiked] = useState<RoundCard | null>(null);
-  const choose = (card: RoundCard, decision: RoundChoice) => {
+  const [liked, setLiked] = useState<QueueCard | null>(null);
+  const choose = (card: QueueCard, decision: QueueChoice) => {
     tap();
     if (decision === "like" || decision === "fish") setLiked(card);
-    void round.choose(card, decision);
+    void queue.choose(card, decision);
   };
   // The designers' try (outside production): a match is a hello. Read here, long
   // before a match, so the setting is known when the hello mounts.
@@ -167,19 +167,19 @@ export function RoundScreen({ star }: { star?: string }) {
   const { fontScale } = useWindowDimensions();
   // Android sends its scale as a float: 130 % arrives as 1.2999999523.
   const wordless = !placement.oneHanded && fontScale >= Math.fround(WORDLESS_UNDO_FONT_SCALE);
-  const undo = round.canUndo && (
+  const undo = queue.canUndo && (
     <Button
       variant="ghost"
       size={wordless ? "icon" : "default"}
       className={cn(placement.oneHanded && "w-full")}
-      accessibilityLabel={t("round.undo.label")}
+      accessibilityLabel={t("queue.undo.label")}
       onPress={() => {
         tap();
-        round.undo();
+        queue.undo();
       }}
     >
       <Icon as={Undo2} />
-      {!wordless && <Text>{t("round.undo")}</Text>}
+      {!wordless && <Text>{t("queue.undo")}</Text>}
     </Button>
   );
   // A like or a pass takes the star off, so a card holding one has none to offer.
@@ -188,16 +188,16 @@ export function RoundScreen({ star }: { star?: string }) {
     <Button
       variant="ghost"
       className={cn(placement.oneHanded && "w-full")}
-      disabled={round.busy}
-      accessibilityLabel={t("round.star.label", { name: current.entry.card.displayName })}
+      disabled={queue.busy}
+      accessibilityLabel={t("queue.star.label", { name: current.entry.card.displayName })}
       accessibilityState={{ selected: starred }}
       onPress={() => {
         tap();
-        void round.toggleStar(current);
+        void queue.toggleStar(current);
       }}
     >
       <Icon as={Star} fill={starred ? "currentColor" : "none"} />
-      <Text>{t(starred ? "round.star.on" : "round.star")}</Text>
+      <Text>{t(starred ? "queue.star.on" : "queue.star")}</Text>
     </Button>
   );
   const backToStars = (ref?: Ref<View>) => (
@@ -217,8 +217,8 @@ export function RoundScreen({ star }: { star?: string }) {
     <SafeAreaView className="flex-1 bg-background">
       <Backdrop />
       <ScreenHeader
-        title={t(star ? "stars.title" : "round.title")}
-        backLabel={t(star ? "stars.card.back" : "round.back")}
+        title={t(star ? "stars.title" : "queue.title")}
+        backLabel={t(star ? "stars.card.back" : "queue.back")}
       >
         {!placement.oneHanded && undo}
       </ScreenHeader>
@@ -229,13 +229,13 @@ export function RoundScreen({ star }: { star?: string }) {
       )}
       {/* Keyed by the card, so each one starts at its top. */}
       <ScrollView
-        key={match ?? entry?.position ?? "round"}
+        key={match ?? entry?.position ?? "queue"}
         contentContainerClassName="flex-grow gap-4 p-6"
       >
         {view.status === "loading" && (
           <Text accessibilityLiveRegion="polite">{t("load.loading")}</Text>
         )}
-        {view.status === "failed" && <LoadFailed error={view.error} onRetry={round.retry} />}
+        {view.status === "failed" && <LoadFailed error={view.error} onRetry={queue.retry} />}
         {view.status === "budget" && (
           <Text ref={focusOnMount} accessibilityLiveRegion="polite">
             {t("errors.card_budget_exceeded")}
@@ -244,19 +244,19 @@ export function RoundScreen({ star }: { star?: string }) {
         {view.status === "gone" && (
           <>
             <Text ref={focusOnMount} accessibilityLiveRegion="polite">
-              {t("round.gone")}
+              {t("queue.gone")}
             </Text>
             {backToStars()}
           </>
         )}
-        {entries === null && <Text ref={focusOnMount}>{t("round.none")}</Text>}
+        {entries === null && <Text ref={focusOnMount}>{t("queue.none")}</Text>}
         {match !== null && (
           <View className="gap-4">
             {hello ? (
               <Hello
                 name={hello.displayName}
                 still={still}
-                you={<OwnPhoto label={t("round.hello.you")} />}
+                you={<OwnPhoto label={t("queue.hello.you")} />}
                 them={
                   helloPhoto && (
                     <CachedPhoto
@@ -270,13 +270,13 @@ export function RoundScreen({ star }: { star?: string }) {
               />
             ) : (
               <Text ref={focusOnMount} variant="h2" accessibilityLiveRegion="polite">
-                {t("round.match.title")}
+                {t("queue.match.title")}
               </Text>
             )}
             <Button
               size={hello ? "lg" : "default"}
               className={lime ? "bg-accent active:bg-accent/85 web:hover:bg-accent/90" : undefined}
-              accessibilityLabel={t(hello ? "round.hello.open" : "round.match.open")}
+              accessibilityLabel={t(hello ? "queue.hello.open" : "queue.match.open")}
               onPress={() => {
                 tap();
                 away.current = true;
@@ -284,7 +284,7 @@ export function RoundScreen({ star }: { star?: string }) {
               }}
             >
               <Text className={lime ? "text-accent-foreground" : undefined}>
-                {t(hello ? "round.hello.open" : "round.match.open")}
+                {t(hello ? "queue.hello.open" : "queue.match.open")}
               </Text>
               {hello && (
                 <Icon as={ArrowRight} className={lime ? "text-accent-foreground" : undefined} />
@@ -297,10 +297,10 @@ export function RoundScreen({ star }: { star?: string }) {
                 variant="outline"
                 onPress={() => {
                   tap();
-                  round.closeMatch();
+                  queue.closeMatch();
                 }}
               >
-                {t("round.match.continue")}
+                {t("queue.match.continue")}
               </Button>
             )}
           </View>
@@ -314,33 +314,33 @@ export function RoundScreen({ star }: { star?: string }) {
                 className="rounded-full bg-secondary px-3 py-1 text-secondary-foreground"
               >
                 {current.entry.relaxedField
-                  ? t("round.reason.relaxedField", {
+                  ? t("queue.reason.relaxedField", {
                       field: t(fieldLabelKey(current.entry.relaxedField)),
                     })
-                  : t(REASON[current.entry.reason as Exclude<RoundReason, "relaxed">])}
+                  : t(REASON[current.entry.reason as Exclude<QueueReason, "relaxed">])}
               </Text>
               {!placement.oneHanded && starToggle}
             </View>
             {(current.entry.notAnswered ?? []).map((field) => (
               <Text key={field} variant="muted">
-                {t("round.notAnswered", { field: t(fieldLabelKey(field)) })}
+                {t("queue.notAnswered", { field: t(fieldLabelKey(field)) })}
               </Text>
             ))}
             {current.entry.relaxedField && current.entry.decision === null && (
               <Button
                 variant="ghost"
                 className="self-start"
-                disabled={round.busy}
-                accessibilityLabel={t("round.relaxed.undo", {
+                disabled={queue.busy}
+                accessibilityLabel={t("queue.relaxed.undo", {
                   field: t(fieldLabelKey(current.entry.relaxedField)),
                 })}
                 onPress={() => {
                   tap();
                   const field = current.entry.relaxedField;
-                  if (field) void round.unrelax(current.day, field);
+                  if (field) void queue.unrelax(current.day, field);
                 }}
               >
-                {t("round.relaxed.undo", { field: t(fieldLabelKey(current.entry.relaxedField)) })}
+                {t("queue.relaxed.undo", { field: t(fieldLabelKey(current.entry.relaxedField)) })}
               </Button>
             )}
             {current.entry.decision !== null && <Text>{t(REVISIT[current.entry.decision])}</Text>}
@@ -351,7 +351,7 @@ export function RoundScreen({ star }: { star?: string }) {
               // after the next card took this one's place would never take the
               // blocked person off, and Undo would bring them back (ADR-030 §11).
               onGone={
-                round.busy ? undefined : () => round.drop(current.day, current.entry.position)
+                queue.busy ? undefined : () => queue.drop(current.day, current.entry.position)
               }
               onRefused={(code) =>
                 setRefused({ day: current.day, position: current.entry.position, code: code ?? "" })
@@ -374,12 +374,12 @@ export function RoundScreen({ star }: { star?: string }) {
         {/* The queue's end (ADR-062 §11): the line the reader is taken to, what may be relaxed for today (#99, ADR-042), and the same way into What you seek for everybody. */}
         {!star && match === null && !entry && entries && view.status === "ready" && (
           <>
-            <Text ref={focusOnMount}>{t("round.done")}</Text>
+            <Text ref={focusOnMount}>{t("queue.done")}</Text>
             <ShortPool
-              day={view.round.day}
-              busy={round.busy}
-              onRelax={(relaxation) => round.relax(view.round.day, relaxation)}
-              onUndo={(field) => round.unrelax(view.round.day, field)}
+              day={view.queue.day}
+              busy={queue.busy}
+              onRelax={(relaxation) => queue.relax(view.queue.day, relaxation)}
+              onUndo={(field) => queue.unrelax(view.queue.day, field)}
             />
             <Button
               variant="outline"
@@ -396,9 +396,9 @@ export function RoundScreen({ star }: { star?: string }) {
       {match === null && current && view.status === "ready" && (
         <DecisionBar
           card={current}
-          fishToSend={view.round.fishToSend}
-          likesLeft={view.round.likesLeft}
-          busy={round.busy}
+          fishToSend={view.queue.fishToSend}
+          likesLeft={view.queue.likesLeft}
+          busy={queue.busy}
           left={placement.hand === "left"}
           oneHanded={placement.oneHanded}
           icons={DECISION_ICONS[placement.style]}
@@ -412,7 +412,7 @@ export function RoundScreen({ star }: { star?: string }) {
       {match === null && !current && placement.oneHanded && undo && (
         <View className="border-t border-border bg-background px-6 py-3">
           <View
-            testID="round-one-handed"
+            testID="queue-one-handed"
             className={cn("w-2/3", placement.hand === "left" ? "self-start" : "self-end")}
           >
             {undo}
@@ -451,10 +451,10 @@ function DecisionBar({
   star,
   onChoose,
 }: {
-  card: RoundCard;
-  /** Whether a fish can go today, as the round and each decision's answer say (#475). */
+  card: QueueCard;
+  /** Whether a fish can go today, as the queue and each decision's answer say (#475). */
   fishToSend: boolean;
-  /** How many of the day's likes are left, as the round and each decision's answer say (#524). */
+  /** How many of the day's likes are left, as the queue and each decision's answer say (#524). */
   likesLeft: number;
   busy: boolean;
   left: boolean;
@@ -465,13 +465,13 @@ function DecisionBar({
   undo: ReactNode;
   /** The star, which comes down from the card in one-handed mode; nothing on a card holding a like or a pass. */
   star: ReactNode;
-  onChoose: (card: RoundCard, decision: RoundChoice) => void;
+  onChoose: (card: QueueCard, decision: QueueChoice) => void;
 }) {
   const { t } = useT();
   const { entry } = card;
   const likes = (
     <Text variant="muted" className={cn(!left && "text-right")}>
-      {t("round.likesLeft", { likes: likesLeft })}
+      {t("queue.likesLeft", { likes: likesLeft })}
     </Text>
   );
   // A fish counts in the day's likes, so with none left it can go only on a
@@ -482,12 +482,12 @@ function DecisionBar({
       variant="secondary"
       className={cn("rounded-lg", oneHanded && "w-full")}
       disabled={busy}
-      accessibilityLabel={t("round.fish")}
+      accessibilityLabel={t("queue.fish")}
       accessibilityState={{ selected: entry.decision === "fish" }}
       onPress={() => onChoose(card, "fish")}
     >
       <Icon as={Fish} />
-      <Text>{t("round.fish")}</Text>
+      <Text>{t("queue.fish")}</Text>
     </Button>
   );
   const later = (
@@ -495,11 +495,11 @@ function DecisionBar({
       variant="ghost"
       className={cn(oneHanded && "w-full")}
       disabled={busy}
-      accessibilityLabel={t("round.skip")}
+      accessibilityLabel={t("queue.skip")}
       accessibilityState={{ selected: entry.decision === "skip" }}
       onPress={() => onChoose(card, "skip")}
     >
-      {t("round.skip")}
+      {t("queue.skip")}
     </Button>
   );
   const pass = (
@@ -509,12 +509,12 @@ function DecisionBar({
       size="lg"
       className={cn("rounded-md", oneHanded ? "w-full" : "flex-1")}
       disabled={busy}
-      accessibilityLabel={t("round.pass")}
+      accessibilityLabel={t("queue.pass")}
       accessibilityState={{ selected: entry.decision === "pass" }}
       onPress={() => onChoose(card, "pass")}
     >
       <Icon as={icons.pass} />
-      <Text>{t("round.pass")}</Text>
+      <Text>{t("queue.pass")}</Text>
     </Button>
   );
   const like = (
@@ -523,19 +523,19 @@ function DecisionBar({
       size="lg"
       className={cn("rounded-full", oneHanded ? "w-full" : "flex-1")}
       disabled={busy}
-      accessibilityLabel={t("round.like")}
+      accessibilityLabel={t("queue.like")}
       accessibilityState={{ selected: entry.decision === "like" }}
       onPress={() => onChoose(card, "like")}
     >
       <Icon as={icons.like} />
-      <Text>{t("round.like")}</Text>
+      <Text>{t("queue.like")}</Text>
     </Button>
   );
   return (
     <View className="gap-3 border-t border-border bg-background px-6 py-3">
       {oneHanded ? (
         <View
-          testID="round-one-handed"
+          testID="queue-one-handed"
           className={cn("w-2/3 gap-3", left ? "self-start" : "self-end")}
         >
           {undo}
@@ -549,7 +549,7 @@ function DecisionBar({
       ) : (
         <>
           <View
-            testID="round-likes-row"
+            testID="queue-likes-row"
             className={cn(
               "flex-row flex-wrap items-center justify-end gap-x-4 gap-y-3",
               left && "flex-row-reverse",

@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Kuutti API",
-    "version": "0.125.1",
+    "version": "0.126.0",
     "description": "Free, non-commercial dating app for Finland. Every account is verified through a Finnish bank. Source: AGPL-3.0 with App Store exception."
   },
   "components": {
@@ -342,8 +342,8 @@
           "notifications": {
             "$ref": "#/components/schemas/ExportedNotifications"
           },
-          "rounds": {
-            "$ref": "#/components/schemas/ExportedRounds"
+          "queue": {
+            "$ref": "#/components/schemas/ExportedQueue"
           },
           "stars": {
             "$ref": "#/components/schemas/ExportedStars"
@@ -374,7 +374,7 @@
           "conversations",
           "contacts",
           "notifications",
-          "rounds",
+          "queue",
           "stars",
           "invitations"
         ]
@@ -2245,7 +2245,7 @@
           "shadow_ban"
         ]
       },
-      "ExportedRounds": {
+      "ExportedQueue": {
         "type": "object",
         "properties": {
           "about": {
@@ -2255,7 +2255,7 @@
           "items": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/ExportedRound"
+              "$ref": "#/components/schemas/ExportedQueueDay"
             },
             "maxItems": 1000
           }
@@ -2265,25 +2265,15 @@
           "items"
         ]
       },
-      "ExportedRound": {
+      "ExportedQueueDay": {
         "type": "object",
         "properties": {
           "day": {
             "type": "string",
             "format": "date"
           },
-          "builtAt": {
+          "startedAt": {
             "type": "string",
-            "format": "date-time"
-          },
-          "openedAt": {
-            "type": "string",
-            "nullable": true,
-            "format": "date-time"
-          },
-          "completedAt": {
-            "type": "string",
-            "nullable": true,
             "format": "date-time"
           },
           "relaxations": {
@@ -2296,16 +2286,14 @@
           "entries": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/ExportedRoundEntry"
+              "$ref": "#/components/schemas/ExportedQueueEntry"
             },
             "maxItems": 32767
           }
         },
         "required": [
           "day",
-          "builtAt",
-          "openedAt",
-          "completedAt",
+          "startedAt",
           "relaxations",
           "entries"
         ]
@@ -2345,7 +2333,7 @@
           "aside"
         ]
       },
-      "ExportedRoundEntry": {
+      "ExportedQueueEntry": {
         "type": "object",
         "properties": {
           "position": {
@@ -2354,7 +2342,7 @@
             "maximum": 32767
           },
           "reason": {
-            "$ref": "#/components/schemas/RoundReason"
+            "$ref": "#/components/schemas/QueueReason"
           },
           "reasonInWords": {
             "type": "string"
@@ -2379,7 +2367,7 @@
             "format": "date-time"
           },
           "decision": {
-            "$ref": "#/components/schemas/RoundChoice"
+            "$ref": "#/components/schemas/QueueChoice"
           },
           "decisionInWords": {
             "type": "string",
@@ -2416,7 +2404,7 @@
           "distanceInWords"
         ]
       },
-      "RoundReason": {
+      "QueueReason": {
         "type": "string",
         "enum": [
           "matches_filters",
@@ -2426,7 +2414,7 @@
           "fish"
         ]
       },
-      "RoundChoice": {
+      "QueueChoice": {
         "type": "string",
         "nullable": true,
         "enum": [
@@ -5248,7 +5236,7 @@
           "same_first_message",
           "photo_fetches",
           "cards_served",
-          "round_reads"
+          "queue_reads"
         ]
       },
       "SanctionList": {
@@ -6905,7 +6893,7 @@
         },
         "additionalProperties": false
       },
-      "RoundResponse": {
+      "QueueResponse": {
         "type": "object",
         "properties": {
           "day": {
@@ -6916,7 +6904,7 @@
             "type": "array",
             "nullable": true,
             "items": {
-              "$ref": "#/components/schemas/RoundEntry"
+              "$ref": "#/components/schemas/QueueEntry"
             },
             "maxItems": 10
           },
@@ -6940,7 +6928,7 @@
           "yourTurn"
         ]
       },
-      "RoundEntry": {
+      "QueueEntry": {
         "type": "object",
         "properties": {
           "position": {
@@ -6949,10 +6937,10 @@
             "maximum": 32767
           },
           "reason": {
-            "$ref": "#/components/schemas/RoundReason"
+            "$ref": "#/components/schemas/QueueReason"
           },
           "decision": {
-            "$ref": "#/components/schemas/RoundChoice"
+            "$ref": "#/components/schemas/QueueChoice"
           },
           "card": {
             "$ref": "#/components/schemas/ProfileCard"
@@ -6985,7 +6973,7 @@
           "star"
         ]
       },
-      "RoundDecisionAnswer": {
+      "QueueDecisionAnswer": {
         "type": "object",
         "properties": {
           "match": {
@@ -7022,11 +7010,11 @@
         ],
         "additionalProperties": false
       },
-      "RoundDecisionUpdate": {
+      "QueueDecisionUpdate": {
         "type": "object",
         "properties": {
           "decision": {
-            "$ref": "#/components/schemas/RoundChoice"
+            "$ref": "#/components/schemas/QueueChoice"
           }
         },
         "required": [
@@ -7105,7 +7093,7 @@
           "entries": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/RoundEntry"
+              "$ref": "#/components/schemas/QueueEntry"
             },
             "maxItems": 10
           }
@@ -8197,7 +8185,7 @@
       },
       "post": {
         "summary": "Tell Kuutti you found somebody",
-        "description": "\"Löysin hänet\" (#83, ADR-040): the reason, from a closed list, counted once per account in an anonymous daily count that names nobody. An indication only: nothing else changes, no state, no session, no round, no conversation.",
+        "description": "\"Löysin hänet\" (#83, ADR-040): the reason, from a closed list, counted once per account in an anonymous daily count that names nobody. An indication only: nothing else changes, no state, no session, no queue, no conversation.",
         "security": [
           {
             "session": []
@@ -8263,7 +8251,7 @@
     "/account/pause": {
       "post": {
         "summary": "Take a break: pause this account",
-        "description": "The account goes to paused (#170, ADR-022): the profile leaves every pool, counter and round, and every session of the account ends, this one included. Nothing is erased: the profile, the photos, the preferences and the consents stay as they are, and the next bank login brings the account back as it was. The body confirms; the screen asks first.",
+        "description": "The account goes to paused (#170, ADR-022): the profile leaves every pool, counter and queue, and every session of the account ends, this one included. Nothing is erased: the profile, the photos, the preferences and the consents stay as they are, and the next bank login brings the account back as it was. The body confirms; the screen asks first.",
         "security": [
           {
             "session": []
@@ -9116,7 +9104,7 @@
     "/profile": {
       "get": {
         "summary": "The caller's profile and what it still needs",
-        "description": "The profile as saved (null before the first save), the completeness rule's verdict (what is missing before the profile can enter a round), and the home in names, which PUT /account/home writes and this document never does.",
+        "description": "The profile as saved (null before the first save), the completeness rule's verdict (what is missing before the profile can enter a queue), and the home in names, which PUT /account/home writes and this document never does.",
         "security": [
           {
             "session": []
@@ -9220,7 +9208,7 @@
     "/profile/card": {
       "get": {
         "summary": "The caller's own card, as others will see it",
-        "description": "The card built the way a round builds it for someone else, with the age from the bank-verified year and month, the approved photos in order (bytes through GET /photos/{id}/{variant}) and what is still missing. Nothing is recorded: this is the owner looking at themselves.",
+        "description": "The card built the way a queue builds it for someone else, with the age from the bank-verified year and month, the approved photos in order (bytes through GET /photos/{id}/{variant}) and what is still missing. Nothing is recorded: this is the owner looking at themselves.",
         "security": [
           {
             "session": []
@@ -9744,7 +9732,7 @@
     "/blocks": {
       "post": {
         "summary": "Block the person of a card one was shown",
-        "description": "From then on neither is shown to the other, in either direction, in any round, card, photo or pool. Between the two identities, so it holds for a later account of either; final. Nobody is told.",
+        "description": "From then on neither is shown to the other, in either direction, in any queue, card, photo or pool. Between the two identities, so it holds for a later account of either; final. Nobody is told.",
         "security": [
           {
             "session": []
@@ -13480,7 +13468,7 @@
         }
       }
     },
-    "/rounds/today": {
+    "/queue/today": {
       "get": {
         "summary": "The next cards of the queue",
         "description": "The Finnish day and the next cards to go through, at most ten, in order: likes waiting, then new people, then people coming back. Each says why it is there and how far its person lives as it stood when the entry was written. With nothing left to go through a read adds the next people; entries null while the caller's matching has not opened, an empty list at the queue's end. A card that cannot be shown now, a filter of either side included, is left out. fishToSend says whether the fish's budget lets the caller send one today, one of matching_config fish_budget in the calendar week (fish_window_days counted from a Monday) or an earned one, never how many. likesLeft says how many of the day's likes the caller has left, from matching_config like_budget_balanced down to zero, by the count that refuses a like. yourTurn says how many conversations wait on the caller's answer. Serving a card writes the shown record and counts against matching_config exposure_cards_per_day, where that is not 0 (ADR-008, ADR-062).",
@@ -13495,7 +13483,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RoundResponse"
+                  "$ref": "#/components/schemas/QueueResponse"
                 }
               }
             }
@@ -13523,7 +13511,7 @@
         }
       }
     },
-    "/rounds/{day}/entries/{position}/seen": {
+    "/queue/{day}/entries/{position}/seen": {
       "post": {
         "summary": "Report a card seen",
         "description": "The phone had the card on the screen. The first report is recorded; a repeat writes nothing. A decision does not need it.",
@@ -13578,7 +13566,7 @@
             }
           },
           "404": {
-            "description": "not_found: no round today, no card at that place, a card that can no longer be shown (a block, a sanction, or for a like a filter of either side), or a day not begun.",
+            "description": "not_found: no queue today, no card at that place, a card that can no longer be shown (a block, a sanction, or for a like a filter of either side), or a day not begun.",
             "content": {
               "application/json": {
                 "schema": {
@@ -13588,7 +13576,7 @@
             }
           },
           "409": {
-            "description": "round_expired: the day named has ended; nothing was written.",
+            "description": "day_ended: the day named has ended; nothing was written.",
             "content": {
               "application/json": {
                 "schema": {
@@ -13600,10 +13588,10 @@
         }
       }
     },
-    "/rounds/{day}/entries/{position}/decision": {
+    "/queue/{day}/entries/{position}/decision": {
       "put": {
         "summary": "Like, pass or skip a card",
-        "description": "Recorded, or replacing the day's earlier decision on the card; the same decision again writes nothing. A day that has ended answers round_expired. A skip moves on, spends nothing and answers no like; the card returns another day. A like counts against the day's matching_config like_budget_balanced, a like back on a liked_you or fish card too; a pass or a skip never does. A new like or fish answers your_turn_limit with matching_config your_turn_limit conversations waiting on the caller, and not_found where either side's filters no longer let the two meet. A like of somebody whose like of the caller stands is a match: the answer names its conversation, and that like is final. A fish is a like with a mark, matching_config fish_budget of them in each fish_window_days counted from a Monday, the calendar week; on a liked_you or fish card it is a like. Past the fish's budget, a fish invitations earned the caller is used by itself, left out of the count after, and given back when the decision changes the same day. The answer's fishToSend, likesLeft and yourTurn are the queue's after this decision.",
+        "description": "Recorded, or replacing the day's earlier decision on the card; the same decision again writes nothing. A day that has ended answers day_ended. A skip moves on, spends nothing and answers no like; the card returns another day. A like counts against the day's matching_config like_budget_balanced, a like back on a liked_you or fish card too; a pass or a skip never does. A new like or fish answers your_turn_limit with matching_config your_turn_limit conversations waiting on the caller, and not_found where either side's filters no longer let the two meet. A like of somebody whose like of the caller stands is a match: the answer names its conversation, and that like is final. A fish is a like with a mark, matching_config fish_budget of them in each fish_window_days counted from a Monday, the calendar week; on a liked_you or fish card it is a like. Past the fish's budget, a fish invitations earned the caller is used by itself, left out of the count after, and given back when the decision changes the same day. The answer's fishToSend, likesLeft and yourTurn are the queue's after this decision.",
         "security": [
           {
             "session": []
@@ -13635,7 +13623,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RoundDecisionUpdate"
+                "$ref": "#/components/schemas/QueueDecisionUpdate"
               }
             }
           }
@@ -13646,7 +13634,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RoundDecisionAnswer"
+                  "$ref": "#/components/schemas/QueueDecisionAnswer"
                 }
               }
             }
@@ -13672,7 +13660,7 @@
             }
           },
           "404": {
-            "description": "not_found: no round today, no card at that place, a card that can no longer be shown (a block, a sanction, or for a like a filter of either side), or a day not begun.",
+            "description": "not_found: no queue today, no card at that place, a card that can no longer be shown (a block, a sanction, or for a like a filter of either side), or a day not begun.",
             "content": {
               "application/json": {
                 "schema": {
@@ -13682,7 +13670,7 @@
             }
           },
           "409": {
-            "description": "round_expired: the day named has ended; match_made: the card's like made a match and stays; your_turn_limit: too many conversations wait on the caller's answer. Nothing was written.",
+            "description": "day_ended: the day named has ended; match_made: the card's like made a match and stays; your_turn_limit: too many conversations wait on the caller's answer. Nothing was written.",
             "content": {
               "application/json": {
                 "schema": {
@@ -13704,9 +13692,9 @@
         }
       }
     },
-    "/rounds/{day}/relaxations": {
+    "/queue/{day}/relaxations": {
       "get": {
-        "summary": "What today's round may relax, and what is relaxed",
+        "summary": "What today's queue may relax, and what is relaxed",
         "description": "Once no new person is left in the queue, every deal-breaker of the caller's that is not paused and not relaxed today, each way it can be relaxed for the day: unanswered (let through those who did not answer its field) and aside (set it aside), each listed only when it would add somebody today, with more: how much it widens the caller's pool, rounded down to a step of matching_config pond_counter_k. Counted on asking. Also the relaxations in force today. Never another filter (ADR-042).",
         "security": [
           {
@@ -13756,7 +13744,7 @@
             }
           },
           "404": {
-            "description": "not_found: no round today, or a day not begun.",
+            "description": "not_found: no queue today, or a day not begun.",
             "content": {
               "application/json": {
                 "schema": {
@@ -13766,7 +13754,7 @@
             }
           },
           "409": {
-            "description": "round_expired: the day named has ended; nothing was written.",
+            "description": "day_ended: the day named has ended; nothing was written.",
             "content": {
               "application/json": {
                 "schema": {
@@ -13838,7 +13826,7 @@
             }
           },
           "404": {
-            "description": "not_found: no round today, a day not begun, or a relaxation the offers would not list (no deal-breaker of the caller's on that field, a paused one, or unanswered where those people are let through already). Nothing was written.",
+            "description": "not_found: no queue today, a day not begun, or a relaxation the offers would not list (no deal-breaker of the caller's on that field, a paused one, or unanswered where those people are let through already). Nothing was written.",
             "content": {
               "application/json": {
                 "schema": {
@@ -13848,7 +13836,7 @@
             }
           },
           "409": {
-            "description": "round_expired: the day named has ended; already_relaxed: that deal-breaker is relaxed today; relaxations_changed: another device relaxed or undid one since this tap's offers were counted. Nothing was written.",
+            "description": "day_ended: the day named has ended; already_relaxed: that deal-breaker is relaxed today; relaxations_changed: another device relaxed or undid one since this tap's offers were counted. Nothing was written.",
             "content": {
               "application/json": {
                 "schema": {
@@ -13870,7 +13858,7 @@
         }
       }
     },
-    "/rounds/{day}/relaxations/{field}": {
+    "/queue/{day}/relaxations/{field}": {
       "delete": {
         "summary": "Undo today's relaxation of a deal-breaker",
         "description": "The relaxation goes, and with it the cards that came in under it, a later relaxation's too, that are still undecided; a decided one stays as it was decided.",
@@ -13930,7 +13918,7 @@
             }
           },
           "404": {
-            "description": "not_found: no round today, a day not begun, or that field not relaxed today.",
+            "description": "not_found: no queue today, a day not begun, or that field not relaxed today.",
             "content": {
               "application/json": {
                 "schema": {
@@ -13940,7 +13928,7 @@
             }
           },
           "409": {
-            "description": "round_expired: the day named has ended; nothing was written.",
+            "description": "day_ended: the day named has ended; nothing was written.",
             "content": {
               "application/json": {
                 "schema": {
@@ -13985,7 +13973,7 @@
         }
       }
     },
-    "/rounds/{day}/entries/{position}/star": {
+    "/queue/{day}/entries/{position}/star": {
       "put": {
         "summary": "Put a star on a card",
         "description": "Marks the card's person for later: it spends nothing and decides nothing, and the same star again answers the one that stands. It reaches nobody. A card holding a like or a pass takes none. first says this is the only star the list shows.",
@@ -14047,7 +14035,7 @@
             }
           },
           "404": {
-            "description": "not_found: no such card in today's round, one that can no longer be shown, or one holding a like or a pass.",
+            "description": "not_found: no such card in today's queue, one that can no longer be shown, or one holding a like or a pass.",
             "content": {
               "application/json": {
                 "schema": {
@@ -14057,7 +14045,7 @@
             }
           },
           "409": {
-            "description": "round_expired: the day named has ended; stars_full: the list shows matching_config stars_max people. Nothing was written.",
+            "description": "day_ended: the day named has ended; stars_full: the list shows matching_config stars_max people. Nothing was written.",
             "content": {
               "application/json": {
                 "schema": {
@@ -14152,7 +14140,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RoundResponse"
+                  "$ref": "#/components/schemas/QueueResponse"
                 }
               }
             }
@@ -14338,7 +14326,7 @@
       },
       "put": {
         "summary": "Set whom the caller seeks, the age window, or both",
-        "description": "Either or both, each replacing its row: a non-empty set of genders, an age window within 18 and 99 with min at most max. Onboarding saves each on its own screen (ADR-010 §13). Hard rows: the round builder never crosses them, in either direction. The set of genders needs the sensitive-answers consent of the current wording (ADR-010 §16).",
+        "description": "Either or both, each replacing its row: a non-empty set of genders, an age window within 18 and 99 with min at most max. Onboarding saves each on its own screen (ADR-010 §13). Hard rows: the queue's builder never crosses them, in either direction. The set of genders needs the sensitive-answers consent of the current wording (ADR-010 §16).",
         "security": [
           {
             "session": []

@@ -107,7 +107,7 @@ async function world(ctx: TestContext, overrides: Record<string, string> = {}) {
 
 describe("the histories are what a person's own answers would be", () => {
   test("every one passes the contracts, and there is one for each persona with a history", () => {
-    // The people of Iida's round (#379) have stories too: their profiles are her cards.
+    // The people of Iida's queue (#379) have stories too: their profiles are her cards.
     expect(PERSONA_HISTORIES.map((h) => h.key).sort()).toEqual(
       DEMO_PERSONAS.filter((p) => p.group === "history" || p.group === "cards")
         .map((p) => p.key)

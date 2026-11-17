@@ -51,7 +51,7 @@ In the order a person meets them, then the moderators' side.
 | stadium | `s1(["Opens the app"])` | the start and each end |
 | box | `s2["Chooses Sign in"]` | a step |
 | diamond | `s3{"Known account?"}` | a choice; its arrows carry the answers, `s3 -->\|"yes"\| s4` |
-| hexagon | `s4{{"Waits for the night's round"}}` | a wait: the night's jobs, a moderator's queue, the gate's count |
+| hexagon | `s4{{"Waits for the night's jobs"}}` | a wait: the night's jobs, a moderator's queue, the gate's count |
 | dashed box | `s5["Told by push: not built yet, #102"]:::notbuilt` | a step not built yet; its label says so and names the issue |
 
 Every label is in double quotes, so punctuation cannot break the diagram. The dashed outline is never the only mark of a step not built: the label says it too. No colours, fills or other styles: GitHub draws the diagram in its light and dark themes, and meaning never rests on colour (CLAUDE.md, Accessibility). Every diagram opens with `accTitle` and `accDescr`, which GitHub hands to screen readers, and ends with `classDef notbuilt stroke-dasharray: 5 5` when it has a dashed step.
@@ -60,7 +60,7 @@ Every label is in double quotes, so punctuation cannot break the diagram. The da
 
 **Steps.** Under the diagram, the same flow as numbered steps, one per box, numbered as the boxes' ids (`s3` is step 3). A choice says where each answer leads ("yes: 4; no: 9"). A diagram alone is not readable by a screen reader; the steps are, and they are what the diagram is checked against.
 
-**Words.** English, plain, and the app's own names for things, as the English of `packages/i18n/messages.yaml` says them ("the round", "a fish", "taking a break"). A number appears by its name in `matching_config` (`like_expiry_days`), never by its value, so that values live in one place: `matching_config`, which the register gives row by row with who decided each. A constant that lives in code is described without its value. No route, table or file names in the diagram or the steps; they go under "Where it lives", whose Rules line names the register's areas that hold the flow's rules. No TD number either: a flow links the ADR, which cites the TD.
+**Words.** English, plain, and the app's own names for things, as the English of `packages/i18n/messages.yaml` says them ("People", "a fish", "taking a break"). A number appears by its name in `matching_config` (`like_expiry_days`), never by its value, so that values live in one place: `matching_config`, which the register gives row by row with who decided each. A constant that lives in code is described without its value. No route, table or file names in the diagram or the steps; they go under "Where it lives", whose Rules line names the register's areas that hold the flow's rules. No TD number either: a flow links the ADR, which cites the TD.
 
 **History.** Each file ends with its History: one line per pull request that changed the flow as a person or a moderator meets it, oldest first, the date the pull request merged, the issue and the pull request:
 

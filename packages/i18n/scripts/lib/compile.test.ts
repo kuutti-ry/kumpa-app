@@ -53,8 +53,8 @@ describe("the catalogues", () => {
   it("hold slang under slangi alone, and only the keys that have it (#521)", () => {
     const withSlang = compile({
       ...base,
-      "round.title": {
-        en: "Today's round",
+      "queue.title": {
+        en: "Today's queue",
         description: "d",
         fi: "Päivän kierros",
         slangi: "Päivän rundi",
@@ -62,9 +62,9 @@ describe("the catalogues", () => {
       },
     });
     expect(withSlang["slangi.ts"]).toContain("export const slangi:");
-    expect(withSlang["slangi.ts"]).toContain('"round.title": "Päivän rundi",');
+    expect(withSlang["slangi.ts"]).toContain('"queue.title": "Päivän rundi",');
     expect(withSlang["slangi.ts"]).not.toContain("demo.");
-    expect(withSlang["fi.ts"]).toContain('"round.title": "Päivän kierros",');
+    expect(withSlang["fi.ts"]).toContain('"queue.title": "Päivän kierros",');
     expect(withSlang["en.ts"]).not.toContain("rundi");
   });
 

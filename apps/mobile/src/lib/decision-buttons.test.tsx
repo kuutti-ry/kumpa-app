@@ -8,7 +8,7 @@ import {
   useDecisionButtons,
 } from "./decision-buttons";
 
-// Where the round's decision buttons sit (#82): what is stored and read back,
+// Where the queue's decision buttons sit (#82): what is stored and read back,
 // and the defaults where nothing or nonsense is stored.
 
 const store = (SecureStore as unknown as { __store: Map<string, string> }).__store;

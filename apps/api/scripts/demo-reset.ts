@@ -2,7 +2,7 @@
  * Returns the twenty-five personas to where they begin (#73, ADR-014 §12; on
  * staging #141, ADR-018): everybody erased through the erasure path and
  * forgotten, then the nineteen with a history given it anew, with their
- * conversations (#348) and, once matching is open, Iida's round for the day
+ * conversations (#348) and, once matching is open, Iida's queue for the day
  * (#379).
  *
  *   pnpm demo:reset                  reset, then the histories
@@ -51,7 +51,7 @@ import {
   giveConversations,
   giveHistory,
   givePhotoMessages,
-  giveRounds,
+  giveQueueDays,
   type HistoryResult,
   viaRoutes,
 } from "./demo/histories.ts";
@@ -101,7 +101,7 @@ if (envArg !== undefined && process.env.APP_ENV !== undefined && envArg !== proc
 
 /**
  * The population's consents to the wordings in force, the counter after the
- * people changed, matching opened, then the round of the stories, which needs
+ * people changed, matching opened, then the queue of the stories, which needs
  * the switch on (#379): the same steps locally and on staging.
  */
 async function recount(
@@ -121,13 +121,13 @@ async function recount(
   await pool.query("DELETE FROM pond_counter");
   const counted = await takeSnapshot({ db: pool, logger, now });
   console.log(JSON.stringify({ msg: "demo reset: counter recounted", ...counted }));
-  // And matching open, so that the personas have rounds (ADR-060 Open 1): the
+  // And matching open, so that the personas have queue days (ADR-060 Open 1): the
   // switch's next version by this command's name, where it stands closed.
   const opened = await openMatching(pool, "demo-reset");
   console.log(JSON.stringify({ msg: "demo reset: matching opened", opened }));
   if (results.length === 0) return;
-  const rounds = await giveRounds({ db: pool, logger, now }, results);
-  console.log(JSON.stringify({ msg: "demo reset: rounds", ...rounds }));
+  const days = await giveQueueDays({ db: pool, logger, now }, results);
+  console.log(JSON.stringify({ msg: "demo reset: queue days", ...days }));
   const cast = await giveCastStories(pool, results, now());
   console.log(JSON.stringify({ msg: "demo reset: the cast's stories", ...cast }));
 }

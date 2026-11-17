@@ -1,6 +1,6 @@
 # notifications
 
-In-conversation push, the match push, optional email channel; the round's push went with the daily set (ADR-062 §12). TD-3, TD-18, ADR-055.
+In-conversation push, the match push, optional email channel; the queue's push went with the daily set (ADR-062 §12). TD-3, TD-18, ADR-055.
 
 - `NotificationChoices.tsx` (#176, ADR-032): Settings › Notifications, one switch per kind (messages, matches, moderators' decisions), stored on the server and on until switched off, after what this phone's answer leaves to do (`PhoneLine.tsx`) and the line saying what a notification says: which kind, never what it says or from whom (#581). Only moderators' decisions has a line of its own, that nothing is sent for them yet. The settings slice wraps it in its page.
 - `PhoneLine.tsx` (#102, ADR-055 §9, #581): what this phone's answer leaves to do, first in the panel, since the row's value says the answer: allowed, nothing; refused, the button to the phone's settings (`Linking.openSettings`); never asked, the button that shows the phone's own question, dimmed while it is open; unavailable (the web preview, a phone that could not be read), a line in words. Read again as the app comes back to the front; a change after the first read is said aloud on both platforms (`sayAloud`, `components/Notice.tsx`). On the web target the line alone: nothing read, listened for or asked.

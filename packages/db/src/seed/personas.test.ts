@@ -39,7 +39,7 @@ describe("the personas of the mock bank", () => {
     expect(new Set(DEMO_PERSONAS.map((p) => p.key)).size).toBe(25);
     expect(new Set(DEMO_PERSONAS.map((p) => p.individual)).size).toBe(25);
     // A name of its own: a flow finds the persona's button by the name, and
-    // the chat's and the round's flows find the other person by the given name.
+    // the chat's and the queue's flows find the other person by the given name.
     expect(new Set(DEMO_PERSONAS.map((p) => p.given)).size).toBe(25);
     expect(new Set(DEMO_PERSONAS.map((p) => `${p.given} ${p.family}`)).size).toBe(25);
     for (const p of DEMO_PERSONAS) {
@@ -88,7 +88,7 @@ describe("the personas of the mock bank", () => {
     }
     // The rest are the mock bank's alone: the ages, the three pairs of the
     // conversations, the chat's (#348), the contact share's (#103) and the
-    // report's (#351), the round's cast (#379), and What you seek's (#542), for
+    // report's (#351), the queue's cast (#379), and What you seek's (#542), for
     // whom the bed has no test user left.
     const mockOnly = DEMO_PERSONAS.filter((p) => p.bank === undefined).map((p) => p.key);
     expect(mockOnly).toEqual([
@@ -216,7 +216,7 @@ describe("the login page of the mock bank", () => {
     }
   });
 
-  it("leaves the people of Iida's round out of the list at the top, with a card each below (#379)", () => {
+  it("leaves the people of Iida's queue out of the list at the top, with a card each below (#379)", () => {
     const cards = page.indexOf('<section aria-labelledby="group-walkthrough">');
     const theirs = page.indexOf('<section aria-labelledby="group-cards">');
     expect(theirs).toBeGreaterThan(cards);

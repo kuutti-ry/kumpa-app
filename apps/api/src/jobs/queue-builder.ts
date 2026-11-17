@@ -3,10 +3,10 @@ import {
   type DistanceBand,
   pondCounterK,
   QUEUE_PAGE,
+  type QueueDecision,
   type Relaxation,
   type RelaxationKind,
   type RelaxationOffer,
-  type RoundDecision,
   saidInStep,
 } from "@kuutti/schema";
 import { addDays, finnishDay } from "../lib/finnish-day.ts";
@@ -22,12 +22,12 @@ import {
   type Place,
   type PoolPerson,
   pausedOf,
+  type QueueCandidate,
+  queueOrder,
   type RelaxedCandidate,
   type Return,
-  type RoundCandidate,
   relaxationsOf,
   relaxedBy,
-  roundOrder,
 } from "../matching/index.ts";
 import { type Subject, subjectOf, subjectsAmong, subjectsOfPond } from "./pool.ts";
 
@@ -36,8 +36,8 @@ import { type Subject, subjectOf, subjectsAmong, subjectsOfPond } from "./pool.t
  * person. Once an admin has opened matching (#500, ADR-060), everybody complete has a
  * queue from their first read; nothing is built at night. It lives with the jobs
  * and not in a slice for the reason `pool.ts` does: it reads across accounts,
- * profiles, photos, preferences, consents, blocks, rounds and conversations. The
- * rule of whom and in which order is the matching slice's (`roundOrder`,
+ * profiles, photos, preferences, consents, blocks, queue days and conversations. The
+ * rule of whom and in which order is the matching slice's (`queueOrder`,
  * `comingBackOrder`), the one writer too (`addPlaces`).
  *
  * A read that finds nothing left to go through adds the next people to the
@@ -58,7 +58,7 @@ import { type Subject, subjectOf, subjectsAmong, subjectsOfPond } from "./pool.t
  * Every entry is written with the band between the two homes as they stand then
  * (ADR-061 §5), however it came into the queue.
  *
- * Nothing it reads or decides is logged: whose queue has whom in it is the round
+ * Nothing it reads or decides is logged: whose queue has whom in it is the queue
  * record's, and the export's (ADR-034 §7).
  */
 export type BuilderDeps = { db: Queryable; logger: Logger; now: () => Date };
@@ -85,7 +85,7 @@ type History = {
   seen: Map<string, { lastShown: string; from: Return }>;
 };
 
-const RETURNS_FROM: Record<RoundDecision, Return> = {
+const RETURNS_FROM: Record<QueueDecision, Return> = {
   skip: "skipped",
   pass: "passed",
   like: "liked",
@@ -111,12 +111,12 @@ async function historyOf(
   const { rows: shown } = await db.query<{
     id: string;
     last_shown: string;
-    decision: RoundDecision | null;
+    decision: QueueDecision | null;
     second_pass: boolean;
   }>(
     `SELECT DISTINCT ON (e.candidate_id)
             e.candidate_id AS id, r.day::text AS last_shown, e.decision, e.second_pass
-       FROM rounds r JOIN round_entries e ON e.round_id = r.id
+       FROM queue_day r JOIN queue_entry e ON e.queue_day_id = r.id
       WHERE r.account_id = $1 AND r.day < $2::date
         AND (e.seen_at IS NOT NULL OR e.decision IS NOT NULL)
       ORDER BY e.candidate_id, r.day DESC`,
@@ -182,12 +182,12 @@ async function waitingOn(
   const { rows } = await db.query<{ id: string; fish: boolean; waived: Relaxation["field"][] }>(
     `SELECT r.account_id AS id, bool_or(e.fish) AS fish,
             coalesce(array_agg(DISTINCT w.field) FILTER (WHERE w.field IS NOT NULL), '{}') AS waived
-       FROM round_entries e JOIN rounds r ON r.id = e.round_id
+       FROM queue_entry e JOIN queue_day r ON r.id = e.queue_day_id
        LEFT JOIN LATERAL unnest(e.relaxed_with) AS w(field) ON true
       WHERE e.candidate_id = $1 AND e.decision = 'like'
         AND r.day < $2::date AND r.day > $2::date - $3::int
         AND NOT EXISTS (
-          SELECT 1 FROM rounds mine JOIN round_entries answer ON answer.round_id = mine.id
+          SELECT 1 FROM queue_day mine JOIN queue_entry answer ON answer.queue_day_id = mine.id
            WHERE mine.account_id = $1 AND answer.candidate_id = r.account_id
              AND answer.decision IN ('like', 'pass') AND mine.day >= r.day)
       GROUP BY r.account_id
@@ -200,7 +200,7 @@ async function waitingOn(
 const waivedAs = (fields: readonly Relaxation["field"][]): Relaxation[] =>
   fields.map((field) => ({ field, kind: "aside" as const }));
 
-type Inbox = { places: RoundCandidate[]; fish: Set<string>; waits: Set<string> };
+type Inbox = { places: QueueCandidate[]; fish: Set<string>; waits: Set<string> };
 
 /**
  * What the owner's inbox can show now (ADR-062 §2, §4): `places` in order, `fish`
@@ -253,7 +253,7 @@ type Today = {
 /** Everybody in the person's log of `day`, decided or not. */
 async function inLogOf(db: Queryable, accountId: string, day: string): Promise<Set<string>> {
   const { rows } = await db.query<{ candidate_id: string }>(
-    `SELECT e.candidate_id FROM round_entries e JOIN rounds r ON r.id = e.round_id
+    `SELECT e.candidate_id FROM queue_entry e JOIN queue_day r ON r.id = e.queue_day_id
       WHERE r.account_id = $1 AND r.day = $2`,
     [accountId, day],
   );
@@ -312,7 +312,7 @@ async function todayOf(deps: BuilderDeps, accountId: string): Promise<Today | nu
 // shortcut: this and `waitingOn` go through a candidate's whole kept year of
 // entries for two weeks of likes, some thousands of rows each by a year's end, and
 // each walk asks again of whoever is at the stop; a partial index on
-// `round_entries (candidate_id) WHERE decision = 'like'` and a memo per walk lift
+// `queue_entry (candidate_id) WHERE decision = 'like'` and a memo per walk lift
 // it, when capacity.md's run asks.
 
 async function heldBack(
@@ -341,11 +341,11 @@ async function atTheStop(
   if (stop <= 0) return [];
   const { rows } = await db.query<{ id: string }>(
     `SELECT e.candidate_id AS id
-       FROM round_entries e JOIN rounds r ON r.id = e.round_id
+       FROM queue_entry e JOIN queue_day r ON r.id = e.queue_day_id
       WHERE e.candidate_id = ANY($1::uuid[]) AND e.decision = 'like'
         AND r.day < $2::date AND r.day > $2::date - $3::int
         AND NOT EXISTS (
-          SELECT 1 FROM rounds mine JOIN round_entries answer ON answer.round_id = mine.id
+          SELECT 1 FROM queue_day mine JOIN queue_entry answer ON answer.queue_day_id = mine.id
            WHERE mine.account_id = e.candidate_id AND answer.candidate_id = r.account_id
              AND answer.decision IN ('like', 'pass') AND mine.day >= r.day)
       GROUP BY e.candidate_id
@@ -419,7 +419,7 @@ function orderedPlaces(
   day: string,
 ): Place[] {
   const size = candidates.length;
-  const fresh = roundOrder(
+  const fresh = queueOrder(
     owner,
     candidates.filter((subject) => !history.seen.has(subject.id)),
     { day, size },
@@ -432,7 +432,7 @@ function orderedPlaces(
     }),
     { day, size },
   );
-  const distance = (candidate: RoundCandidate): DistanceBand =>
+  const distance = (candidate: QueueCandidate): DistanceBand =>
     bandBetween(owner.person.home, candidate.person.home);
   return [
     ...fresh.map((candidate) => ({
@@ -580,7 +580,7 @@ export async function fittingNow(
   const { rows: likes } = await db.query<{ id: string; waived: Relaxation["field"][] }>(
     `SELECT r.account_id AS id,
             coalesce(array_agg(DISTINCT w.field) FILTER (WHERE w.field IS NOT NULL), '{}') AS waived
-       FROM round_entries e JOIN rounds r ON r.id = e.round_id
+       FROM queue_entry e JOIN queue_day r ON r.id = e.queue_day_id
        LEFT JOIN LATERAL unnest(e.relaxed_with) AS w(field) ON true
       WHERE e.candidate_id = $1 AND r.account_id = ANY($2::uuid[]) AND e.decision = 'like'
         AND r.day > $3::date - $4::int
@@ -608,7 +608,7 @@ export async function fittingNow(
  * relaxed today, each way it can be, with how much it widens the pool in the
  * counter's steps, and listed only when it would add somebody today. Whoever the
  * inbox stop holds back is in no queue, so neither of those counts them. Null with
- * no round today.
+ * no queue today.
  */
 export async function relaxationOffers(
   deps: BuilderDeps,
@@ -657,7 +657,7 @@ export async function relaxationOffers(
  * their soft matches, then the order of coming back, past whoever the inbox stop
  * holds back; with the day's relaxations they were counted under, on top of which
  * this one loosens the person's filters. The next reads go on to the rest. Null
- * for a relaxation the offers would not list: no round today, a field that is no
+ * for a relaxation the offers would not list: no queue today, a field that is no
  * deal-breaker of the person's, a paused one, one relaxed today, or `unanswered`
  * where those people are let through already.
  */
@@ -668,7 +668,7 @@ export async function relaxedCandidates(
 ): Promise<{ basis: Relaxation[]; candidates: RelaxedCandidate[] } | null> {
   const t = await todayOf(deps, accountId);
   if (!t || !(await relaxationsOf(deps.db, accountId, t.day))) return null;
-  // The stored deal-breaker: one relaxed today meanwhile is the writer's to refuse, under the round's lock.
+  // The stored deal-breaker: one relaxed today meanwhile is the writer's to refuse, under the queue's lock.
   const dealBreaker = t.owner.person.dealBreakers.find((d) => d.field === relaxation.field);
   if (!dealBreaker || pausedOf(dealBreaker.field, t.owner.person.fields)) return null;
   if (relaxation.kind === "unanswered" && dealBreaker.includeUnknown) return null;

@@ -23,7 +23,7 @@ function HandOver({ photoOf }: { photoOf?: string }) {
 
 const ROUTES = {
   index: () => <Text>Home</Text>,
-  round: () => <Text>People</Text>,
+  queue: () => <Text>People</Text>,
   "chats/index": () => <Text>Conversations</Text>,
   "chats/[id]": () => <HandOver />,
   "chats/photo/[messageId]": () => <HandOver photoOf="c1" />,
@@ -66,17 +66,17 @@ afterEach(() => {
 });
 
 describe("handing over to the list (#491)", () => {
-  it("leaves the list on the round after a photo's report in a conversation the match screen opened, and Back goes to the round", async () => {
-    const app = await opened("/round", "/chats/c1", "/chats/photo/m1");
-    expect(app.stack()).toEqual(["round", "chats/[id]", "chats/photo/[messageId]"]);
+  it("leaves the list on the queue after a photo's report in a conversation the match screen opened, and Back goes to the queue", async () => {
+    const app = await opened("/queue", "/chats/c1", "/chats/photo/m1");
+    expect(app.stack()).toEqual(["queue", "chats/[id]", "chats/photo/[messageId]"]);
     await handOver("photo");
     expect(app.pathname()).toBe("/chats");
-    expect(app.stack()).toEqual(["round", "chats/index"]);
+    expect(app.stack()).toEqual(["queue", "chats/index"]);
     expect(screen.getByText("Conversations")).toBeTruthy();
     expect(takeNotice()).toBe("reported");
-    // Back finds the round, not the reported conversation's "no longer available".
+    // Back finds the queue, not the reported conversation's "no longer available".
     await act(async () => router.back());
-    expect(app.pathname()).toBe("/round");
+    expect(app.pathname()).toBe("/queue");
     expect(screen.getByText("People")).toBeTruthy();
   });
 
@@ -87,26 +87,26 @@ describe("handing over to the list (#491)", () => {
     expect(app.stack()).toEqual(["chats/index"]);
   });
 
-  it("takes both photos a quick double tap pushed, and leaves the list on the round", async () => {
-    const app = await opened("/round", "/chats/c1", "/chats/photo/m1", "/chats/photo/m1");
+  it("takes both photos a quick double tap pushed, and leaves the list on the queue", async () => {
+    const app = await opened("/queue", "/chats/c1", "/chats/photo/m1", "/chats/photo/m1");
     await handOver("photo");
-    expect(app.stack()).toEqual(["round", "chats/index"]);
+    expect(app.stack()).toEqual(["queue", "chats/index"]);
   });
 
   it("puts the list in the place of a photo an outside link opened, with no conversation under it, as before", async () => {
-    const app = await opened("/round", "/chats/photo/m1");
+    const app = await opened("/queue", "/chats/photo/m1");
     await handOver("photo");
     expect(app.pathname()).toBe("/chats");
-    expect(app.stack()).toEqual(["round", "chats/index"]);
+    expect(app.stack()).toEqual(["queue", "chats/index"]);
   });
 
-  it("leaves the list on the round after the conversation's own report, the conversation replaced", async () => {
-    const app = await opened("/round", "/chats/c1");
+  it("leaves the list on the queue after the conversation's own report, the conversation replaced", async () => {
+    const app = await opened("/queue", "/chats/c1");
     await handOver("conversation");
     expect(app.pathname()).toBe("/chats");
-    expect(app.stack()).toEqual(["round", "chats/index"]);
+    expect(app.stack()).toEqual(["queue", "chats/index"]);
     await act(async () => router.back());
-    expect(app.pathname()).toBe("/round");
+    expect(app.pathname()).toBe("/queue");
   });
 
   it("goes back down to the list after the conversation's own report when the list opened it", async () => {

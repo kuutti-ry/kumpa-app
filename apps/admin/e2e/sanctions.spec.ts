@@ -3,7 +3,7 @@ import { expect, signInAsModerator, test } from "./fixtures.ts";
 
 // A person's page and the actions on it (#306, #308, #477): reached by an account id at the
 // lookup, as a moderator does with one copied from a report or a feedback row. The person is
-// Riikka, a card in Iida's round (e2e/run.ts), whom nothing else in the flows touches.
+// Riikka, a card in Iida's queue (e2e/run.ts), whom nothing else in the flows touches.
 
 const person = () => {
   const account = process.env.E2E_PERSON_ACCOUNT;
@@ -38,7 +38,7 @@ test("a suspension is applied through its confirm step and lifted through anothe
   const confirm = apply.getByRole("button", { name: "Apply" });
   await expect(confirm).toBeDisabled();
   await apply.getByLabel("Reason").selectOption({ label: "Harassment" });
-  await apply.getByLabel("Note", { exact: true }).fill("Unkind words in a round.");
+  await apply.getByLabel("Note", { exact: true }).fill("Unkind words in a queue.");
   // The day after the earliest the field takes, so a run across midnight still asks a later day.
   const ends = apply.getByLabel("Suspended until", { exact: true });
   const earliest = new Date(`${await ends.getAttribute("min")}T12:00:00Z`);
@@ -47,7 +47,7 @@ test("a suspension is applied through its confirm step and lifted through anothe
   await confirm.click();
   await expect(apply).toBeHidden();
   await expect(sanctions.getByRole("status")).toHaveText("Applied: Suspension.");
-  const entry = sanctions.getByRole("listitem").filter({ hasText: "Unkind words in a round." });
+  const entry = sanctions.getByRole("listitem").filter({ hasText: "Unkind words in a queue." });
   await expect(entry).toContainText("Suspension");
 
   // A second look says what lifting does, beside Lift it (#581), as the lift's own step does. The

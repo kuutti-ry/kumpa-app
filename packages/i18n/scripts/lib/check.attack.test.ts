@@ -148,13 +148,13 @@ const NEVER_SLANG: [string, string, string, string?][] = [
   // What stays plain is known by twelve runs of letters in the key: a failure,
   // a person's data, a consent or a way out named in other words carries none of them.
   ["a failure said once, under a number's field", "settings.contacts.phoneShort", "settings.title"],
-  ["a like that was refused", "round.yourTurn.refused", "round.title"],
+  ["a like that was refused", "queue.yourTurn.refused", "queue.title"],
   ["a person's e-mail address", "settings.email.unconfirmed", "settings.title"],
   ["a person's gender", "profile.gender.title", "profile.title"],
   ["a consent", "settings.consent.title", "settings.title"],
   ["signing out", "settings.signOut.label", "settings.title"],
   // A form the check has to read like the plain one.
-  ["a failure named in capitals", "round.loadFAILED", "round.title"],
+  ["a failure named in capitals", "queue.loadFAILED", "queue.title"],
 ];
 
 for (const [name, key, harmless, open] of NEVER_SLANG) {

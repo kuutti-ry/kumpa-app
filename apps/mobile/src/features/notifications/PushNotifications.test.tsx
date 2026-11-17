@@ -358,8 +358,8 @@ describe("a tap on a push", () => {
     // No push names its conversation any more (the maintainer's of 25/10/2026).
     ["a conversation", { kind: "message", conversationId: CONVERSATION }],
     ["a word too many", { kind: "match", name: "Henna" }],
-    // Still in a phone's list after the round's push went (ADR-062 §12): the app has no such kind.
-    ["the round's old kind", { kind: "round" }],
+    // Still in a phone's list after the queue's push went (ADR-062 §12): the app has no such kind.
+    ["the queue's old kind", { kind: "round" }],
     ["no data at all", undefined],
   ])("opens nothing for a push with %s, and lets it go", async (_, data) => {
     await renderWithTheme(<PushNotifications />);

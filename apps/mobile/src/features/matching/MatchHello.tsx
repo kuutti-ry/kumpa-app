@@ -64,7 +64,7 @@ function Frame({
  * It says no more than the plain match did: no score, no fit, nothing the two
  * are said to share (CLAUDE.md, Product constraints). The reader is taken to
  * the greeting, the photos are one image named in words, and what to do next
- * is the buttons under it, which the round screen keeps.
+ * is the buttons under it, which the queue screen keeps.
  */
 export function MatchHello({
   name,
@@ -147,7 +147,7 @@ export function MatchHello({
             }}
           >
             <Slab room={room} textRef={focusOnMount}>
-              {t("round.hello.title")}
+              {t("queue.hello.title")}
             </Slab>
           </Animated.View>
           <Animated.View
@@ -158,11 +158,11 @@ export function MatchHello({
           </Animated.View>
         </View>
       </View>
-      <Text className="pt-2 text-center">{t("round.hello.both")}</Text>
+      <Text className="pt-2 text-center">{t("queue.hello.both")}</Text>
       <View
         accessible
         accessibilityRole="image"
-        accessibilityLabel={t("round.hello.photos", { name })}
+        accessibilityLabel={t("queue.hello.photos", { name })}
         className="self-center"
         style={{ width: room, paddingTop: room * 0.03, paddingBottom: room * 0.13 }}
       >
@@ -182,7 +182,7 @@ export function MatchHello({
           </Animated.View>
           <View className="flex-row justify-center">
             <Frame
-              caption={t("round.hello.you")}
+              caption={t("queue.hello.you")}
               width={frame}
               style={{
                 zIndex: 1,

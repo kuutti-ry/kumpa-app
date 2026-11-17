@@ -8,7 +8,7 @@ import { GUILD_OPTIONS, UNIVERSITIES } from "./guilds.ts";
  * or bounds, and two roles: what the person's own value may do (`role`) and
  * what preference about other people's value may exist (`preferenceAbout`).
  * The roles are data here and nowhere in code paths, so the card, the pool,
- * the round builder and the deal-breakers read one table (ADR-019 §2).
+ * the queue's builder and the deal-breakers read one table (ADR-019 §2).
  * `specialCategory` marks an article 9 field: its value is refused until the
  * person has given the explicit consent of the current wording, and it never
  * is never logged (ADR-009 §2, ADR-019 §4). Option texts are messages.yaml
@@ -19,7 +19,7 @@ import { GUILD_OPTIONS, UNIVERSITIES } from "./guilds.ts";
 
 /**
  * What the person's own value may do (ADR-019 §1): `hard` is always in the
- * matching query, both ways; `soft` orders a round and is never shown as a
+ * matching query, both ways; `soft` orders a queue and is never shown as a
  * score; `info` is shown on the card and never queried; `hidden` is stored
  * and never shown (a setting).
  */
@@ -401,7 +401,7 @@ export const PROFILE_FIELDS = {
     ],
     { role: "info", preferenceAbout: "none" },
   ),
-  /** "Hide me from my field": people of the same field never see this person; the round builder of #95 reads it. */
+  /** "Hide me from my field": people of the same field never see this person; the queue's builder of #95 reads it. */
   hideFromField: flag({ role: "hidden", preferenceAbout: "none" }),
   /** Lines of work, as many as apply (#178, #239). */
   occupation: multi(

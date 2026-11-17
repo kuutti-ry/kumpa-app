@@ -2,7 +2,7 @@
 Feature: Pushes say that there is something, never what or from whom
   A phone whose app is closed is told of two things through Expo (#102,
   ADR-055): a message the person may read and a match made by the other's
-  like. The round's push went with the daily set (ADR-062 §12): with nothing
+  like. The queue's push went with the daily set (ADR-062 §12): with nothing
   built at night nothing is ready to tell of. A push is one line of the app's
   own words in the phone's language and its kind: never a message's text, a
   name, an account or the conversation (§1). Who may be told of a message is
