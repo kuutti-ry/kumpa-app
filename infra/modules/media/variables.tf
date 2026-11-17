@@ -38,9 +38,9 @@ variable "origin_proof_store_arn" {
 }
 
 variable "extra_aliases" {
-  description = "Names besides api_fqdn that the distribution serves for the box, each routed by Traefik on the forwarded Host: Dokploy's control plane (ADR-005 §7, #198). They are names on the certificate too; the environment's dns.tf points them at the distribution."
-  type        = list(string)
-  default     = []
+  description = "Names besides api_fqdn that the distribution serves for the box, each routed by Traefik on the forwarded Host, mapped to the hosted zone the name lives in: Dokploy's control plane (ADR-005 §7, #198), and the API's and Dokploy's names under the second domain while the hosts have two (ADR-072). They are names on the certificate too, validated in that zone; the environment's dns.tf points them at the distribution."
+  type        = map(string)
+  default     = {}
 }
 
 variable "edge_requests_per_five_minutes" {

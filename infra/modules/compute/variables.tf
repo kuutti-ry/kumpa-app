@@ -81,10 +81,14 @@ variable "cpu_credits" {
   }
 }
 
-variable "domain" {
-  description = "The project domain; the instance role sends mail as noreply@<domain> through its SES identity (#385, ADR-043 §5)."
-  type        = string
-  default     = "kuutti.app"
+variable "mail_domains" {
+  description = "The domains the instance role may send mail from, each as noreply@<domain> through that domain's SES identity (#385, ADR-043 §5; infra/bootstrap/mail.tf). Both of the hosts' domains while they have two (ADR-072); which one the API sends from is its MAIL_FROM."
+  type        = list(string)
+
+  validation {
+    condition     = length(var.mail_domains) > 0
+    error_message = "mail_domains names at least one domain."
+  }
 }
 
 variable "mail_recipients" {

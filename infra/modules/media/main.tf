@@ -9,8 +9,9 @@
 #
 # The same distribution fronts the rest of what the box serves on 443, under
 # extra_aliases: Dokploy's control plane (ADR-005 §7, #198), so that the box
-# can admit CloudFront alone. Traefik routes it by the forwarded Host, as it
-# routes the API. Let's Encrypt's HTTP-01
+# can admit CloudFront alone, and the API's and Dokploy's names under the
+# second domain while the hosts have two (ADR-072). Traefik routes each by the
+# forwarded Host, as it routes the API. Let's Encrypt's HTTP-01
 # challenge for a name behind the distribution reaches Traefik over plain HTTP,
 # through a third origin (below).
 
@@ -254,15 +255,16 @@ resource "aws_cloudfront_origin_request_policy" "acme" {
 }
 
 # ---------------------------------------------------------------------------
-# The certificate for the alias, in us-east-1 as CloudFront requires, validated
-# by a record in the project zone.
+# The certificate for the aliases, in us-east-1 as CloudFront requires, each
+# name validated by a record in its own zone: the project zone's for api_fqdn,
+# the one extra_aliases gives for every other (ADR-072).
 # ---------------------------------------------------------------------------
 
 resource "aws_acm_certificate" "api" {
   provider = aws.us_east_1
 
   domain_name               = var.api_fqdn
-  subject_alternative_names = var.extra_aliases
+  subject_alternative_names = keys(var.extra_aliases)
   validation_method         = "DNS"
 
   lifecycle {
@@ -281,7 +283,7 @@ resource "aws_route53_record" "validation" {
     }
   }
 
-  zone_id         = var.zone_id
+  zone_id         = lookup(var.extra_aliases, each.key, var.zone_id)
   name            = each.value.name
   type            = each.value.type
   ttl             = 60
@@ -308,7 +310,7 @@ resource "aws_cloudfront_distribution" "this" {
   # Europe and North America: Finland is served from Europe, and the rest of
   # the classes add edges nobody here reaches.
   price_class = "PriceClass_100"
-  aliases     = concat([var.api_fqdn], var.extra_aliases)
+  aliases     = concat([var.api_fqdn], keys(var.extra_aliases))
   # The edge's rate rule (edge.tf, #41, ADR-067).
   web_acl_id = aws_wafv2_web_acl.edge.arn
 

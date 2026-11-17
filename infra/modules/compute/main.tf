@@ -25,9 +25,11 @@ locals {
   log_group_name    = "/${var.project}/${var.environment}/api"
   session_log_group = "/${var.project}/ssm-sessions"
   backup_prefix     = "dokploy-backup/${var.environment}/"
-  # The API's MAIL_FROM default (apps/api/src/lib/config.ts) without its
-  # display name, which ses:FromAddress does not include.
-  mail_from = "noreply@${var.domain}"
+  # The API's MAIL_FROM (apps/api/src/lib/config.ts) without its display
+  # name, which ses:FromAddress does not include: noreply@ of each mail
+  # domain, so that the sender can move from one to the other with a
+  # parameter while both may send (ADR-072).
+  mail_from = [for d in var.mail_domains : "noreply@${d}"]
   # Where the box's free memory goes, which modules/observability's
   # memory-low alarm reads (#77). A namespace of its own, not Kuutti/<env>:
   # the box may write here and nowhere else, so nothing on it (the API) can
@@ -137,9 +139,12 @@ data "aws_iam_policy_document" "api" {
   # Mail (#385, ADR-043 §5): the code that confirms an address. SESv2
   # SendEmail with simple content is authorised as ses:SendEmail against the
   # sending identity, so neither ses:SendRawEmail nor a configuration set is
-  # granted. The identity is the domain's (infra/bootstrap/mail.tf, in this
-  # region, the API's S3_REGION), and the From address is pinned to noreply@:
-  # a MAIL_FROM of any other address is refused here, and the API answers 503.
+  # granted. The identities are the domains' (infra/bootstrap/mail.tf, in this
+  # region, the API's S3_REGION), and the From address is pinned to noreply@
+  # of one of them: a MAIL_FROM of any other address is refused here, and the
+  # API answers 503. SES checks a send against the identity of the From
+  # address's own domain, so naming both pairs in one statement lets no
+  # address send through the other's identity.
   # Staging also names whom it may mail (#385, ADR-043 §6): every account there
   # is one of Telia's test persons, whose credentials are published, so without
   # the list anyone could have codes sent to addresses of their choosing once
@@ -151,12 +156,12 @@ data "aws_iam_policy_document" "api" {
     sid       = "SesSendAsNoreply"
     effect    = "Allow"
     actions   = ["ses:SendEmail"]
-    resources = ["arn:aws:ses:${local.region}:${local.account_id}:identity/${var.domain}"]
+    resources = [for d in var.mail_domains : "arn:aws:ses:${local.region}:${local.account_id}:identity/${d}"]
 
     condition {
       test     = "StringEquals"
       variable = "ses:FromAddress"
-      values   = [local.mail_from]
+      values   = local.mail_from
     }
 
     dynamic "condition" {

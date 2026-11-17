@@ -172,9 +172,14 @@ resource "aws_route53_record" "github_org_verification" {
 # anyone send as it with only a soft fail. Google's envelope carries the
 # sender's own address, so its mail aligns under aspf=s, and its signature
 # as d=kumpa.fi aligns under adkim=s, which carries a forwarded message that
-# breaks SPF. The CAA names Amazon's issuers alone:
-# Amplify's ACM certificate is the only one the domain has, and no box serves
-# it, so Let's Encrypt has no place here.
+# breaks SPF. The CAA names the issuers kuutti.app's does: ACM for Amplify's
+# certificate and the distributions', and Let's Encrypt since the boxes serve
+# api, dokploy and origin.api under kumpa.fi as well, with a certificate from
+# Traefik for each (#703, ADR-072).
+#
+# SES sends as kumpa.fi too, through an identity of its own (mail.tf): its
+# Easy DKIM signs as d=kumpa.fi, which aligns under adkim=s, and its envelope,
+# mail.kumpa.fi, has its own SPF, as kuutti.app's does.
 # ---------------------------------------------------------------------------
 
 import {
@@ -238,6 +243,7 @@ resource "aws_route53_record" "kumpa_caa" {
     "0 issue \"amazontrust.com\"",
     "0 issue \"awstrust.com\"",
     "0 issue \"amazonaws.com\"",
+    "0 issue \"letsencrypt.org\"",
     "0 iodef \"mailto:admin@${var.domain}\"",
   ]
 }
