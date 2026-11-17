@@ -5,7 +5,13 @@ import {
   CONSENT_TEXT_LOCALES,
   CONSENT_VERSIONS,
 } from "./generated/consent.ts";
-import { isLegalTextKind, legalPageUrl } from "./legal.ts";
+import {
+  isLegalTextKind,
+  LEGAL_PAGES,
+  legalLinkPath,
+  legalPageUrl,
+  legalSitePage,
+} from "./legal.ts";
 
 /**
  * A wording and its version move together (#46, #208, ADR-010 §4): an edit
@@ -52,11 +58,25 @@ describe("consent versions", () => {
         ]),
       ),
     ).toEqual({
-      privacy: `https://kuutti.app/legal/privacy/#privacy-${CONSENT_VERSIONS.privacy}`,
-      special_category: `https://kuutti.app/legal/privacy/#special_category-${CONSENT_VERSIONS.special_category}`,
-      terms: `https://kuutti.app/legal/terms/#terms-${CONSENT_VERSIONS.terms}`,
+      privacy: `https://kumpa.fi/legal/privacy/#privacy-${CONSENT_VERSIONS.privacy}`,
+      special_category: `https://kumpa.fi/legal/privacy/#special_category-${CONSENT_VERSIONS.special_category}`,
+      terms: `https://kumpa.fi/legal/terms/#terms-${CONSENT_VERSIONS.terms}`,
     });
     expect(isLegalTextKind("toString")).toBe(false);
+  });
+
+  // The phone opens the API's path (ADR-010 §4, amendment of 2026-11-17),
+  // which sends it to the site's page; the anchor rides along.
+  it("links the app to the API's page of each kind, at the anchor of the version", () => {
+    expect(legalLinkPath("terms", "2026-11-1")).toBe("/legal/terms#terms-2026-11-1");
+    expect(legalLinkPath("privacy", "2026-11-1")).toBe("/legal/privacy#privacy-2026-11-1");
+    expect(legalLinkPath("special_category", "2026-11-1")).toBe(
+      "/legal/privacy#special_category-2026-11-1",
+    );
+    expect(LEGAL_PAGES.map(legalSitePage)).toEqual([
+      "https://kumpa.fi/legal/terms/",
+      "https://kumpa.fi/legal/privacy/",
+    ]);
   });
 
   // The website's CI reads CONSENT_VERSIONS out of this module on main

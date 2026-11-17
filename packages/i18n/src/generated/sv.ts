@@ -352,7 +352,7 @@ export const sv: Readonly<Record<string, string>> = {
   "onboarding.changeFrom": "Nästa ändring möjlig: {date}.",
   "onboarding.consents.binding": "Den engelska texten är den som gäller; det här är en översättning.",
   "onboarding.consents.explain": "Läs båda. Du godkänner exakt den här versionen av varje text; om en ändras frågar vi igen.",
-  "onboarding.consents.fullText": "Läs hela texten på kuutti.app (version {version})",
+  "onboarding.consents.fullText": "Läs hela texten på webbplatsen (version {version})",
   "onboarding.consents.outdatedApp": "Den här texten har en nyare version än den som är inbyggd i appen. Uppdatera appen för att fortsätta.",
   "onboarding.continue": "Fortsätt",
   "onboarding.failed": "Något kunde inte läsas in. Försök igen.",

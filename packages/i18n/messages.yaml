@@ -4397,10 +4397,10 @@ onboarding.consents.binding:
   machine: { fi: true, sv: true }
 
 onboarding.consents.fullText:
-  en: "Read the full text on kuutti.app (version {version})"
-  description: "A link under each legal summary (the terms, the privacy summary, the sensitive answers; onboarding and Settings) to the full text on the website, at the anchor of {version}, the consent_version this app carries (#208, ADR-010 §4). Opens the browser."
-  fi: "Lue koko teksti osoitteessa kuutti.app (versio {version})"
-  sv: "Läs hela texten på kuutti.app (version {version})"
+  en: "Read the full text on the website (version {version})"
+  description: "A link under each legal summary (the terms, the privacy summary, the sensitive answers; onboarding and Settings) to the full text on the website, at the anchor of {version}, the consent_version this app carries (#208, ADR-010 §4). Opens the browser. It names no address: the API sends the browser to wherever the texts are published (amendment of 2026-11-17)."
+  fi: "Lue koko teksti verkkosivuilta (versio {version})"
+  sv: "Läs hela texten på webbplatsen (version {version})"
   machine: { fi: true, sv: true }
 
 onboarding.consents.outdatedApp:
