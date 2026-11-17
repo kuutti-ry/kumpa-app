@@ -3,6 +3,7 @@ import Settings from "lucide-react-native/icons/settings";
 import Wrench from "lucide-react-native/icons/wrench";
 import { ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Backdrop } from "@/components/backdrop";
 import { LoadFailed } from "@/components/LoadFailed";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -41,6 +42,7 @@ export function HomeScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-background">
+      <Backdrop />
       {/* The wrench left and the gear right (#511), the gear alone on the right in production. */}
       <View className="flex-row justify-between px-2">
         {technical ? (

@@ -1,5 +1,7 @@
-import { fireEvent, render, screen } from "@testing-library/react-native";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react-native";
+import * as SecureStore from "expo-secure-store";
 import { Platform, Text } from "react-native";
+import { Card } from "@/components/ui/card";
 import { a11yProblems, type HostNode, pressables } from "@/test/a11y";
 import { renderWithTheme } from "@/test/render";
 import { HEADING_FONT_SCALE } from "@/theme/a11y";
@@ -81,4 +83,45 @@ describe("ScreenHeader's way back", () => {
     expect(onBack).toHaveBeenCalledTimes(1);
     expect(router.back).not.toHaveBeenCalled();
   });
+});
+
+// The designers' try (outside production): where a style draws a backdrop,
+// the header lets it show through, ruled off by a fainter line; elsewhere,
+// and in high contrast, it is today's solid bar.
+describe("ScreenHeader's ground", () => {
+  const store = (SecureStore as unknown as { __store: Map<string, string> }).__store;
+  afterEach(() => {
+    store.delete("kuutti.preference.look");
+    store.delete("kuutti.preference.highContrast");
+  });
+  const bar = () =>
+    JSON.stringify(screen.toJSON()).match(/"className":"[^"]*\bborder-b\b[^"]*"/)?.[0];
+
+  it.each([
+    ["today", false, "rounded-xl", "bg-background"],
+    ["neubrutalism", false, "rounded-lg", "bg-background"],
+    ["organic", false, "rounded-3xl", "bg-transparent"],
+    ["glass", false, "rounded-3xl", "bg-transparent"],
+    ["bold", false, "rounded-3xl", "bg-transparent"],
+    ["glass", true, "rounded-3xl", "bg-background"],
+  ] as const)(
+    "in the %s style, high contrast %s, once read (%s), is %s",
+    async (look, contrast, rounding, ground) => {
+      if (look !== "today") store.set("kuutti.preference.look", look);
+      if (contrast) store.set("kuutti.preference.highContrast", "true");
+      // A card beside it shows the style has been read: its rounding is the style's.
+      await renderWithTheme(
+        <>
+          <ScreenHeader title="The basics" backLabel="Back" onBack={jest.fn()} />
+          <Card testID="card" />
+        </>,
+      );
+      await waitFor(() =>
+        expect(String(screen.getByTestId("card").props.className).split(" ")).toContain(rounding),
+      );
+      if (contrast)
+        await waitFor(() => expect(JSON.stringify(screen.toJSON())).toContain("high-contrast"));
+      expect(bar()?.split(/[\s"]/)).toContain(ground);
+    },
+  );
 });

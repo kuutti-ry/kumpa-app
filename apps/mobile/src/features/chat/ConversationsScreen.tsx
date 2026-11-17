@@ -4,6 +4,7 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import { Pressable, RefreshControl, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Backdrop } from "@/components/backdrop";
 import { LoadFailed } from "@/components/LoadFailed";
 import { sayOnIos, useSpokenOnIos } from "@/components/Notice";
 import { ScreenHeader } from "@/components/ScreenHeader";
@@ -11,8 +12,11 @@ import { SupportLink } from "@/components/SupportLink";
 import { Text } from "@/components/ui/text";
 import type { SafetyOutcome } from "@/features/safety";
 import { useT } from "@/lib/locale";
+import { cn } from "@/lib/utils";
 import { DECORATIVE, MINIMUM_TARGET } from "@/theme/a11y";
 import { useHapticTap } from "@/theme/haptics";
+import { pressFill } from "@/theme/looks";
+import { useLookTraits } from "@/theme/ThemeProvider";
 import { ConnectionLine } from "./ConnectionLine";
 import { NOTICES, takeNotice } from "./notice";
 import { whenOf } from "./time";
@@ -53,6 +57,7 @@ function Row({ conversation }: { conversation: ConversationSummary }) {
   const { t, locale } = useT();
   const router = useRouter();
   const tap = useHapticTap();
+  const traits = useLookTraits();
   const name = counterpartName(t, conversation);
   const line = lineOf(t, conversation);
   const when = conversation.lastMessage ? whenOf(locale, conversation.lastMessage.at) : null;
@@ -71,7 +76,7 @@ function Row({ conversation }: { conversation: ConversationSummary }) {
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={label}
-      className="flex-row items-center gap-3 rounded-lg px-2 py-2 active:bg-accent"
+      className={cn("flex-row items-center gap-3 rounded-lg px-2 py-2", pressFill(traits))}
       style={MINIMUM_TARGET}
       onPress={() => {
         tap();
@@ -188,6 +193,7 @@ export function ConversationsScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-background">
+      <Backdrop />
       <ScreenHeader title={t("chat.list.title")} backLabel={t("chat.back")} />
       <ConnectionLine />
       <ScrollView

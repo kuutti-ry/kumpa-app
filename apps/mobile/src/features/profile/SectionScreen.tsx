@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import { useEffect } from "react";
 import { ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Backdrop } from "@/components/backdrop";
 import { LoadFailedScreen, LoadingScreen } from "@/components/LoadFailed";
 import { NEEDED_MARK } from "@/components/RowGroup";
 import { ScreenHeader } from "@/components/ScreenHeader";
@@ -142,6 +143,7 @@ export function SectionScreen({ section: id, once = false }: { section: string; 
 
   return (
     <SafeAreaView className="flex-1 bg-background">
+      <Backdrop />
       <ScreenHeader
         title={t(sectionTitleKey(section.id))}
         backLabel={t(

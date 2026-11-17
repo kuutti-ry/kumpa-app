@@ -3,7 +3,7 @@ import type * as React from "react";
 import { Platform } from "react-native";
 import { cn } from "@/lib/utils";
 import { hitSlopFor } from "@/theme/a11y";
-import { useLook } from "@/theme/ThemeProvider";
+import { useLookTraits } from "@/theme/ThemeProvider";
 
 // Drawn size in points; hitSlop extends the touch target to 44 pt (#12).
 const TRACK_WIDTH = 52;
@@ -22,8 +22,8 @@ type SwitchProps = Omit<
 > & { accessibilityLabel: string };
 
 function Switch({ className, accessibilityLabel, ...props }: SwitchProps) {
-  // Today's --input edge, or the neubrutalism try's ink.
-  const neubrutalist = useLook() === "neubrutalism";
+  // Today's --input edge, or the Neobrutalism try's ink.
+  const neubrutalist = useLookTraits().ink;
   return (
     <SwitchPrimitives.Root
       accessibilityRole="switch"

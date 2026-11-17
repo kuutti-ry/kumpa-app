@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import { useEffect, useRef } from "react";
 import { ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Backdrop } from "@/components/backdrop";
 import { LoadFailedScreen, LoadingScreen } from "@/components/LoadFailed";
 import { sayAloud } from "@/components/Notice";
 import { ScreenHeader } from "@/components/ScreenHeader";
@@ -147,6 +148,7 @@ export function LaterFieldScreen({ field, once = false }: { field: string; once?
 
   return (
     <SafeAreaView className="flex-1 bg-background">
+      <Backdrop />
       {/* Out of the questions in one step, wherever they were opened from: each
           one is pushed on the last, so a plain back would step back one. */}
       <ScreenHeader

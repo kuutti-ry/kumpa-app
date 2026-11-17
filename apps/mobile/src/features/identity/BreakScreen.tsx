@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Backdrop } from "@/components/backdrop";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -47,6 +48,7 @@ export function BreakScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-background">
+      <Backdrop />
       <ScreenHeader title={t("account.break.title")} backLabel={t("account.break.back")} />
       <ScrollView contentContainerClassName="gap-6 p-6">
         <View className="gap-3" accessibilityRole="list">

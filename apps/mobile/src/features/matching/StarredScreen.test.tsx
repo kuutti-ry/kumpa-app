@@ -1,6 +1,7 @@
 import type { StarredPerson } from "@kuutti/schema";
-import { act, fireEvent, screen, within } from "@testing-library/react-native";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react-native";
 import { useLocales } from "expo-localization";
+import * as SecureStore from "expo-secure-store";
 import { clearSession, saveSession } from "@/lib/session";
 import { noProblems } from "@/test/a11y";
 import { FAILED_TO_LOAD } from "@/test/failed";
@@ -19,6 +20,8 @@ const { __router: router, __focus: focus } = jest.requireMock("expo-router") as 
   __router: { push: jest.Mock; back: jest.Mock };
   __focus: () => void;
 };
+
+const store = (SecureStore as unknown as { __store: Map<string, string> }).__store;
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
@@ -250,6 +253,25 @@ describe("the Starred list", () => {
     await show();
     await press("Back to home");
     expect(router.back).toHaveBeenCalled();
+  });
+});
+
+// Pressed, a row keeps its words' colour on a ground they are paired with:
+// today's --accent, or the ink's tint in a try style, whose --accent is loud.
+describe("a row pressed (#408)", () => {
+  afterEach(() => store.delete("kuutti.preference.look"));
+
+  it.each([
+    ["today", "active:bg-accent", "active:bg-foreground/10"],
+    ["organic", "active:bg-foreground/10", "active:bg-accent"],
+  ] as const)("fills in the %s style's way", async (look, fill, not) => {
+    if (look !== "today") store.set("kuutti.preference.look", look);
+    api(list(HENNA));
+    await show();
+    const classes = () =>
+      String(screen.getByRole("button", { name: "Henna, 31" }).props.className).split(" ");
+    await waitFor(() => expect(classes()).toContain(fill));
+    expect(classes()).not.toContain(not);
   });
 });
 

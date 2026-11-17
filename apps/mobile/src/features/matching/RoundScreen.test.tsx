@@ -3784,4 +3784,28 @@ describe("a match as a hello, in the designers' try", () => {
       expect(rotations()).toContain("-10deg");
     });
   });
+
+  // Glass's and Bold Contrast's hello is MatchPop too, on their own ground: a
+  // frosted pane on bubbles, a block of the accent on one of the flourish; the
+  // greeting in the colour its ground is paired with.
+  describe.each([
+    ["glass", "text-card-foreground"],
+    ["bold", "text-accent-foreground"],
+  ] as const)("in the %s try", (look, ink) => {
+    beforeEach(() => store.set("kuutti.preference.look", look));
+
+    it("greets with the same words and photos in its ground's ink, and leads to the conversation", async () => {
+      api(matchOn(1));
+      await show();
+      await press("Like");
+      expect(String(heading("Well, hello!").props.className).split(" ")).toContain(ink);
+      expect(screen.getByText("You would both like to hear more about each other.")).toBeTruthy();
+      expect(takenTo()).toEqual({ event: "focus", words: ["Well, hello!"] });
+      expect(screen.getByRole("image", { name: "You and Henna" })).toBeTruthy();
+      noProblems();
+
+      await press("Say hello");
+      expect(router.push).toHaveBeenCalledWith(`/chats/${CONVERSATION}`);
+    });
+  });
 });

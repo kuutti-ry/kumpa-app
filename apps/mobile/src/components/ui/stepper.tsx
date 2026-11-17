@@ -8,7 +8,7 @@ import { Text } from "@/components/ui/text";
 import { cn } from "@/lib/utils";
 import { useHapticTap } from "@/theme/haptics";
 import { useHardShadow } from "@/theme/shadow";
-import { useLook } from "@/theme/ThemeProvider";
+import { useLookTraits } from "@/theme/ThemeProvider";
 
 /**
  * A number between a minus and a plus, which stand well clear of it (the
@@ -54,8 +54,7 @@ export function Stepper({
   tone?: "card" | "secondary";
 }) {
   const tap = useHapticTap();
-  const look = useLook();
-  const loud = look === "neubrutalism";
+  const { ink: loud, pill, glass, headline } = useLookTraits();
   const shadow = useHardShadow(4);
   // Said when it changes, not when the screen opens.
   const before = useRef(shown);
@@ -66,13 +65,16 @@ export function Stepper({
       AccessibilityInfo.announceForAccessibilityWithOptions(shown, { queue: true });
     }
   }, [shown]);
-  if (look === "organic") {
-    // Organic Pop, Sini's age screen: a pill with its label a tab on its top
-    // edge, the number large and slanted between a plain minus and plus.
+  if (pill) {
+    // The pill styles, Sini's Organic Pop age screen: a pill with its label a
+    // tab on its top edge, the number large between a plain minus and plus,
+    // slanted or in Saiga's italic as the style's headline is; a frosted pane
+    // in Glass.
+    const card = glass ? "bg-card/70" : "bg-card";
     return (
       <View>
         {label !== undefined && (
-          <View className="self-start rounded-t-2xl bg-card px-4 pb-0.5 pt-2">
+          <View className={cn("self-start rounded-t-2xl px-4 pb-0.5 pt-2", card)}>
             <Text variant="small" className="font-medium text-card-foreground">
               {label}
             </Text>
@@ -80,7 +82,8 @@ export function Stepper({
         )}
         <View
           className={cn(
-            "flex-row items-center justify-between gap-3 rounded-[32px] bg-card px-2 py-2 shadow-lg shadow-primary/15",
+            "flex-row items-center justify-between gap-3 rounded-[32px] px-2 py-2 shadow-lg shadow-primary/15",
+            card,
             label !== undefined && "rounded-tl-none",
           )}
         >
@@ -101,8 +104,15 @@ export function Stepper({
           <Text
             role="none"
             maxFontSizeMultiplier={1}
-            className="shrink text-center font-sans font-extrabold text-card-foreground"
-            style={{ fontSize: 44, lineHeight: 52, transform: [{ skewX: "-9deg" }] }}
+            className={cn(
+              "shrink text-center font-sans text-card-foreground",
+              headline === "italic" ? "font-normal italic" : "font-extrabold",
+            )}
+            style={{
+              fontSize: 44,
+              lineHeight: 52,
+              transform: headline === "italic" ? undefined : [{ skewX: "-9deg" }],
+            }}
             accessibilityLiveRegion="polite"
           >
             {shown}

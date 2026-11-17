@@ -3,7 +3,7 @@ import { useWindowDimensions, View } from "react-native";
 import { GradientBlob } from "@/components/organic";
 import { Stepper } from "@/components/ui/stepper";
 import { useT } from "@/lib/locale";
-import { useLook } from "@/theme/ThemeProvider";
+import { useLookTraits } from "@/theme/ThemeProvider";
 
 /**
  * The youngest and the oldest one seeks, as What you seek and onboarding ask
@@ -20,7 +20,8 @@ export function AgeWindowSteppers({
   onChange: (ages: AgeWindow) => void;
 }) {
   const { t } = useT();
-  const organic = useLook() === "organic";
+  // Organic Pop draws a soft shape behind the two; the other styles' backdrop is the screen's.
+  const organic = useLookTraits().backdrop === "blobs";
   const { width } = useWindowDimensions();
   const steppers = (
     <>

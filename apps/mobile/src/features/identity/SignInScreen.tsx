@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { AppState, Linking, Platform, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Backdrop } from "@/components/backdrop";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
@@ -231,6 +232,7 @@ export function SignInScreen({ code, error, until }: SignInParams) {
 
   return (
     <SafeAreaView className="flex-1 bg-background">
+      <Backdrop />
       <ScrollView contentContainerClassName="flex-grow items-center justify-center gap-4 p-6">
         <Text variant="h1" accessibilityRole="header">
           {t("signIn.title")}

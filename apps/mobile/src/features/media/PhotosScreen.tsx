@@ -12,6 +12,7 @@ import Trash from "lucide-react-native/icons/trash";
 import { useEffect, useRef, useState } from "react";
 import { Animated, Pressable, ScrollView, useWindowDimensions, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Backdrop } from "@/components/backdrop";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { sayAloud } from "@/components/Notice";
 import { ScreenHeader } from "@/components/ScreenHeader";
@@ -25,7 +26,7 @@ import { usePhotoDescriptionText } from "@/lib/photo-descriptions";
 import { cn } from "@/lib/utils";
 import { MINIMUM_TARGET } from "@/theme/a11y";
 import { useHapticTap } from "@/theme/haptics";
-import { useLook } from "@/theme/ThemeProvider";
+import { useLookTraits } from "@/theme/ThemeProvider";
 import { useMotionDuration } from "@/theme/useReducedMotion";
 import { CaptionDialog } from "./CaptionDialog";
 import { captionKey } from "./captions";
@@ -118,7 +119,7 @@ export function PhotosScreen({
   const { t } = useT();
   // The Organic Pop try (outside production): rounder tiles, the main photo's
   // word as a lime tag and Add a photo as a soft button, as Sini's photo step.
-  const pop = useLook() === "organic";
+  const pop = useLookTraits().pill;
   const router = useRouter();
   const tap = useHapticTap();
   const photos = usePhotos();
@@ -173,6 +174,7 @@ export function PhotosScreen({
 
   return (
     <SafeAreaView className="flex-1 bg-background">
+      <Backdrop />
       {!step && <ScreenHeader title={t("photos.title")} backLabel={t("photos.back")} />}
       <ScrollView
         contentContainerClassName="flex-grow gap-4 p-6"

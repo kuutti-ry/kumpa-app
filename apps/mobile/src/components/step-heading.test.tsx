@@ -60,13 +60,19 @@ const segments = () => {
   walk((node, hidden) => {
     const className = String(node.props?.className ?? "");
     if (!/\bflex-1 rounded-full\b/.test(className)) return;
-    fills.push(className.match(/\bbg-(primary|ring|border|card)\b/)?.[1] ?? "none");
+    fills.push(className.match(/\bbg-(primary|ring|border|card|flourish)\b/)?.[1] ?? "none");
     if (!hidden) spoken += 1;
   });
   return { fills, spoken };
 };
 
-describe.each(["today", "neubrutalism", "organic"] as const)(
+/** The question in Saiga's italic: Glass's and Bold Contrast's headline. */
+const italic = () =>
+  String(screen.queryByRole("heading")?.props.className ?? "")
+    .split(" ")
+    .includes("italic");
+
+describe.each(["today", "neubrutalism", "organic", "glass", "bold"] as const)(
   "A step's heading in %s's look",
   (look) => {
     beforeEach(() => {
@@ -84,7 +90,9 @@ describe.each(["today", "neubrutalism", "organic"] as const)(
     };
 
     it("reads the step's question as the screen's one heading, and none of what is drawn round it", async () => {
-      await shown(<StepTitle>{QUESTION}</StepTitle>, () => drawings().all.length > 0);
+      await shown(<StepTitle>{QUESTION}</StepTitle>, () =>
+        look === "glass" || look === "bold" ? italic() : drawings().all.length > 0,
+      );
       expect(screen.getAllByRole("heading").map((each) => each.props.children)).toEqual([QUESTION]);
       expect(drawings().spoken).toEqual([]);
     });
@@ -118,6 +126,84 @@ describe("The bar under a step's progress", () => {
     await renderWithTheme(<StepProgress step={3} total={8} />);
     await waitFor(() => expect(segments().fills).toHaveLength(8));
     expect(segments().fills).toEqual(["primary", "primary", "ring", ...Array(5).fill("border")]);
+  });
+
+  it("marks this step in the ring's colour in Glass, on Sini's thin bar", async () => {
+    store.set(LOOK, "glass");
+    await renderWithTheme(<StepProgress step={3} total={8} />);
+    await waitFor(() => expect(segments().fills).toHaveLength(8));
+    expect(segments().fills).toEqual(["primary", "primary", "ring", ...Array(5).fill("border")]);
+  });
+
+  it("marks this step in Bold Contrast's loudest colour, on a thicker bar", async () => {
+    store.set(LOOK, "bold");
+    await renderWithTheme(<StepProgress step={3} total={8} />);
+    await waitFor(() => expect(segments().fills).toHaveLength(8));
+    expect(segments().fills).toEqual([
+      "primary",
+      "primary",
+      "flourish",
+      ...Array(5).fill("border"),
+    ]);
+    const heights = new Set<string>();
+    walk((node) => {
+      const name = String(node.props?.className ?? "");
+      if (/\bflex-1 rounded-full\b/.test(name)) heights.add(name.match(/\bh-[\d.]+\b/)?.[0] ?? "");
+    });
+    expect([...heights]).toEqual(["h-2.5"]);
+  });
+});
+
+describe("The pill styles' headline on a step", () => {
+  afterEach(() => {
+    store.delete(LOOK);
+    store.delete("kuutti.preference.highContrast");
+  });
+
+  /** The short block of the flourish under Bold Contrast's question, and whether it is read. */
+  const underline = () => {
+    const found: boolean[] = [];
+    walk((node, hidden) => {
+      if (
+        String(node.props?.className ?? "")
+          .split(" ")
+          .includes("bg-flourish")
+      )
+        found.push(hidden);
+    });
+    return found;
+  };
+
+  it("is Saiga's italic on Glass's backdrop, with nothing drawn beside it", async () => {
+    store.set(LOOK, "glass");
+    await renderWithTheme(<StepTitle>{QUESTION}</StepTitle>);
+    await waitFor(() => expect(italic()).toBe(true));
+    const heading = screen.getByRole("heading");
+    expect(StyleSheet.flatten(heading.props.style).transform).toBeUndefined();
+    expect(drawings().all).toEqual([]);
+    expect(underline()).toEqual([]);
+  });
+
+  it("is Saiga's italic underlined in the flourish in Bold Contrast, the line unread", async () => {
+    store.set(LOOK, "bold");
+    await renderWithTheme(<StepTitle>{QUESTION}</StepTitle>);
+    await waitFor(() => expect(italic()).toBe(true));
+    expect(underline()).toEqual([true]);
+  });
+
+  it("keeps Organic Pop's slant and draws no shape behind it in high contrast", async () => {
+    store.set(LOOK, "organic");
+    store.set("kuutti.preference.highContrast", "true");
+    await renderWithTheme(<StepTitle>{QUESTION}</StepTitle>);
+    await waitFor(() =>
+      expect(String(screen.getByRole("heading").props.className).split(" ")).toContain(
+        "font-extrabold",
+      ),
+    );
+    expect(StyleSheet.flatten(screen.getByRole("heading").props.style).transform).toEqual([
+      { skewX: "-9deg" },
+    ]);
+    expect(drawings().all).toEqual([]);
   });
 });
 

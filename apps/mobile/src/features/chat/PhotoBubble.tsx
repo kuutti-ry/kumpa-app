@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { DECORATIVE } from "@/theme/a11y";
 import { useHapticTap } from "@/theme/haptics";
 import { useMotionDuration } from "@/theme/useReducedMotion";
-import { bubbleColours, MessageFrame } from "./Bubble";
+import { MessageFrame, useBubble } from "./Bubble";
 import type { ChatPhotoParams } from "./ChatPhotoScreen";
 import { timeOf } from "./time";
 
@@ -51,7 +51,7 @@ export function PhotoBubble({
   const tap = useHapticTap();
   const transition = useMotionDuration(200);
   const mine = message.side === "mine";
-  const colours = bubbleColours(mine);
+  const colours = useBubble(mine);
   const time = timeOf(locale, message.createdAt);
   const caption = message.body;
   const { photo } = message;
@@ -66,7 +66,7 @@ export function PhotoBubble({
             time,
             text: caption ? t("chat.photo.removedCaption", { caption }) : t("chat.photo.removed"),
           })}
-          className={cn("gap-1 rounded-2xl px-3 py-2", colours.box)}
+          className={cn("gap-1 px-3 py-2", colours.shape, colours.box)}
         >
           <Text className={cn("italic", colours.text)}>{t("chat.photo.removed")}</Text>
           {caption ? <Text className={colours.text}>{caption}</Text> : null}
@@ -85,7 +85,7 @@ export function PhotoBubble({
         accessibilityRole="button"
         accessibilityLabel={label}
         accessibilityHint={t("chat.photo.open")}
-        className={cn("overflow-hidden rounded-2xl active:opacity-80", colours.box)}
+        className={cn("overflow-hidden active:opacity-80", colours.shape, colours.box)}
         style={{ width: THUMB_EDGE, minHeight: THUMB_EDGE }}
         onPress={() => {
           tap();
@@ -140,7 +140,7 @@ export function SendingPhotoBubble({
   percent: number;
 }) {
   const { t, locale } = useT();
-  const colours = bubbleColours(true);
+  const colours = useBubble(true);
   return (
     <MessageFrame mine at={at} note={t("chat.photo.uploading", { percent })} live>
       <View
@@ -150,7 +150,7 @@ export function SendingPhotoBubble({
           time: timeOf(locale, at),
           text: caption || t("chat.photo.photo"),
         })}
-        className={cn("overflow-hidden rounded-2xl", colours.box)}
+        className={cn("overflow-hidden", colours.shape, colours.box)}
         style={{ width: THUMB_EDGE }}
       >
         <Image

@@ -1725,6 +1725,41 @@ describe("OnboardingScreen", () => {
     });
   });
 
+  // Glass and Bold Contrast end the walk on the same Profile ready, on their
+  // own ground, the headline in the colour that ground is paired with.
+  describe.each([
+    ["glass", "text-card-foreground"],
+    ["bold", "text-accent-foreground"],
+  ] as const)("the end of the walk in the %s try", (look, ink) => {
+    const LOOK = "kuutti.preference.look";
+    beforeEach(() => store.set(LOOK, look));
+    afterEach(() => store.delete(LOOK));
+
+    it("celebrates with the same words and button, the headline in its ground's ink", async () => {
+      const { server } = fakeApi();
+      allAnswered(server);
+      server.consents = server.consents.map((c) =>
+        c.kind === "special_category" ? { ...c, withdrawnAt: "2026-10-01T10:00:00.000Z" } : c,
+      );
+      server.seeks = null;
+      await show(<OnboardingScreen />);
+      await waitFor(() => expect(screen.getByText("Whom are you looking for?")).toBeTruthy());
+      await press(row("Men"));
+      await press(screen.getByLabelText("I consent to Kuutti ry storing whom I seek"));
+      await press(screen.getByRole("button", { name: "Continue" }));
+      await flush();
+      const headline = await waitFor(() => screen.getByRole("heading", { name: "Profile ready!" }));
+      expect(String(headline.props.className).split(" ")).toContain(ink);
+      expect(screen.getByText("Nicely done. That was the hard part.")).toBeTruthy();
+      expect(screen.getAllByRole("button")).toEqual([
+        screen.getByRole("button", { name: "Continue" }),
+      ]);
+      checkA11y();
+      await press(screen.getByRole("button", { name: "Continue" }));
+      expect(router.replace).toHaveBeenCalledWith("/");
+    });
+  });
+
   describe("the seeks step and a stored answer (#542)", () => {
     const TITLE = "Whom are you looking for?";
     const CONSENT = "I consent to Kuutti ry storing whom I seek";

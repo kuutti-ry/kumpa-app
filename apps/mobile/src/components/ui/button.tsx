@@ -6,8 +6,9 @@ import { Icon } from "@/components/ui/icon";
 import { Text, TextClassContext } from "@/components/ui/text";
 import { cn } from "@/lib/utils";
 import { MINIMUM_TARGET } from "@/theme/a11y";
+import { type Look, PRESS_FILL } from "@/theme/looks";
 import { HARD_SHADOW, useHardShadow } from "@/theme/shadow";
-import { useLook } from "@/theme/ThemeProvider";
+import { useLook, useLookTraits } from "@/theme/ThemeProvider";
 
 // From React Native Reusables (#12, TD-9), adapted to the accessibility
 // baseline: heights are minimums so scaled text is never clipped, every size
@@ -62,7 +63,8 @@ const todaysButton = cva(cn(BASE, "border"), {
 });
 
 // The neubrutalism try (outside production): a 2 px stroke in the ink on every
-// drawn variant, and a press that moves the button into its hard shadow.
+// drawn variant, and a press that moves the button into its hard shadow; an
+// outlined or a ghost one is tinted with the ink too, its words unchanged.
 const neubrutalistButton = cva(cn(BASE, "border-2"), {
   variants: {
     variant: {
@@ -71,50 +73,60 @@ const neubrutalistButton = cva(cn(BASE, "border-2"), {
         "border-stroke bg-destructive",
         Platform.select({ web: "hover:bg-destructive/90" }),
       ),
-      outline: cn(
-        "border-stroke bg-card active:bg-accent",
-        Platform.select({ web: "hover:bg-accent" }),
-      ),
+      outline: cn("border-stroke bg-card", PRESS_FILL.tint),
       secondary: cn(
         "border-stroke bg-secondary",
         Platform.select({ web: "hover:bg-secondary/80" }),
       ),
-      ghost: cn("active:bg-accent", Platform.select({ web: "hover:bg-accent" })),
+      ghost: PRESS_FILL.tint,
     },
     size: SIZES,
   },
   defaultVariants: { variant: "default", size: "default" },
 });
 
-// The Organic Pop try (outside production): pills, Sini's, no outline but where
-// outline is the variant, and a press that only darkens.
-const organicButton = cva(cn(BASE, "rounded-full border-[1.5px]"), {
-  variants: {
-    variant: {
-      default: cn(
-        "bg-primary active:bg-primary/85",
-        Platform.select({ web: "hover:bg-primary/90" }),
-      ),
-      destructive: cn(
-        "bg-destructive active:bg-destructive/85",
-        Platform.select({ web: "hover:bg-destructive/90" }),
-      ),
-      outline: cn(
-        "border-foreground bg-transparent active:bg-secondary",
-        Platform.select({ web: "hover:bg-secondary/60" }),
-      ),
-      secondary: cn(
-        "bg-secondary active:bg-secondary/80",
-        Platform.select({ web: "hover:bg-secondary/80" }),
-      ),
-      ghost: cn("active:bg-secondary", Platform.select({ web: "hover:bg-secondary/60" })),
+// The pill styles of the try (outside production), Sini's Organic Pop, Glass
+// and Bold Contrast: pills, no outline but where outline is the variant, and a
+// press that only darkens, an outlined or a ghost one by a tint of the ink
+// under unchanged words. Each says how its outline variant is drawn: Organic
+// Pop's in the ink on the ground, Glass's a frosted pane in the primary's line,
+// Bold Contrast's in a thicker ink; Bold Contrast's pills are taller too.
+const pillButton = (outline: string, tall = false) =>
+  cva(cn(BASE, "rounded-full border-[1.5px]"), {
+    variants: {
+      variant: {
+        default: cn(
+          "bg-primary active:bg-primary/85",
+          Platform.select({ web: "hover:bg-primary/90" }),
+        ),
+        destructive: cn(
+          "bg-destructive active:bg-destructive/85",
+          Platform.select({ web: "hover:bg-destructive/90" }),
+        ),
+        outline,
+        secondary: cn(
+          "bg-secondary active:bg-secondary/80",
+          Platform.select({ web: "hover:bg-secondary/80" }),
+        ),
+        ghost: PRESS_FILL.tint,
+      },
+      size: {
+        ...SIZES,
+        default: tall ? "min-h-14 min-w-touch px-7 py-3" : "min-h-12 min-w-touch px-6 py-2.5",
+      },
     },
-    size: { ...SIZES, default: "min-h-12 min-w-touch px-6 py-2.5" },
-  },
-  defaultVariants: { variant: "default", size: "default" },
-});
+    defaultVariants: { variant: "default", size: "default" },
+  });
 
-const RECIPES = { today: todaysButton, neubrutalism: neubrutalistButton, organic: organicButton };
+const RECIPES: Record<Look, typeof todaysButton> = {
+  today: todaysButton,
+  neubrutalism: neubrutalistButton,
+  organic: pillButton(cn("border-foreground bg-transparent", PRESS_FILL.tint)),
+  glass: pillButton(
+    cn("border-primary bg-card/60 active:bg-card", Platform.select({ web: "hover:bg-card" })),
+  ),
+  bold: pillButton(cn("border-2 border-foreground bg-transparent", PRESS_FILL.tint), true),
+};
 
 // Saiga Regular: as dark as the system font's Semibold, the weight a phone
 // gives a button's words (#408). A drawn button centres its words as it
@@ -194,16 +206,22 @@ function Button({
   ...props
 }: ButtonProps) {
   const look = useLook();
+  const { ink } = useLookTraits();
   const arrow = onward && look !== "today";
   const shadow = useHardShadow(HARD_SHADOW.control);
   // A ghost button is a row or a link, and a disabled one lies flat.
-  const raised = look === "neubrutalism" && variant !== "ghost" && props.disabled !== true;
+  const raised = ink && variant !== "ghost" && props.disabled !== true;
   const recipe = RECIPES[look];
   // Pressed is state here, not a style function: NativeWind's Pressable drops one.
   const [pressed, setPressed] = React.useState(false);
   return (
     <TextClassContext.Provider
-      value={cn(buttonTextVariants({ variant }), props.disabled && DISABLED_TEXT)}
+      value={cn(
+        buttonTextVariants({ variant }),
+        // Bold Contrast's words weigh more: Saiga Medium.
+        look === "bold" && "font-medium",
+        props.disabled && DISABLED_TEXT,
+      )}
     >
       <Pressable
         accessibilityRole={accessibilityRole}

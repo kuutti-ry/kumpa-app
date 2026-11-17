@@ -2,6 +2,7 @@ import Check from "lucide-react-native/icons/check";
 import { useMemo, useState } from "react";
 import { Modal, Platform, SectionList, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Backdrop } from "@/components/backdrop";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
@@ -58,6 +59,7 @@ export function CountryPicker({
       onRequestClose={onClose}
     >
       <SafeAreaView className="flex-1 bg-background">
+        <Backdrop />
         <View className="flex-row items-center justify-between gap-2 border-b border-border px-4 py-2">
           <Text variant="h4" className="flex-1">
             {t("settings.contacts.country")}
