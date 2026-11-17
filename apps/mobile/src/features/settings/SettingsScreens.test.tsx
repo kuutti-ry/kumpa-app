@@ -5,6 +5,7 @@ import { useLocales } from "expo-localization";
 import * as SecureStore from "expo-secure-store";
 import { DeviceEventEmitter, Linking, Platform, StyleSheet } from "react-native";
 import { LegalSummary } from "@/features/identity";
+import { apiBaseUrl } from "@/lib/api-url";
 import { clearSession, currentSession, saveSession } from "@/lib/session";
 import { noProblems } from "@/test/a11y";
 import { expectPinnedHeader } from "@/test/layout";
@@ -169,7 +170,7 @@ describe("the legal texts under their rows", () => {
     expect(screen.getByText(/^Kumpa is a service of Kuutti ry/)).toBeTruthy();
     // The version, as the link to the full text on the website (#208).
     expect(
-      screen.getByRole("link", { name: /^Read the full text on kuutti\.app \(version \S+\)$/ }),
+      screen.getByRole("link", { name: /^Read the full text on the website \(version \S+\)$/ }),
     ).toBeTruthy();
     noProblems();
   });
@@ -180,7 +181,7 @@ describe("the legal texts under their rows", () => {
     expect(screen.getByText(/^Kuutti ry is the controller of the personal data/)).toBeTruthy();
     await fireEvent.press(screen.getByRole("link", { name: /^Read the full text/ }));
     expect(open).toHaveBeenCalledWith(
-      `https://kuutti.app/legal/privacy/#privacy-${CONSENT_VERSIONS.privacy}`,
+      `${apiBaseUrl()}/legal/privacy#privacy-${CONSENT_VERSIONS.privacy}`,
     );
     open.mockRestore();
   });

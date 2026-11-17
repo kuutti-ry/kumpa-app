@@ -23,7 +23,7 @@ Who uses Kuutti, and which outside services it depends on: the direction of ever
 ```mermaid
 flowchart TB
   accTitle: Context, part 1: the people and what their devices reach
-  accDescr: A person uses the phone app and a moderator uses the admin panel in a browser. Both reach the API through CloudFront, and both log in at their bank through Telia Tunnistus, which sends the browser back to the API. The app takes its JavaScript from Expo's EAS Update, reports errors to Sentry and links to the legal texts on the website. The API sends its pushes to Expo's push service, which delivers them to the app through Apple's or Google's push service. App attestation is planned for later.
+  accDescr: A person uses the phone app and a moderator uses the admin panel in a browser. Both reach the API through CloudFront, and both log in at their bank through Telia Tunnistus, which sends the browser back to the API. The app takes its JavaScript from Expo's EAS Update, reports errors to Sentry and opens the legal texts through the API, which sends the browser on to the website. The API sends its pushes to Expo's push service, which delivers them to the app through Apple's or Google's push service. App attestation is planned for later.
   subgraph people["The people"]
     n1["A person, with the phone app"]
     n2["A moderator, with the admin panel in a browser"]
@@ -38,7 +38,7 @@ flowchart TB
     n7["Telia Tunnistus: the bank login"]
     n8["Expo EAS Update: the app's JavaScript"]
     n9["Sentry, EU region: error reports"]
-    n10["The website kuutti.app on Amplify Hosting, its own repository"]
+    n10["The website kumpa.fi, also at kuutti.app, on Amplify Hosting, its own repository"]
     n11["Expo push, then Apple's APNs or Google's FCM: the pushes"]
     n12["App attestation by Apple and Google: planned for later, ADR-056"]:::notbuilt
   end
@@ -54,7 +54,7 @@ flowchart TB
   n3 -->|"checks for an update at each start"| n8
   n3 -->|"errors, when a DSN is set"| n9
   n5 -->|"errors, when a DSN is set"| n9
-  n3 -->|"opens the legal texts"| n10
+  n5 -->|"sends the browser on to a legal text, from /legal/terms or /legal/privacy"| n10
   n5 -->|"a push: one line of the app's words and what it is about, never a text or a name"| n11
   n11 -->|"wakes the phone with it"| n3
   n3 -.->|"planned for later, ADR-056"| n12
@@ -72,7 +72,7 @@ flowchart TB
 7. Telia Tunnistus: the broker of Finnish bank IDs; staging uses Telia's pre-production bed and its test persons. The API reads Telia's discovery document and keys at boot. A sign-in sends the browser to Telia, the person logs in at their bank every time, and Telia sends the browser back to the API's callback with a code. The API exchanges the code with a signed client assertion and decrypts the ID token. A developer's machine uses the mock bank ([Deployment](deployment.md), part 1).
 8. Expo EAS Update: the app's JavaScript bundle. The app checks for an update at each start, on the channel its build names: `staging` for the development and preview builds and for the staging build that Google Play's internal testing track carries, `production` for the production build. Updates are not code-signed (ADR-004).
 9. Sentry, in its EU data region: error reports from the API and the app, with every category of data the SDK would collect by itself switched off in the API. Each is on only where a DSN is set: the parameter `sentry-dsn` for the API, `EXPO_PUBLIC_SENTRY_DSN` for the app.
-10. The website `kuutti.app`, on AWS Amplify Hosting, built from its own repository `kuutti-ry/kumpa-app-site`. The app opens the full legal texts there. No arrow joins the website and the API: the API's browser allowlist on staging names the panel's two origins, `kuutti.app`'s and `kumpa.fi`'s, and nothing else.
+10. The website `kumpa.fi`, also served at `kuutti.app`, on AWS Amplify Hosting, built from its own repository `kuutti-ry/kumpa-app-site`. The full legal texts are there. The app opens the API's `/legal/terms` or `/legal/privacy` in the phone's browser, at the anchor of its version, and the API answers with a redirect to the site's page (#208, ADR-010 §21), so the site can move without a build of the app. That redirect is the one arrow between the API and the website: the API never calls the site, and its browser allowlist on staging names the panel's two origins, `kuutti.app`'s and `kumpa.fi`'s, and nothing else.
 11. Push through Expo (#102, ADR-055): the API sends each push to Expo's push service over HTTPS, at most a hundred a request, and Expo hands it to Apple's APNs or Google's FCM, which wake the phone. A push carries the device's token, one line of the app's own words in the device's language (a new message, a new match) and its kind, never a message's text, a name, an account or the conversation, whose id would pair the two phones for the vendors. The app registers its token with the API (`PUT /push-token`) once the phone lets Kuutti notify; the API sends where the parameter `push` says `expo`, as on staging, and reads receipts back once, fifteen minutes later, to forget tokens Apple or Google no longer know. What Expo receives and keeps: `docs/vendors/expo.md`.
 12. App attestation by Apple and Google: planned for later, not built. The third of ADR-056 §1's triggers has come with the queue, which serves cards outside a bounded round (ADR-062); starting it is the maintainer's call, on its own issue. Screenshots are never noticed, so no service stands for them (ADR-056 §4).
 

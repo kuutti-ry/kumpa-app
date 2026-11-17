@@ -134,7 +134,7 @@ describe("pnpm check:legal-versions", () => {
   // this app's own wording, which the site carries as it is, in the language
   // the site says counts (the English); `moved` replaces one kind's entry.
   // The network is a stand-in.
-  const DEPLOYED = "https://kuutti.app/legal/versions.json";
+  const DEPLOYED = "https://kumpa.fi/legal/versions.json";
   const hashOf = (kind: string) =>
     kind === "special_category"
       ? siteFingerprint(en[`legal.${kind}.title`] ?? "", en[`legal.${kind}.summary`] ?? "")
@@ -188,7 +188,7 @@ describe("pnpm check:legal-versions", () => {
               version: "2099-01-1",
               hash: "0123456789abcdef",
               language: "en",
-              url: "https://kuutti.app/legal/privacy/#privacy-2099-01-1",
+              url: "https://kumpa.fi/legal/privacy/#privacy-2099-01-1",
             },
           }),
         ),

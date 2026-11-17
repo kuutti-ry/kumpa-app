@@ -4,7 +4,7 @@ import type { Deps } from "../app.ts";
 import type { AppEnv } from "../lib/env.ts";
 
 /** Where everybody goes whose phone has no store of Kuutti's yet. */
-export const SITE_URL = "https://kuutti.app/";
+export const SITE_URL = "https://kumpa.fi/";
 
 /**
  * One link for Kuutti (#574, ADR-044 §13): `/i` and `/i/{code}` send an

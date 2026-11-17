@@ -41,7 +41,7 @@ flowchart TB
     s4["Language: Same as the phone, and each language under its own name; the app changes at once"]
     s5["Theme: Same as the phone, Light or Dark, and High contrast; the app changes at once"]
     s6(["Keeps the choice on this phone, still chosen after a restart"])
-    s7["Terms of use or Privacy: the summary accepted, and Read the full text on kuutti.app"]
+    s7["Terms of use or Privacy: the summary accepted, and Read the full text on the website"]
     s8(["Opens the full text of that version in the phone's browser"])
     s9(["Source code: the address of the running service's source, opened in the browser"])
     s10["Licences: each package with who provides it, its version and its licence, then the data the app carries"]
@@ -76,8 +76,8 @@ flowchart TB
 4. Language offers "Same as the phone", the default, then each language under its own name, the chosen one marked "✓", never by colour alone: English and Suomi in the store's build, and outside production Svenska too and Stadi, a made-up language over Finnish, which shows Stadin slangi where a text has one and the Finnish text elsewhere. For Stadi, what the server writes, a push or an e-mail, is in Finnish. The app changes its language at once, this row included.
 5. Theme offers "Same as the phone", the default, "Light" and "Dark", the chosen one marked "✓", and the "High contrast" switch, a second set of colours for either, whose words turn it too. The app changes at once.
 6. The app keeps the choice on this phone only, never on the server, as it keeps the phone's other small choices, Photo descriptions and Like and Pass. The choice is still there after the app is closed and opened again, and so is the session: no bank login again. The consents and the notification choices are kept by the API instead, so every phone of the person's reads the same.
-7. Terms of use or Privacy opens the summary the person accepted, as the app carries it and never machine-translated, and under it "Read the full text on kuutti.app (version …)". There is no switch: the terms and the privacy summary end only with the account, and a new version is asked of everybody again ([Onboarding](onboarding.md#part-1-arriving-the-consents-and-a-friends-code)).
-8. The link opens the full text of that very version on the public website, in the phone's browser; the site's English text is the one that binds.
+7. Terms of use or Privacy opens the summary the person accepted, as the app carries it and never machine-translated, and under it "Read the full text on the website (version …)". There is no switch: the terms and the privacy summary end only with the account, and a new version is asked of everybody again ([Onboarding](onboarding.md#part-1-arriving-the-consents-and-a-friends-code)).
+8. The link opens the full text of that very version on the public website, kumpa.fi, in the phone's browser, by way of the API, which sends it on (ADR-010 §21); the site's English text is the one that binds.
 9. Source code says "Kumpa is free software under the AGPL-3.0 licence, published at:" and the address of the running service's source, which the API names as the row opens; the address opens in the browser. While the API cannot say it, the words stand alone. It is there for everybody, signed in or not.
 10. Licences opens a screen of its own, "Licences of the packages": the packages whose code ships in this build, in families under headings a screen reader can jump between, each a row that opens nothing, with its name and then who provides it, its version and its licence, or its version and licence alone where it names nobody. Under "Data" stands "Postal areas": where the list of places the app carries comes from, on what terms and what Kuutti changed, in Finnish or English. The last row, "Licence texts", opens 11.
 11. "Licence texts" shows each licence text once, under "Licence 1", "Licence 2" and on, with "Packages" under it naming each package and its copyright lines, then each "Notice" with the packages that ship it, all in English as written and every paragraph selectable. A package with no licence file of its own says from where upstream the lines and the text come.
@@ -230,3 +230,4 @@ flowchart TB
 - 2026-11-16 (#208): Terms of use and Privacy show the summaries in force for Kumpa, version 2026-11-1, and the site's English text is the one that binds.
 - 2026-11-16 (#700, PR #701): About Kumpa, the source line and the support page name the app Kumpa, and the consent to store whom one seeks is given to Kuutti ry.
 - 2026-11-16 (#208): research leaves the app, consent and all: a yes given before is deleted with its kind, and feedback writes no research event.
+- 2026-11-17 (#208): the link under the legal summaries says "on the website" and goes through the API, which sends the browser to the text at kumpa.fi.

@@ -2,7 +2,7 @@
  * `pnpm check:legal-versions [--file <versions.json>]`: the app's consent
  * versions against the site's (#208, ADR-010 §4), in CI's i18n job.
  *
- * Reads https://kuutti.app/legal/versions.json, which the site's build writes,
+ * Reads https://kumpa.fi/legal/versions.json, which the site's build writes,
  * or a local copy with --file (the site's dist/ before it is deployed, a
  * fixture), and fails when a kind's version in CONSENT_VERSIONS is not the
  * site's, when either side lacks a kind, when the app's link to a text is

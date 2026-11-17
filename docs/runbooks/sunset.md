@@ -24,12 +24,12 @@ Production, unless the row says otherwise.
 |---|---|---|---|---|
 | RDS `kuutti-prod`, database `kuutti` | accounts, identities (`hetu_hmac`), profiles, consents, sessions, feedback, sanctions, the audit log | yes | until deleted; the audit log five years, photo-check notes twelve months (`.claude/rules/db.md`) | 4.4 |
 | RDS automated backups | the same, as point-in-time copies | yes | 35 days (`infra/modules/data/main.tf`) | 4.4 |
-| RDS snapshots: `kuutti-prod-final`, and a manual one before each release-tag migration (`.claude/rules/infra.md`) | the same | yes | until deleted by hand | 4.4 |
+| RDS snapshots: `kuutti-prod-final`, and a manual one before each release-tag migration (`.claude/rules/infra.md`) | the same | yes | deleted by hand within 35 days, the privacy policy's period for copies (#190) | 4.4 |
 | S3 `kuutti-media-prod-<account>` | photos, three variants each; versioning off | yes | until deleted | 4.3 |
 | SSM `/kuutti/prod/*`; the offline medium; the sealed envelope | keys and passwords (`rotation.md`, The list) | no, but the HMAC key unlocks `hetu_hmac` | until deleted | 4.1, 4.5 |
 | Log group `/kuutti/prod/api` | request lines with `account_id` and request id, never hetu, message text, e-mail or `seeks` | pseudonymous | 30 days | 4.6 |
 | Log group `/kuutti/ssm-sessions` | what was typed and shown in Session Manager | possibly | 90 days | 4.6 |
-| Sentry `kuutti-ry`, projects `api` and `mobile` | errors; request data, user and IP stripped (`sentry-setup.md`) | not by design | Sentry's own retention (not in the repository) | 4.6 |
+| Sentry `kuutti-ry`, projects `api` and `mobile` | errors; request data, user and IP stripped (`sentry-setup.md`) | not by design | 30 days on the Developer plan, 90 on a paid one (`sentry-setup.md`, step 3) | 4.6 |
 | S3 `kuutti-admin-<env>-<account>` | the moderation panel's files | no | until deleted | 4.7 |
 | State bucket `kuutti-tfstate-<account>` | OpenTofu state, `dokploy-backup/` (90 days), `github-export/` (365 days) | no | as shown | 4.11 |
 | Telia | the identification events of every bank login | yes, Telia's | five years in a sealed environment, Traficom's rule for every broker (`docs/vendors/telia.md`) | Telia's obligation, not ours |

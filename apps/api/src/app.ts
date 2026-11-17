@@ -24,6 +24,7 @@ import {
   currentConsent,
   type IdentityBroker,
   isSignInStart,
+  legalTextRoutes,
   onboardingRoutes,
   refuseSignInStart,
   sessionStore,
@@ -148,6 +149,9 @@ export const PUBLIC_ROUTES = new Set([
   // The one link (#574, ADR-044 §13): a redirect to a store, no page, no lookup.
   "GET /i",
   "GET /i/:code",
+  // The app's links to the legal texts (#208, ADR-010 §4): a redirect to the website, no page.
+  "GET /legal/terms",
+  "GET /legal/privacy",
   "GET /admin/auth/start",
   "POST /admin/auth/exchange",
   // The chat's socket (#349): its first frame carries the session's token, checked
@@ -244,6 +248,7 @@ export function createApp(deps: Deps) {
   app.route("/", authRoutes(deps, guard, moderators));
   app.route("/", accountRoutes(deps, guard));
   app.route("/", wellKnownRoutes(deps));
+  app.route("/", legalTextRoutes());
   app.route("/", invitationLinkRoutes(deps));
   // A URL of somebody else's photo is checked by the velocity rule (#86,
   // ADR-041): the safety slice decides, the media slice only issues.

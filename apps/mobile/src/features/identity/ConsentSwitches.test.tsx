@@ -2,6 +2,7 @@ import { CONSENT_VERSIONS } from "@kuutti/i18n";
 import { act, fireEvent, renderHook, screen, waitFor } from "@testing-library/react-native";
 import type * as React from "react";
 import { Linking } from "react-native";
+import { apiBaseUrl } from "@/lib/api-url";
 import { clearSession, saveSession } from "@/lib/session";
 import { a11yProblems, type HostNode, pressables } from "@/test/a11y";
 import { FAILED_TO_LOAD } from "@/test/failed";
@@ -156,11 +157,11 @@ describe("ConsentSwitch", () => {
     await screen.findByLabelText(LABEL);
     await fireEvent.press(
       screen.getByRole("link", {
-        name: `Read the full text on kuutti.app (version ${SENSITIVE})`,
+        name: `Read the full text on the website (version ${SENSITIVE})`,
       }),
     );
     expect(open).toHaveBeenCalledWith(
-      `https://kuutti.app/legal/privacy/#special_category-${SENSITIVE}`,
+      `${apiBaseUrl()}/legal/privacy#special_category-${SENSITIVE}`,
     );
     open.mockRestore();
   });
