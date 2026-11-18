@@ -8,7 +8,7 @@ Commands below use `tofu`. Terraform is command-compatible if you have it instea
 
 | path | contents | when |
 |---|---|---|
-| `bootstrap/` | state bucket, GitHub OIDC provider, CI roles, budget and billing alarm, the hosted zones of the project domain and of `kumpa.fi`, an SES identity for each (#385, ADR-043; #703, ADR-072) | once, before anything else |
+| `bootstrap/` | state bucket, GitHub OIDC provider, CI roles, budget and billing alarm, the hosted zones of the project domain, of `kumpa.fi` and of its misspelling `kunpa.fi` (#726), an SES identity for each of the first two (#385, ADR-043; #703, ADR-072) | once, before anything else |
 | `modules/` | `network`, `compute`, `data` (#7); `observability` (#11); `media` (#48, ADR-005: live on staging since 2026-10-09, dormant in production until its cutover below); `admin` (#313, ADR-025: the moderation panel's host, composed by staging; production with #25) | as the work needs them |
 | `envs/staging`, `envs/prod` | one composition per environment: the modules plus the non-secret parameters | #7 |
 | `github/` | repository settings, branch protection, environments | not adopted; `gh api` below until the GitHub provider question is settled |
@@ -694,15 +694,26 @@ The script refuses to overwrite a key and `put-parameter` runs without `--overwr
 
 The Amplify app (`kumpa-app-site`, eu-central-1) is the console-created exception of ADR-001: connecting Amplify to a repository is an installation of the Amplify GitHub App, a browser consent. The CLI connects an app only with a GitHub token (`create-app` or `update-app` with `--access-token`), and then adds a deploy key to the repository, which the organisation refuses: deploy keys are off in `kuutti-ry`, and a token kept in state is what the ADR forbids anyway. Creating it, once, in the Amplify console: *Create new app*, GitHub; on GitHub's page give the Amplify GitHub App access to `kumpa-app-site` (*Only select repositories*); repository `kuutti-ry/kumpa-app-site`, branch `main`, not a monorepo; the build settings are read from the repository's `amplify.yml`; under *Advanced settings* the environment variable `FONTS_TOKEN`, the site's own read-only token for Saiga (the site's decision 18; without it the site is built in Inter); *Save and deploy*. Then *Custom domains*, *Add domain*, `kuutti.app` and `kumpa.fi` from the Route 53 list, each with `www`: Amplify issues the certificate and writes the validation and alias records into the zone itself (10 to 30 minutes).
 
-The console leaves three things to put right, from the CLI after `pnpm aws:login`, no token involved: it adds a catch-all rewrite (`/<*>` to `/index.html`, 404-200) that would answer every missing address with the home page, and the site has real pages and a 404 of its own; the redirects from `www` and the cost allocation tag are not set. `--custom-rules` replaces every rule the app has, so it names both redirects.
+The console leaves three things to put right, from the CLI after `pnpm aws:login`, no token involved: it adds a catch-all rewrite (`/<*>` to `/index.html`, 404-200) that would answer every missing address with the home page, and the site has real pages and a 404 of its own; the redirects from `www` and the cost allocation tag are not set. `--custom-rules` replaces every rule the app has, so it names every redirect: the two from `www`, and the two of the misspelling below.
 
 ```bash
 APP=$(aws amplify list-apps --query "apps[?name=='kumpa-app-site'].appId" --output text)
-aws amplify update-app --app-id "$APP" --custom-rules source=https://www.kuutti.app,target=https://kuutti.app,status=301 source=https://www.kumpa.fi,target=https://kumpa.fi,status=301
+aws amplify update-app --app-id "$APP" --custom-rules source=https://www.kuutti.app,target=https://kuutti.app,status=301 source=https://www.kumpa.fi,target=https://kumpa.fi,status=301 source=https://kunpa.fi,target=https://kumpa.fi,status=301 source=https://www.kunpa.fi,target=https://kumpa.fi,status=301
 aws amplify tag-resource --resource-arn "arn:aws:amplify:eu-central-1:$(aws sts get-caller-identity --query Account --output text):apps/$APP" --tags Project=kuutti,ManagedBy=console
 aws amplify get-domain-association --app-id "$APP" --domain-name kuutti.app --query 'domainAssociation.[domainStatus,statusReason]' --output text
 curl -sI https://kuutti.app/ | grep -i -E '^HTTP|content-security-policy'
 ```
+
+`kunpa.fi`, the misspelling with an n, is a third custom domain of the app and serves no page: over https, it and `www.kunpa.fi` answer a 301 to the same path and query on `kumpa.fi`, and over http first a 301 to https under the same name (#726). The name is registered at Zoner, not through Route 53, and Zoner's own forwarding answers on http alone: over https it presents a certificate for its own name, and a browser warns. So the bootstrap creates the name's zone (`bootstrap/dns.tf`), with records that say it has no mail, and Zoner's Nameserver page carries the zone's four name servers, entered by hand after the apply, since the .fi registry checks that they answer for the name:
+
+```bash
+(cd infra/bootstrap && tofu output kunpa_name_servers)
+aws amplify create-domain-association --app-id "$APP" --domain-name kunpa.fi --sub-domain-settings prefix=,branchName=main prefix=www,branchName=main
+aws amplify get-domain-association --app-id "$APP" --domain-name kunpa.fi --query 'domainAssociation.[domainStatus,statusReason]' --output text
+for u in http://kunpa.fi https://kunpa.fi http://www.kunpa.fi https://www.kunpa.fi; do curl -sL -o /dev/null -w '%{num_redirects} %{url_effective}\n' "$u/legal/privacy/?x=1"; done
+```
+
+Run the `update-app` line above first, with the misspelling's two rules in it: an association made before its rules would serve the site itself under `kunpa.fi` until they exist. The association comes after the name servers, since the certificate is validated through the zone. The zone costs 0.50 USD a month. To take the name off the app: `delete-domain-association`, then at once the alias, `www` and validation records Amplify left in its zone, which no state holds and which would otherwise point at a distribution that is no longer the app's.
 
 A domain is associated with one app at a time: moving it from another app means removing it there first, and some minutes without the site while the certificate is issued anew. To retire the app: `delete-app`, then the records it left in the zone.
 

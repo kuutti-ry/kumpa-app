@@ -261,3 +261,72 @@ resource "aws_route53_record" "kumpa_google_dkim" {
     "A0lgAB187vd52xIXhPlZBZc9gUHqgBBSqZjgZ9boep2KdvoOynp3hbcZPH8XmGAsdniOSHbrea1ol/T15pfufD+PX795KJbh7CaI1+0/rCAqn4g2B53Gf8ilo+sw64WtFHHsywlzmH04DEKQjNaewIDAQAB",
   ])]
 }
+
+# ---------------------------------------------------------------------------
+# The misspelling. kunpa.fi, with an n, was registered on 2026-11-17 so that
+# somebody who types it lands on kumpa.fi (#726). It is registered at Zoner
+# and not through Route 53, so no registration made a zone: this one is
+# created here, the first zone that is, and its four name servers are entered
+# at Zoner by hand (output kunpa_name_servers). A recreated zone would get
+# other name servers than Zoner points at, hence prevent_destroy, as above.
+#
+# Zoner's own forwarding answers on http alone: over https it presents a
+# certificate for its own name. So the name is a domain of the Amplify app,
+# which holds a certificate for it and answers a 301 to the same path on
+# kumpa.fi (infra/README.md, The website). Amplify writes the apex alias, www
+# and the certificate's validation record, ADR-001's documented exception,
+# and a bare domain needs that alias, which is why the DNS is here at all.
+#
+# The name sends and receives no mail, and the records below say so, as
+# kuutti.app's said before its Workspace (#450): a null MX (RFC 7505), an SPF
+# that admits nobody and the reject DMARC, so nobody else sends as it either.
+# The CAA names Amazon's issuers alone: nothing but Amplify's ACM certificate
+# is ever issued for it.
+# ---------------------------------------------------------------------------
+
+resource "aws_route53_zone" "kunpa" {
+  name    = "kunpa.fi"
+  comment = "The misspelling of kumpa.fi, redirected to it (#726)"
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+resource "aws_route53_record" "kunpa_mx" {
+  zone_id = aws_route53_zone.kunpa.zone_id
+  name    = "kunpa.fi"
+  type    = "MX"
+  ttl     = 3600
+  records = ["0 ."]
+}
+
+resource "aws_route53_record" "kunpa_txt" {
+  zone_id = aws_route53_zone.kunpa.zone_id
+  name    = "kunpa.fi"
+  type    = "TXT"
+  ttl     = 3600
+  records = ["v=spf1 -all"]
+}
+
+resource "aws_route53_record" "kunpa_dmarc" {
+  zone_id = aws_route53_zone.kunpa.zone_id
+  name    = "_dmarc.kunpa.fi"
+  type    = "TXT"
+  ttl     = 3600
+  records = ["v=DMARC1; p=reject; adkim=s; aspf=s"]
+}
+
+resource "aws_route53_record" "kunpa_caa" {
+  zone_id = aws_route53_zone.kunpa.zone_id
+  name    = "kunpa.fi"
+  type    = "CAA"
+  ttl     = 3600
+  records = [
+    "0 issue \"amazon.com\"",
+    "0 issue \"amazontrust.com\"",
+    "0 issue \"awstrust.com\"",
+    "0 issue \"amazonaws.com\"",
+    "0 iodef \"mailto:admin@${var.domain}\"",
+  ]
+}
