@@ -2,11 +2,40 @@ import { randomBytes } from "node:crypto";
 import { describe, expect } from "vitest";
 import { signedInAccount, staffSession } from "../test/account.ts";
 import { type TestContext, test } from "../test/harness.ts";
-import { auditBoundary, recordAudit } from "./audit.ts";
+import { auditBoundary, pruneAuditLog, recordAudit } from "./audit.ts";
 
 // features/safety/audit.feature: the row says who, what, subject, when; and
 // the table's trigger keeps it that way against the application role,
-// which is the role these tests run as.
+// which is the role these tests run as, for five years, when the night's
+// prune deletes it (#714, ADR-076). That only the prune deletes on a
+// deployed database, and how the roles hold it, is
+// packages/db/src/audit-owner.test.ts.
+
+/**
+ * A row written `age` before now(), which is the transaction's start: the same
+ * instant the prune and the trigger measure from. The line is drawn in UTC, the
+ * functions' own setting, so the test's session draws it there too.
+ */
+async function written(
+  ctx: TestContext,
+  age: string,
+  { action = "photo.view", actor }: { action?: string; actor: string | null },
+): Promise<string> {
+  await ctx.client.query("SET LOCAL timezone = 'UTC'");
+  const { rows } = await ctx.client.query<{ id: string }>(
+    `INSERT INTO audit_log (actor_identity_id, action, subject_type, subject_id, at)
+     VALUES ($1, $2, 'photo', gen_random_uuid(), now() - $3::interval) RETURNING id`,
+    [actor, action, age],
+  );
+  return rows[0]?.id ?? "";
+}
+
+async function actions(ctx: TestContext): Promise<string[]> {
+  const { rows } = await ctx.client.query<{ action: string }>(
+    "SELECT action FROM audit_log ORDER BY at, action",
+  );
+  return rows.map((r) => r.action);
+}
 
 describe("audit log", () => {
   test("An audit row is written with who, what, subject and when", async ({ ctx }) => {
@@ -64,6 +93,56 @@ describe("audit log", () => {
     await ctx.client.query("ROLLBACK TO SAVEPOINT attempt");
     const row = await ctx.client.query("SELECT action FROM audit_log WHERE id = $1", [id]);
     expect(row.rows[0]?.action).toBe("photo.approve");
+  });
+
+  test("An audit row past five years may be deleted, and still not updated", async ({ ctx }) => {
+    const staff = await staffSession(ctx.client);
+    const old = await written(ctx, "5 years 1 second", { actor: staff.identityId });
+    await ctx.client.query("SAVEPOINT attempt");
+    await expect(
+      ctx.client.query("UPDATE audit_log SET action = 'photo.reject' WHERE id = $1", [old]),
+    ).rejects.toThrow(/append-only: UPDATE refused/);
+    await ctx.client.query("ROLLBACK TO SAVEPOINT attempt");
+    // A statement trigger asks no age: a table of old rows is not truncated either.
+    await expect(ctx.client.query("TRUNCATE audit_log")).rejects.toThrow(
+      /append-only: TRUNCATE refused/,
+    );
+    await ctx.client.query("ROLLBACK TO SAVEPOINT attempt");
+    // One row of exactly five years in the statement, and it fails whole.
+    const line = await written(ctx, "5 years", {
+      action: "photo.approve",
+      actor: staff.identityId,
+    });
+    await ctx.client.query("SAVEPOINT attempt");
+    await expect(
+      ctx.client.query("DELETE FROM audit_log WHERE id = ANY($1)", [[old, line]]),
+    ).rejects.toThrow(/append-only: DELETE refused/);
+    await ctx.client.query("ROLLBACK TO SAVEPOINT attempt");
+    expect(await actions(ctx)).toEqual(["photo.view", "photo.approve"]);
+    const gone = await ctx.client.query("DELETE FROM audit_log WHERE id = $1", [old]);
+    expect(gone.rowCount).toBe(1);
+    expect(await actions(ctx)).toEqual(["photo.approve"]);
+  });
+
+  test("The night deletes the audit rows written more than five years ago", async ({ ctx }) => {
+    const staff = await staffSession(ctx.client);
+    await written(ctx, "9 years", { action: "photo.reject", actor: staff.identityId });
+    await written(ctx, "5 years 1 second", { actor: staff.identityId });
+    // The one kind of row no person wrote: an automatic rule's shadow ban (ADR-033).
+    await written(ctx, "6 years", { action: "sanction.apply", actor: null });
+    await written(ctx, "5 years", { action: "photo.approve", actor: staff.identityId });
+    await written(ctx, "4 years 364 days", { action: "account.view", actor: staff.identityId });
+    await recordAudit(ctx.client, {
+      actorIdentityId: staff.identityId,
+      action: "audit.read",
+      subjectType: "any",
+      subjectId: staff.identityId,
+    });
+    expect(await pruneAuditLog(ctx.client)).toBe(3);
+    expect(await actions(ctx)).toEqual(["photo.approve", "account.view", "audit.read"]);
+    // The next night finds nothing more to do.
+    expect(await pruneAuditLog(ctx.client)).toBe(0);
+    expect(await actions(ctx)).toEqual(["photo.approve", "account.view", "audit.read"]);
   });
 });
 
@@ -145,6 +224,18 @@ describe("the audit boundary at boot", () => {
     [
       "the application role may still truncate the table",
       (s: Staged) => [`GRANT TRUNCATE ON public.audit_log TO ${s.app}`],
+    ],
+    [
+      "everybody may add a trigger to the table",
+      () => ["GRANT TRIGGER ON public.audit_log TO PUBLIC"],
+    ],
+    [
+      "the application role may point a foreign key at a column of the table",
+      (s: Staged) => [`GRANT REFERENCES (id) ON public.audit_log TO ${s.app}`],
+    ],
+    [
+      "the application role may update a column of the table",
+      (s: Staged) => [`GRANT UPDATE (action) ON public.audit_log TO ${s.app}`],
     ],
     [
       "the application role is a member of the owner",

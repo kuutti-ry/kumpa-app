@@ -3,9 +3,9 @@ import type { Queryable } from "@kuutti/db";
 // The audit log (TD-5, security checklist "Moderator actions, disclosure
 // requests, and photo views by staff write to the immutable audit table").
 // One row per thing a member of staff did or saw, keyed by their identity
-// (never an account); the table refuses UPDATE and DELETE by trigger,
-// so a row written here is a row kept for five years
-// (rules/db.md). `detail` is a small closed structure, never text a person
+// (never an account); the table's trigger refuses UPDATE, and DELETE until
+// the row is five years old, when the night's prune deletes it (ADR-076,
+// rules/db.md). `detail` is a small closed structure, never text a person
 // typed.
 
 const AUDIT_ACTIONS = [
@@ -50,7 +50,9 @@ export type AuditEntry = {
 /**
  * Whether the role boundary of ADR-006 is in place: audit_log and its trigger
  * function owned by another role, and this connection without UPDATE, DELETE
- * or TRUNCATE. Logged at boot; a deployed box without it is a warning the
+ * or TRUNCATE, and without TRIGGER or REFERENCES, which would let it add a
+ * trigger the night's prune runs as the owner, or a key that blocks it (#714,
+ * ADR-076 §6). Logged at boot; a deployed box without it is a warning the
  * maintainer answers with infra/scripts/db-audit-owner.sh.
  */
 export async function auditBoundary(db: Queryable): Promise<{
@@ -77,8 +79,8 @@ export async function auditBoundary(db: Queryable): Promise<{
        (SELECT pg_get_userbyid(relowner) FROM pg_class WHERE oid = to_regclass('public.audit_log')) AS table_owner,
        (SELECT pg_get_userbyid(proowner) FROM pg_proc WHERE oid = to_regprocedure('public.audit_log_immutable()')) AS function_owner,
        (to_regclass('public.audit_log') IS NOT NULL AND (
-          has_table_privilege('public.audit_log', 'UPDATE') OR has_table_privilege('public.audit_log', 'DELETE')
-          OR has_table_privilege('public.audit_log', 'TRUNCATE'))) AS can_rewrite,
+          has_table_privilege('public.audit_log', 'UPDATE, DELETE, TRUNCATE, TRIGGER')
+          OR has_any_column_privilege('public.audit_log', 'UPDATE, REFERENCES'))) AS can_rewrite,
        (SELECT pg_has_role(current_user, relowner, 'MEMBER') FROM pg_class WHERE oid = to_regclass('public.audit_log')) AS member_of_owner,
        (to_regclass('audit_log') = to_regclass('public.audit_log')) AS resolves_to_public,
        (SELECT pg_get_userbyid(nspowner) FROM pg_namespace WHERE nspname = 'public') AS schema_owner`,
@@ -110,6 +112,17 @@ export async function auditBoundary(db: Queryable): Promise<{
       r.schema_owner !== r.me &&
       r.schema_owner !== "pg_database_owner",
   };
+}
+
+/**
+ * The night's prune (#714, ADR-076): the rows written more than five years ago,
+ * deleted by the database's own `audit_log_prune()`, which runs as the table's
+ * owner, takes no argument and reads the database's clock, so neither this
+ * process nor its connection can widen what goes. Answers how many went.
+ */
+export async function pruneAuditLog(db: Queryable): Promise<number> {
+  const { rows } = await db.query<{ pruned: string }>("SELECT public.audit_log_prune() AS pruned");
+  return Number(rows[0]?.pruned);
 }
 
 /** Writes before the thing happens: a view whose audit row failed is a view that does not happen. */

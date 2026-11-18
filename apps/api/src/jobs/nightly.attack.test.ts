@@ -27,6 +27,7 @@ const PILE: Record<string, string> = {
   "prune-photo-check-notes": "safety/photo-check.attack.test.ts",
   "prune-photo-access": "media/access-prune.attack.test.ts",
   "prune-reports": "safety/reports.attack.test.ts",
+  "prune-audit-log": "safety/audit.attack.test.ts",
   "archive-silent-conversations": "chat/archive.attack.test.ts",
   "moderate-pending-photos": "media/moderation.attack.test.ts",
   "sweep-orphaned-objects": "media/erasure.attack.test.ts",

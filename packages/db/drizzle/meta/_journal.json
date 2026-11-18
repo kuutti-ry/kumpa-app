@@ -99,6 +99,13 @@
       "when": 1794921828065,
       "tag": "0013_queue_names",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1795025137954,
+      "tag": "0014_audit_log_prune",
+      "breakpoints": true
     }
   ]
 }
