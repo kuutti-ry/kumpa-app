@@ -235,6 +235,7 @@ describe("boot", () => {
       "prune-photo-check-notes",
       "prune-photo-access",
       "prune-reports",
+      "prune-audit-log",
       "archive-silent-conversations",
     ]);
     const { logger, lines } = await captureLogger();
@@ -256,7 +257,7 @@ describe("boot", () => {
       "moderate-pending-photos",
       "sweep-orphaned-objects",
     ]);
-    expect(jobs).toHaveLength(13);
+    expect(jobs).toHaveLength(14);
     // Nothing is pending in this database: the look finds nothing and asks the store nothing.
     // The sweep is not run here: the stand-in's bucket is shared with the developer's own
     // stack, whose rows are in another database, so it would take their photos for orphans.

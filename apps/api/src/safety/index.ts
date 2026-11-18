@@ -3,7 +3,7 @@
 
 // A person's page in the panel (#306).
 export { accountAdminRoutes } from "./account-routes.ts";
-export { auditBoundary, recordAudit } from "./audit.ts";
+export { auditBoundary, pruneAuditLog, recordAudit } from "./audit.ts";
 // The audit log's reader and the staff list (#309, #310), admins only.
 export { auditAdminRoutes } from "./audit-routes.ts";
 // The automatic shadow bans (#105, ADR-033): the check after a conversation's

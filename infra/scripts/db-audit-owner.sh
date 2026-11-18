@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
-# Moves audit_log and its trigger function to the kuutti_audit role, so the
-# application role can only read and append (#49, ADR-006, security checklist
-# line 67). Run from the maintainer's machine after the first deploy that
-# created the table. Before a deploy whose migrations touch audit_log, run it
+# Moves audit_log, its trigger function and its prune to the kuutti_audit
+# role, so the application role can only read, append and call the night's
+# prune (#49, ADR-006, #714, ADR-076, security checklist line 67), and refuses
+# a table or function that differs from what the migrations made (ADR-076 §6).
+# Run from the maintainer's machine after the first deploy that created the
+# table. Before a deploy whose migrations touch audit_log, run it
 # with `release` (ownership back to kuutti_app for that deploy), then again
 # without. The API logs "audit boundary" at boot with enforced: true|false.
 #
@@ -36,7 +38,12 @@ for _ in $(seq 1 30); do
 done
 master_password=$(aws secretsmanager get-secret-value --secret-id "$secret" --query SecretString --output text | jq -r .password)
 conn="host=$host hostaddr=127.0.0.1 port=$local_port dbname=kuutti user=kuutti_admin sslmode=verify-full sslrootcert=$repo/apps/api/certs/rds-eu-central-1-bundle.pem"
-if [ "$(PGPASSWORD="$master_password" psql -tAq "$conn" -c "SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'audit_log'")" != "1" ]; then
+# The catalog alone from the first statement: kuutti_app owns the database, so
+# it may set a search path for every session there with its own functions or
+# views first, which the master would then run (ADR-076 §6). A client's option
+# outranks the database's setting.
+export PGOPTIONS="-c search_path=pg_catalog,pg_temp"
+if [ "$(PGPASSWORD="$master_password" psql -tAq "$conn" -c "SELECT 1 FROM pg_catalog.pg_tables WHERE schemaname = 'public' AND tablename = 'audit_log'")" != "1" ]; then
   echo "audit_log does not exist yet on $env: deploy the migration first" >&2
   exit 1
 fi
@@ -44,7 +51,7 @@ if [ "$mode" = "release" ]; then
   echo "handing audit_log back to kuutti_app for one deploy; run this script again afterwards"
   file="$repo/infra/scripts/db-audit-release.sql"
 else
-  echo "moving audit_log to the kuutti_audit role; kuutti_app keeps SELECT and INSERT"
+  echo "moving audit_log to the kuutti_audit role; kuutti_app keeps SELECT, INSERT and the prune"
   file="$repo/infra/scripts/db-audit-owner.sql"
 fi
 sed -e 's/__APP_ROLE__/kuutti_app/g' -e 's/__AUDIT_ROLE__/kuutti_audit/g' "$file" \
