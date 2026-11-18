@@ -1,12 +1,15 @@
+import type { Queryable } from "@kuutti/db";
 import {
   AdminAnnouncement,
   AdminAnnouncementList,
   type AnnouncementDraft,
   Notices,
+  NotificationChoices,
   PushData,
 } from "@kuutti/schema";
 import { it } from "vitest";
 import { type App, createApp } from "../app.ts";
+import { eraseAccount } from "../identity/index.ts";
 import { MailFailed, type MailMessage } from "../lib/mail.ts";
 import { confirmedAddress, type SignedIn, signedInAccount, staffSession } from "../test/account.ts";
 import {
@@ -19,7 +22,7 @@ import {
   testConfig,
 } from "../test/harness.ts";
 import { heldSchedule, memoryPusher } from "../test/push.ts";
-import { announcementTextFor } from "./announcements.ts";
+import { announcementTextFor, mailAnnouncement } from "./announcements.ts";
 import { createPush } from "./push.ts";
 
 // Announcements (#573, ADR-068, features/notifications/announcements.feature):
@@ -45,6 +48,9 @@ const SWEDISH = {
   body: "Kuutti är stängd klockan 10–12 för underhåll.",
 };
 
+/** Where an email's one-click unsubscribe points here: an API whose callback is on https (unsubscribe.ts). */
+const UNSUBSCRIBE_BASE = "https://api.example.test/mail/unsubscribe/";
+
 type Headers = Record<string, string>;
 
 /** The app with a push of its own over a memory pusher and a memory mailer, a held schedule and a clock. */
@@ -64,6 +70,7 @@ async function appWith(ctx: TestContext, at = NOON) {
     online: () => false,
     schedule: schedule.schedule,
     pause: async () => {},
+    unsubscribe: UNSUBSCRIBE_BASE,
   });
   const app = createApp({
     config: testConfig(),
@@ -128,6 +135,31 @@ async function phoneOf(app: App, who: SignedIn, language = "en") {
   expect(answer.status).toBe(204);
   return token;
 }
+
+/** Whether the person's Announcements switch is on, as Settings reads it. */
+async function announcementsOn(app: App, who: SignedIn) {
+  const answer = await app.request("/account/notifications", { headers: who.headers });
+  expect(answer.status).toBe(200);
+  const { choices } = NotificationChoices.parse(await answer.json());
+  return choices.find((choice) => choice.kind === "announcement")?.enabled;
+}
+
+/** The person's unsubscribe secret, null before their first announcement email. */
+const unsubscribeTokenOf = async (ctx: TestContext, who: SignedIn) =>
+  (
+    await ctx.client.query<{ token: string }>(
+      "SELECT token FROM unsubscribe_token WHERE account_id = $1",
+      [who.accountId],
+    )
+  ).rows[0]?.token ?? null;
+
+/** What a mail app sends for the email's Unsubscribe (RFC 8058 §3.2), to the path of its link. */
+const oneClick = (app: App, link: string) =>
+  app.request(new URL(link).pathname, {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: "List-Unsubscribe=One-Click",
+  });
 
 /** The person switches announcements off, through the route. */
 async function switchOff(app: App, who: SignedIn) {
@@ -352,6 +384,8 @@ describe("announcements", () => {
     const mine = sent.filter((message) => message.to.endsWith("@example.test"));
     expect(mine.map((message) => message.to).sort()).toEqual(["a@example.test", "d@example.test"]);
     const toA = mine.find((message) => message.to === "a@example.test");
+    const aToken = await unsubscribeTokenOf(ctx, a);
+    expect(aToken).toMatch(/^[A-Za-z0-9_-]{43}$/);
     expect(toA).toEqual({
       to: "a@example.test",
       subject: `Kumpa: ${DRAFT.en.title}`,
@@ -361,16 +395,78 @@ describe("announcements", () => {
         "You get this because you confirmed this address in the Kumpa app. Announcements can be turned off in Settings, under Notifications.",
         "Kuutti ry",
       ].join("\n\n"),
+      unsubscribe: `${UNSUBSCRIBE_BASE}${aToken}`,
     });
     const toD = mine.find((message) => message.to === "d@example.test");
     expect(toD?.subject).toBe(`Kumpa: ${DRAFT.fi.title}`);
     expect(toD?.text.startsWith(`${DRAFT.fi.title}\n\n${DRAFT.fi.body}\n\nSaat tämän`)).toBe(true);
     for (const message of mine) expect(message.text).not.toMatch(/https?:|www\./);
-    // No address and no words of it in a log line.
+    // Each their own secret, and none made for those nobody mailed.
+    const dToken = await unsubscribeTokenOf(ctx, d);
+    expect(toD?.unsubscribe).toBe(`${UNSUBSCRIBE_BASE}${dToken}`);
+    expect(dToken).not.toBe(aToken);
+    expect(await unsubscribeTokenOf(ctx, b)).toBeNull();
+    expect(await unsubscribeTokenOf(ctx, c)).toBeNull();
+    // No address, no words of it and no secret in a log line.
     const logged = JSON.stringify(logs());
-    for (const words of ["@example.test", DRAFT.en.body, DRAFT.fi.body]) {
+    for (const words of ["@example.test", DRAFT.en.body, DRAFT.fi.body, aToken, dToken]) {
       expect(logged).not.toContain(words);
     }
+  });
+
+  test("One click on an announcement email's Unsubscribe turns that person's announcements off", async ({
+    ctx,
+  }) => {
+    const { app, sent, settled } = await appWith(ctx);
+    const [writer, other] = [
+      await staffSession(ctx.client, "admin"),
+      await staffSession(ctx.client, "admin"),
+    ];
+    const a = await signedInAccount(ctx.client);
+    const b = await signedInAccount(ctx.client);
+    await confirmedAddress(ctx.client, a, "a@example.test", "en");
+    await confirmedAddress(ctx.client, b, "b@example.test", "en");
+    const first = await written(app, writer.headers);
+    expect((await approve(app, other.headers, first.id)).status).toBe(200);
+    await settled();
+    const link = sent.find((message) => message.to === "a@example.test")?.unsubscribe ?? "";
+    expect(link.startsWith(UNSUBSCRIBE_BASE)).toBe(true);
+    const answer = await oneClick(app, link);
+    expect(answer.status).toBe(200);
+    expect(answer.headers.get("cache-control")).toBe("no-store");
+    expect(await answer.text()).toBe("");
+    expect(await announcementsOn(app, a)).toBe(false);
+    expect(await announcementsOn(app, b)).toBe(true);
+    sent.length = 0;
+    const second = await written(app, writer.headers);
+    expect((await approve(app, other.headers, second.id)).status).toBe(200);
+    await settled();
+    const mine = sent.filter((message) => message.to.endsWith("@example.test"));
+    expect(mine.map((message) => message.to)).toEqual(["b@example.test"]);
+  });
+
+  test("Opening an unsubscribe link, or posting to one nobody holds, changes nothing", async ({
+    ctx,
+  }) => {
+    const { app, sent, settled } = await appWith(ctx);
+    const [writer, other] = [
+      await staffSession(ctx.client, "admin"),
+      await staffSession(ctx.client, "admin"),
+    ];
+    const a = await signedInAccount(ctx.client);
+    await confirmedAddress(ctx.client, a, "a@example.test", "en");
+    const { id } = await written(app, writer.headers);
+    expect((await approve(app, other.headers, id)).status).toBe(200);
+    await settled();
+    const link = sent.find((message) => message.to === "a@example.test")?.unsubscribe ?? "";
+    const opened = await app.request(new URL(link).pathname);
+    expect(opened.status).toBe(405);
+    expect(opened.headers.get("allow")).toBe("POST");
+    expect(await opened.text()).toBe("");
+    const nobodys = await oneClick(app, `${UNSUBSCRIBE_BASE}${"A".repeat(43)}`);
+    expect(nobodys.status).toBe(404);
+    expect(await errorCode(nobodys)).toBe("not_found");
+    expect(await announcementsOn(app, a)).toBe(true);
   });
 
   test("A draft can be deleted, a sent announcement cannot", async ({ ctx }) => {
@@ -536,8 +632,10 @@ describe("the email of an announcement", () => {
   test("a send that fails is logged by its reason alone, and the rest go on", async ({ ctx }) => {
     const { logger, lines } = await captureLogger();
     const sent: string[] = [];
+    const headers: (string | undefined)[] = [];
     const mailer = {
       send: async (message: MailMessage) => {
+        if (message.to.endsWith("@example.test")) headers.push(message.unsubscribe);
         if (message.to === "first@example.test") throw new MailFailed("MessageRejected", 400);
         sent.push(message.to);
       },
@@ -563,6 +661,10 @@ describe("the email of an announcement", () => {
     expect((await approve(app, other.headers, id)).status).toBe(200);
     await push.settled();
     expect(sent.filter((to) => to.endsWith("@example.test"))).toEqual(["second@example.test"]);
+    // No base, a developer's machine's API: no unsubscribe, and no secret made.
+    expect(headers).toEqual([undefined, undefined]);
+    expect(await unsubscribeTokenOf(ctx, first)).toBeNull();
+    expect(await unsubscribeTokenOf(ctx, second)).toBeNull();
     const failed = lines().filter((line) => line.msg === "announcement mail not sent");
     expect(failed).toEqual([
       expect.objectContaining({
@@ -572,6 +674,42 @@ describe("the email of an announcement", () => {
       }),
     ]);
     expect(JSON.stringify(lines())).not.toContain("@example.test");
+  });
+});
+
+describe("the email of an announcement, against an erasure", () => {
+  test("an account erased after its address was read is sent nothing", async ({ ctx }) => {
+    const { logger } = await captureLogger();
+    const push = createPush({ db: ctx.client, logger, now: () => NOON, online: () => false });
+    const app = createApp({ config: testConfig(), logger, db: ctx.client, now: () => NOON, push });
+    const [writer, other] = [
+      await staffSession(ctx.client, "admin"),
+      await staffSession(ctx.client, "admin"),
+    ];
+    const gone = await signedInAccount(ctx.client);
+    const kept = await signedInAccount(ctx.client);
+    await confirmedAddress(ctx.client, gone, "gone@example.test", "en");
+    await confirmedAddress(ctx.client, kept, "kept@example.test", "en");
+    const { id } = await written(app, writer.headers);
+    expect((await approve(app, other.headers, id)).status).toBe(200);
+    await push.settled();
+    // The erasure lands between the read of the address and the secret's.
+    const db: Queryable = {
+      query: async (text, values) => {
+        if (text.includes("INSERT INTO unsubscribe_token") && values?.[0] === gone.accountId) {
+          await eraseAccount({ db: ctx.client, logger, now: () => NOON }, gone.accountId);
+        }
+        return ctx.client.query(text, values);
+      },
+    };
+    const sent: MailMessage[] = [];
+    const mailer = { send: async (message: MailMessage) => void sent.push(message) };
+    const pause = async () => {};
+    expect(
+      await mailAnnouncement({ db, logger, mailer, pause, unsubscribe: UNSUBSCRIBE_BASE }, id),
+    ).toBe(sent.length);
+    const mine = sent.filter((message) => message.to.endsWith("@example.test"));
+    expect(mine.map((message) => message.to)).toEqual(["kept@example.test"]);
   });
 });
 

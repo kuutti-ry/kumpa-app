@@ -27,7 +27,7 @@ import {
   sweepOrphanedObjects,
   sweepPendingPhotos,
 } from "./media/index.ts";
-import { createPush, type Push } from "./notifications/index.ts";
+import { createPush, type Push, unsubscribeBase } from "./notifications/index.ts";
 import {
   auditBoundary,
   endSuspensions,
@@ -194,13 +194,16 @@ export async function boot({
   logger.info({ ios: config.IOS_ATTESTATION, team: config.IOS_TEAM_ID }, "app attestation");
   // The process's one push (#102, ADR-055): the app's message and match
   // pushes and the queue's, asking the same live registry who is in the app.
+  const unsubscribe = unsubscribeBase(config);
   const push = createPush({
     db: pool,
     logger,
     now: () => new Date(),
     ...(pusher ? { pusher } : {}),
-    // An announcement's email goes with its push (ADR-068 §5).
+    // An announcement's email goes with its push (ADR-068 §5), with its
+    // one-click unsubscribe (#196).
     ...(mailer ? { mailer } : {}),
+    ...(unsubscribe ? { unsubscribe } : {}),
     online: (accountId) => live.online(accountId),
   });
   const app = createApp({

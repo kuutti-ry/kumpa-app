@@ -16,3 +16,6 @@ export {
 export { createPush, type Push } from "./push.ts";
 export { notificationRoutes } from "./routes.ts";
 export { erasePushTokensOf, exportPushTokens } from "./tokens.ts";
+// One-click unsubscribe from the announcement email (#196, RFC 8058): the
+// machine caller's route, and where its links point, for app.ts and boot.ts.
+export { unsubscribeBase, unsubscribeRoutes } from "./unsubscribe.ts";

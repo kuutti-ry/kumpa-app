@@ -182,3 +182,22 @@ export const pushToken = pgTable(
   },
   (table) => [index("push_token_account_idx").on(table.accountId)],
 );
+
+/**
+ * The secret of an account's one-click unsubscribe (#196, RFC 8058; ADR-068
+ * §5): 256 random bits as base64url, in the List-Unsubscribe header of every
+ * announcement email the account is sent, so a POST to the link turns its
+ * Announcements switch off. One per account, made at its first announcement
+ * email and kept as it is, so the links in older emails keep working; all it
+ * opens is that one switch, so a leaked row costs at most someone's
+ * announcements (the maintainer, 18/11/2026). Found by the token in the
+ * database, never compared in the process. Erasure deletes it; the export
+ * leaves it out, as it leaves out a session's token.
+ */
+export const unsubscribeToken = pgTable("unsubscribe_token", {
+  accountId: uuid("account_id")
+    .primaryKey()
+    .references(() => account.id),
+  token: text("token").notNull().unique(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});

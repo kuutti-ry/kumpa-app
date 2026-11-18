@@ -61,6 +61,7 @@ export {
   notificationPreference,
   pushPlatform,
   pushToken,
+  unsubscribeToken,
 } from "./notifications.ts";
 export { pondCounter } from "./pond-counter.ts";
 export {

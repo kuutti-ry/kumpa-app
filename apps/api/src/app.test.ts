@@ -476,9 +476,17 @@ describe("no web surface", () => {
   });
 
   it("the public list names no route with an id in its path", () => {
-    // The one exception: the one link's code (#574, ADR-044 §13), a redirect
-    // to a store that never looks the code up and names nobody (rewards/link.test.ts).
-    const valued = new Set(["GET /i/:code"]);
+    // The exceptions: the one link's code (#574, ADR-044 §13), a redirect to
+    // a store that never looks the code up and names nobody (rewards/link.test.ts);
+    // and an announcement email's one-click unsubscribe (#196, RFC 8058, ADR-068
+    // §5), whose secret RFC 8058 puts in the link: it serves no page, answers
+    // nothing but a status and only turns its own holder's switch off
+    // (notifications/unsubscribe.test.ts).
+    const valued = new Set([
+      "GET /i/:code",
+      "POST /mail/unsubscribe/:token",
+      "GET /mail/unsubscribe/:token",
+    ]);
     for (const key of PUBLIC_ROUTES) if (!valued.has(key)) expect(key).not.toMatch(/[:{]/);
   });
 

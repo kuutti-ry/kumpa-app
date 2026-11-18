@@ -13,6 +13,7 @@ import { type Mailer, MailFailed } from "../lib/mail.ts";
 import { contactDetailsIn } from "../profile/index.ts";
 import { recordAudit } from "../safety/index.ts";
 import * as repo from "./repo.ts";
+import { unsubscribeLinkOf } from "./unsubscribe.ts";
 
 // Announcements (#573, ADR-068): one text to everybody, for what people must
 // know, never a call to come back. An admin writes it, another admin approves
@@ -169,9 +170,10 @@ const MAIL_SPACING_MS = 100;
 /**
  * The email of an announcement (ADR-068 §5): to everybody its notice reached
  * whose address is confirmed and whose switch is on, each read fresh just
- * before its send, in the language they read the terms in. One at a time,
- * spaced; a failed send is logged by its reason and the rest go on, and
- * nothing is retried. The number sent.
+ * before its send, in the language they read the terms in, with the
+ * person's one-click unsubscribe in its headers where `unsubscribe`, the
+ * link's base, is set (#196). One at a time, spaced; a failed send is logged
+ * by its reason and the rest go on, and nothing is retried. The number sent.
  */
 // shortcut: the sending lives in this process's memory, so a restart while it
 // runs loses the rest (ADR-068, Left out); a column for how far it got would lift it.
@@ -181,6 +183,7 @@ export async function mailAnnouncement(
     logger: Logger;
     mailer: Mailer;
     pause: (ms: number) => Promise<void>;
+    unsubscribe?: string;
   },
   announcementId: string,
 ): Promise<number> {
@@ -190,6 +193,11 @@ export async function mailAnnouncement(
   for (const accountId of await repo.announcementAccounts(deps.db, announcementId)) {
     const to = await repo.announcementMailOf(deps.db, accountId);
     if (!to) continue;
+    const unsubscribe = deps.unsubscribe
+      ? await unsubscribeLinkOf(deps.db, deps.unsubscribe, accountId)
+      : undefined;
+    // Erased since its address was read.
+    if (unsubscribe === null) continue;
     if (sent > 0) await deps.pause(MAIL_SPACING_MS);
     const { locale, text } = announcementTextFor(texts, to.locale);
     const t = tFor(locale);
@@ -198,6 +206,7 @@ export async function mailAnnouncement(
         to: to.address,
         subject: t("mail.announcement.subject", { title: text.title }),
         text: [text.title, text.body, t("mail.announcement.why"), t("mail.signature")].join("\n\n"),
+        ...(unsubscribe ? { unsubscribe } : {}),
       });
       sent += 1;
     } catch (error) {

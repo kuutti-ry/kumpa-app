@@ -58,11 +58,15 @@ describe("sentry options", () => {
       },
       user: { id: "acc-1", email: "a@b.fi", ip_address: "10.0.0.1" },
       breadcrumbs: [{ category: "http", data: { url: "https://x/?email=a@b.fi" } }],
+      transaction: "POST /mail/unsubscribe/S3cr3t-0f-f0rty-thr33",
     });
     expect(event.request).toBeUndefined();
+    expect(event.transaction).toBeUndefined();
     expect(event.user).toEqual({ id: "acc-1" });
     expect(event.breadcrumbs?.[0]?.data).toBeUndefined();
-    expect(JSON.stringify(event)).not.toMatch(/010190-123A|a@b\.fi|private words|session=abc/);
+    expect(JSON.stringify(event)).not.toMatch(
+      /010190-123A|a@b\.fi|private words|session=abc|S3cr3t/,
+    );
   });
 
   it("strips the values of local variables from every stack frame, and extra", () => {

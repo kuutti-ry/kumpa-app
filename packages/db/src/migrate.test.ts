@@ -1111,6 +1111,7 @@ describe("migrate", () => {
           "sanction",
           "session",
           "star",
+          "unsubscribe_token",
         ]);
       } finally {
         await pool.end();

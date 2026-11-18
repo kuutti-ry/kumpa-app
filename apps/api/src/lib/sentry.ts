@@ -62,6 +62,12 @@ export function sentryOptions(config: SentryConfig): Sentry.NodeOptions {
  */
 export function stripRequestData<T extends Sentry.ErrorEvent>(event: T): T {
   delete event.request;
+  // The SDK names the event after the request's raw path: its Http
+  // integration listens on Node's own channel, which runtime injection does
+  // not switch off. A path can carry a secret (#196's unsubscribe link, an
+  // invitation's code) or an id, so the name goes; the route tag the
+  // reporter sets names the pattern.
+  delete event.transaction;
   if (event.user) {
     event.user = event.user.id === undefined ? undefined : { id: event.user.id };
   }
