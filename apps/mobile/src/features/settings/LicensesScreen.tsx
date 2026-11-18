@@ -6,6 +6,7 @@ import { RowGroup } from "@/components/RowGroup";
 import { Text } from "@/components/ui/text";
 import { useT } from "@/lib/locale";
 import { useHapticTap } from "@/theme/haptics";
+import { IMAGE_CREDITS } from "./image-credits";
 import { LICENCES } from "./licences";
 import { licenseGroups } from "./license-families";
 import { SettingsPage } from "./SettingsPage";
@@ -21,8 +22,10 @@ const GROUPS = licenseGroups(LICENCES.packages);
  * names nobody has no provider. The data the app carries follows the
  * packages (ADR-061 §4): where it comes from, on what terms and what Kuutti
  * changed, as the list itself says it, in Finnish or English, and CC BY 4.0
- * asks no more languages. The texts the licences ask to go with every copy are
- * behind the last row.
+ * asks no more languages. The images whose terms ask for credit follow the
+ * data (#405), each set read as one sentence: who made it, where it was
+ * found, and its licence with the licence's address. The texts the licences
+ * ask to go with every copy are behind the last row.
  */
 export function LicensesScreen() {
   const { t, locale } = useT();
@@ -59,6 +62,18 @@ export function LicensesScreen() {
               summary: `${credit.source} ${credit.changes}`,
             },
           ]}
+        />
+      </View>
+      <View className="gap-2">
+        <Text variant="h3" accessibilityRole="header">
+          {t("tech.licenses.images")}
+        </Text>
+        <RowGroup
+          rows={IMAGE_CREDITS.map(({ title, author, source, licence, licenceUrl }) => ({
+            key: title,
+            title: t(title),
+            summary: t("tech.licenses.credit", { author, source, licence, licenceUrl }),
+          }))}
         />
       </View>
       <RowGroup
