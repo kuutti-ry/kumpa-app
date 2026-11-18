@@ -229,7 +229,7 @@ The Dokploy admin password and its two-factor authentication are changed in the 
 
 ## 10. Expo robot token
 
-`EXPO_TOKEN` is the authority to publish updates to every channel, `production` included, because updates are not code-signed (ADR-004). It exists in the environments `staging` and `prod`, never at repository level (security checklist). Revoking the old token at Expo ends those copies too.
+`EXPO_TOKEN` is the authority to publish updates to every channel, `production` included, because updates are not code-signed (ADR-004). It exists in the environments `staging` and `prod`, never at repository level (security checklist). Revoking the old token at Expo ends those copies too. The environments `preview` and `preview-cleanup` are deleted, which revoked nothing: if they held a token of their own, it is valid until revoked at Expo (ADR-070, Open, 5).
 
 **Steps.** On expo.dev, as the organisation's owner or Admin, create a new access token for the robot user (Developer role; `apps/mobile/README.md`, Setting up EAS). Then:
 
