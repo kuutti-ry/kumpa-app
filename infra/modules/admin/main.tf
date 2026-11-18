@@ -186,21 +186,6 @@ resource "aws_cloudfront_response_headers_policy" "admin" {
   }
 }
 
-# The previews' CloudFront Function went with the previews (ADR-070). Destroying
-# it in the apply that detaches it fails: OpenTofu deletes it before it updates
-# the distribution, and CloudFront refuses a function still in use (409
-# FunctionInUse, staging's applies of #709 and #710). So the state forgets it,
-# the distribution is updated alone, and the maintainer deletes the function by
-# hand once the apply is done (ADR-070, Open 2).
-# shortcut: one block for both environments; delete it once production's next tag has applied it.
-removed {
-  from = aws_cloudfront_function.previews
-
-  lifecycle {
-    destroy = false
-  }
-}
-
 # ---------------------------------------------------------------------------
 # The certificate for the aliases, in us-east-1 as CloudFront requires, each
 # name validated by a record in its own zone: the project zone's for
