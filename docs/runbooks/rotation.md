@@ -36,7 +36,7 @@ There is no rotation calendar. Rotate when a value may have been seen by someone
 | `/kuutti/<env>/origin-secret`, and the key `origin-secret` of the store `kuutti-<env>-origin-proof` | SSM SecureString; a CloudFront key value store; the offline medium | the API at boot; the distribution's CloudFront Function on every request | maintainer | 17 |
 | session and admin-session tokens, sign-in codes | hashes in the database | the API | nothing to rotate | 8 |
 | `DOKPLOY_TOKEN`, the Dokploy admin login | GitHub environments; Dokploy | `deploy.yml` | the Dokploy admin and a repository admin | 9 |
-| `EXPO_TOKEN` | GitHub environments `staging`, `prod`; `preview-cleanup` until the maintainer deletes it (ADR-070, Open, 5) | `deploy.yml`, `eas-build.yml` | an Expo owner or Admin and a repository admin | 10 |
+| `EXPO_TOKEN` | GitHub environments `staging`, `prod` | `deploy.yml`, `eas-build.yml` | an Expo owner or Admin and a repository admin | 10 |
 | `SENTRY_AUTH_TOKEN`; the two DSNs | GitHub environments `staging`, `prod`; EAS environments `preview`, `production`; SSM `sentry-dsn` (String) | `deploy.yml`, EAS builds; the API and the app | the Sentry owner and a repository admin | 11 |
 | GitHub variables, AWS access from CI | repository and environment variables; OIDC roles | the workflows | an owner | 12 |
 | `FONTS_TOKEN`, read-only on `kuutti-ry/kumpa-app-fonts` alone | EAS environments `preview`, `production`, visibility secret. Never GitHub. The website's Amplify app holds a token of its own, rotated in `kumpa-app-site` (its decision 18) | EAS builds, `eas-build-pre-install` (`scripts/fonts.ts`, ADR-052) | the maintainer | 13 |
@@ -103,7 +103,7 @@ The `--query` of the first line prints the version numbers and dates only, never
 
 ## 2. Database preview password: gone
 
-The previews went on 2026-11-16 (ADR-070), and with them the role `kuutti_preview` and `/kuutti/staging/db-preview-password`, which the maintainer drops and deletes (ADR-070, Open, 3). The number stays, so that the other sections keep theirs.
+The previews went on 2026-11-16 (ADR-070), and with them `/kuutti/staging/db-preview-password`, deleted on 2026-11-18, and the role `kuutti_preview`, which the maintainer drops (ADR-070, Open, 3). The number stays, so that the other sections keep theirs.
 
 ## 3. Database master password
 
@@ -219,7 +219,7 @@ gh secret set DOKPLOY_TOKEN --env staging            # the admin's key
 
 Then delete the old key on the same Dokploy page.
 
-Until the maintainer deletes it (ADR-070, Open, 4), the member `ci-preview` has a key of its own, limited to the `previews` project, in the environment `preview-cleanup`. After a leak, delete that key too, on the member's Settings, Profile page; nothing on `main` uses it.
+Until the maintainer deletes it (ADR-070, Open, 4), the member `ci-preview` has a key of its own, limited to the `previews` project; its copy in GitHub went with the environment `preview-cleanup` on 2026-11-18. After a leak, delete that key too, on the member's Settings, Profile page; nothing on `main` uses it.
 
 **Check.** The next deploy's step "Point the Dokploy application at the image and deploy" passes.
 
@@ -229,7 +229,7 @@ The Dokploy admin password and its two-factor authentication are changed in the 
 
 ## 10. Expo robot token
 
-`EXPO_TOKEN` is the authority to publish updates to every channel, `production` included, because updates are not code-signed (ADR-004). It exists in the environments `staging` and `prod`, and in `preview-cleanup` until the maintainer deletes it (ADR-070, Open, 5), never at repository level (security checklist). Revoking the old token at Expo ends those copies too.
+`EXPO_TOKEN` is the authority to publish updates to every channel, `production` included, because updates are not code-signed (ADR-004). It exists in the environments `staging` and `prod`, never at repository level (security checklist). Revoking the old token at Expo ends those copies too.
 
 **Steps.** On expo.dev, as the organisation's owner or Admin, create a new access token for the robot user (Developer role; `apps/mobile/README.md`, Setting up EAS). Then:
 
