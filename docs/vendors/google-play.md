@@ -1,10 +1,10 @@
 # Google Play (Google)
 
-What Google Play is to Kuutti, and what Google receives through it. Since 2026-10-27 the association has an organisation developer account on Google Play, with the developer name Kuutti ry, owned by the maintainer's login at the association's Google Workspace (`docs/runbooks/custody.md`). The app is `fi.kumpa`, Kumpa, since #184's native batch (ADR-057 §10). Until then it was `fi.kuutti.app`, Kuutti, which stays in the account with its internal testing track: what this file says happened on a day in October or on 1 November 2026 happened to that app, and the steps below are walked again for `fi.kumpa`, all but the Google Cloud project and its service account (step 4), which are the account's. The one track in use is internal testing, which carries the staging app to the team (ADR-057). No credentials in this file, and no address but the public ones.
+What Google Play is to Kuutti, and what Google receives through it. Since 2026-10-27 the association has an organisation developer account on Google Play, with the developer name Kuutti ry, owned by the maintainer's login at the association's Google Workspace (`docs/runbooks/custody.md`). The app is `fi.kumpa`, Kumpa, since #184's native batch (ADR-057 §10). Until then it was `fi.kuutti.app`, Kuutti, which stays in the account with its internal testing track: what this file says happened on a day in October or on 1 November 2026 happened to that app, and the steps below are walked again for `fi.kumpa`, all but the Google Cloud project and its service account (step 4), which are the account's. Two tracks are in use: internal testing, which carries the staging app to the team (ADR-057), and since 2026-11-18 a closed test, which took the same staging bundle through Google's first review (The closed test, below). No credentials in this file, and no address but the public ones.
 
 ## What Play shows of the association
 
-Play Console's Play developer profile lists as public account details the organisation's name Kuutti ry, its registered address (public on `kuutti.app` too), the developer phone number of the account and the developer e-mail `hello@kuutti.app`. They come from the account details Google verified, and change there. Once the app is listed, its page and the developer page show them, with the website `https://kuutti.app/`.
+Play Console's Play developer profile lists as public account details the organisation's name Kuutti ry, its registered address (public on `kuutti.app` too), the developer phone number of the account and the developer e-mail `hello@kuutti.app`. They come from the account details Google verified, and change there. Once the app is listed, its page and the developer page show them, with the website `https://kuutti.app/`. Kumpa's own listing names `https://kumpa.fi/` as its website and `hello@kuutti.app` as its contact.
 
 The developer page's own content is set under Developer account, Play developer profile. As the console asked on 2026-10-27:
 - the developer icon, 512 by 512, and the header image, 4096 by 2304, each a JPEG or an opaque 24-bit PNG of at most 1 MB. Google's help asks for a 32-bit PNG icon, but the console refuses transparency;
@@ -20,7 +20,8 @@ The icon is the app's own and the header the site's dawn and water colours aroun
 | Each app bundle EAS submits, with its version code | Play makes the phones' APKs from it and signs them with the keys it holds |
 | The internal testers' list: the addresses of the team's Google accounts, kept by hand in the console | who may opt in and install the internal test |
 | The service account's calls: which bundle goes to which track, with which status | the upload (ADR-057 §3) |
-| Later, before a closed or public release: the store listing, the content rating, the target audience (18 and over only), the data safety form, the child safety declaration and the reviewers' way in | Play's review and the store page (#188, #299) |
+| The closed test's list: the addresses of its testers' Google accounts, kept by hand in the console | who may opt in and install the closed test |
+| Since 2026-11-18: the store listing, the content rating, the target audience (18 and over only), the data safety form, the child safety declaration and the reviewers' way in | Play's review and the store page (#188, #299, #560) |
 
 From the phones, Play itself records installs and updates and, on phones whose owners share usage and diagnostics with Google, crashes and freezes (Android vitals). The app adds no Google library of its own: `expo-application`, which Expo's own modules pull in, carries Google's install-referrer client, which the app asks once, on the phone, for an invitation's code (ADR-074 §4). Nor does Play add one, while its automatic protection is off (ADR-057 §9). Google's pre-launch robots also run each uploaded bundle on test phones; in the staging app they stop at the bank login, which they cannot pass.
 
@@ -28,7 +29,7 @@ From the phones, Play itself records installs and updates and, on phones whose o
 
 - **The app signing keys**, generated and held by Google (Play App Signing). For a new app in 2026 that is a hybrid set: an RSA key for Android 16 and lower, a classical key and an ML-DSA key for Android 17 and later. Every install from Play carries them, and nobody at Kuutti holds a copy. Their SHA-256 fingerprints are in Play Console under Protected with Play, Play Store protection, Manage Play app signing (older guides say Setup, App integrity); verified links (#184) need all three. Until a release reaches open testing or production, the maintainer may still change them to the association's own key (ADR-057, Open 1).
 - **The upload key**: EAS's keystore of `fi.kumpa`, a new one unless `fi.kuutti.app`'s was assigned to it before its first build (ADR-057 §10), which also signs the development and preview APKs. Play takes a bundle for a track only with its signature. EAS hands it to every cloud build, so to any holder of `EXPO_TOKEN` too. Google resets it on request when it is lost or out (`docs/runbooks/rotation.md`, section 14).
-- **The service account** in the association's Google Cloud project, whose JSON key EAS holds for its submissions. In Play Console it may view this app and release it to testing tracks; the same permission lets it upload to internal app sharing, which takes a bundle signed with any key. EAS uses the key for any holder of `EXPO_TOKEN`, so its trust is the update path's: write access (ADR-004 §3, ADR-057 §3). The owner login may also act as it, an hour at a time and without a key (Reading Play from the command line, below).
+- **The service account** in the association's Google Cloud project, whose JSON key EAS holds for its submissions. In Play Console it may view this app and release it to testing tracks; the same permission lets it upload to internal app sharing, which takes a bundle signed with any key. EAS uses the key for any holder of `EXPO_TOKEN`, so its trust is the update path's: write access (ADR-004 §3, ADR-057 §3). The owner login may also act as it, an hour at a time and without a key (Reading Play from the command line, below). While Kumpa was a draft the service account could also write the listing; since the closed test was published on 2026-11-18 it cannot (Writing the listing, below).
 
 Play's copy of the app and an APK from expo.dev are signed with different keys, so neither installs over the other: a phone uninstalls one to take the other, and loses the app's local data, the session among it.
 
@@ -116,15 +117,69 @@ unset h e
 
 On 2026-10-28 it showed `{"track":"internal","releases":[{"name":"0.0.0","versionCodes":["3"],"status":"completed"}]}`. A release's status is `completed`, `draft`, `inProgress` or `halted` (`statusUnspecified` when none is set). The API knows testers only as Google Groups: the e-mail lists, internal app sharing's settings and the opt-in link (step 6) are the console's alone. `--scopes` is a hidden flag of `print-access-token` in gcloud 590, which warns that it is ignored for an impersonated account and applies it all the same. The login's gcloud session asks to be signed in again after some hours (by the next morning, on 2026-10-28): `gcloud auth login`, in a terminal of the maintainer's.
 
+### Writing the listing
+
+While Kumpa was a draft, the same token wrote its listing: the edit's `details` (the contact), `listings/en-GB` (the name and the descriptions) and the images (`icon`, `featureGraphic` and `phoneScreenshots`, each a POST of the file to `https://androidpublisher.googleapis.com/upload/androidpublisher/v3/applications/fi.kumpa/edits/<edit>/listings/en-GB/<kind>?uploadType=media`), then `POST $a/edits/${e}:commit`. In zsh the braces matter: `$e:commit` is read as a modifier of `$e`, eats the `c`, and Google answers with a 404 page.
+
+Since the closed test was published (2026-11-18) the API refuses both ways of committing a listing change, and the edit is deleted with nothing changed:
+
+- with `changesNotSentForReview=true`: "Changes are sent for review automatically. The query parameter changesNotSentForReview must not be set.";
+- without it: "The caller does not have permission". The service account may release to testing tracks and no more (step 4), and the store presence of a published app is beyond that. Whether it gets a permission for it is the maintainer's; until then a listing change is made in the console.
+
+In the console the listing is at `https://play.google.com/console/u/<n>/developers/<developer id>/app/<app id>/store-listings`, and the page with the texts and the screenshots at `…/store-listings/default/edit`. Other pages of the app end `app-dashboard`, `publishing` (Publishing overview), `app-content/overview` and `test-and-release`.
+
 The grant goes with `gcloud iam service-accounts remove-iam-policy-binding eas-submit@kuutti-play.iam.gserviceaccount.com --project=kuutti-play --member=user:<owner login> --role=roles/iam.serviceAccountTokenCreator`, read back with `gcloud iam service-accounts get-iam-policy eas-submit@kuutti-play.iam.gserviceaccount.com --project=kuutti-play`. A token minted before it went works until its hour is out.
 
-## Before a closed track (#193, #188)
+## The closed test (#193, #188, #560)
 
-None of this is needed for internal testing, and all of it is for a closed or public one, which Google reviews:
+Internal testing needs none of this. A closed or public track does, and Google reviews it. On 2026-11-18 it was all filled for Kumpa and sent, so that the reviewers' way in (#560) and the forms of #188 met Google once before the production submission. What was sent is the staging bundle, as #560's comment of 2026-11-05 chose for the review build: every person in it is invented, and the bank is the broker's test bank.
 
-- the store listing: a 512 by 512 icon, a 1024 by 500 feature graphic, at least two screenshots (each within the console's own limits, which for the developer page were stricter than Google's help), a short description of at most 80 characters, in Finnish, Swedish and English (#193), and the Dating category;
-- the app content: the privacy policy (#190), the sign-in details for the reviewers, which bank identification cannot give (#299), no ads, the content rating questionnaire, the target audience 18 and over only with minors' access restricted (Google's policy for dating apps, since October 2025), the data safety form with a web link where an account's deletion is asked, and the child safety standards: a public page on `kuutti.app` against child sexual abuse and exploitation that names the app, the in-app reporting, and a named point of contact (#188);
-- the production build itself (ADR-057 §7).
+**The store listing**, in English (U.K.) alone, the app's default language (Finnish, step 1's, was not chosen for Kumpa; the Finnish and Swedish listings wait for #55 and #413):
+
+| Field | What it holds |
+|---|---|
+| Name | Kumpa |
+| Short description, at most 80 characters | "Dating for Finland, run by a non-profit. Every account verified by bank ID." |
+| Full description | an opening line, five short points and a closing line: the App Store's text (`docs/vendors/app-store.md`) |
+| Icon, 512 by 512 | the app's own icon, a placeholder |
+| Feature graphic, 1024 by 500 | a placeholder |
+| Phone screenshots, 1080 by 1920 | five real screens of the staging app with a caption each, placeholders until #413: the bank sign-in, what you seek, a conversation, your profile, settings |
+| Contact | `hello@kuutti.app`, `https://kumpa.fi/` |
+| Category | Dating |
+
+The listing's last step, Review, asks for the AI asset declaration: "Don't label assets", or "Label assets as created or edited using AI", then asset by asset. One of the screenshots holds a generated picture.
+
+**App content.** The console keeps these pages under Monitor and improve, Policy and programs. As answered:
+
+| Page | Answer |
+|---|---|
+| Privacy policy | `https://kumpa.fi/legal/privacy/` |
+| Ads | No, the app contains no ads |
+| Content rating | category Social or Communication, best described as Social; users' precise location shared with others: no; digital purchases: no; users can block: yes; users can report: yes; chat is moderated: yes; limited to invited friends: no. The same answers gave `fi.kuutti.app` PEGI 18, USK 18+, ESRB Mature 17+ and IARC 18+ on 2026-11-01 |
+| Target audience and content | 18 and over only, with minors' access restricted (Google's policy for dating apps, since October 2025) |
+| Data safety | imported as a CSV file the maintainer keeps: 17 data types, all collected, none shared; encrypted in transit; an account is created through "Other", strong electronic identification through a Finnish bank; deletion is asked at `https://kumpa.fi/delete-account/` |
+| Government apps | No |
+| Financial features | None |
+| Health | No health features |
+| Advertising ID | No |
+| Sign in details | all or some functionality is restricted; two sets, each a user ID of the broker's test bank with an empty password: a member with a history (`DEMOUSER4`, Sanna) and a new member (`DEMOUSER1`, Onni), with the steps in English (`docs/runbooks/store-review.md`) |
+| Child safety standards | the published standards at `https://kumpa.fi/child-safety/`, the in-app reporting, a named point of contact, and the self-certification (#188) |
+
+While a page is unsaved the app's setup is incomplete, and nothing is reviewed by itself (ADR-057 §6); the last pages were saved only when the review was wanted.
+
+**The track.** Test and release, Testing, Closed testing: the track the console calls "Closed testing - Alpha" (`alpha` in the API), Finland as its one country, one e-mail list of testers, and a release made from the bundle already on internal testing, "2 (0.127.0)", version code 2. Publishing overview then showed thirteen changes, which the maintainer sent for review. Google approved them the same day.
+
+**Managed publishing.** Before the first approval the console refused it ("You can't turn on managed publishing right now"). Once the review had passed it was on, the changes waited under "Changes ready to publish", and the maintainer published them. It stays on: an approved change reaches nobody until a person publishes it, which the production submission needs (ADR-057 §7). A later change of the listing, the five captioned screenshots, was saved in the console that afternoon and went the same way.
+
+**The testers.** Closed testing, Testers has the opt-in link. Each tester opens it with a listed Google account, as in step 6.
+
+Not yet seen: whether a staging bundle that EAS submits to internal testing now waits for Google, or for a person to publish it, since the setup is complete and managed publishing is on (step 5, and the last paragraph of What the association sets up). The next start of the `staging` profile shows it, on the submission's page on expo.dev and in Publishing overview.
+
+## Before production (#193)
+
+- the listing in Finnish, Swedish and English with the real screenshots and feature graphic (#413, #55);
+- Sign in details read again and reworded (`docs/runbooks/store-review.md`, What the forms say);
+- the production build itself (ADR-057 §7), with managed publishing on.
 
 ## When something goes wrong
 
@@ -135,12 +190,16 @@ None of this is needed for internal testing, and all of it is for a closed or pu
 - **The build fails in Run gradlew, at Sentry's source-map upload, with `error: organization not found`:** the `SENTRY_AUTH_TOKEN` in EAS's `preview` environment predates Sentry's present organisation name, and an organisation token carries the slug it was made under. Development builds skip the upload, so a release build is the first to fail, as the first `staging` build did on 2026-10-27; the deprecation warnings above the failure are not it. Make the token again and set it from `apps/mobile` with `pnpm exec eas env:set --environment preview --name SENTRY_AUTH_TOKEN --visibility secret`, the value at the prompt (`docs/runbooks/sentry-setup.md`, section 4).
 - **`eas` asks which account should own the project:** it ran outside `apps/mobile`, where it finds no `app.json`. Linking there writes an `app.json` of its own at that place, to delete. Run `eas` from `apps/mobile`.
 - **The version code is already used:** a bundle with that number was uploaded before. Build again; EAS counts up.
-- **The caller does not have permission:** the service account's invitation has not reached the API yet (up to 48 hours), or lacks Release apps to testing tracks.
+- **The caller does not have permission:** the service account's invitation has not reached the API yet (up to 48 hours), or lacks Release apps to testing tracks. On the commit of a listing change it means the app is no longer a draft (Writing the listing).
+- **"You can't turn on managed publishing right now":** the app has not passed its first review. Send the changes, and switch it on once they are approved (The closed test).
+- **A reviewer cannot sign in:** `docs/runbooks/store-review.md`, If a reviewer cannot get in.
 - **A bad release:** an internal testing release cannot be halted. Revert the change on `main` and start the `staging` profile again: the new bundle's higher version code replaces the bad one on the testers' phones. On a closed or open track, halt its rollout in Play Console. A bad JavaScript update is stopped at EAS, not in the store (ADR-004, `docs/runbooks/incident.md`).
 
 A failed submission shows on its page on expo.dev and in `eas submit:list --status errored`. GitHub shows nothing: the job ended when the build was queued.
 
 ## Sources, read on 2026-10-27
+
+The closed test, Writing the listing and the console's paths are what the console and the API showed on 2026-11-18, not Google's documentation.
 
 - Google, Android developer verification: https://developer.android.com/developer-verification/guides/google-play-console (updated 2026-09-30), https://developer.android.com/developer-verification/guides/faq, https://support.google.com/googleplay/android-developer/answer/16984799 (registering Play package names), https://support.google.com/googleplay/android-developer/answer/16761055 (the proof APK).
 - Google Play: https://support.google.com/googleplay/android-developer/answer/9859152 (Create app), https://support.google.com/googleplay/android-developer/answer/9845334 (testing tracks), https://support.google.com/googleplay/android-developer/answer/9844679 (internal app sharing), https://support.google.com/googleplay/android-developer/answer/16285429 (halting a release), https://support.google.com/googleplay/android-developer/answer/10183279 (automatic protection), https://support.google.com/googleplay/android-developer/answer/9842756 (Play App Signing), https://support.google.com/googleplay/android-developer/answer/9873827 (the developer profile), https://developers.google.com/android-publisher/getting_started (the service account).
