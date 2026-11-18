@@ -103,7 +103,7 @@ The `--query` of the first line prints the version numbers and dates only, never
 
 ## 2. Database preview password: gone
 
-The previews went on 2026-11-16 (ADR-070), and with them `/kuutti/staging/db-preview-password`, deleted on 2026-11-18, and the role `kuutti_preview`, which the maintainer drops (ADR-070, Open, 3). The number stays, so that the other sections keep theirs.
+The previews went on 2026-11-16 (ADR-070), and with them `/kuutti/staging/db-preview-password` and the role `kuutti_preview`, deleted and dropped on 2026-11-18 (ADR-070, Open, 3). The number stays, so that the other sections keep theirs.
 
 ## 3. Database master password
 
