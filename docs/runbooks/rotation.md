@@ -219,7 +219,7 @@ gh secret set DOKPLOY_TOKEN --env staging            # the admin's key
 
 Then delete the old key on the same Dokploy page.
 
-Until the maintainer deletes it (ADR-070, Open, 4), the member `ci-preview` has a key of its own, limited to the `previews` project; its copy in GitHub went with the environment `preview-cleanup` on 2026-11-18. After a leak, delete that key too, on the member's Settings, Profile page; nothing on `main` uses it.
+The previews' member `ci-preview` had a key of its own, limited to the `previews` project. Its copy in GitHub went with the environment `preview-cleanup`, and the member was removed from staging's Dokploy on 2026-11-18, its key with it (ADR-070, Open, 4): the owner is the only member, and no second key is left to delete after a leak.
 
 **Check.** The next deploy's step "Point the Dokploy application at the image and deploy" passes.
 
@@ -229,7 +229,7 @@ The Dokploy admin password and its two-factor authentication are changed in the 
 
 ## 10. Expo robot token
 
-`EXPO_TOKEN` is the authority to publish updates to every channel, `production` included, because updates are not code-signed (ADR-004). It exists in the environments `staging` and `prod`, never at repository level (security checklist). Revoking the old token at Expo ends those copies too. The environments `preview` and `preview-cleanup` are deleted, which revoked nothing: if they held a token of their own, it is valid until revoked at Expo (ADR-070, Open, 5).
+`EXPO_TOKEN` is the authority to publish updates to every channel, `production` included, because updates are not code-signed (ADR-004). It exists in the environments `staging` and `prod`, never at repository level (security checklist). Revoking the old token at Expo ends those copies too. The environments `preview` and `preview-cleanup` are deleted, which revoked nothing. The token made with `preview-cleanup` was revoked at Expo on 2026-11-18, and the robot has one token left, the one `staging` and `prod` hold. What `preview` held can no longer be read: if it was this token, every branch could read it until 2026-11-16, and only the rotation below ends such a copy (ADR-070, Open, 5).
 
 **Steps.** On expo.dev, as the organisation's owner or Admin, create a new access token for the robot user (Developer role; `apps/mobile/README.md`, Setting up EAS). Then:
 
