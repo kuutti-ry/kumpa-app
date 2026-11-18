@@ -263,28 +263,50 @@ describe("migrate, when a migration fails midway", () => {
     }
   }
 
-  const firstStepStands = (second: string, fails: boolean) =>
-    database(async (pool) => {
-      const dir = twoSteps(second);
-      try {
-        const done = migrate(pool, dir);
-        if (fails) await expect(done).rejects.toThrow();
-        else expect(await done).toEqual({ state: "applied", applied: 2 });
-        const { rows } = await pool.query<{ stands: boolean }>(
-          "SELECT to_regclass('public.first_step') IS NOT NULL AS stands",
-        );
-        return { stands: rows[0]?.stands === true };
-      } finally {
-        rmSync(dir, { recursive: true, force: true });
-      }
-    });
+  /** For each of the two steps, whether its table stands and whether the journal has its line. */
+  const steps = async (pool: Pool) =>
+    (
+      await pool.query<{ stands: boolean; recorded: boolean }>(
+        `SELECT to_regclass('public.' || step.name) IS NOT NULL AS stands,
+                EXISTS (SELECT 1 FROM drizzle.__drizzle_migrations m WHERE m.created_at = step.at) AS recorded
+           FROM (VALUES ('first_step', 1700000000000::bigint), ('second_step', 1700000000001::bigint))
+                AS step (name, at)`,
+      )
+    ).rows;
 
+  // Each migration commits on its own (ADR-075, #722): the first stands with
+  // its line, and the second, which made its table before it failed, has
+  // neither. A change without its line would be made again by the next boot.
   attack(
-    "migrate: the migration before the one that failed stays applied, with no line in the journal",
+    "migrate: a run that failed leaves a migration's change standing without its line in the journal",
     {
-      attempt: () => firstStepStands(FAILS, true),
-      control: () => firstStepStands("CREATE TABLE second_step (id integer);", false),
-      succeeds: (seen) => expect(seen.stands).toBe(true),
+      attempt: () =>
+        database(async (pool) => {
+          const dir = twoSteps(
+            `CREATE TABLE second_step (id integer);--> statement-breakpoint\n${FAILS}`,
+          );
+          try {
+            await expect(migrate(pool, dir)).rejects.toThrow();
+            return await steps(pool);
+          } finally {
+            rmSync(dir, { recursive: true, force: true });
+          }
+        }),
+      // Planted: both applied, then the second's line taken out of the journal.
+      control: () =>
+        database(async (pool) => {
+          const dir = twoSteps("CREATE TABLE second_step (id integer);");
+          try {
+            expect(await migrate(pool, dir)).toEqual({ state: "applied", applied: 2 });
+            await pool.query(
+              "DELETE FROM drizzle.__drizzle_migrations WHERE created_at = 1700000000001",
+            );
+            return await steps(pool);
+          } finally {
+            rmSync(dir, { recursive: true, force: true });
+          }
+        }),
+      succeeds: (seen) => expect(seen.some((step) => step.stands !== step.recorded)).toBe(true),
     },
   );
 
