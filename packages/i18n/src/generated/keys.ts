@@ -1639,8 +1639,10 @@ export type MessageParams = {
   "tech.environment": { "environment": string };
   "tech.errorTest.send": Record<never, never>;
   "tech.errorTest.sent": Record<never, never>;
+  "tech.licenses.credit": { "author": string; "source": string; "licence": string; "licenceUrl": string };
   "tech.licenses.data": Record<never, never>;
   "tech.licenses.from": { "address": string };
+  "tech.licenses.images": Record<never, never>;
   "tech.licenses.licenceAt": { "place": number };
   "tech.licenses.notice": Record<never, never>;
   "tech.licenses.other": Record<never, never>;
@@ -1650,6 +1652,7 @@ export type MessageParams = {
   "tech.licenses.texts": Record<never, never>;
   "tech.licenses.title": Record<never, never>;
   "tech.licenses.version": { "version": string; "license": string };
+  "tech.licenses.zodiac": Record<never, never>;
   "tech.look.bold": Record<never, never>;
   "tech.look.glass": Record<never, never>;
   "tech.look.neubrutalism": Record<never, never>;
