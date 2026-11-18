@@ -36,7 +36,7 @@ The files under this directory are shown before an option's name in the profile 
 | `zodiac/aquarius.svg` | [Aquarius symbol (bold).svg](https://commons.wikimedia.org/wiki/File%3AAquarius_symbol_%28bold%29.svg) (Wikimedia Commons) | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0) | Kwamikagami | — |
 | `zodiac/pisces.svg` | [Pisces symbol (bold).svg](https://commons.wikimedia.org/wiki/File%3APisces_symbol_%28bold%29.svg) (Wikimedia Commons) | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0) | Kwamikagami | — |
 
-Public domain on Commons means the file page carries a public-domain tag (a text logo or a simple shape below the threshold of originality, or the author's release). The CC BY-SA 4.0 files (the zodiac set) keep their author and licence here, as the licence asks. The party sites' files were fetched on 10/10/2026 at the maintainer's word; a party that wants its mark shown differently, or not at all, is answered by a change here.
+Public domain on Commons means the file page carries a public-domain tag (a text logo or a simple shape below the threshold of originality, or the author's release). The CC BY-SA 4.0 files (the zodiac set) keep their author and licence here, as the licence asks, and the app credits them on its licences screen, under Images (`src/features/settings/image-credits.ts`, #405), with their author, Commons and the licence's address; a file added here under terms that ask for credit is added there too, or `image-credits.test.ts` fails. The party sites' files were fetched on 10/10/2026 at the maintainer's word; a party that wants its mark shown differently, or not at all, is answered by a change here.
 
 ## The services' marks (#474)
 

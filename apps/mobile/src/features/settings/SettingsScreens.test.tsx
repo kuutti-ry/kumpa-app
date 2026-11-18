@@ -244,6 +244,7 @@ describe("the licences screen", () => {
       "FormatJS",
       "Other packages",
       "Data",
+      "Images",
     ]);
     // A package sits under its family's heading, before the next one.
     const flat = JSON.stringify(screen.toJSON());
@@ -309,6 +310,51 @@ describe("the licences screen", () => {
         expect(screen.getByLabelText(title).props.accessibilityValue.text).toBe(
           `${credit.source} ${credit.changes}`,
         );
+      } finally {
+        (useLocales as jest.Mock).mockReturnValue([{ languageTag: "en-US" }]);
+      }
+    });
+  });
+
+  describe("the images the app carries (#405)", () => {
+    const zodiac =
+      "Author: Kwamikagami. Source: Wikimedia Commons. Licence: CC BY-SA 4.0, https://creativecommons.org/licenses/by-sa/4.0/";
+
+    it("stand after the data and before the texts, each set read as one sentence and not pressed", async () => {
+      await renderWithTheme(<LicensesScreen />);
+      const flat = JSON.stringify(screen.toJSON());
+      const at = (text: string) => flat.indexOf(text);
+      expect(at('"Postal areas"')).toBeLessThan(at('"Images"'));
+      expect(at('"Images"')).toBeLessThan(at('"Star signs"'));
+      expect(at('"Star signs"')).toBeLessThan(at('"Licence texts"'));
+      const row = screen.getByLabelText("Star signs");
+      expect(row.props.accessible).toBe(true);
+      expect(row.props.accessibilityRole).not.toBe("button");
+      expect(row.props.accessibilityValue.text).toBe(zodiac);
+      // Drawn as it is heard.
+      expect(within(row).getByText(zodiac)).toBeTruthy();
+      noProblems();
+    });
+
+    it.each([
+      [
+        "fi-FI",
+        "Kuvat",
+        "Horoskooppimerkit",
+        "Tekijä: Kwamikagami. Lähde: Wikimedia Commons. Lisenssi: CC BY-SA 4.0, https://creativecommons.org/licenses/by-sa/4.0/",
+      ],
+      [
+        "sv-FI",
+        "Bilder",
+        "Stjärntecken",
+        "Upphovsperson: Kwamikagami. Källa: Wikimedia Commons. Licens: CC BY-SA 4.0, https://creativecommons.org/licenses/by-sa/4.0/",
+      ],
+    ])("speak %s", async (tag, heading, title, credit) => {
+      (useLocales as jest.Mock).mockReturnValue([{ languageTag: tag }]);
+      try {
+        await renderWithTheme(<LicensesScreen />);
+        expect(await screen.findByText(heading)).toBeTruthy();
+        expect(screen.getByLabelText(title).props.accessibilityValue.text).toBe(credit);
       } finally {
         (useLocales as jest.Mock).mockReturnValue([{ languageTag: "en-US" }]);
       }

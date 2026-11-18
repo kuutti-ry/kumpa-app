@@ -9277,6 +9277,27 @@ tech.licenses.postalAreas:
   sv: "Postnummerområden"
   machine: { fi: true, sv: true }
 
+tech.licenses.images:
+  en: "Images"
+  description: "Licences screen (#405): the heading over the images the app carries whose licences ask for their author to be credited, after the data and before the licence texts."
+  fi: "Kuvat"
+  sv: "Bilder"
+  machine: { fi: true, sv: true }
+
+tech.licenses.zodiac:
+  en: "Star signs"
+  description: "Licences screen (#405): the name of the set of star sign symbols shown before the star sign answer in a profile (profile.field.zodiac). Who drew them, where they were found and their licence follow it in tech.licenses.credit."
+  fi: "Horoskooppimerkit"
+  sv: "Stjärntecken"
+  machine: { fi: true, sv: true }
+
+tech.licenses.credit:
+  en: "Author: {author}. Source: {source}. Licence: {licence}, {licenceUrl}"
+  description: "Licences screen (#405): under the name of a set of images, read after the name as one sentence, as Creative Commons licences ask. {author} is the name the author gives on the site the images came from (Kwamikagami), {source} that site (Wikimedia Commons), {licence} the licence's short name (CC BY-SA 4.0) and {licenceUrl} the licence's address; all four stay as they are, in the nominative."
+  fi: "Tekijä: {author}. Lähde: {source}. Lisenssi: {licence}, {licenceUrl}"
+  sv: "Upphovsperson: {author}. Källa: {source}. Licens: {licence}, {licenceUrl}"
+  machine: { fi: true, sv: true }
+
 tech.licenses.texts:
   en: "Licence texts"
   description: "Licences screen (#512): the last row, and the title of the screen it opens, which holds the licence texts, copyright lines and notices the packages' licences ask to go with every copy of the app, in English as the packages wrote them."
