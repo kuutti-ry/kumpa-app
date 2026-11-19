@@ -779,13 +779,22 @@ describe("what seen means (ADR-062 §2)", () => {
   });
 
   test("A skip starts no clock, and the card returns another day", async ({ ctx }) => {
-    const { women, men } = await pondOf(ctx, 1, 1);
+    const { women, men } = await pondOf(ctx, 1, 2);
     const [a] = women;
-    const [b] = men;
-    if (!a || !b) throw new Error("people not written");
+    const [b, listed] = men;
+    if (!a || !b || !listed) throw new Error("people not written");
+    // A skip that puts nobody on the Later list (#681): the list is full, so
+    // the card is a skip alone, as before the list took Later's cards.
+    await withMatchingConfig(ctx.client, { stars_max: 1 });
+    await ctx.client.query("INSERT INTO star (account_id, candidate_id) VALUES ($1, $2)", [
+      a,
+      listed,
+    ]);
     const app = await appAt(ctx.client);
     await readToday(app, ctx.client, a);
-    expect((await decideAs(app, ctx.client, a, 1, "skip")).status).toBe(200);
+    const skipped = await decideAs(app, ctx.client, a, 1, "skip");
+    expect(skipped.status).toBe(200);
+    expect(QueueDecisionAnswer.parse(await skipped.json()).later).toBe("full");
     // Not the same day: the queue's order is its clock.
     expect((await readToday(app, ctx.client, a)).entries).toEqual([]);
 
@@ -840,10 +849,14 @@ describe("what seen means (ADR-062 §2)", () => {
     expect((await queueDayOf(ctx.client, a, finnishDay(daysOn(12))))?.[0]?.reason).toBe(
       "liked_you",
     );
+    // The skip put "B" on the Later list (#681), so once the like has expired
+    // "B" is offered there and never again as a card (ADR-064 §3).
     await fill(ctx.client, a, daysOn(13));
-    expect(await queueDayOf(ctx.client, a, finnishDay(daysOn(13)))).toEqual([
-      { candidate_id: b, reason: "seen_before" },
+    expect(await queueDayOf(ctx.client, a, finnishDay(daysOn(13)))).toEqual([]);
+    const listed = await ctx.client.query("SELECT candidate_id FROM star WHERE account_id = $1", [
+      a,
     ]);
+    expect(listed.rows).toEqual([{ candidate_id: b }]);
   });
 
   test("A pass whose earlier one has been pruned counts as a first", async ({ ctx }) => {

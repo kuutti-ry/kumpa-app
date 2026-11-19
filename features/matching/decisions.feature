@@ -88,7 +88,7 @@ Feature: The queue's cards, seen and decided
     Then both are decided, and "C" took the day's one like
 
   Scenario: A skip starts no clock, and the card returns another day
-    Given "A" skipped "B" yesterday
+    Given "A" skipped "B" yesterday with the Later list full, so that it put nobody on it
     When "A" reads the queue today
     Then "B" comes back, labelled seen before
 

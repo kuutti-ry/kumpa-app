@@ -356,7 +356,7 @@ async function atTheStop(
 }
 
 /**
- * Of these people, whom a person's Starred list leaves out by the queue's rules
+ * Of these people, whom a person's Later list leaves out by the queue's rules
  * (ADR-064 §6). Nothing may tell that somebody's pile is at the inbox stop (ADR-062
  * §4), so the stop is asked with care. Whoever the person's own queue shows today
  * anyway, in today's log or with a like waiting on them, is not asked it: their
@@ -391,7 +391,7 @@ export async function heldFromStars(
 /**
  * Whether this person's like or fish waits on the owner, by the rule of the owner's
  * inbox (ADR-062 §2): the card's label, for a card that comes by another way (the
- * Starred list, ADR-064 §4). Null with none.
+ * Later list, ADR-064 §4). Null with none.
  */
 export async function likeWaiting(
   db: Queryable,
@@ -564,7 +564,7 @@ export async function fitsNow(
   return new Set(fitting.map((subject) => subject.id));
 }
 
-/** The people `fitsNow` names, as subjects, each of them seen by others: the queue's reads and the Starred list ask the same (ADR-064 §6). */
+/** The people `fitsNow` names, as subjects, each of them seen by others: the queue's reads and the Later list ask the same (ADR-064 §6). */
 export async function fittingNow(
   deps: Pick<BuilderDeps, "now">,
   db: Queryable,

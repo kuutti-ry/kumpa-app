@@ -1,6 +1,6 @@
 import type { StarredPerson } from "@kuutti/schema";
 import { useRouter } from "expo-router";
-import Star from "lucide-react-native/icons/star";
+import ListMinus from "lucide-react-native/icons/list-minus";
 import { Pressable, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Backdrop } from "@/components/backdrop";
@@ -61,19 +61,20 @@ function Row({ person, onClear }: { person: StarredPerson; onClear: () => void }
           onClear();
         }}
       >
-        <Icon as={Star} fill="currentColor" />
+        <Icon as={ListMinus} />
       </Button>
     </View>
   );
 }
 
 /**
- * The Starred list (#575, ADR-064): the people the person put a star on, the
+ * The Later list (#575, ADR-064, #681): the people the person chose Later on, the
  * latest first and in no other order, each with their name, their age and a photo
- * they were shown. A row opens the card, with Like, the fish and Pass, spending
- * what those spend anywhere else (`QueueScreen`), and its star takes the star off.
- * Only the person ever sees it. Somebody the list leaves out goes with no word why,
- * and nothing counts them: no number and no order but when they were starred.
+ * they were shown. A row opens the card, with Like, the flower and Pass, spending
+ * what those spend anywhere else (`QueueScreen`), and its button takes the person
+ * off the list, drawn as a list with a minus, never the cross that is Pass's. Only
+ * the person ever sees it. Somebody the list leaves out goes with no word why, and
+ * nothing counts them: no number and no order but when they were put on it.
  */
 export function StarredScreen() {
   const { t } = useT();

@@ -453,7 +453,7 @@ flowchart TB
 91. On What you seek, its row says "Paused until you answer it yourself.", and its screen draws what stands read-only, with "Answer it" (part 6).
 92. The person answers the field again.
 93. The API saves the profile, and the deal-breaker is no longer paused.
-94. Nothing waits for the night: both people's filters are asked on every read of People, on every like and on every read of Starred. A change of whom one seeks, the ages, what one is here for, a deal-breaker or the home works on the next read, narrowing and widening at once; a paused deal-breaker, meanwhile, filters nothing.
+94. Nothing waits for the night: both people's filters are asked on every read of People, on every like and on every read of the Later list. A change of whom one seeks, the ages, what one is here for, a deal-breaker or the home works on the next read, narrowing and widening at once; a paused deal-breaker, meanwhile, filters nothing.
 95. For the two people, the API asks each deal-breaker of both, not paused, against the other's own answer, a hidden one included: an answer passes when the holder accepts it (for the languages, any one in common; for the height, against the holder's own; for the distance, the band between the two homes), and no answer passes only while the holder's "Also people who did not answer" is on. Whom each seeks, the age windows and what each is here for are asked both ways too. Refused by either: 96. Otherwise: 97.
 96. Neither is a card in the other's queue, whichever of the two holds the filter. A card already in today's log that no longer fits is left out while it does not fit, and a like on it is refused as a card no longer available; a pass or Later still works, so a like can always be taken back.
 97. As far as the filters go, the two stay in each other's pool; a block and "Hide me from people in my field" still hold on their own. A queue that runs short can offer to relax a deal-breaker for that day alone: [People](queue.md), part 5.
@@ -506,4 +506,5 @@ flowchart TB
 - 2026-11-07 (#616, PR #641): what a card needs is starred where it is edited; a later question asks only the half still open; a deal-breaker on the languages never takes "Another language".
 - 2026-11-08 (#644, PR #647): the card in two depths, a short card and the whole card in place, its answers as chips, a shared one filled and in bold.
 - 2026-11-15 (#677, PR #682): "University" and "Guild or student association" join "Work and education" and the education's later question; both show on the whole card, a shared one filled and in bold. A guild's name leaves out its school's before its own.
+- 2026-11-18 (#681): the filters are asked on every read of the Later list, which took the star's place.
 - 2026-11-19 (#681): a finished profile needs no words: a bio, a ready line or answered questions leave what the card still needs, and the line beside the bio and Questions goes; onboarding offers them once instead.

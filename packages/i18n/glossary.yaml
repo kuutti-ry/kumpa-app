@@ -30,8 +30,12 @@ like:
 pass:
   definition: Deciding not to talk to someone in this queue. Neutral and kind; it must not read as rejection or as a judgement of the other person.
 
-star:
-  definition: A private mark a member puts on somebody's card, to come back to them later without a like or a pass. Only the member sees it; a bookmark, never a rating or a super like. Starred means having one.
+Later list:
+  definition: The people a member chose Later on, to come back to them without a like or a pass (#681; until then a star put them there). Only the member sees it; a bookmark, never a rating or a super like. Its name is the same word as the card's Later button.
+
+flower:
+  definition: A like that says a little more and comes first in the other person's queue, only so many a week (ADR-039). Its icon is a dandelion's seed head. Never a gift, a purchase or a super like; nobody buys one.
+  fi: kukka
 
 standing:
   definition: Whether a verified person is in good standing, suspended or banned. Used in moderation and account notices; formal, factual register.

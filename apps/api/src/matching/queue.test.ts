@@ -270,7 +270,12 @@ describe("reading the queue", () => {
   });
 
   /** A read with the queue's two sides stubbed: what a read does with what they answer. */
-  async function reading(ctx: TestContext, queue: Queue, cardOf: CardOf, accountId: string) {
+  async function reading(
+    ctx: TestContext,
+    queue: Pick<Queue, "fill" | "fits">,
+    cardOf: CardOf,
+    accountId: string,
+  ) {
     const deps = await depsOn(ctx.client);
     return readQueue(deps, MATCHES, queue, accountId, cardOf);
   }
@@ -286,7 +291,7 @@ describe("reading the queue", () => {
     if (!a) throw new Error("cast not written");
     await queueDayFor(ctx.client, a, []);
     let fills = 0;
-    const queue: Queue = {
+    const queue: Pick<Queue, "fill" | "fits"> = {
       fill: async () => {
         fills += 1;
         return true;
@@ -1238,11 +1243,12 @@ describe("the filters on a decision (ADR-062 §8)", () => {
   /** A queue that says who was asked, and that the card fits or does not. */
   function asking(fit: boolean) {
     const asked: { db: Queryable; ids: readonly string[] }[] = [];
-    const queue: Pick<Queue, "fits"> = {
+    const queue: Pick<Queue, "fits" | "later"> = {
       fits: async (db, _accountId, ids) => {
         asked.push({ db, ids });
         return new Set(fit ? ids : []);
       },
+      later: FITS.later,
     };
     return { asked, queue };
   }

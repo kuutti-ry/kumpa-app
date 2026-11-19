@@ -759,6 +759,118 @@ describe("PhotosScreen", () => {
     expect(screen.getAllByRole("button", { name: /^Open photo/ })).toHaveLength(1);
   });
 
+  describe("several photos picked at once (#681)", () => {
+    /** An upload that waits for the test, so the words on the way can be read. */
+    class HeldXhr extends FakeXhr {
+      static held: HeldXhr[] = [];
+      override send(body: FormData | null): void {
+        FakeXhr.sent.push({ method: "POST", url: "", headers: {}, body });
+        HeldXhr.held.push(this);
+      }
+    }
+    const lands = (n: number) =>
+      act(async () => {
+        const xhr = HeldXhr.held.shift();
+        if (!xhr) throw new Error("no upload under way");
+        xhr.status = 201;
+        xhr.responseText = JSON.stringify({ ...photo(n), state: "pending" });
+        xhr.onload?.();
+      });
+    const picks = (...names: string[]) =>
+      launch.mockResolvedValueOnce({
+        canceled: false,
+        assets: names.map((name) => ({ uri: `file:///${name}.jpg`, width: 3000, height: 2000 })),
+      });
+    /** A photo's tile, in the language of the test. */
+    const tileIn = (position: number) =>
+      screen.queryByRole("button", {
+        name: new RegExp(`^(Open photo|Avaa kuva|Öppna foto) ${position}$`),
+      });
+    beforeEach(() => {
+      HeldXhr.held = [];
+    });
+
+    it.each([
+      ["en-US", "Add a photo", "Uploading photo 1 of 2… 50 %", "Uploading photo 2 of 2… 0 %"],
+      ["fi-FI", "Lisää kuva", "Lähetetään kuvaa 1/2… 50 %", "Lähetetään kuvaa 2/2… 0 %"],
+      [
+        "sv-FI",
+        "Lägg till ett foto",
+        "Laddar upp foto 1 av 2… 50 %",
+        "Laddar upp foto 2 av 2… 0 %",
+      ],
+    ])(
+      "says in %s which of how many is going, and the grid grows by each as it lands",
+      async (tag, add, first, second) => {
+        (useLocales as jest.Mock).mockReturnValue([{ languageTag: tag }]);
+        try {
+          fetchMock([answersLists(list(1), list(3)), answersUrls]);
+          picks("a", "b");
+          (globalThis as { XMLHttpRequest: unknown }).XMLHttpRequest = HeldXhr;
+          await show(<PhotosScreen />);
+          await press(await screen.findByRole("button", { name: add }));
+          await waitFor(() => expect(HeldXhr.held).toHaveLength(1));
+          await act(async () =>
+            HeldXhr.held[0]?.upload.onprogress?.({ lengthComputable: true, loaded: 1, total: 2 }),
+          );
+          expect(screen.getByText(first)).toBeTruthy();
+          await lands(2);
+          expect(await screen.findByText(second)).toBeTruthy();
+          expect(tileIn(2)).toBeTruthy();
+          await lands(3);
+          await waitFor(() => expect(tileIn(3)).toBeTruthy());
+          expect(screen.queryByText(second)).toBeNull();
+        } finally {
+          (useLocales as jest.Mock).mockReturnValue([{ languageTag: "en-US" }]);
+        }
+      },
+    );
+
+    it.each([
+      [
+        "en-US",
+        "Add a photo",
+        "One of the photos cannot be used.",
+        "2 of the photos cannot be used.",
+      ],
+      ["fi-FI", "Lisää kuva", "Yhtä kuvista ei voi käyttää.", "2 kuvaa ei voi käyttää."],
+      [
+        "sv-FI",
+        "Lägg till ett foto",
+        "Ett av fotona kan inte användas.",
+        "2 av fotona kan inte användas.",
+      ],
+    ])(
+      "says once in %s how many of those picked the check refused, and sends the rest",
+      async (tag, add, one, two) => {
+        (useLocales as jest.Mock).mockReturnValue([{ languageTag: tag }]);
+        try {
+          setLocalCheck(async (uri) => (uri.includes("nude") ? "refuse" : "allow"));
+          FakeXhr.answers = [
+            { status: 201, body: JSON.stringify({ ...photo(2), state: "pending" }) },
+          ];
+          fetchMock([answersLists(list(1, 6), list(2, 6)), answersUrls]);
+          picks("a", "nude");
+          await show(<PhotosScreen />);
+          await press(await screen.findByRole("button", { name: add }));
+          expect(await screen.findByText(one)).toBeTruthy();
+          expect(FakeXhr.sent).toHaveLength(1);
+          await waitFor(() => expect(tileIn(2)).toBeTruthy());
+
+          FakeXhr.sent.length = 0;
+          fetchMock([answersList(list(1, 6)), answersUrls]);
+          picks("nude-1", "nude-2", "b");
+          await show(<PhotosScreen />);
+          await press(await screen.findByRole("button", { name: add }));
+          expect(await screen.findByText(two)).toBeTruthy();
+          expect(FakeXhr.sent).toHaveLength(1);
+        } finally {
+          (useLocales as jest.Mock).mockReturnValue([{ languageTag: "en-US" }]);
+        }
+      },
+    );
+  });
+
   it("shows the API's refusal in its own words and lets the person dismiss it", async () => {
     fetchMock([answersList(list(1)), answersUrls]);
     launch.mockResolvedValueOnce({

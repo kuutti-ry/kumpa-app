@@ -170,7 +170,7 @@ describe("HomeScreen", () => {
     (globalThis.fetch as jest.Mock).mockImplementation(answering([]));
     await renderWithTheme(<HomeScreen />);
     await screen.findByRole("button", { name: "See people" });
-    expect(screen.queryByRole("button", { name: "Starred" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Later list" })).toBeNull();
 
     (globalThis.fetch as jest.Mock).mockImplementation(
       answering([
@@ -178,7 +178,7 @@ describe("HomeScreen", () => {
       ]),
     );
     await renderWithTheme(<HomeScreen />);
-    await userEvent.setup().press(await screen.findByRole("button", { name: "Starred" }));
+    await userEvent.setup().press(await screen.findByRole("button", { name: "Later list" }));
     expect(router.push).toHaveBeenCalledWith("/stars");
   });
 
@@ -241,13 +241,13 @@ describe("HomeScreen", () => {
     it("has what there is to do first and how many are on Kuutti last, once matching is open", async () => {
       answering("open");
       await renderWithTheme(<HomeScreen />);
-      await screen.findByRole("button", { name: "Starred" });
+      await screen.findByRole("button", { name: "Later list" });
       await screen.findByText(COUNTER);
       // Each way on before the counter, the offer of notifications inside the gate card.
       const order = [
         "Matching is open for you.",
         "See people",
-        "Starred",
+        "Later list",
         "Shall Kumpa tell you?",
         "Your profile",
         "Conversations",

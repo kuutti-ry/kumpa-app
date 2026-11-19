@@ -42,13 +42,13 @@ flowchart TB
     s6{"Account active, and not on a break already?"}
     s8["Puts the account on a break and keeps aside the state it had"]
     s9["Ends every session of the account, and with each its phone's registration for notifications"]
-    s10["Deletes nothing: profile, photos, answers, consents, e-mail, likes and stars stay"]
+    s10["Deletes nothing: profile, photos, answers, consents, e-mail, likes and Later lists stay"]
     s14{{"A like waiting for the person runs out once like_expiry_days have passed"}}
     s16["E-mails an announcement made meanwhile to a confirmed address, and keeps its notice for the return"]
     s18["Brings the account back to the state it had"]
   end
   subgraph other["The other person"]
-    s12["Meets no card of the person in People or Starred, so no new like or match comes"]
+    s12["Meets no card of the person in People or a Later list, so no new like or match comes"]
     s13["Keeps the conversation, without the person's photo, and can still write"]
   end
   subgraph night["The night's jobs"]
@@ -85,9 +85,9 @@ flowchart TB
 7. The app says "The break could not be started. Try again." Nothing has changed and the person stays signed in. A request that fails on the way ends here too.
 8. The API puts the account on a break and keeps aside the state it had, in one go with 9 and 10.
 9. It ends every session of the account, and with each session goes its phone's registration for notifications, so nothing is pushed to the person while they are away. The other devices are signed out at their next request to the API.
-10. Nothing is deleted: the profile, the photos, the answers, the consents, the e-mail, the likes the person gave, and the stars they put and those on them stay as they were. While the break lasts, the count on People on Kumpa leaves the person out ([People on Kumpa](people-on-kuutti.md#part-3-the-nights-count)), and their profile photos are refused to everybody else.
+10. Nothing is deleted: the profile, the photos, the answers, the consents, the e-mail, the likes the person gave, the people on their Later list and their place on others' stay as they were. While the break lasts, the count on People on Kumpa leaves the person out ([People on Kumpa](people-on-kuutti.md#part-3-the-nights-count)), and their profile photos are refused to everybody else.
 11. The app signs this phone out to the sign-in screen, which says "Your account is on a break" over "Sign in with your bank". Opened again later, the app shows its first screen, with "I already have an account".
-12. Meanwhile nobody meets the person's card in People, not even a card already in someone's queue for today ([People](queue.md#part-1-people-reads-the-queue)), and the person leaves the Starred list of whoever starred them, while the star waits for their return ([People](queue.md#part-4-the-star-and-starred)). So no new like or match reaches them.
+12. Meanwhile nobody meets the person's card in People, not even a card already in someone's queue for today ([People](queue.md#part-1-people-reads-the-queue)), and the person leaves the Later list of whoever put them there, while their place on it waits for their return ([People](queue.md#part-4-the-later-list)). So no new like or match reaches them.
 13. Somebody the person matched with keeps the conversation, with the person's name but without their photo, and can still write; the messages wait for the person's return, pushed to nobody, since the person has no session.
 14. The clocks run on as at any other time: a like waiting for the person runs out once `like_expiry_days` have passed since it was given.
 15. The night moves a conversation silent for `silent_match_archive_days` to Archived, the person's as anybody's ([Chat](chat.md)). Writing in it brings it back.
@@ -123,4 +123,5 @@ flowchart TB
 - 2026-11-07 (#573, PR #643): an announcement made during a break reaches a confirmed address by e-mail, and its notice waits on home for the return.
 - 2026-11-16 (#700, PR #701): the break's screen names the app Kumpa, and the home card is People on Kumpa.
 - 2026-11-16 (#208): research leaves the app, so a break and a return note nothing for it.
+- 2026-11-18 (#681): the star is the Later list, which Later puts people on: the person leaves it during a break and is back on it after.
 - 2026-11-19 (#681): opened again after a break, the signed-out app shows its first screen, with I already have an account, in the plain sign-in screen's place.

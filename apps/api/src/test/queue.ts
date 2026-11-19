@@ -13,8 +13,9 @@ import {
   conversationBetween as standing,
 } from "../chat/index.ts";
 import { fitsNow } from "../jobs/queue-builder.ts";
+import { starsShown } from "../jobs/stars.ts";
 import { finnishDay } from "../lib/finnish-day.ts";
-import { addPlaces, type Queue } from "../matching/index.ts";
+import { addPlaces, putOnLaterList, type Queue } from "../matching/index.ts";
 import { signInAs } from "./account.ts";
 import { conversationBetween } from "./chat.ts";
 import { STOPPED_CLOCK } from "./global-setup.ts";
@@ -219,8 +220,14 @@ export const MATCHES = {
 };
 
 /** What `decide` reads across slices at a clock, as app.ts hands it. */
-export const fitsAt = (now: () => Date): Pick<Queue, "fits"> => ({
+export const fitsAt = (now: () => Date): Pick<Queue, "fits" | "later"> => ({
   fits: (db, accountId, candidateIds) => fitsNow({ now }, db, accountId, candidateIds),
+  later: (tx, input) =>
+    putOnLaterList(
+      tx,
+      { shown: (db, accountId, candidateIds) => starsShown({ now }, db, accountId, candidateIds) },
+      input,
+    ),
 });
 
 /** `count` people who fit one another, each signed in. */

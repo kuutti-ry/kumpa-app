@@ -53,7 +53,13 @@ import { servedDocument } from "./lib/openapi.ts";
 import type { Pusher } from "./lib/push.ts";
 import { addressOf, limited, personOf, rateLimit } from "./lib/rate-limit.ts";
 import { serverRequestId } from "./lib/request-id.ts";
-import { preferencesRoutes, queueRoutes, readPreferences, starRoutes } from "./matching/index.ts";
+import {
+  preferencesRoutes,
+  putOnLaterList,
+  queueRoutes,
+  readPreferences,
+  starRoutes,
+} from "./matching/index.ts";
 import { type MediaDeps, photoAdminRoutes, photoRoutes, UPLOAD_ROUTE } from "./media/index.ts";
 import {
   announcementAdminRoutes,
@@ -363,6 +369,10 @@ export function createApp(deps: Deps) {
     logger: deps.logger,
     now: () => deps.now?.() ?? new Date(),
   });
+  // Whom of these the person's Later list shows now (#575, #681): the list's read,
+  // and Later's count of how full it is.
+  const shownOnList = (db: Queryable, accountId: string, candidateIds: readonly string[]) =>
+    starsShown(builderDeps(), db, accountId, candidateIds);
   // The caller's own answers, which the deal-breakers' pause and the cards' "did not answer" read (#149, #99).
   const ownFieldsOf = async (accountId: string) =>
     (await exportProfile(deps.db, accountId))?.fields ?? {};
@@ -398,6 +408,8 @@ export function createApp(deps: Deps) {
       {
         fill: (accountId) => fillQueue(builderDeps(), accountId),
         fits: (db, accountId, candidateIds) => fitsNow(builderDeps(), db, accountId, candidateIds),
+        // Later puts the person on the list (#681), which the stars read as their list does.
+        later: (tx, input) => putOnLaterList(tx, { shown: shownOnList }, input),
       },
       // A match is a conversation (#100, ADR-031): the chat slice's, handed in
       // here since the chat imports the profile, which imports matching.
@@ -426,8 +438,7 @@ export function createApp(deps: Deps) {
       guard,
       cardOf,
       {
-        shown: (db, accountId, candidateIds) =>
-          starsShown(builderDeps(), db, accountId, candidateIds),
+        shown: shownOnList,
         place: (accountId, candidateId) => starPlace(builderDeps(), accountId, candidateId),
         people: (accountId) => starredPeople(builderDeps(), accountId),
       },

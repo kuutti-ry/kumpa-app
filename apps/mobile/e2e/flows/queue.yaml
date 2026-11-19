@@ -1,12 +1,14 @@
 # The queue (#379, #502, ADR-034, ADR-062): Iida opens it from the gate card
 # on home, meets Henna first, who liked her yesterday, and likes her back: it
 # is a match, which leads to the conversation and back to the queue. The next
-# card she leaves for later, brings back with Undo, passes, takes back again
-# and likes; the one after she reports and blocks from the card's header with
-# a reason and a short note (ADR-030 §11), and it leaves the screen; the last
-# one gets her fish (#378). Then the queue says that is everybody, and its one
-# button leads into What you seek and back. Which of Katja, Minna and Riikka
-# comes when is the day's order, so the flow decides by place, never by name.
+# card she leaves for later, which puts it on her Later list and says so the
+# first time (#681), brings back with Undo, passes, takes back again and likes;
+# the one after she reports and blocks from the card's header with a reason and
+# a short note (ADR-030 §11), and it leaves the screen; the last one she leaves
+# for later too. Then the queue says that is everybody, leads to the Later list,
+# where later-list.yaml goes on from, and its button into What you seek leads
+# there and back. Which of Katja, Minna and Riikka comes when is the day's
+# order, so the flow decides by place, never by name.
 # The stories give Iida her queue (packages/db/src/seed/queue.ts), and no
 # other persona fits her; a match and a block are final, so the flow runs once
 # after each `pnpm demo:reset`.
@@ -28,12 +30,12 @@ name: The queue shows one card at a time, liking back makes a match, Later and U
     timeout: 60000
 - assertVisible: "Matching is open for you\\.|Seuranhaku on sinulle auki\\.|Matchningen är öppen för dig\\."
 - tapOn: "See people|Katso ihmisiä|Se människor"
-# Henna first, labelled: she liked Iida, so there is no fish on her card.
+# Henna first, labelled: she liked Iida, so there is no flower on her card.
 - extendedWaitUntil:
     visible: "Liked you|Tykkäsi sinusta|Gillade dig"
     timeout: 15000
 - assertVisible: "Henna, \\d+"
-- assertNotVisible: "Send a fish|Lähetä kala|Skicka en fisk"
+- assertNotVisible: "Send a flower|Lähetä kukka|Skicka en blomma"
 # The day's likes, said beside the buttons from the first card (#524).
 - assertVisible: "10 likes left today|10 tykkäystä jäljellä tänään|10 gillanden kvar i dag"
 # Her town and how far, words on the line under her name, above the photo
@@ -66,12 +68,14 @@ name: The queue shows one card at a time, liking back makes a match, Later and U
     notVisible: "Henna, \\d+"
     timeout: 15000
 - waitForAnimationToEnd
-# Later moves on and spends nothing (ADR-062 §3); Undo brings the card back and
-# says what was decided, and the decision can still change.
+# Later moves on, spends nothing and puts the person on the Later list, which
+# the first time says who sees it (ADR-062 §3, #681); Undo brings the card back
+# and says what was decided, and the decision can still change.
 - tapOn: "Later|Myöhemmin|Senare"
 - extendedWaitUntil:
-    visible: "Undo your last decision|Kumoa viimeisin valintasi|Ångra ditt senaste val"
+    visible: "Saved to your Later list\\. Only you can see it\\.|Tallennettu Myöhemmin-listallesi\\. Vain sinä näet sen\\.|Sparad i din Senare-lista\\. Bara du ser den\\."
     timeout: 15000
+- assertVisible: "Undo your last decision|Kumoa viimeisin valintasi|Ångra ditt senaste val"
 # Henna's like back spent one (#503), and Later spends nothing.
 - assertVisible: "9 likes left today|9 tykkäystä jäljellä tänään|9 gillanden kvar i dag"
 - tapOn: "Undo your last decision|Kumoa viimeisin valintasi|Ångra ditt senaste val"
@@ -113,7 +117,8 @@ name: The queue shows one card at a time, liking back makes a match, Later and U
 # of the two. Scrolled to and tapped as itself: since the step asks about one
 # photo too (#476), the label alone can come into view with its field still
 # below the fold, and "below the label" then found the queue's bar behind the
-# dialog, whose Send a fish took the tap (a run of 27/10/2026).
+# dialog, whose Send a fish (the flower since #681) took the tap (a run of
+# 27/10/2026).
 - scrollUntilVisible:
     element:
       text: "Anything the moderators should know \\(optional, up to 500 characters\\)|Mitä moderaattoreiden pitäisi tietää \\(vapaaehtoinen, enintään 500 merkkiä\\)|Något moderatorerna bör veta \\(valfritt, högst 500 tecken\\)"
@@ -137,21 +142,24 @@ name: The queue shows one card at a time, liking back makes a match, Later and U
     visible: "Thank you\\. A moderator will look at it\\.|Kiitos\\. Moderaattori katsoo ilmoituksen\\.|Tack\\. En moderator tittar på anmälan\\."
     timeout: 15000
 - tapOn: "Done|Valmis|Klar"
-# The last card takes Iida's fish of the week.
+# The last card goes on the Later list too: the like before took the first
+# off, so the list holds this one alone and says so again (#681).
 - extendedWaitUntil:
-    visible: "Send a fish|Lähetä kala|Skicka en fisk"
+    visible: "Send a flower|Lähetä kukka|Skicka en blomma"
     timeout: 15000
 - waitForAnimationToEnd
-- tapOn: "Send a fish|Lähetä kala|Skicka en fisk"
-# The end, in words, once a read finds nobody: no count, no word of tomorrow.
+- tapOn: "Later|Myöhemmin|Senare"
+# The end, in words, once a read finds nobody: no count, no word of tomorrow,
+# and the way to the Later list, which holds somebody (#681).
 - extendedWaitUntil:
     visible: "That's everybody for now\\.|Siinä kaikki tällä erää\\.|Det var alla för tillfället\\."
     timeout: 15000
+- assertVisible: "Later list|Myöhemmin-lista|Senare-listan"
 - assertNotVisible: "Like|Tykkää|Gilla"
 - assertNotVisible: "Pass|Ohita|Hoppa över"
 - assertNotVisible: "Later|Myöhemmin|Senare"
 - assertNotVisible: "\\d+ likes? left today|\\d+ tykkäys(tä)? jäljellä tänään|\\d+ gillanden? kvar i dag"
-# Its one button leads into What you seek, and the way back reads the queue
+# Its button into What you seek leads there, and the way back reads the queue
 # again, so a change there works at once (ADR-062 §8, §11).
 - tapOn: "What you seek|Mitä etsit|Vad du söker"
 - extendedWaitUntil:

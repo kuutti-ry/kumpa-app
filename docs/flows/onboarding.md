@@ -241,7 +241,7 @@ flowchart TB
   subgraph person["The person"]
     s52["Moves either end with its buttons, chooses Continue"]
     s56["Chooses Something long-term, Something casual, Open to either or A dance partner, then Continue"]
-    s59["Adds photos one at a time and chooses Continue: see Photos"]
+    s59["Adds photos, several at once if they like, and chooses Continue: see Photos"]
     s63["Chooses Finish my profile, or Not now"]
     s65(["Closes the app midway"])
   end
@@ -288,7 +288,7 @@ flowchart TB
 56. The person chooses "Something long-term", "Something casual", "Open to either" or "A dance partner", each a row the width of the screen, and "Continue". Open to either covers long-term and casual; a dance partner meets dance partners only.
 57. The API saves the intent on the profile.
 58. The photos step is the photos screen itself: "Two photos of you", "Profiles with a face photo get seen.", the grid of photos, "Add a photo" and "Continue", its only way on.
-59. The person adds photos one at a time from the phone, as on the photos screen of the profile (see [Photos](photos.md)), and chooses "Continue", which opens once enough photos count as the API counts them: one waiting for the check or for a moderator counts, a refused one does not. How many is under Open below.
+59. The person adds photos from the phone, several at once if they like, as on the photos screen of the profile (see [Photos](photos.md)), and chooses "Continue", which opens once enough photos count as the API counts them: one waiting for the check or for a moderator counts, a refused one does not. How many is under Open below.
 60. Continue reads the photos and the open steps again: does the person have enough photos the check has not refused? A photo refused meanwhile keeps the step, and its tile says why. Yes: 61. No: 58. The card and matching wait for the photos' approval. A bio, a ready line or prompts are no step: a profile is complete without them.
 61. Nothing is open now. Did this walk ask something, has this phone never shown the offer, and has the profile no words, neither a bio of the length the code holds, a ready line, nor two answered prompts? Yes: 62. No: 64.
 62. "Finish your profile": "A fuller profile brings much better suggestions. Add a few words about yourself or answer a few questions, or go on as you are." It is marked as shown as it shows, and never comes back on this phone: there is no reminder.
@@ -334,4 +334,5 @@ flowchart TB
 - 2026-11-16 (#700, PR #701): the home step names the app Kumpa, and the consent to store whom one seeks is given to Kuutti ry.
 - 2026-11-16 (#208): research leaves the app, consent and all; onboarding already asked nothing about it.
 - 2026-11-17 (#184, PR #723): a friend's code that came by their link, or with an Android install, is already in the code's field.
+- 2026-11-18 (#681): the photos step picks several photos at once, as the photos screen does.
 - 2026-11-19 (#681): turned round: the name, the gender and its label, whom one seeks with the sensitive-answers consent, and the home are asked before the bank, counted as four, held on the phone for an hour, the consent in memory for whoever is at the phone, and saved by the bank login once the account holds the terms; after it come a friend's code, what the card shows of the home, the ages, the intent and the photos, with no step number, and a question the save did not land; the welcome step is the terms in one line and two links; a few words are no step, and a walk ends on one offer to finish the profile, once on a phone.

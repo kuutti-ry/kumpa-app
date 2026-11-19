@@ -183,7 +183,7 @@ describe("the fish", () => {
     });
     expect(refused.status).toBe(429);
     expect(ErrorResponse.parse(await refused.json()).error.message).toBe(
-      "Du kan inte skicka en fisk just nu.",
+      "Du kan inte skicka en blomma just nu.",
     );
     expect(Number(refused.headers.get("retry-after"))).toBe(
       (NEXT_MONDAY.getTime() - T.getTime()) / 1000,

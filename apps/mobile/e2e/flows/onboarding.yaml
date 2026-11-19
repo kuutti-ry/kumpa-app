@@ -237,7 +237,8 @@ name: A newcomer answers four questions before the bank, keeps them over a resta
 
 # The photos: the step is the grid itself, under its heading and the reason,
 # with no press before it and no screen of its own (#581). Three photos,
-# through the system picker one at a time; Continue ends the step, and takes two.
+# through the system picker one at a time, which takes several and so waits
+# for its Done (#681); Continue ends the step, and takes two.
 - extendedWaitUntil:
     visible: "Two photos of you|Kaksi kuvaa sinusta|Två bilder på dig"
     timeout: 15000
@@ -258,6 +259,7 @@ name: A newcomer answers four questions before the bank, keeps them over a resta
     file: ../common/pick-photo.yaml
     env:
       INDEX: 0
+      MANY: true
       LANDED: "Open photo 1|Avaa kuva 1|Öppna foto 1"
 - assertVisible:
     text: "Continue|Jatka|Fortsätt"
@@ -266,6 +268,7 @@ name: A newcomer answers four questions before the bank, keeps them over a resta
     file: ../common/pick-photo.yaml
     env:
       INDEX: 1
+      MANY: true
       LANDED: "Open photo 2|Avaa kuva 2|Öppna foto 2"
 - extendedWaitUntil:
     visible:
@@ -276,6 +279,7 @@ name: A newcomer answers four questions before the bank, keeps them over a resta
     file: ../common/pick-photo.yaml
     env:
       INDEX: 2
+      MANY: true
       LANDED: "Open photo 3|Avaa kuva 3|Öppna foto 3"
 - assertNotVisible: "3 photos, at most 6|3 kuvaa, enintään 6|3 foton, högst 6"
 # A photo seen full size and back reads the status again, and two photos answer
