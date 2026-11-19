@@ -4,6 +4,7 @@ import { DEAL_BREAKERS_CAP } from "./deal-breakers.ts";
 import {
   ExportedQueueEntry,
   ExportedStars,
+  Later,
   QUEUE_PAGE,
   QUEUE_POSITION_MAX,
   QueueChoice,
@@ -22,7 +23,6 @@ import {
   RelaxationsResponse,
   RelaxationUndone,
   STARS_CEILING,
-  StarAnswer,
   StarList,
   StarParams,
   StarredPerson,
@@ -95,13 +95,18 @@ describe("a decision", () => {
 describe("the answer to a decision", () => {
   it("names a match or none, and says whether a fish can still go (#475) and whose turn waits (ADR-062 §5)", () => {
     const match = { conversationId: "7d8f3c2a-1b4e-4c6d-9e0f-2a3b4c5d6e7f" };
-    const made = { match, fishToSend: false, likesLeft: 0, yourTurn: 8 };
+    const made = { match, fishToSend: false, likesLeft: 0, yourTurn: 8, later: null };
     expect(QueueDecisionAnswer.parse(made)).toEqual(made);
-    const none = { match: null, fishToSend: true, likesLeft: 7, yourTurn: 0 };
+    const none = { match: null, fishToSend: true, likesLeft: 7, yourTurn: 0, later: null };
     expect(QueueDecisionAnswer.parse(none)).toEqual(none);
   });
 
-  const answer = { match: null, fishToSend: true, likesLeft: 7, yourTurn: 0 };
+  it("says where a Later left the person (#681)", () => {
+    const later = { match: null, fishToSend: true, likesLeft: 7, yourTurn: 0, later: "full" };
+    expect(QueueDecisionAnswer.parse(later)).toEqual(later);
+  });
+
+  const answer = { match: null, fishToSend: true, likesLeft: 7, yourTurn: 0, later: null };
 
   it.each([
     ["no word on the fish", { ...answer, fishToSend: undefined }, "invalid_type"],
@@ -113,6 +118,8 @@ describe("the answer to a decision", () => {
     ["the turn below zero", { ...answer, yourTurn: -1 }, "too_small"],
     ["the turn in part", { ...answer, yourTurn: 1.5 }, "invalid_type"],
     ["the turn as a flag", { ...answer, yourTurn: true }, "invalid_type"],
+    ["no word on Later", { ...answer, later: undefined }, "invalid_value"],
+    ["Later as a flag", { ...answer, later: true }, "invalid_value"],
     ["anything else", { ...answer, liked: true }, "unrecognized_keys"],
   ] as const)("refuses %s", (_, input, code) => {
     expect(codes(QueueDecisionAnswer, input)).toEqual([code]);
@@ -179,10 +186,12 @@ describe("a star (#575, ADR-064)", () => {
     expect(codes(star, "not-a-uuid")).toEqual(["invalid_format"]);
   });
 
-  it("put on a card answers its id and whether it is the first, and nothing else", () => {
-    expect(StarAnswer.parse({ id, first: true })).toEqual({ id, first: true });
-    expect(codes(StarAnswer, { id })).toEqual(["invalid_type"]);
-    expect(codes(StarAnswer, { id, first: true, count: 3 })).toEqual(["unrecognized_keys"]);
+  it("put by Later says where it left the person, and nothing else", () => {
+    for (const later of ["first", "listed", "full", "not_listed"] as const) {
+      expect(Later.parse(later)).toBe(later);
+    }
+    expect(codes(Later, "starred")).toEqual(["invalid_value"]);
+    expect(codes(Later, 3)).toEqual(["invalid_value"]);
   });
 
   it("is addressed by its own id", () => {

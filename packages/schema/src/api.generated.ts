@@ -7034,7 +7034,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The people the caller starred
+         * The people the caller saved for later
          * @description Those who may be shown now, the latest star first and in no other order: both people's filters, the accounts' state and the inbox stop are asked on every read, and whoever does not pass is left out with no word why. Each with a name, an age and the main one of the photos the caller was shown, whose thumb is asked for as any photo's. It serves no card and signs no photo.
          */
         get: {
@@ -7067,84 +7067,6 @@ export interface paths {
             };
         };
         put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/queue/{day}/entries/{position}/star": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /**
-         * Put a star on a card
-         * @description Marks the card's person for later: it spends nothing and decides nothing, and the same star again answers the one that stands. It reaches nobody. A card holding a like or a pass takes none. first says this is the only star the list shows.
-         */
-        put: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    day: string;
-                    position: number;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description The star, and whether it is the first. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["StarAnswer"];
-                    };
-                };
-                /** @description Validation failed. */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description unauthenticated, session_expired or session_revoked. */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description not_found: no such card in today's queue, one that can no longer be shown, or one holding a like or a pass. */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description day_ended: the day named has ended; stars_full: the list shows matching_config stars_max people. Nothing was written. */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
         post?: never;
         delete?: never;
         options?: never;
@@ -9220,7 +9142,10 @@ export interface components {
             fishToSend: boolean;
             likesLeft: number;
             yourTurn: number;
+            later: components["schemas"]["Later"];
         };
+        /** @enum {string|null} */
+        Later: "first" | "listed" | "full" | "not_listed" | null;
         QueueDecisionUpdate: {
             decision: components["schemas"]["QueueChoice"];
         };
@@ -9257,11 +9182,6 @@ export interface components {
                 id: string;
                 blurhash: string;
             } | null;
-        };
-        StarAnswer: {
-            /** Format: uuid */
-            id: string;
-            first: boolean;
         };
         DealBreakersResponse: {
             dealBreakers: components["schemas"]["StoredDealBreaker"][];

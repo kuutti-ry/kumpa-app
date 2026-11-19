@@ -62,17 +62,28 @@ describe("migrate", () => {
       const pool = createPool({ connectionString: url, max: 2 });
       try {
         await migrate(pool, MIGRATIONS);
-        const { rows } = await pool.query<{ key: string; value: unknown; version: number }>(
-          "SELECT key, value, version FROM matching_config ORDER BY key, version",
-        );
+        const { rows } = await pool.query<{
+          key: string;
+          value: unknown;
+          version: number;
+          created_by: string;
+        }>("SELECT key, value, version, created_by FROM matching_config ORDER BY key, version");
         const at = (version: number) =>
           Object.fromEntries(
             rows.filter((r) => r.version === version).map((r) => [r.key, r.value]),
           );
         expect(at(1)).toEqual(MATCHING_CONFIG_V1);
-        // A new value is a new version (ADR-033 History, the maintainer's of 17/11/2026).
+        // A new value is a new version: the review hours' (ADR-033 History, the
+        // maintainer's of 17/11/2026) and the Later list's most (#681, ADR-064 History,
+        // the maintainer's of 18/11/2026).
         expect(rows.filter((r) => r.version !== 1)).toEqual([
-          { key: "auto_shadow_ban_review_hours", value: 168, version: 2 },
+          {
+            key: "auto_shadow_ban_review_hours",
+            value: 168,
+            version: 2,
+            created_by: "migration:0011",
+          },
+          { key: "stars_max", value: 30, version: 2, created_by: "migration:0016" },
         ]);
       } finally {
         await pool.end();
@@ -99,8 +110,9 @@ describe("migrate", () => {
           if (Number(rows[0]?.n) > 0) holding[table] = Number(rows[0]?.n);
         }
         expect(holding).toEqual({
-          // Version 1 of every key, and the review hours' second (migration 0011).
-          matching_config: Object.keys(MATCHING_CONFIG_V1).length + 1,
+          // Version 1 of every key, the review hours' second (migration 0011) and the
+          // Later list's (migration 0016).
+          matching_config: Object.keys(MATCHING_CONFIG_V1).length + 2,
         });
       } finally {
         await pool.end();
@@ -140,7 +152,7 @@ describe("migrate", () => {
         // A row without a reason is still written, as the seed writes one; the panel's carries its reason.
         await pool.query(
           `INSERT INTO matching_config (version, key, value, created_by)
-           VALUES (2, 'stars_max', '12'::jsonb, 'seed')`,
+           VALUES (3, 'stars_max', '12'::jsonb, 'seed')`,
         );
         await pool.query(
           `INSERT INTO matching_config (version, key, value, created_by, reason)
@@ -148,7 +160,7 @@ describe("migrate", () => {
         );
         const written = await pool.query<{ key: string; reason: string | null }>(
           `SELECT key, reason FROM matching_config
-            WHERE version = 2 AND key IN ('inbox_stop', 'stars_max') ORDER BY key`,
+            WHERE (key, version) IN (('inbox_stop', 2), ('stars_max', 3)) ORDER BY key`,
         );
         expect(written.rows).toEqual([
           { key: "inbox_stop", reason: "Smaller piles first" },

@@ -9,7 +9,6 @@ import {
   RelaxationAnswer,
   RelaxationsResponse,
   RelaxationUndone,
-  StarAnswer,
   StarList,
   type StarredPerson,
 } from "@kuutti/schema";
@@ -85,23 +84,14 @@ export async function undoRelaxation(day: string, field: DealBreakerField): Prom
   return RelaxationUndone.parse(data).removed;
 }
 
-/** The people the person starred who may be shown now, the latest star first (#575, ADR-064 §6). It serves no card and signs no photo. */
+/** The people on the person's Later list who may be shown now, the latest first (#575, ADR-064 §6). It serves no card and signs no photo. */
 export async function fetchStars(): Promise<StarredPerson[]> {
   const { data, error, response } = await api.GET("/stars");
   if (!data) throw failed(response, error, "stars");
   return StarList.parse(data).items;
 }
 
-/** A star on today's card (§1): the star, and whether it is the first the list shows. */
-export async function putStar(day: string, position: number): Promise<StarAnswer> {
-  const { data, error, response } = await api.PUT("/queue/{day}/entries/{position}/star", {
-    params: { path: { day, position } },
-  });
-  if (!data) throw failed(response, error, "star");
-  return StarAnswer.parse(data);
-}
-
-/** A star taken off, on a card or on the list. */
+/** Somebody taken off the Later list (#681). */
 export async function clearStar(id: string): Promise<void> {
   const { error, response } = await api.DELETE("/stars/{id}", { params: { path: { id } } });
   if (!response.ok) throw failed(response, error, "clear star");

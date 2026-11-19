@@ -3,6 +3,7 @@ import {
   type DealBreaker,
   type DealBreakerField,
   type DistanceBand,
+  type Later,
   type ProfileCard,
   QUEUE_PAGE,
   QUEUE_POSITION_MAX,
@@ -47,7 +48,9 @@ export type CardOf = (
  * to the day's log, opening it when the person's matching is open, and says
  * whether it added anybody. `fits` says which of these people are in each
  * other's pool with the person now, both ways (§8), in the caller's
- * transaction when there is one.
+ * transaction when there is one. `later` puts a Later's person on the list
+ * (#681, the stars' `putOnLaterList`), in `decide`'s transaction, under its
+ * locks, after the skip is written.
  */
 export type Queue = {
   fill: (accountId: string) => Promise<boolean>;
@@ -56,6 +59,10 @@ export type Queue = {
     accountId: string,
     candidateIds: readonly string[],
   ) => Promise<ReadonlySet<string>>;
+  later: (
+    tx: Queryable,
+    input: { accountId: string; candidateId: string; at: Date },
+  ) => Promise<Later>;
 };
 
 /**
@@ -490,7 +497,7 @@ async function nextCards(
 export async function readQueue(
   deps: QueueDeps,
   matches: Pick<Matches, "yourTurn">,
-  queue: Queue,
+  queue: Pick<Queue, "fill" | "fits">,
   accountId: string,
   cardOf: CardOf,
   dealBreakers: readonly DealBreaker[] = [],
@@ -573,9 +580,15 @@ export async function markSeen(
 export async function decide(
   deps: QueueDeps,
   matches: Matches,
-  queue: Pick<Queue, "fits">,
+  queue: Pick<Queue, "fits" | "later">,
   input: { accountId: string; day: string; position: number; decision: QueueChoice },
-): Promise<{ match: string | null; fishToSend: boolean; likesLeft: number; yourTurn: number }> {
+): Promise<{
+  match: string | null;
+  fishToSend: boolean;
+  likesLeft: number;
+  yourTurn: number;
+  later: Later | null;
+}> {
   const { at, today } = todayOrRefuse(deps, input.day);
   const decision: QueueDecision = input.decision === "fish" ? "like" : input.decision;
   const written = await transaction(deps.db, async (tx) => {
@@ -607,10 +620,17 @@ export async function decide(
       entry.candidate_id,
       dayWindow(at).start,
     );
+    // Later puts the person on the list (#681), again too, so a star cleared from
+    // the list since comes back with the next Later.
+    const listed = () =>
+      decision === "skip"
+        ? queue.later(tx, { accountId: input.accountId, candidateId: entry.candidate_id, at })
+        : null;
     if (entry.decision === decision && entry.fish === fish) {
       return {
         match: decision === "like" ? standing : null,
         ...(await budgetsOf(tx, matches, input.accountId, today)),
+        later: await listed(),
         matchedWith: null,
       };
     }
@@ -670,13 +690,15 @@ export async function decide(
     );
     if (updated.rowCount !== 1) throw notFound();
     // A like or a pass takes the star off (ADR-064 §3), so the list holds only the
-    // undecided; here, so that one refused or rolled back leaves it. A skip decides nothing.
+    // undecided, and Later puts it on (#681); here, so that one refused or rolled
+    // back changes neither.
     if (decision !== "skip") {
       await tx.query("DELETE FROM star WHERE account_id = $1 AND candidate_id = $2", [
         input.accountId,
         entry.candidate_id,
       ]);
     }
+    const onList = await listed();
     let match = decision === "like" ? standing : null;
     let opened = false;
     if (decision === "like" && entry.decision !== "like" && !standing) {
@@ -712,6 +734,7 @@ export async function decide(
       // After this decision's write, under the queue's lock: the answer says
       // what it left, and is known before any push of the match starts (ADR-055 §5).
       ...(await budgetsOf(tx, matches, input.accountId, today)),
+      later: onList,
       matchedWith: opened ? entry.candidate_id : null,
     };
   });
@@ -722,6 +745,7 @@ export async function decide(
     fishToSend: written.fishToSend,
     likesLeft: written.likesLeft,
     yourTurn: written.yourTurn,
+    later: written.later,
   };
 }
 

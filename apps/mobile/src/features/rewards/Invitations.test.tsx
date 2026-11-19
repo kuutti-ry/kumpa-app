@@ -52,8 +52,8 @@ const withdrawLabel = (at: string) =>
 const TEXT = {
   make: "Create an invitation",
   earns:
-    "When a friend you invite finishes their profile, you get a fish and your friend gets a fish.",
-  fish: "A fish is a like that comes first in the other person's queue, ahead of ordinary likes.",
+    "When a friend you invite finishes their profile, you get a flower and your friend gets a flower.",
+  fish: "A flower is a like that comes first in the other person's queue, ahead of ordinary likes.",
   made: "Your invitation is ready. Its code is below.",
   once: "Kumpa shows this code only now. Share it with one friend.",
   withdrawn: "The invitation was withdrawn. Its code no longer works.",
@@ -61,7 +61,8 @@ const TEXT = {
   redeem: "Have an invitation code?",
   codeLabel: "Invitation code",
   use: "Use the code",
-  redeemEarns: "The code earns you a fish and your friend a fish once your profile is complete.",
+  redeemEarns:
+    "The code earns you a flower and your friend a flower once your profile is complete.",
   done: "The code is in.",
 };
 
@@ -165,67 +166,67 @@ describe("Invitations", () => {
     [
       "en",
       { inviterFish: 2, friendFish: 3 },
-      "When a friend you invite finishes their profile, you get 2 fish and your friend gets 3 fish.",
+      "When a friend you invite finishes their profile, you get 2 flowers and your friend gets 3 flowers.",
     ],
     [
       "en",
       { inviterFish: 1, friendFish: 0 },
-      "When a friend you invite finishes their profile, you get a fish.",
+      "When a friend you invite finishes their profile, you get a flower.",
     ],
     [
       "en",
       { inviterFish: 3, friendFish: 0 },
-      "When a friend you invite finishes their profile, you get 3 fish.",
+      "When a friend you invite finishes their profile, you get 3 flowers.",
     ],
     [
       "en",
       { inviterFish: 0, friendFish: 1 },
-      "When a friend you invite finishes their profile, your friend gets a fish.",
+      "When a friend you invite finishes their profile, your friend gets a flower.",
     ],
     [
       "en",
       { inviterFish: 0, friendFish: 2 },
-      "When a friend you invite finishes their profile, your friend gets 2 fish.",
+      "When a friend you invite finishes their profile, your friend gets 2 flowers.",
     ],
     [
       "fi",
       { inviterFish: 1, friendFish: 1 },
-      "Kun kutsumasi ystävä saa profiilinsa valmiiksi, saat kalan ja ystäväsi saa kalan.",
+      "Kun kutsumasi ystävä saa profiilinsa valmiiksi, saat kukan ja ystäväsi saa kukan.",
     ],
     [
       "fi",
       { inviterFish: 2, friendFish: 3 },
-      "Kun kutsumasi ystävä saa profiilinsa valmiiksi, saat 2 kalaa ja ystäväsi saa 3 kalaa.",
+      "Kun kutsumasi ystävä saa profiilinsa valmiiksi, saat 2 kukkaa ja ystäväsi saa 3 kukkaa.",
     ],
     [
       "fi",
       { inviterFish: 1, friendFish: 0 },
-      "Kun kutsumasi ystävä saa profiilinsa valmiiksi, saat kalan.",
+      "Kun kutsumasi ystävä saa profiilinsa valmiiksi, saat kukan.",
     ],
     [
       "fi",
       { inviterFish: 0, friendFish: 1 },
-      "Kun kutsumasi ystävä saa profiilinsa valmiiksi, ystäväsi saa kalan.",
+      "Kun kutsumasi ystävä saa profiilinsa valmiiksi, ystäväsi saa kukan.",
     ],
     [
       "sv",
       { inviterFish: 1, friendFish: 1 },
-      "När en vän du bjuder in gör klart sin profil får du en fisk och din vän får en fisk.",
+      "När en vän du bjuder in gör klart sin profil får du en blomma och din vän får en blomma.",
     ],
     [
       "sv",
       { inviterFish: 2, friendFish: 3 },
-      "När en vän du bjuder in gör klart sin profil får du 2 fiskar och din vän får 3 fiskar.",
+      "När en vän du bjuder in gör klart sin profil får du 2 blommor och din vän får 3 blommor.",
     ],
     [
       "sv",
       { inviterFish: 1, friendFish: 0 },
-      "När en vän du bjuder in gör klart sin profil får du en fisk.",
+      "När en vän du bjuder in gör klart sin profil får du en blomma.",
     ],
     [
       "sv",
       { inviterFish: 0, friendFish: 1 },
-      "När en vän du bjuder in gör klart sin profil får din vän en fisk.",
+      "När en vän du bjuder in gör klart sin profil får din vän en blomma.",
     ],
   ])("says in %s what the reward %j earns", async (locale, reward, words) => {
     (useLocales as jest.Mock).mockReturnValue([{ languageTag: locale }]);
@@ -238,9 +239,9 @@ describe("Invitations", () => {
     ["en", TEXT.fish],
     [
       "fi",
-      "Kala on tykkäys, joka tulee toisen jonossa ensimmäisenä, tavallisten tykkäysten edellä.",
+      "Kukka on tykkäys, joka tulee toisen jonossa ensimmäisenä, tavallisten tykkäysten edellä.",
     ],
-    ["sv", "En fisk är ett gillande som kommer först i den andras kö, före vanliga gillanden."],
+    ["sv", "En blomma är ett gillande som kommer först i den andras kö, före vanliga gillanden."],
   ])("says in %s what a fish is, where many first meet the word (#616)", async (locale, words) => {
     (useLocales as jest.Mock).mockReturnValue([{ languageTag: locale }]);
     fakeApi(answer());
@@ -265,8 +266,8 @@ describe("Invitations", () => {
   );
 
   it.each<[number, { fish: number }, string[]]>([
-    [1, { fish: 2 }, ["You have 2 earned fish waiting."]],
-    [3, { fish: 1 }, ["You have an earned fish waiting."]],
+    [1, { fish: 2 }, ["You have 2 earned flowers waiting."]],
+    [3, { fish: 1 }, ["You have an earned flower waiting."]],
     [2, { fish: 0 }, []],
   ])(
     "says what waits with %i counted, %j, and never the count (#581)",
@@ -346,23 +347,23 @@ describe("Invitations", () => {
   // The one link (#574) on the API the app talks to, here the local default.
   const GET_IT =
     "Get the app: http://localhost:3000/i/ABCDE-FGHJK After signing in, type this code: ABCDE-FGHJK";
-  const LITTLE_MORE = "A fish is a like that says a little more.";
+  const LITTLE_MORE = "A flower is a like that says a little more.";
 
   it.each([
     [
       "both earn",
       { inviterFish: 1, friendFish: 1 },
-      `${INVITED} The code earns you a fish and your friend a fish once your profile is complete. ${LITTLE_MORE} ${GET_IT}`,
+      `${INVITED} The code earns you a flower and your friend a flower once your profile is complete. ${LITTLE_MORE} ${GET_IT}`,
     ],
     [
       "both earn, in numbers of their own",
       { inviterFish: 3, friendFish: 2 },
-      `${INVITED} The code earns you 2 fish and your friend 3 fish once your profile is complete. ${LITTLE_MORE} ${GET_IT}`,
+      `${INVITED} The code earns you 2 flowers and your friend 3 flowers once your profile is complete. ${LITTLE_MORE} ${GET_IT}`,
     ],
     [
       "the friend alone earns",
       { inviterFish: 0, friendFish: 1 },
-      `${INVITED} The code earns you a fish once your profile is complete. ${LITTLE_MORE} ${GET_IT}`,
+      `${INVITED} The code earns you a flower once your profile is complete. ${LITTLE_MORE} ${GET_IT}`,
     ],
     ["the inviter alone earns", { inviterFish: 1, friendFish: 0 }, `${INVITED} ${GET_IT}`],
     ["neither earns", { inviterFish: 0, friendFish: 0 }, `${INVITED} ${GET_IT}`],
@@ -650,30 +651,30 @@ describe("Invitations", () => {
     [
       "en",
       { inviterFish: 2, friendFish: 3 },
-      "The code earns you 3 fish and your friend 2 fish once your profile is complete.",
+      "The code earns you 3 flowers and your friend 2 flowers once your profile is complete.",
     ],
     [
       "en",
       { inviterFish: 0, friendFish: 1 },
-      "The code earns you a fish once your profile is complete.",
+      "The code earns you a flower once your profile is complete.",
     ],
     [
       "en",
       { inviterFish: 0, friendFish: 2 },
-      "The code earns you 2 fish once your profile is complete.",
+      "The code earns you 2 flowers once your profile is complete.",
     ],
     [
       "fi",
       { inviterFish: 2, friendFish: 3 },
-      "Koodista saat 3 kalaa ja ystäväsi saa 2 kalaa, kun profiilisi on valmis.",
+      "Koodista saat 3 kukkaa ja ystäväsi saa 2 kukkaa, kun profiilisi on valmis.",
     ],
-    ["fi", { inviterFish: 0, friendFish: 1 }, "Koodista saat kalan, kun profiilisi on valmis."],
+    ["fi", { inviterFish: 0, friendFish: 1 }, "Koodista saat kukan, kun profiilisi on valmis."],
     [
       "sv",
       { inviterFish: 2, friendFish: 3 },
-      "Koden ger dig 3 fiskar och din vän 2 fiskar när din profil är klar.",
+      "Koden ger dig 3 blommor och din vän 2 blommor när din profil är klar.",
     ],
-    ["sv", { inviterFish: 0, friendFish: 1 }, "Koden ger dig en fisk när din profil är klar."],
+    ["sv", { inviterFish: 0, friendFish: 1 }, "Koden ger dig en blomma när din profil är klar."],
   ])("says in %s what the reward %j earns whoever types a code", async (locale, reward, words) => {
     (useLocales as jest.Mock).mockReturnValue([{ languageTag: locale }]);
     fakeApi(answer({ canInvite: false, redeemable: true, reward }));
@@ -700,8 +701,8 @@ describe("Invitations", () => {
     await renderWithTheme(<Invitations />);
     expect(await screen.findByRole("button", { name: "Skapa en inbjudan" })).toBeTruthy();
     expect(drawn()).toEqual([
-      "När en vän du bjuder in gör klart sin profil får du en fisk och din vän får en fisk.",
-      "En fisk är ett gillande som kommer först i den andras kö, före vanliga gillanden.",
+      "När en vän du bjuder in gör klart sin profil får du en blomma och din vän får en blomma.",
+      "En blomma är ett gillande som kommer först i den andras kö, före vanliga gillanden.",
       "Skapa en inbjudan",
     ]);
   });

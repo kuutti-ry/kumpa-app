@@ -1,0 +1,53 @@
+# The Later list (#575, ADR-064, #681): queue.yaml left Iida's last card for
+# later, which put that person on her list. Home now has the way to it; the list
+# opens the card as it stands, and the flower from there takes the person off
+# (a like, a flower or a pass does). The list then says nobody is there, and
+# home goes back to how it was. Which of Katja, Minna and Riikka it holds is the
+# day's order, so the flow finds the row by place, never by name. The flower
+# is final, so the flow runs once after each `pnpm demo:reset`, after queue.yaml.
+# Taking somebody off by the row's own button, the cap and whoever the list
+# leaves out are the API's and jest's tests.
+appId: fi.kumpa
+name: Later puts the person on a Later list only they see, the list opens the card, and a flower from there takes them off
+---
+- runFlow:
+    file: ../common/sign-in.yaml
+    env:
+      PERSONA: Iida Mattila
+# Home has the way to the list, by its word and no count.
+- scrollUntilVisible:
+    element: "Later list|Myöhemmin-lista|Senare-listan"
+    direction: DOWN
+    centerElement: true
+    timeout: 60000
+- tapOn: "Later list|Myöhemmin-lista|Senare-listan"
+# The rows stand under the title alone: the first Later said who sees it (#581).
+# A row opens the card as it stands, with what was decided above it.
+- extendedWaitUntil:
+    visible: "(Katja|Minna|Riikka), \\d+"
+    timeout: 15000
+- waitForAnimationToEnd
+- tapOn: "(Katja|Minna|Riikka), \\d+"
+- extendedWaitUntil:
+    visible: "You left this person for later\\. You can change that until midnight\\.|Jätit tämän henkilön myöhemmäksi\\. Voit muuttaa sitä keskiyöhön asti\\.|Du lämnade den här personen till senare\\. Du kan ändra det fram till midnatt\\."
+    timeout: 15000
+- waitForAnimationToEnd
+# The flower decides the card, and the way back to the list is all that stands
+# (the header's and the button's: either leads there).
+- tapOn: "Send a flower|Lähetä kukka|Skicka en blomma"
+- extendedWaitUntil:
+    notVisible: "Send a flower|Lähetä kukka|Skicka en blomma"
+    timeout: 15000
+- assertNotVisible: "You left this person for later\\. You can change that until midnight\\.|Jätit tämän henkilön myöhemmäksi\\. Voit muuttaa sitä keskiyöhön asti\\.|Du lämnade den här personen till senare\\. Du kan ändra det fram till midnatt\\."
+- tapOn: "Back to Later list|Takaisin Myöhemmin-listaan|Tillbaka till Senare-listan"
+- extendedWaitUntil:
+    visible: "Nobody here right now\\.|Täällä ei ole nyt ketään\\.|Ingen här just nu\\."
+    timeout: 15000
+- tapOn: "Back to home|Takaisin alkuun|Tillbaka till start"
+# Home as it was: something going is waited for (README).
+- extendedWaitUntil:
+    visible: "See people|Katso ihmisiä|Se människor"
+    timeout: 15000
+- extendedWaitUntil:
+    notVisible: "Later list|Myöhemmin-lista|Senare-listan"
+    timeout: 15000

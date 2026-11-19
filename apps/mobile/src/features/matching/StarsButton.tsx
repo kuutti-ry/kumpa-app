@@ -5,10 +5,12 @@ import { useHapticTap } from "@/theme/haptics";
 import { useStars } from "./useStars";
 
 /**
- * The way to the Starred list (#575, ADR-064 §6), on the home screen beside the way
- * to the queue, only while the list shows somebody. Its word only: no count.
+ * The way to the Later list (#575, ADR-064 §6, #681), on the home screen beside the
+ * way to the queue and where the queue ends, only while the list shows somebody.
+ * Its words only: no count. From the queue's end it takes the queue's place, so
+ * that the list's back arrow goes home, as it says.
  */
-export function StarsButton() {
+export function StarsButton({ replace = false }: { replace?: boolean }) {
   const { t } = useT();
   const router = useRouter();
   const tap = useHapticTap();
@@ -19,7 +21,8 @@ export function StarsButton() {
       variant="outline"
       onPress={() => {
         tap();
-        router.push("/stars");
+        if (replace) router.replace("/stars");
+        else router.push("/stars");
       }}
     >
       {t("stars.home.open")}

@@ -3560,10 +3560,10 @@ errors.relaxations_changed:
   machine: { fi: true, sv: true }
 
 errors.fish_budget_exceeded:
-  en: "You cannot send a fish just now."
-  description: "Today's queue (429 with Retry-After, #378, ADR-039): the person has sent matching_config fish_budget fish within the period of fish_window_days counted from a Monday, the calendar week (#475), and no earned fish waits; Retry-After says when the next can go. The queue screen says it when another phone sent the week's fish meanwhile, and takes the fish button away; it never names the day of the next, which is Monday. Nothing was saved. Never a number or a period: both are tunables."
-  fi: "Et voi lähettää kalaa juuri nyt."
-  sv: "Du kan inte skicka en fisk just nu."
+  en: "You cannot send a flower just now."
+  description: "Today's queue (429 with Retry-After, #378, ADR-039): the person has sent matching_config fish_budget flowers within the period of fish_window_days counted from a Monday, the calendar week (#475), and no earned flower waits; Retry-After says when the next can go. The queue screen says it when another phone sent the week's flowers meanwhile, and takes the flower button away; it never names the day of the next, which is Monday. Nothing was saved. Never a number or a period: both are tunables."
+  fi: "Et voi lähettää kukkaa juuri nyt."
+  sv: "Du kan inte skicka en blomma just nu."
   machine: { fi: true, sv: true }
 
 errors.like_budget_exceeded:
@@ -3587,11 +3587,11 @@ errors.invitations_full:
   sv: "Du har redan så många väntande inbjudningar som du kan ha. Dra tillbaka en, eller vänta tills en vän använder den."
   machine: { fi: true, sv: true }
 
-errors.stars_full:
-  en: "You have as many stars as you can have. Take one off to add another."
-  description: "A card (409, #575, ADR-064 §5): the person's list shows matching_config stars_max people. Never a number: the limit is a tunable. Nothing was saved."
-  fi: "Sinulla on jo niin monta tähteä kuin voi olla. Poista jokin niistä, niin voit lisätä uuden."
-  sv: "Du har redan så många stjärnor som du kan ha. Ta bort en för att lägga till en ny."
+queue.later.full:
+  en: "Your Later list is full, so this person will come back another day."
+  description: "Above the next card when Later found the person's Later list at its most (#681, ADR-064 §5, the maintainer, 18/11/2026): the card moved on all the same and comes back another day, as any card left for later does. Never a number: the most is a tunable (matching_config stars_max). Nothing about taking somebody off the list."
+  fi: "Myöhemmin-listasi on täynnä, joten tämä henkilö tulee vastaan toisena päivänä."
+  sv: "Din Senare-lista är full, så den här personen kommer tillbaka en annan dag."
   machine: { fi: true, sv: true }
 
 errors.invitation_not_for_you:
@@ -4613,6 +4613,13 @@ photos.uploading:
   sv: "Laddar upp… {percent, number} %"
   machine: { fi: true, sv: true }
 
+photos.uploading.many:
+  en: "Uploading photo {index, number} of {photos, number}… {percent, number} %"
+  description: "Photos screen, upload progress when several photos were picked at once (#681): they go one after another, in the order picked. {index} is the photo being sent, from 1; {photos} is how many were picked; {percent} is that photo's progress, a whole number 0 to 100."
+  fi: "Lähetetään kuvaa {index, number}/{photos, number}… {percent, number} %"
+  sv: "Laddar upp foto {index, number} av {photos, number}… {percent, number} %"
+  machine: { fi: true, sv: true }
+
 photos.state.pending:
   en: "In review"
   description: "Photos screen, the words under the hourglass on a photo waiting for the check or for a person, both states alike (the maintainer, 04/11/2026); only the owner sees the photo."
@@ -4730,6 +4737,13 @@ photos.refused.local:
   description: Photos screen, the on-device check refused the picked photo; nothing was sent. Deliberately says no more.
   fi: Tätä kuvaa ei voi käyttää.
   sv: Det här fotot kan inte användas.
+  machine: { fi: true, sv: true }
+
+photos.refused.localSome:
+  en: "{refused, plural, one {One of the photos cannot be used.} other {# of the photos cannot be used.}}"
+  description: "Photos screen, after several photos were picked at once (#681): the on-device check refused {refused} of them, which were not sent; the others went on. Said once, at the end. Deliberately says no more, as photos.refused.local does: the grid shows which ones arrived."
+  fi: "{refused, plural, one {Yhtä kuvista ei voi käyttää.} other {# kuvaa ei voi käyttää.}}"
+  sv: "{refused, plural, one {Ett av fotona kan inte användas.} other {# av fotona kan inte användas.}}"
   machine: { fi: true, sv: true }
 
 photos.error.permission:
@@ -6171,8 +6185,8 @@ admin.automaticBans.rule.cards_served:
   description: "Admin panel, the automatic shadow bans: the velocity rule on cards served applied it; {people} is of how many different people, {first} the first card's time and {at} when the rule applied the ban (#86)."
 
 admin.automaticBans.rule.queue_reads:
-  en: "Read the queue or opened a starred card {reads, plural, one {# time} other {# times}} between {first} and {at}."
-  description: "Admin panel, the automatic shadow bans: the velocity rule on reads of the queue applied it; {reads} is how many served reads of the queue, each starred card opened from the Starred list counted as one (ADR-064 §4), {first} the first one's time and {at} when the rule applied the ban (#86, ADR-041)."
+  en: "Read the queue or opened a card from the Later list {reads, plural, one {# time} other {# times}} between {first} and {at}."
+  description: "Admin panel, the automatic shadow bans: the velocity rule on reads of the queue applied it; {reads} is how many served reads of the queue, each card opened from the Later list counted as one (ADR-064 §4, #681), {first} the first one's time and {at} when the rule applied the ban (#86, ADR-041)."
 
 admin.automaticBans.hidden:
   en: "Hidden: {age}."
@@ -7447,10 +7461,10 @@ account.export.queue.relaxation.aside:
   machine: { fi: true, sv: true }
 
 account.export.queue.reason.fish:
-  en: "Had sent you a fish"
-  description: "Inside the downloaded data file (#378), why a card was in the person's queue: the card's person had sent them a fish, as the card's label said."
-  fi: "Oli lähettänyt sinulle kalan"
-  sv: "Hade skickat en fisk till dig"
+  en: "Had sent you a flower"
+  description: "Inside the downloaded data file (#378), why a card was in the person's queue: the card's person had sent them a flower, as the card's label said."
+  fi: "Oli lähettänyt sinulle kukan"
+  sv: "Hade skickat en blomma till dig"
   machine: { fi: true, sv: true }
 
 account.export.queue.decision.like:
@@ -7461,10 +7475,10 @@ account.export.queue.decision.like:
   machine: { fi: true, sv: true }
 
 account.export.queue.decision.fish:
-  en: "Sent a fish"
-  description: "Inside the downloaded data file (#378), the person's decision on a card of their queue: a fish, a like that says a little more, of which a person may send matching_config fish_budget in each calendar week, Monday to Sunday (fish_window_days counted from a Monday, #475)."
-  fi: "Lähetit kalan"
-  sv: "Skickade en fisk"
+  en: "Sent a flower"
+  description: "Inside the downloaded data file (#378), the person's decision on a card of their queue: a flower, a like that says a little more, of which a person may send matching_config fish_budget in each calendar week, Monday to Sunday (fish_window_days counted from a Monday, #475)."
+  fi: "Lähetit kukan"
+  sv: "Skickade en blomma"
   machine: { fi: true, sv: true }
 
 account.export.queue.decision.pass:
@@ -7482,10 +7496,10 @@ account.export.queue.decision.skip:
   machine: { fi: true, sv: true }
 
 account.export.star.about:
-  en: "When you put each star you have now. Who it is on is not written here."
-  description: "Inside the downloaded data file (#575, ADR-064 §9), the text that opens the part listing the person's stars by date only. Plain; says why no name is there."
-  fi: "Milloin laitoit kunkin nykyisen tähtesi. Sitä, kenelle se on, ei kirjoiteta tähän."
-  sv: "När du satte var och en av dina stjärnor. Vem den gäller står inte här."
+  en: "When you put each person on your Later list who is on it now. Who they are is not written here."
+  description: "Inside the downloaded data file (#575, ADR-064 §9, #681), the text that opens the part listing the people on the person's Later list by date only. Plain; says why no name is there."
+  fi: "Milloin laitoit kunkin nyt Myöhemmin-listallasi olevan henkilön listalle. Sitä, kuka hän on, ei kirjoiteta tähän."
+  sv: "När du lade till var och en som nu finns i din Senare-lista. Vem det är står inte här."
   machine: { fi: true, sv: true }
 
 account.export.block.about:
@@ -8097,10 +8111,10 @@ queue.reason.seen_before:
   machine: { fi: true, sv: true }
 
 queue.reason.fish:
-  en: "Sent you a fish"
-  description: "Why a card is in the queue (TD-12, #378, ADR-039): this person sent the reader a fish, a like that goes first; liking back makes a match. The word fish is the app's own for it (ADR-039 Open 1), for the native review. A short label."
-  fi: "Lähetti sinulle kalan"
-  sv: "Skickade en fisk till dig"
+  en: "Sent you a flower"
+  description: "Why a card is in the queue (TD-12, #378, ADR-039): this person sent the reader a flower, a like that goes first; liking back makes a match. The word flower (kukka) is the maintainer's of 18/11/2026 (#681), which settles ADR-039 Open 1; its icon is a dandelion's seed head. A short label."
+  fi: "Lähetti sinulle kukan"
+  sv: "Skickade en blomma till dig"
   machine: { fi: true, sv: true }
 
 queue.reason.relaxedField:
@@ -8174,10 +8188,10 @@ queue.short.nobody:
   machine: { fi: true, sv: true }
 
 queue.fish:
-  en: "Send a fish"
-  description: "Decision button on a queue card, above like and pass, a filled rounded square with a fish (#378, ADR-039): a like with a mark, first in the other person's queue; matching_config fish_budget of them in a calendar week, Monday to Sunday (fish_window_days from a Monday). Not offered on a card that liked the reader or sent a fish, nor with no likes left except on a card already liked (#503), nor once no fish can go (the week's is sent and no earned one waits), except on the card that holds it (#475). Never a number or a period on the button: both are tunables. The word fish is the app's own (ADR-039 Open 1), for the native review."
-  fi: "Lähetä kala"
-  sv: "Skicka en fisk"
+  en: "Send a flower"
+  description: "Decision button on a queue card, in the smaller row above like and pass, a filled rounded square with a dandelion (#378, ADR-039, #681): a like with a mark, first in the other person's queue; matching_config fish_budget of them in a calendar week, Monday to Sunday (fish_window_days from a Monday). Not offered on a card that liked the reader or sent a flower, nor with no likes left except on a card already liked (#503), nor once no flower can go (the week's is sent and no earned one waits), except on the card that holds it (#475). Never a number or a period on the button: both are tunables. The word flower (kukka) is the maintainer's of 18/11/2026 (#681), which settles ADR-039 Open 1; its icon is a dandelion's seed head."
+  fi: "Lähetä kukka"
+  sv: "Skicka en blomma"
   max_length: 24
   machine: { fi: true, sv: true }
 
@@ -8201,7 +8215,7 @@ queue.pass:
 
 queue.skip:
   en: "Later"
-  description: "Decision button on a card (ADR-062 §3): move on without deciding. It spends nothing and costs nobody anything, and the card returns another day. Plainer than Like and Pass, a text button. Finnish Ohita is already Pass, so this is never that word. One word."
+  description: "Decision button on a card (ADR-062 §3, #681): move on without deciding, and put the person on the Later list to come back to (the maintainer, 18/11/2026); the list's title is the same word. It spends nothing and costs nobody anything, and nobody else learns of it. Plainer than Like and Pass, a text button. Finnish Ohita is already Pass, so this is never that word. One word."
   fi: "Myöhemmin"
   sv: "Senare"
   max_length: 14
@@ -8251,10 +8265,10 @@ queue.revisit.skip:
   machine: { fi: true, sv: true }
 
 queue.revisit.fish:
-  en: "You sent this person a fish. You can change that until midnight."
-  description: "Above a card the reader brought back with Undo, when its decision is a fish (ADR-034 §5, ADR-039): changed the same day, the fish is given back."
-  fi: "Lähetit tälle henkilölle kalan. Voit muuttaa sitä keskiyöhön asti."
-  sv: "Du skickade en fisk till den här personen. Du kan ändra det fram till midnatt."
+  en: "You sent this person a flower. You can change that until midnight."
+  description: "Above a card the reader brought back with Undo, when its decision is a flower (ADR-034 §5, ADR-039): changed the same day, the flower is given back."
+  fi: "Lähetit tälle henkilölle kukan. Voit muuttaa sitä keskiyöhön asti."
+  sv: "Du skickade en blomma till den här personen. Du kan ändra det fram till midnatt."
   machine: { fi: true, sv: true }
 
 queue.done:
@@ -8360,85 +8374,62 @@ onboarding.ready.body:
   sv: "Snyggt. Det där var den jobbiga delen."
   machine: { fi: true, sv: true }
 
-# --- The stars (#575, ADR-064): somebody marked for later, without a like or a pass ---
+# --- The Later list (#575, ADR-064, #681): somebody saved to come back to, without a like or a pass ---
 
-queue.star:
-  en: "Star"
-  description: "Button on a card with no star on it (#575, ADR-064 §1): mark this person to come back to later, without a like or a pass. A private bookmark that spends nothing. Never a rating, a super like or anything the other person sees. One word."
-  fi: "Tähti"
-  sv: "Stjärna"
-  max_length: 14
-  machine: { fi: true, sv: true }
-
-queue.star.on:
-  en: "Starred"
-  description: "The same button with the star on it (#575): a tap takes it off. The icon is filled as well, so the state is never colour alone. One word."
-  fi: "Tähdellä"
-  sv: "Stjärnmärkt"
-  max_length: 14
-  machine: { fi: true, sv: true }
-
-queue.star.label:
-  en: "Star: {name}"
-  description: "What a screen reader says for the star on a card (#575), naming the person; the reader adds whether it is selected. {name} stays in the nominative after the colon."
-  fi: "Tähti: {name}"
-  sv: "Stjärna: {name}"
-  machine: { fi: true, sv: true }
-
-queue.star.first:
-  en: "Only you can see your stars."
-  description: "Above the card when a star is the only one on the person's list (#575, ADR-064 §7), so that it cannot be taken for a super like, which other apps use a star for. The one line that says who sees a star: the Starred list says nothing of it (#581). Plain and calm."
-  fi: "Vain sinä näet tähtesi."
-  sv: "Bara du ser dina stjärnor."
+queue.later.first:
+  en: "Saved to your Later list. Only you can see it."
+  description: "Above the next card when Later has put the first person on the person's Later list (#575, ADR-064 §7, #681): where Later put them, and that nobody else sees it, so that it cannot be taken for a super like. The one line that says who sees the list: the list says nothing of it (#581). Plain and calm."
+  fi: "Tallennettu Myöhemmin-listallesi. Vain sinä näet sen."
+  sv: "Sparad i din Senare-lista. Bara du ser den."
   machine: { fi: true, sv: true }
 
 stars.title:
-  en: "Starred"
-  description: "Title of the list of people the person put a star on (#575, ADR-064 §6). A plain name, and it shrinks to fit one line."
-  fi: "Tähdellä merkityt"
-  sv: "Stjärnmärkta"
+  en: "Later"
+  description: "Title of the Later list, the people the person chose Later on to come back to (#575, ADR-064 §6, #681): the same word as the card's button (queue.skip). A plain name, and it shrinks to fit one line."
+  fi: "Myöhemmin"
+  sv: "Senare"
   machine: { fi: true, sv: true }
 
 stars.home.open:
-  en: "Starred"
-  description: "Button on the home screen into the list of people the person starred, shown only when there is one (#575, ADR-064 §6). Its word only: no count."
-  fi: "Tähdellä merkityt"
-  sv: "Stjärnmärkta"
+  en: "Later list"
+  description: "Button into the Later list, on the home screen and where the queue ends, shown only when somebody is on it (#575, ADR-064 §6, #681). Its words only: no count."
+  fi: "Myöhemmin-lista"
+  sv: "Senare-listan"
   machine: { fi: true, sv: true }
 
 stars.back:
   en: "Back to home"
-  description: "Back arrow of the Starred list, heard by a screen reader: where it goes (#575)."
+  description: "Back arrow of the Later list, heard by a screen reader: where it goes (#575, #681)."
   fi: "Takaisin alkuun"
   sv: "Tillbaka till start"
   machine: { fi: true, sv: true }
 
 stars.none:
   en: "Nobody here right now."
-  description: "The Starred list with nobody to show (#575). It may hold stars left out for now, so it never says the person has none, and never why anybody is gone (ADR-064 §6)."
+  description: "The Later list with nobody to show (#575, #681). It may hold people left out for now, so it never says the list is empty, and never why anybody is gone (ADR-064 §6)."
   fi: "Täällä ei ole nyt ketään."
   sv: "Ingen här just nu."
   machine: { fi: true, sv: true }
 
 stars.clear.label:
-  en: "Take the star off: {name}"
-  description: "What a screen reader says for the star on a row of the Starred list (#575): a tap takes it off and the row goes. {name} stays in the nominative after the colon."
-  fi: "Poista tähti: {name}"
-  sv: "Ta bort stjärnan: {name}"
+  en: "Take off the list: {name}"
+  description: "What a screen reader says for the button on a row of the Later list that takes the person off it (#575, #681): a tap takes them off and the row goes. {name} stays in the nominative after the colon."
+  fi: "Poista listalta: {name}"
+  sv: "Ta bort från listan: {name}"
   machine: { fi: true, sv: true }
 
 stars.photo.label:
   en: "Photo: {name}"
-  description: "What a screen reader says for a row's small photo on the Starred list (#575), where it reads the photo at all: the row says the name first. {name} stays in the nominative after the colon."
+  description: "What a screen reader says for a row's small photo on the Later list (#575, #681), where it reads the photo at all: the row says the name first. {name} stays in the nominative after the colon."
   fi: "Kuva: {name}"
   sv: "Foto: {name}"
   machine: { fi: true, sv: true }
 
 stars.card.back:
-  en: "Back to Starred"
-  description: "The back arrow's spoken name and the button on a card opened from the Starred list, once it is decided (#575): where they go. Once the card is gone this button is all that stands, and the screen reader is taken to it (#581)."
-  fi: "Takaisin tähdellä merkittyihin"
-  sv: "Tillbaka till stjärnmärkta"
+  en: "Back to Later list"
+  description: "The back arrow's spoken name and the button on a card opened from the Later list, once it is decided (#575, #681): where they go. Once the card is gone this button is all that stands, and the screen reader is taken to it (#581)."
+  fi: "Takaisin Myöhemmin-listaan"
+  sv: "Tillbaka till Senare-listan"
   machine: { fi: true, sv: true }
 
 # --- The chat (#348, ADR-031): the list of conversations, a conversation and its composer ---
@@ -9684,10 +9675,10 @@ notices.invitationCounted.title:
   machine: { fi: true, sv: true }
 
 notices.invitationCounted.body:
-  en: "Somebody you invited has finished their profile. {fish, plural, =0 {Thank you for inviting them.} one {You earned a fish.} other {You earned # fish.}}"
-  description: "The home screen's notices (#107, ADR-044 §9), under the title: what the counted invitation earned its inviter. fish is the units it earned; =0 when it earned nothing (matching_config invitation_reward switched off). Never who was invited, never when they joined. Fish is the app's super-like (ADR-039)."
-  fi: "Joku kutsumasi on saanut profiilinsa valmiiksi. {fish, plural, =0 {Kiitos, että kutsuit hänet.} one {Ansaitsit kalan.} other {Ansaitsit # kalaa.}}"
-  sv: "Någon du bjöd in har gjort klart sin profil. {fish, plural, =0 {Tack för att du bjöd in.} one {Du fick en fisk.} other {Du fick # fiskar.}}"
+  en: "Somebody you invited has finished their profile. {fish, plural, =0 {Thank you for inviting them.} one {You earned a flower.} other {You earned # flowers.}}"
+  description: "The home screen's notices (#107, ADR-044 §9), under the title: what the counted invitation earned its inviter. fish is the flowers it earned; =0 when it earned nothing (matching_config invitation_reward switched off). Never who was invited, never when they joined. A flower is the app's like that says a little more (ADR-039, #681)."
+  fi: "Joku kutsumasi on saanut profiilinsa valmiiksi. {fish, plural, =0 {Kiitos, että kutsuit hänet.} one {Ansaitsit kukan.} other {Ansaitsit # kukkaa.}}"
+  sv: "Någon du bjöd in har gjort klart sin profil. {fish, plural, =0 {Tack för att du bjöd in.} one {Du fick en blomma.} other {Du fick # blommor.}}"
   machine: { fi: true, sv: true }
 
 notices.invitationFriend.title:
@@ -9698,10 +9689,10 @@ notices.invitationFriend.title:
   machine: { fi: true, sv: true }
 
 notices.invitationFriend.body:
-  en: "The invitation earned you {fish, plural, one {a fish} other {# fish}}."
-  description: "The home screen's notices (#503, ADR-044 §9), under the title: what the invitation earned the person who used it. The invitation earned it, never the finished profile: finishing one's own profile earns nothing (the maintainer, 31/10/2026). fish is the units it earned them, at least one. Never who invited them. Fish is the app's super-like (ADR-039). Nothing here on how a fish is spent, which it does by itself (#581), and never a number of days or a period (tunables)."
-  fi: "Kutsu toi sinulle {fish, plural, one {kalan} other {# kalaa}}."
-  sv: "Inbjudan gav dig {fish, plural, one {en fisk} other {# fiskar}}."
+  en: "The invitation earned you {fish, plural, one {a flower} other {# flowers}}."
+  description: "The home screen's notices (#503, ADR-044 §9), under the title: what the invitation earned the person who used it. The invitation earned it, never the finished profile: finishing one's own profile earns nothing (the maintainer, 31/10/2026). fish is the flowers it earned them, at least one. Never who invited them. A flower is the app's like that says a little more (ADR-039, #681). Nothing here on how a flower is spent, which it does by itself (#581), and never a number of days or a period (tunables)."
+  fi: "Kutsu toi sinulle {fish, plural, one {kukan} other {# kukkaa}}."
+  sv: "Inbjudan gav dig {fish, plural, one {en blomma} other {# blommor}}."
   machine: { fi: true, sv: true }
 
 # --- Invitations (#107, ADR-044): a code for one friend, made and withdrawn in Settings, typed by the friend after the bank login ---
@@ -9722,17 +9713,17 @@ settings.invite.waiting:
   machine: { fi: true, sv: true }
 
 settings.invite.earns:
-  en: "{reward, select, both {When a friend you invite finishes their profile, you get {inviterFish, plural, one {a fish} other {# fish}} and your friend gets {friendFish, plural, one {a fish} other {# fish}}.} inviter {When a friend you invite finishes their profile, you get {inviterFish, plural, one {a fish} other {# fish}}.} other {When a friend you invite finishes their profile, your friend gets {friendFish, plural, one {a fish} other {# fish}}.}}"
-  description: "The Invitations panel, what an invitation earns today (#107, ADR-044 §4, §8, #503, #581), from matching_config invitation_reward: reward says which of the two earn, both, inviter, or the friend alone; inviterFish and friendFish are their fish. Not drawn when neither earns. Never a number of days or a period (tunables)."
-  fi: "{reward, select, both {Kun kutsumasi ystävä saa profiilinsa valmiiksi, saat {inviterFish, plural, one {kalan} other {# kalaa}} ja ystäväsi saa {friendFish, plural, one {kalan} other {# kalaa}}.} inviter {Kun kutsumasi ystävä saa profiilinsa valmiiksi, saat {inviterFish, plural, one {kalan} other {# kalaa}}.} other {Kun kutsumasi ystävä saa profiilinsa valmiiksi, ystäväsi saa {friendFish, plural, one {kalan} other {# kalaa}}.}}"
-  sv: "{reward, select, both {När en vän du bjuder in gör klart sin profil får du {inviterFish, plural, one {en fisk} other {# fiskar}} och din vän får {friendFish, plural, one {en fisk} other {# fiskar}}.} inviter {När en vän du bjuder in gör klart sin profil får du {inviterFish, plural, one {en fisk} other {# fiskar}}.} other {När en vän du bjuder in gör klart sin profil får din vän {friendFish, plural, one {en fisk} other {# fiskar}}.}}"
+  en: "{reward, select, both {When a friend you invite finishes their profile, you get {inviterFish, plural, one {a flower} other {# flowers}} and your friend gets {friendFish, plural, one {a flower} other {# flowers}}.} inviter {When a friend you invite finishes their profile, you get {inviterFish, plural, one {a flower} other {# flowers}}.} other {When a friend you invite finishes their profile, your friend gets {friendFish, plural, one {a flower} other {# flowers}}.}}"
+  description: "The Invitations panel, what an invitation earns today (#107, ADR-044 §4, §8, #503, #581), from matching_config invitation_reward: reward says which of the two earn, both, inviter, or the friend alone; inviterFish and friendFish are their flowers (#681). Not drawn when neither earns. Never a number of days or a period (tunables)."
+  fi: "{reward, select, both {Kun kutsumasi ystävä saa profiilinsa valmiiksi, saat {inviterFish, plural, one {kukan} other {# kukkaa}} ja ystäväsi saa {friendFish, plural, one {kukan} other {# kukkaa}}.} inviter {Kun kutsumasi ystävä saa profiilinsa valmiiksi, saat {inviterFish, plural, one {kukan} other {# kukkaa}}.} other {Kun kutsumasi ystävä saa profiilinsa valmiiksi, ystäväsi saa {friendFish, plural, one {kukan} other {# kukkaa}}.}}"
+  sv: "{reward, select, both {När en vän du bjuder in gör klart sin profil får du {inviterFish, plural, one {en blomma} other {# blommor}} och din vän får {friendFish, plural, one {en blomma} other {# blommor}}.} inviter {När en vän du bjuder in gör klart sin profil får du {inviterFish, plural, one {en blomma} other {# blommor}}.} other {När en vän du bjuder in gör klart sin profil får din vän {friendFish, plural, one {en blomma} other {# blommor}}.}}"
   machine: { fi: true, sv: true }
 
 settings.invite.fish:
-  en: "A fish is a like that comes first in the other person's queue, ahead of ordinary likes."
-  description: "Under what an invitation earns, on the Invitations panel (#616): what a fish is, where many first meet the word. Drawn only with that line. ADR-039 §1, §6 and ADR-062 §2; the word itself is ADR-039 Open 1."
-  fi: "Kala on tykkäys, joka tulee toisen jonossa ensimmäisenä, tavallisten tykkäysten edellä."
-  sv: "En fisk är ett gillande som kommer först i den andras kö, före vanliga gillanden."
+  en: "A flower is a like that comes first in the other person's queue, ahead of ordinary likes."
+  description: "Under what an invitation earns, on the Invitations panel (#616): what a flower is, where many first meet the word. Drawn only with that line. ADR-039 §1, §6 and ADR-062 §2. The word flower (kukka) is the maintainer's of 18/11/2026 (#681), which settles ADR-039 Open 1; its icon is a dandelion's seed head."
+  fi: "Kukka on tykkäys, joka tulee toisen jonossa ensimmäisenä, tavallisten tykkäysten edellä."
+  sv: "En blomma är ett gillande som kommer först i den andras kö, före vanliga gillanden."
   machine: { fi: true, sv: true }
 
 settings.invite.notYet:
@@ -9867,10 +9858,10 @@ settings.invite.withdrawn:
   machine: { fi: true, sv: true }
 
 settings.invite.earned.fish:
-  en: "{fish, plural, one {You have an earned fish waiting.} other {You have # earned fish waiting.}}"
-  description: "The Invitations screen (#107, ADR-044 §8): fish is how many fish invitations earned the person that are not used yet, those they made and the one they used; shown only when there is one."
-  fi: "{fish, plural, one {Sinulla on yksi ansaittu kala odottamassa.} other {Sinulla on # ansaittua kalaa odottamassa.}}"
-  sv: "{fish, plural, one {Du har en intjänad fisk som väntar.} other {Du har # intjänade fiskar som väntar.}}"
+  en: "{fish, plural, one {You have an earned flower waiting.} other {You have # earned flowers waiting.}}"
+  description: "The Invitations screen (#107, ADR-044 §8, #681): fish is how many flowers invitations earned the person that are not used yet, those they made and the one they used; shown only when there is one."
+  fi: "{fish, plural, one {Sinulla on yksi ansaittu kukka odottamassa.} other {Sinulla on # ansaittua kukkaa odottamassa.}}"
+  sv: "{fish, plural, one {Du har en intjänad blomma som väntar.} other {Du har # intjänade blommor som väntar.}}"
   machine: { fi: true, sv: true }
 
 invite.redeem.title:
@@ -9881,10 +9872,10 @@ invite.redeem.title:
   machine: { fi: true, sv: true }
 
 invite.redeem.earns:
-  en: "{reward, select, both {The code earns you {friendFish, plural, one {a fish} other {# fish}} and your friend {inviterFish, plural, one {a fish} other {# fish}} once your profile is complete.} other {The code earns you {friendFish, plural, one {a fish} other {# fish}} once your profile is complete.}}"
-  description: "Over the code's field, on the Invitations screen and in onboarding's invitation step (#503, ADR-044 §12, #581): what the invitation earns the person typing it, shown only while matching_config invitation_reward gives them a fish. reward is both when the inviter earns too; friendFish is the person's fish, inviterFish their friend's."
-  fi: "{reward, select, both {Koodista saat {friendFish, plural, one {kalan} other {# kalaa}} ja ystäväsi saa {inviterFish, plural, one {kalan} other {# kalaa}}, kun profiilisi on valmis.} other {Koodista saat {friendFish, plural, one {kalan} other {# kalaa}}, kun profiilisi on valmis.}}"
-  sv: "{reward, select, both {Koden ger dig {friendFish, plural, one {en fisk} other {# fiskar}} och din vän {inviterFish, plural, one {en fisk} other {# fiskar}} när din profil är klar.} other {Koden ger dig {friendFish, plural, one {en fisk} other {# fiskar}} när din profil är klar.}}"
+  en: "{reward, select, both {The code earns you {friendFish, plural, one {a flower} other {# flowers}} and your friend {inviterFish, plural, one {a flower} other {# flowers}} once your profile is complete.} other {The code earns you {friendFish, plural, one {a flower} other {# flowers}} once your profile is complete.}}"
+  description: "Over the code's field, on the Invitations screen and in onboarding's invitation step (#503, ADR-044 §12, #581): what the invitation earns the person typing it, shown only while matching_config invitation_reward gives them a flower (#681). reward is both when the inviter earns too; friendFish is the person's flowers, inviterFish their friend's."
+  fi: "{reward, select, both {Koodista saat {friendFish, plural, one {kukan} other {# kukkaa}} ja ystäväsi saa {inviterFish, plural, one {kukan} other {# kukkaa}}, kun profiilisi on valmis.} other {Koodista saat {friendFish, plural, one {kukan} other {# kukkaa}}, kun profiilisi on valmis.}}"
+  sv: "{reward, select, both {Koden ger dig {friendFish, plural, one {en blomma} other {# blommor}} och din vän {inviterFish, plural, one {en blomma} other {# blommor}} när din profil är klar.} other {Koden ger dig {friendFish, plural, one {en blomma} other {# blommor}} när din profil är klar.}}"
   machine: { fi: true, sv: true }
 
 invite.redeem.label:
@@ -9925,10 +9916,10 @@ invite.step.skip:
   machine: { fi: true, sv: true }
 
 invite.share.message:
-  en: "You're invited to Kumpa, a free dating app for Finland where everyone signs in with their bank ID. {reward, select, both {The code earns you {friendFish, plural, one {a fish} other {# fish}} and your friend {inviterFish, plural, one {a fish} other {# fish}} once your profile is complete. A fish is a like that says a little more. } friend {The code earns you {friendFish, plural, one {a fish} other {# fish}} once your profile is complete. A fish is a like that says a little more. } other {}}Get the app: {link} After signing in, type this code: {code}"
-  description: "The message the phone's share sheet sends with an invitation (#107, ADR-044 Context 5, §12), to somebody who may not know Kuutti: free, bank-verified, Finland's; what the reader gets (#503), from matching_config invitation_reward, left out when it gives them no fish (reward is both, friend, or anything else; friendFish is the reader's, inviterFish their friend's); after a colon the one link with the code in it (https://api.kuutti.app/i/XXXXX-XXXXX, #574), which sends the friend's phone to its store, and the code (XXXXX-XXXXX) after a colon at the end, to type where the store cannot carry it. Nothing else about the sender."
-  fi: "Sinut on kutsuttu: Kumpa on ilmainen suomalainen deittisovellus, jossa jokainen kirjautuu pankkitunnuksillaan. {reward, select, both {Koodista saat {friendFish, plural, one {kalan} other {# kalaa}} ja ystäväsi saa {inviterFish, plural, one {kalan} other {# kalaa}}, kun profiilisi on valmis. Kala on tykkäys, joka sanoo vähän enemmän. } friend {Koodista saat {friendFish, plural, one {kalan} other {# kalaa}}, kun profiilisi on valmis. Kala on tykkäys, joka sanoo vähän enemmän. } other {}}Lataa sovellus: {link} Kirjoita kirjautumisen jälkeen tämä koodi: {code}"
-  sv: "Du är inbjuden till Kumpa, en gratis dejtingapp för Finland där alla loggar in med sina bankkoder. {reward, select, both {Koden ger dig {friendFish, plural, one {en fisk} other {# fiskar}} och din vän {inviterFish, plural, one {en fisk} other {# fiskar}} när din profil är klar. En fisk är ett gillande som säger lite mer. } friend {Koden ger dig {friendFish, plural, one {en fisk} other {# fiskar}} när din profil är klar. En fisk är ett gillande som säger lite mer. } other {}}Hämta appen: {link} Skriv in den här koden efter inloggningen: {code}"
+  en: "You're invited to Kumpa, a free dating app for Finland where everyone signs in with their bank ID. {reward, select, both {The code earns you {friendFish, plural, one {a flower} other {# flowers}} and your friend {inviterFish, plural, one {a flower} other {# flowers}} once your profile is complete. A flower is a like that says a little more. } friend {The code earns you {friendFish, plural, one {a flower} other {# flowers}} once your profile is complete. A flower is a like that says a little more. } other {}}Get the app: {link} After signing in, type this code: {code}"
+  description: "The message the phone's share sheet sends with an invitation (#107, ADR-044 Context 5, §12), to somebody who may not know Kuutti: free, bank-verified, Finland's; what the reader gets (#503), from matching_config invitation_reward, left out when it gives them no flower (reward is both, friend, or anything else; friendFish is the reader's, inviterFish their friend's); after a colon the one link with the code in it (https://api.kuutti.app/i/XXXXX-XXXXX, #574), which sends the friend's phone to its store, and the code (XXXXX-XXXXX) after a colon at the end, to type where the store cannot carry it. Nothing else about the sender."
+  fi: "Sinut on kutsuttu: Kumpa on ilmainen suomalainen deittisovellus, jossa jokainen kirjautuu pankkitunnuksillaan. {reward, select, both {Koodista saat {friendFish, plural, one {kukan} other {# kukkaa}} ja ystäväsi saa {inviterFish, plural, one {kukan} other {# kukkaa}}, kun profiilisi on valmis. Kukka on tykkäys, joka sanoo vähän enemmän. } friend {Koodista saat {friendFish, plural, one {kukan} other {# kukkaa}}, kun profiilisi on valmis. Kukka on tykkäys, joka sanoo vähän enemmän. } other {}}Lataa sovellus: {link} Kirjoita kirjautumisen jälkeen tämä koodi: {code}"
+  sv: "Du är inbjuden till Kumpa, en gratis dejtingapp för Finland där alla loggar in med sina bankkoder. {reward, select, both {Koden ger dig {friendFish, plural, one {en blomma} other {# blommor}} och din vän {inviterFish, plural, one {en blomma} other {# blommor}} när din profil är klar. En blomma är ett gillande som säger lite mer. } friend {Koden ger dig {friendFish, plural, one {en blomma} other {# blommor}} när din profil är klar. En blomma är ett gillande som säger lite mer. } other {}}Hämta appen: {link} Skriv in den här koden efter inloggningen: {code}"
   machine: { fi: true, sv: true }
 
 settings.contacts.intro:

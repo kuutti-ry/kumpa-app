@@ -10,13 +10,16 @@ import {
   uploadPhoto,
 } from "./client";
 import { placed } from "./drag";
-import { pickPrepared } from "./pick";
+import { pickPhotos, prepareChecked } from "./pick";
+
+const IDLE = { kind: "idle" } as const;
 
 type PhotosBusy =
   | { kind: "idle" }
   /** The phone's picker, then the check and the resize on the phone: nothing to say until the upload (#581). */
   | { kind: "picking" }
-  | { kind: "uploading"; percent: number }
+  /** `index` of `count` only when several were picked (#681). */
+  | { kind: "uploading"; percent: number; index?: number; count?: number }
   | { kind: "removing"; id: string }
   | { kind: "appealing"; id: string }
   | { kind: "captioning"; id: string }
@@ -24,7 +27,8 @@ type PhotosBusy =
 
 /** What the screen tells the person after something did not go as asked; one at a time. */
 export type PhotosNotice =
-  | { kind: "refused_local" }
+  /** `refused` of the photos picked, only when several were (#681). */
+  | { kind: "refused_local"; refused?: number }
   | { kind: "permission" }
   // The caption did not save (#296): its own words, since the generic ones speak of an upload.
   | { kind: "caption_failed" }
@@ -38,10 +42,12 @@ export type PhotosState = {
 };
 
 /**
- * The person's photos and everything they can do to them (#48). Adding a photo
- * is a chain on the phone before anything is sent: pick, the on-device check,
- * the pre-resize; a refusal by the check stops it with no request made. Order
- * changes are optimistic and reloaded from the API when refused.
+ * The person's photos and everything they can do to them (#48). Adding photos
+ * is a chain on the phone before anything is sent: pick as many as there is
+ * room for (#681), then for each in the order picked the on-device check, the
+ * pre-resize and the upload; a refusal by the check skips that one with no
+ * request made, and is said once at the end. Order changes are optimistic and
+ * reloaded from the API when refused.
  */
 export function usePhotos() {
   const [state, setState] = useState<PhotosState>({
@@ -100,11 +106,18 @@ export function usePhotos() {
     );
   }, [update]);
 
-  /** A change the API took: counted, so a read under way gives way to it (`changes`), and put on the list shown. */
-  const settle = useCallback((apply: (list: PhotosState["list"]) => PhotosState["list"]) => {
-    changes.current += 1;
-    setState((previous) => ({ ...previous, busy: { kind: "idle" }, list: apply(previous.list) }));
-  }, []);
+  /**
+   * A change the API took: counted, so a read under way gives way to it
+   * (`changes`), and put on the list shown; idle after it unless more of the
+   * same change is still to go (the next of several photos, #681).
+   */
+  const settle = useCallback(
+    (apply: (list: PhotosState["list"]) => PhotosState["list"], busy: PhotosBusy = IDLE) => {
+      changes.current += 1;
+      setState((previous) => ({ ...previous, busy, list: apply(previous.list) }));
+    },
+    [],
+  );
   /** A change the API refused, said with its code. */
   const fail = useCallback(
     (error: unknown) =>
@@ -112,27 +125,56 @@ export function usePhotos() {
     [update],
   );
 
+  const list = state.list;
   const add = useCallback(async () => {
     update({ busy: { kind: "picking" }, notice: null });
+    // As many as the account may still hold; one while the list is not known.
+    const room = list ? list.maxPhotos - list.photos.length : 1;
+    let sent = 0;
     try {
-      const picked = await pickPrepared();
-      if (picked.kind === "cancelled") return update({ busy: { kind: "idle" } });
+      const picked = await pickPhotos(room);
+      if (picked.kind === "cancelled") return update({ busy: IDLE });
       if (picked.kind === "denied") {
-        return update({ busy: { kind: "idle" }, notice: { kind: "permission" } });
+        return update({ busy: IDLE, notice: { kind: "permission" } });
       }
-      if (picked.kind === "refused_local") {
-        return update({ busy: { kind: "idle" }, notice: { kind: "refused_local" } });
+      const count = picked.assets.length;
+      let refused = 0;
+      for (const [at, asset] of picked.assets.entries()) {
+        const uploading = (percent: number): PhotosBusy =>
+          count > 1
+            ? { kind: "uploading", percent, index: at + 1, count }
+            : { kind: "uploading", percent };
+        const prepared = await prepareChecked(asset);
+        if (prepared.kind === "refused_local") {
+          refused += 1;
+          continue;
+        }
+        update({ busy: uploading(0) });
+        const photo = await uploadPhoto(prepared.photo, (fraction) =>
+          update({ busy: uploading(Math.round(fraction * 100)) }),
+        );
+        sent += 1;
+        settle(
+          (shown) => (shown ? { ...shown, photos: [...shown.photos, photo] } : shown),
+          at < count - 1 ? uploading(100) : IDLE,
+        );
       }
-      update({ busy: { kind: "uploading", percent: 0 } });
-      const photo = await uploadPhoto(picked.photo, (fraction) =>
-        update({ busy: { kind: "uploading", percent: Math.round(fraction * 100) } }),
-      );
-      settle((list) => (list ? { ...list, photos: [...list.photos, photo] } : list));
+      if (refused > 0) {
+        update({
+          busy: IDLE,
+          notice: count > 1 ? { kind: "refused_local", refused } : { kind: "refused_local" },
+        });
+      } else {
+        update({ busy: IDLE });
+      }
     } catch (error) {
-      return fail(error);
+      // What went before the failure stays, and the tips are read for it.
+      fail(error);
+      if (sent > 0) await refresh();
+      return;
     }
-    await refresh();
-  }, [update, refresh, settle, fail]);
+    if (sent > 0) await refresh();
+  }, [list, update, refresh, settle, fail]);
 
   const remove = useCallback(
     async (id: string) => {

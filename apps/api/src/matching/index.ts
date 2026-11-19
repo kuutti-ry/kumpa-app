@@ -47,6 +47,7 @@ export {
 } from "./queue-order.ts";
 export { queueRoutes } from "./queue-routes.ts";
 export { preferencesRoutes } from "./routes.ts";
-// The stars (#575, ADR-064): the routes, and the halves erasure and the export call.
+// The stars (#575, ADR-064), the Later list since #681: the routes, Later's step
+// app.ts hands the queue, and the halves erasure and the export call.
 export { starRoutes } from "./star-routes.ts";
-export { eraseStarsOf, exportStars } from "./stars.ts";
+export { eraseStarsOf, exportStars, putOnLaterList } from "./stars.ts";

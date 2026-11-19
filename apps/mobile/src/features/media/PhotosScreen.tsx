@@ -69,7 +69,11 @@ const ERROR_TEXT: ReadonlyMap<string, PlainMessageKey> = new Map([
 ]);
 
 function noticeText(notice: PhotosNotice, t: ReturnType<typeof useT>["t"]): string {
-  if (notice.kind === "refused_local") return t("photos.refused.local");
+  if (notice.kind === "refused_local") {
+    return notice.refused === undefined
+      ? t("photos.refused.local")
+      : t("photos.refused.localSome", { refused: notice.refused });
+  }
   if (notice.kind === "permission") return t("photos.error.permission");
   if (notice.kind === "caption_failed") return t("load.failed.press");
   return t(ERROR_TEXT.get(notice.code ?? "") ?? "load.failed.press");
@@ -167,10 +171,16 @@ export function PhotosScreen({
     if (action === "makeMain") void photos.makeMain(photo.id);
   };
 
-  const busyText =
-    photos.busy.kind === "uploading"
-      ? t("photos.uploading", { percent: photos.busy.percent })
-      : null;
+  const uploading = photos.busy.kind === "uploading" ? photos.busy : null;
+  const busyText = !uploading
+    ? null
+    : uploading.index !== undefined && uploading.count !== undefined
+      ? t("photos.uploading.many", {
+          index: uploading.index,
+          photos: uploading.count,
+          percent: uploading.percent,
+        })
+      : t("photos.uploading", { percent: uploading.percent });
 
   return (
     <SafeAreaView className="flex-1 bg-background">
@@ -207,7 +217,12 @@ export function PhotosScreen({
 
         {/* By the photos it is about (#287): one advisory tip, the main photo's first. */}
         {list && (
-          <PhotoTip tips={list.tips} fishSpecies={list.fishSpecies} mainId={mainId ?? null} />
+          <PhotoTip
+            tips={list.tips}
+            fishSpecies={list.fishSpecies}
+            mainId={mainId ?? null}
+            photoIds={list.photos.map((photo) => photo.id)}
+          />
         )}
 
         <View className="flex-row flex-wrap gap-3">
