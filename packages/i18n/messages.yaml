@@ -2882,13 +2882,6 @@ profile.prompt.ask_me:
   sv: "Fråga mig om"
   machine: { fi: true, sv: true }
 
-profile.prompts.label:
-  en: "Questions"
-  description: "Heading of the prompts in onboarding's step for words of your own; the profile's prompts section has the section's title instead (#239)."
-  fi: "Kysymykset"
-  sv: "Frågor"
-  machine: { fi: true, sv: true }
-
 profile.progress.short:
   en: "{answered, number}/{total, number}"
   description: "How much of a part of the profile is answered, as a count (#239): on a row of the profile list, over the questions and, of how many may stand, beside the deal-breakers' heading (#581). A screen reader hears profile.progress.answered or profile.dealBreakers.count instead."
@@ -2966,13 +2959,6 @@ profile.completeness.photos:
   sv: "Minst {min, number} godkända foton"
   machine: { fi: true, sv: true }
 
-profile.completeness.bio_or_prompts:
-  en: "A bio of {min, number} characters, a ready line, or two answered questions"
-  description: "Checklist line for the bio-or-questions rule; {min} is the bio length. A ready line counts too (#239). With the bio's hint gone this is where the length is said in The basics (#581)."
-  fi: "Vähintään {min, number} merkin esittely, valmis rivi tai kaksi vastattua kysymystä"
-  sv: "En presentation på {min, number} tecken, en färdig rad eller två besvarade frågor"
-  machine: { fi: true, sv: true }
-
 profile.completeness.seeks:
   en: "Whom you are looking for"
   description: "Missing item that onboarding (#46) sets: nobody without it reaches the profile, so it names no way to fix it (#581)."
@@ -2992,13 +2978,6 @@ profile.needed.hint:
   description: "What a star after a field or a row of the profile means (#616): the footnote under the starred rows, and what a screen reader hears on each starred one in place of the star. The same words as the completeness checklist's heading. Nothing is refused for it: an unfinished card is only not shown."
   fi: "Tarvitaan, ennen kuin korttisi voidaan näyttää"
   sv: "Behövs innan ditt kort kan visas"
-  machine: { fi: true, sv: true }
-
-profile.needed.bioOrPrompts:
-  en: "Your card needs one of these: a bio of {min, number} characters, a ready line, or two answered questions."
-  description: "Under the bio in The basics and under the questions (#616): the either-or of completeness, which a star cannot say, so neither is starred. {min} is the bio length."
-  fi: "Korttisi tarvitsee yhden näistä: vähintään {min, number} merkin esittelyn, valmiin rivin tai kaksi vastattua kysymystä."
-  sv: "Ditt kort behöver ett av dessa: en presentation på {min, number} tecken, en färdig rad eller två besvarade frågor."
   machine: { fi: true, sv: true }
 
 profile.tip.title:
@@ -3755,13 +3734,6 @@ errors.media_unavailable:
   sv: Foton är inte tillgängliga just nu.
   machine: { fi: true, sv: true }
 
-signIn.title:
-  en: Sign in
-  description: Sign-in screen heading.
-  fi: Kirjaudu sisään
-  sv: Logga in
-  machine: { fi: true, sv: true }
-
 signIn.button:
   en: Sign in with your bank
   description: Sign-in screen, the button that opens the bank chooser in the system browser. Also the button after a refusal that lasts (deletion cooldown, ban, suspension, under 18), where trying again would only repeat it, but the phone may be somebody else's (#466).
@@ -4154,6 +4126,160 @@ signIn.unavailable:
   sv: "Webbversionen har ingen bankinloggning. Prova ändringen på en telefon eller i en simulator med testbanken."
   machine: { fi: true, sv: true }
 
+signIn.start.title:
+  en: "A more confident start to dating"
+  description: "The first screen of the app for somebody signed out (#681, ADR-010 §22): what Kumpa is, before anything is asked. The first reader's draft, a person's."
+  fi: "Varmempi alku deittailuun"
+  sv: "En mer självsäker start på dejtandet"
+  machine: { fi: true, sv: true }
+
+signIn.start.verified:
+  en: "Kumpa is a dating community of people whose real-world identities have been verified."
+  description: "First line of the first screen (#681, ADR-010 §22). The draft's, without \"safe\", a promise Kumpa cannot keep: that everybody's identity is verified is what is true. Kumpa stands in the nominative (glossary)."
+  fi: "Kumpa on deittailuyhteisö, jonka jäsenten henkilöllisyys on todennettu."
+  sv: "Kumpa är en dejtinggemenskap av människor vars identitet har verifierats."
+  machine: { fi: true, sv: true }
+
+signIn.start.bankId:
+  en: "Verify your identity with a Finnish bank ID."
+  description: "Second line of the first screen (#681, ADR-010 §22), the first reader's: what Kumpa will ask, said before the first question."
+  fi: "Todenna henkilöllisyytesi suomalaisilla pankkitunnuksilla."
+  sv: "Verifiera din identitet med finskt bank-ID."
+  machine: { fi: true, sv: true }
+
+signIn.start.free:
+  en: "Free dating for adults in Finland. Run by a registered association."
+  description: "Third line of the first screen (#681, ADR-010 §22), the first reader's: adults only, said before the first question, since somebody under 18 would answer for nothing."
+  fi: "Maksutonta deittailua täysi-ikäisille Suomessa. Ylläpitäjänä rekisteröity yhdistys."
+  sv: "Gratis dejting för vuxna i Finland. Drivs av en registrerad förening."
+  machine: { fi: true, sv: true }
+
+signIn.start.phoneOnly:
+  en: "Your answers stay on this phone until you make an account."
+  description: "Last line of the first screen (#681, ADR-010 §22): nothing is sent before the terms are accepted and the bank login saves the answers. The agent's, for the maintainer to review."
+  fi: "Vastauksesi pysyvät tässä puhelimessa, kunnes luot tilin."
+  sv: "Dina svar stannar på den här telefonen tills du skapar ett konto."
+  machine: { fi: true, sv: true }
+
+signIn.start.begin:
+  en: "Get started"
+  description: "The first screen's one button (#681, ADR-010 §22): on to the first question."
+  fi: "Aloita"
+  sv: "Kom igång"
+  machine: { fi: true, sv: true }
+
+signIn.start.resume:
+  en: "Continue where you left off"
+  description: "The first screen's button in place of Get started while answers given earlier wait on the phone, within the hour they are kept (#681, ADR-010 §22). The agent's."
+  fi: "Jatka siitä, mihin jäit"
+  sv: "Fortsätt där du slutade"
+  machine: { fi: true, sv: true }
+
+signIn.start.over:
+  en: "Start over"
+  description: "Under Continue where you left off (#681, ADR-010 §22): removes the answers waiting on the phone, for the next person on a shared phone too. The agent's."
+  fi: "Aloita alusta"
+  sv: "Börja om"
+  machine: { fi: true, sv: true }
+
+signIn.start.haveAccount:
+  en: "I already have an account"
+  description: "The first screen's quieter button (#681, ADR-010 §22): to the bank, past the questions, through the terms where this phone has not recorded them."
+  fi: "Minulla on jo tili"
+  sv: "Jag har redan ett konto"
+  machine: { fi: true, sv: true }
+
+signIn.agree.title:
+  en: "Accept terms of use"
+  description: "Heading of the screen with the terms before the bank (#681, ADR-010 §22), and of onboarding's step that asks them again after it. The first reader's."
+  fi: "Hyväksy käyttöehdot"
+  sv: "Godkänn användarvillkoren"
+  machine: { fi: true, sv: true }
+
+signIn.agree.save:
+  en: "To keep your answers, make an account: accept the terms and identify with your bank."
+  description: "First line of the terms screen after the questions (#681, ADR-010 §22): why the login comes now. Not shown to somebody who already has an account. The agent's."
+  fi: "Tallentaaksesi vastauksesi luo tili: hyväksy ehdot ja tunnistaudu pankkitunnuksilla."
+  sv: "För att spara dina svar, skapa ett konto: godkänn villkoren och identifiera dig med din bank."
+  machine: { fi: true, sv: true }
+
+signIn.agree.rules:
+  en: "Be respectful. Use photos of yourself. Don't copy or collect other members' photos or profiles."
+  description: "The terms in one line (#681, ADR-010 §22), the first reader's: each sentence is one the terms carry (no harassment, photos that show you, no copying or passing on another user's photos or profile)."
+  fi: "Käyttäydy kunnioittavasti. Käytä kuvia itsestäsi. Älä kopioi tai kerää muiden jäsenten kuvia tai profiileja."
+  sv: "Var respektfull. Använd bilder på dig själv. Kopiera eller samla inte andra medlemmars bilder eller profiler."
+  machine: { fi: true, sv: true }
+
+signIn.agree.removal:
+  en: "We may remove accounts that break these rules."
+  description: "Under the rules (#681, ADR-010 §22), the first reader's: the terms let Kuutti ry close an account permanently."
+  fi: "Voimme poistaa tilit, jotka rikkovat näitä sääntöjä."
+  sv: "Vi kan ta bort konton som bryter mot de här reglerna."
+  machine: { fi: true, sv: true }
+
+signIn.agree.accept:
+  en: "By tapping Agree and continue, you accept our Terms of Use and our Privacy Notice."
+  description: "Over the two links and the button (#681, ADR-010 §22), the first reader's: what the press accepts, the linked texts at the versions this app carries. It names the button, so its words are the button's in each language (signIn.agree.button)."
+  fi: "Napauttamalla Hyväksy ja jatka hyväksyt käyttöehtomme ja tietosuojaselosteemme."
+  sv: "Genom att trycka på Godkänn och fortsätt godkänner du våra användarvillkor och vårt dataskyddsmeddelande."
+  machine: { fi: true, sv: true }
+
+signIn.agree.button:
+  en: "Agree and continue"
+  description: "The terms screen's button (#681, ADR-010 §22): holds the two acceptances for the bank login, which records them, and on onboarding's step records them at once."
+  fi: "Hyväksy ja jatka"
+  sv: "Godkänn och fortsätt"
+  machine: { fi: true, sv: true }
+
+signIn.agree.useLink:
+  en: "Read the Terms of Use"
+  description: "A link on the terms screen (#681, ADR-010 §22): opens the full terms on the website, at the version this app carries. The links stand where the summaries were."
+  fi: "Lue käyttöehdot"
+  sv: "Läs användarvillkoren"
+  machine: { fi: true, sv: true }
+
+signIn.agree.noticeLink:
+  en: "Read the Privacy Notice"
+  description: "A link on the terms screen (#681, ADR-010 §22): opens the full privacy notice on the website, at the version this app carries."
+  fi: "Lue tietosuojaseloste"
+  sv: "Läs dataskyddsmeddelandet"
+  machine: { fi: true, sv: true }
+
+signIn.identify.title:
+  en: "Identification"
+  description: "Heading of the screen with the bank button (#681, ADR-010 §22), for a newcomer and for somebody with an account. The first reader's."
+  fi: "Tunnistautuminen"
+  sv: "Identifiering"
+  machine: { fi: true, sv: true }
+
+signIn.identify.why:
+  en: "Use your Finnish bank ID to confirm your identity and age."
+  description: "First line of the identification screen (#681, ADR-010 §22), the first reader's."
+  fi: "Vahvista henkilöllisyytesi ja ikäsi suomalaisilla pankkitunnuksilla."
+  sv: "Bekräfta din identitet och ålder med finskt bank-ID."
+  machine: { fi: true, sv: true }
+
+signIn.identify.notPayment:
+  en: "This is an identity check, not a payment."
+  description: "Second line of the identification screen (#681, ADR-010 §22), the first reader's: the bank's pages look like a payment's."
+  fi: "Tämä on henkilöllisyyden tarkistus, ei maksu."
+  sv: "Det här är en identitetskontroll, inte en betalning."
+  machine: { fi: true, sv: true }
+
+signIn.identify.kept:
+  en: "Kumpa does not keep your name or your identity code from the bank. Others see the name you choose."
+  description: "Third line of the identification screen (#681, ADR-010 §22): in place of the draft's \"seen only by us\", the true and stronger sentence (CLAUDE.md rules 1 and 3: no identity code and no name from the bank are kept, only a keyed fingerprint and the year and month of birth)."
+  fi: "Kumpa ei tallenna pankilta saatua nimeäsi eikä henkilötunnustasi. Muut näkevät valitsemasi nimen."
+  sv: "Kumpa sparar inte ditt namn eller din personbeteckning från banken. Andra ser namnet du väljer."
+  machine: { fi: true, sv: true }
+
+signIn.stage.back:
+  en: "Back"
+  description: "The arrow at the top of the screens before the bank (#681, ADR-010 §22): to the screen before, the first screen at the end."
+  fi: "Takaisin"
+  sv: "Tillbaka"
+  machine: { fi: true, sv: true }
+
 settings.session.label:
   en: "Logging out"
   description: "Title of the row under Account in Settings with Log out and Log out everywhere (#35, #511); named for what it holds, it was This device."
@@ -4382,13 +4508,6 @@ onboarding.age.oldest:
   sv: "Äldsta"
   machine: { fi: true, sv: true }
 
-onboarding.consents.explain:
-  en: "Read both. You accept exactly this version of each text; if one changes, we ask you again."
-  description: "Consents step lead text (versioned consent)."
-  fi: "Lue molemmat. Hyväksyt juuri tämän version kummastakin tekstistä; jos jompikumpi muuttuu, kysymme uudelleen."
-  sv: "Läs båda. Du godkänner exakt den här versionen av varje text; om en ändras frågar vi igen."
-  machine: { fi: true, sv: true }
-
 onboarding.consents.binding:
   en: "The English text is the one that counts; this is a translation."
   description: "Shown with the legal texts where a person reads them in a translation (#208, ADR-010 §9): on a Finnish phone, since the legal texts are written in English and Finnish and the English binds. A Swedish phone reads the English itself and is not shown this."
@@ -4408,34 +4527,6 @@ onboarding.consents.outdatedApp:
   description: "Shown on the consents step when the API's current consent_version differs from the version of the text bundled in the app (#46, ADR-010 §4): the person may only accept the exact wording they read."
   fi: "Tästä tekstistä on uudempi versio kuin sovellukseen sisältyvä. Päivitä sovellus jatkaaksesi."
   sv: "Den här texten har en nyare version än den som är inbyggd i appen. Uppdatera appen för att fortsätta."
-  machine: { fi: true, sv: true }
-
-onboarding.welcome.title:
-  en: "How we do things here"
-  description: "The screen's one heading, over the norms with the two consents (#581): first on the screen before the bank login (#418, ADR-010 §15), and again on the welcome step after it when a wording changed or the rows did not land (#146)."
-  fi: "Näin täällä toimitaan"
-  sv: "Så här gör vi här"
-  machine: { fi: true, sv: true }
-
-onboarding.welcome.norm1:
-  en: "Everybody here has shown a bank ID. Be the person you are."
-  description: "First norm of the welcome screen (#146)."
-  fi: "Jokainen täällä on tunnistautunut pankkitunnuksilla. Ole se, joka olet."
-  sv: "Alla här har visat bank-ID. Var den du är."
-  machine: { fi: true, sv: true }
-
-onboarding.welcome.norm2:
-  en: "No contact details before a match."
-  description: "Second and last norm, on the screen before the bank login and on the welcome step (#146, #581): the one norm a person can break and be refused for."
-  fi: "Ei yhteystietoja ennen matchia."
-  sv: "Inga kontaktuppgifter före en match."
-  machine: { fi: true, sv: true }
-
-onboarding.welcome.accept:
-  en: "I'm in, and I accept both"
-  description: "The one button under the norms and the two consents: before the bank login it leads on, and the consents are recorded right after the sign-in (#418, ADR-010 §15); on the welcome step after the bank login it records them (#146, ADR-010 §9)."
-  fi: "Olen mukana ja hyväksyn molemmat"
-  sv: "Jag är med och godkänner båda"
   machine: { fi: true, sv: true }
 
 onboarding.name.title:
@@ -4543,25 +4634,32 @@ onboarding.photos.explain:
   sv: "Profiler med en ansiktsbild blir sedda."
   machine: { fi: true, sv: true }
 
-onboarding.prompts.title:
-  en: "A few words"
-  description: "Heading of the prompts step (#146)."
-  fi: "Muutama sana"
-  sv: "Några ord"
+onboarding.offer.title:
+  en: "Finish your profile"
+  description: "Heading of the offer after the bank, shown once at the end of the first walk (#681, ADR-010 §22). The agent's."
+  fi: "Viimeistele profiilisi"
+  sv: "Gör klart din profil"
   machine: { fi: true, sv: true }
 
-onboarding.prompts.explain:
-  en: "Answer two questions, write a bio of at least {min, number} characters, or pick a ready line."
-  description: "Under the prompts step's heading (#146, ADR-009 §4, #581): the one place on the step that says what Save and continue waits for; a ready line finishes the step too (#239)."
-  fi: "Vastaa kahteen kysymykseen, kirjoita vähintään {min, number} merkin esittely tai valitse valmis rivi."
-  sv: "Svara på två frågor, skriv en presentation på minst {min, number} tecken eller välj en färdig rad."
+onboarding.offer.body:
+  en: "A fuller profile brings much better suggestions. Add a few words about yourself or answer a few questions, or go on as you are."
+  description: "The offer's one line (#681, ADR-010 §22): the maintainer's reason (14/11/2026), and that going on without it is fine. No reminder comes back: the profile's own screen carries the rest."
+  fi: "Täydempi profiili tuo paljon parempia ehdotuksia. Kerro itsestäsi muutamalla sanalla tai vastaa muutamaan kysymykseen, tai jatka sellaisenaan."
+  sv: "En fylligare profil ger mycket bättre förslag. Skriv några ord om dig själv eller svara på några frågor, eller fortsätt som du är."
   machine: { fi: true, sv: true }
 
-onboarding.prompts.save:
-  en: "Save and continue"
-  description: "Button of the prompts step: saves the profile and moves on (#146)."
-  fi: "Tallenna ja jatka"
-  sv: "Spara och fortsätt"
+onboarding.offer.finish:
+  en: "Finish my profile"
+  description: "The offer's first button (#681, ADR-010 §22): opens the profile."
+  fi: "Viimeistele profiilini"
+  sv: "Gör klart min profil"
+  machine: { fi: true, sv: true }
+
+onboarding.offer.later:
+  en: "Not now"
+  description: "The offer's second button (#681, ADR-010 §22): home, as the profile is."
+  fi: "Ei nyt"
+  sv: "Inte nu"
   machine: { fi: true, sv: true }
 
 photos.title:

@@ -421,13 +421,11 @@ describe("PhotosScreen", () => {
     expect(screen.queryByText(withoutObjects)).toBeNull();
   });
 
-  it("says the onboarding's step when it is that step, as every other step does, and none otherwise (#146)", async () => {
+  it("numbers no step, as onboarding's or on its own: the count was of the questions before the bank (#681)", async () => {
     fetchMock([answersList(list(2)), answersUrls]);
-    await show(
-      <PhotosScreen step={{ position: 8, total: 10, reading: false, onContinue: jest.fn() }} />,
-    );
-    expect(await screen.findByText("Step 8 of 10")).toBeTruthy();
-    expect(screen.getByText("Step 8 of 10").props.accessibilityLiveRegion).toBe("polite");
+    await show(<PhotosScreen step={{ reading: false, onContinue: jest.fn() }} />);
+    expect(await screen.findByText("Main photo")).toBeTruthy();
+    expect(screen.queryByText(/^Step /)).toBeNull();
     await show(<PhotosScreen />);
     expect(await screen.findByText("Main photo")).toBeTruthy();
     expect(screen.queryByText(/^Step /)).toBeNull();
@@ -451,7 +449,7 @@ describe("PhotosScreen", () => {
     const FAILED = "That did not go through. Try again.";
     const showStep = async () => {
       const onContinue = jest.fn();
-      await show(<PhotosScreen step={{ position: 7, total: 8, reading: false, onContinue }} />);
+      await show(<PhotosScreen step={{ reading: false, onContinue }} />);
       return onContinue;
     };
     const onward = () => screen.getByRole("button", { name: "Continue" });
@@ -481,12 +479,11 @@ describe("PhotosScreen", () => {
       };
     };
 
-    it("stands on the grid, under its number, its question as the heading and its line, with Continue in Done's place", async () => {
+    it("stands on the grid, its question as the heading and its line, with Continue in Done's place", async () => {
       fetchMock([answersList(inStates()), answersUrls]);
       await showStep();
       await screen.findByText(EXPLAIN);
       expect(drawn()).toEqual([
-        "Step 7 of 8",
         "Two photos of you",
         "Profiles with a face photo get seen.",
         EXPLAIN,
@@ -498,7 +495,6 @@ describe("PhotosScreen", () => {
       const heading = screen.getByRole("heading", { name: "Two photos of you" });
       expect(heading.props.accessibilityRole).toBe("header");
       expect(heading.props["aria-level"]).toBe("1");
-      expect(screen.getByText("Step 7 of 8").props.accessibilityLiveRegion).toBe("polite");
       expect(pressables(screen.toJSON() as HostNode).flatMap((node) => a11yProblems(node))).toEqual(
         [],
       );
@@ -507,25 +503,18 @@ describe("PhotosScreen", () => {
     it.each([
       [
         "fi-FI",
-        "Vaihe 7 / 8",
         "Kaksi kuvaa sinusta",
         "Profiilit, joissa on kasvokuva, tulevat nähdyiksi.",
         "Jatka",
       ],
-      [
-        "sv-FI",
-        "Steg 7 av 8",
-        "Två bilder på dig",
-        "Profiler med en ansiktsbild blir sedda.",
-        "Fortsätt",
-      ],
-    ])("says it in %s", async (tag, step, question, line, onwardWord) => {
+      ["sv-FI", "Två bilder på dig", "Profiler med en ansiktsbild blir sedda.", "Fortsätt"],
+    ])("says it in %s", async (tag, question, line, onwardWord) => {
       (useLocales as jest.Mock).mockReturnValue([{ languageTag: tag }]);
       try {
         fetchMock([answersList(inStates()), answersUrls]);
         await showStep();
         expect(await screen.findByRole("heading", { name: question })).toBeTruthy();
-        expect(drawn().slice(0, 3)).toEqual([step, question, line]);
+        expect(drawn().slice(0, 2)).toEqual([question, line]);
         expect(screen.getByRole("button", { name: onwardWord })).toBeTruthy();
       } finally {
         (useLocales as jest.Mock).mockReturnValue([{ languageTag: "en-US" }]);
@@ -576,7 +565,6 @@ describe("PhotosScreen", () => {
       await showStep();
       expect(readOnly()).toBe(true);
       expect(drawn()).toEqual([
-        "Step 7 of 8",
         "Two photos of you",
         "Profiles with a face photo get seen.",
         "Add a photo",
@@ -638,7 +626,7 @@ describe("PhotosScreen", () => {
     it("holds Continue while the status it asked for is read", async () => {
       fetchMock([answersList(inStates("approved", "approved")), answersUrls]);
       const onContinue = jest.fn();
-      await show(<PhotosScreen step={{ position: 7, total: 8, reading: true, onContinue }} />);
+      await show(<PhotosScreen step={{ reading: true, onContinue }} />);
       await screen.findByText(EXPLAIN);
       expect(readOnly()).toBe(true);
       await press(onward());
@@ -1640,9 +1628,7 @@ describe("PhotosScreen in the Organic Pop try", () => {
 
   it("says the step's words in today's order, every control labelled, and none of its drawings", async () => {
     fetchMock([answersList(list(2)), answersUrls]);
-    await show(
-      <PhotosScreen step={{ position: 7, total: 8, reading: false, onContinue: jest.fn() }} />,
-    );
+    await show(<PhotosScreen step={{ reading: false, onContinue: jest.fn() }} />);
     expect(await screen.findByText("Main photo")).toBeTruthy();
     await waitFor(() =>
       expect(
@@ -1650,7 +1636,6 @@ describe("PhotosScreen in the Organic Pop try", () => {
       ).toMatch(/\brounded-3xl\b/),
     );
     expect(drawn().filter((each) => each !== "Main photo" && each !== "In review")).toEqual([
-      "Step 7 of 8",
       "Two photos of you",
       "Profiles with a face photo get seen.",
       "Hold a photo and drag it to change the order. A new photo is checked before anyone else sees it.",

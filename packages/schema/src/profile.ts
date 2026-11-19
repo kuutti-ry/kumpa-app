@@ -15,7 +15,11 @@ import { CARD_FIELD_KEYS, HiddenField, PROFILE_FIELDS, ProfileFields } from "./p
 
 export const DISPLAY_NAME_MAX = 20;
 export const BIO_MAX = 500;
-/** A bio this long counts for completeness; a shorter one needs a ready line (#239) or two answered prompts instead. */
+/**
+ * A bio this long counts as the profile's words; a shorter one needs a ready
+ * line (#239) or two answered prompts instead. No part of completeness since
+ * #681 (`bioOrPromptsComplete`).
+ */
 export const BIO_MIN_FOR_COMPLETENESS = 50;
 export const PROMPT_ANSWER_MAX = 160;
 export const PROMPTS_MAX = 3;
@@ -24,9 +28,12 @@ export const PROMPTS_FOR_COMPLETENESS = 2;
 export const PHOTOS_FOR_COMPLETENESS = 2;
 
 /**
- * The words a profile needs (#239): a bio of BIO_MIN_FOR_COMPLETENESS
+ * Whether a profile has its words (#239): a bio of BIO_MIN_FOR_COMPLETENESS
  * characters, a ready line, or PROMPTS_FOR_COMPLETENESS answered prompts.
- * The API's completeness and onboarding's step read this one rule (#223).
+ * Since #681 (the maintainer, 18–19/11/2026, option b) a card is shown
+ * without them: neither completeness nor onboarding asks for them, and the
+ * offer at the end of onboarding reads this rule to ask once when they are
+ * missing; the synthetic population gives everybody them.
  */
 export function bioOrPromptsComplete(words: {
   bio: string | null;
@@ -116,7 +123,7 @@ export type ProfileUpdate = z.infer<typeof ProfileUpdate>;
 
 /** What is still missing before the profile can enter a queue (#47; the tips of #56 read it). */
 export const CompletenessItem = z
-  .enum(["display_name", "photos", "bio_or_prompts", "seeks", "age_window"])
+  .enum(["display_name", "photos", "seeks", "age_window"])
   .meta({ id: "CompletenessItem" });
 export type CompletenessItem = z.infer<typeof CompletenessItem>;
 

@@ -22,7 +22,7 @@ name: Links to the card, photos and conversations cannot restore data after logo
     visible: "Your profile|Profiilisi|Din profil"
     timeout: 15000
 - runFlow: ../common/sign-out.yaml
-- assertVisible: "Sign in with your bank|Kirjaudu pankkitunnuksilla|Logga in med din bank|How we do things here|Näin täällä toimitaan|Så här gör vi här"
+- assertVisible: "Sign in with your bank|Kirjaudu pankkitunnuksilla|Logga in med din bank|I already have an account|Minulla on jo tili|Jag har redan ett konto"
 
 # attack: signed-out-card. The heading proves the link still reached its screen.
 - openLink: fi.kumpa://profile/card
@@ -49,5 +49,5 @@ name: Links to the card, photos and conversations cannot restore data after logo
 - assertNotVisible: "Antti, \\d+(, .*)?"
 - openLink: fi.kumpa://
 - extendedWaitUntil:
-    visible: "Sign in with your bank|Kirjaudu pankkitunnuksilla|Logga in med din bank|How we do things here|Näin täällä toimitaan|Så här gör vi här"
+    visible: "Sign in with your bank|Kirjaudu pankkitunnuksilla|Logga in med din bank|I already have an account|Minulla on jo tili|Jag har redan ett konto"
     timeout: 15000

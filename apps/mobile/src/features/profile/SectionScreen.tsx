@@ -1,4 +1,4 @@
-import { BIO_MIN_FOR_COMPLETENESS, DISPLAY_NAME_MAX, type ProfileUpdate } from "@kuutti/schema";
+import { DISPLAY_NAME_MAX, type ProfileUpdate } from "@kuutti/schema";
 import { useRouter } from "expo-router";
 import { useEffect } from "react";
 import { ScrollView, View } from "react-native";
@@ -36,12 +36,12 @@ type Update = (patch: Partial<ProfileUpdate>) => void;
  * onboarding every step is, so nothing is.
  */
 export function NameEditor({
-  draft,
-  update,
+  value,
+  onChange,
   needed = false,
 }: {
-  draft: ProfileUpdate;
-  update: Update;
+  value: string;
+  onChange: (name: string) => void;
   needed?: boolean;
 }) {
   const { t } = useT();
@@ -55,10 +55,10 @@ export function NameEditor({
       <Input
         accessibilityLabel={t("profile.displayName.label")}
         accessibilityHint={needed ? t("profile.needed.hint") : undefined}
-        value={draft.displayName}
+        value={value}
         maxLength={DISPLAY_NAME_MAX}
         autoCapitalize="words"
-        onChangeText={(displayName) => update({ displayName })}
+        onChangeText={onChange}
       />
     </View>
   );
@@ -75,23 +75,18 @@ function ItemEditor({
   update: Update;
   alone: boolean;
 }) {
-  const { t } = useT();
-  if (item === "displayName") return <NameEditor draft={draft} update={update} needed />;
-  if (item === "bio" || item === "prompts") {
-    // Either is enough for a card, which a star cannot say: the line says it, beside both (#616).
+  if (item === "displayName") {
     return (
-      <View className="gap-2">
-        {item === "bio" ? (
-          <BioEditor draft={draft} update={update} />
-        ) : (
-          <PromptsEditor draft={draft} update={update} />
-        )}
-        <Text variant="muted">
-          {t("profile.needed.bioOrPrompts", { min: BIO_MIN_FOR_COMPLETENESS })}
-        </Text>
-      </View>
+      <NameEditor
+        value={draft.displayName}
+        onChange={(displayName) => update({ displayName })}
+        needed
+      />
     );
   }
+  // Neither is needed for a card since #681, so neither is starred.
+  if (item === "bio") return <BioEditor draft={draft} update={update} />;
+  if (item === "prompts") return <PromptsEditor draft={draft} update={update} />;
   // The identity label is offered after a non-binary gender only, in
   // onboarding and on the gender screen (the registry's rule, #146, #552);
   // here it shows when it was given, to change or clear it, and is not

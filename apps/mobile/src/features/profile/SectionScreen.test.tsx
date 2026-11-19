@@ -10,8 +10,6 @@ import { SectionScreen } from "./SectionScreen";
 import { PROFILE_SECTIONS } from "./sections";
 
 const NEEDED = "Needed before your card can be shown";
-const EITHER =
-  "Your card needs one of these: a bio of 50 characters, a ready line, or two answered questions.";
 
 const settle = () => new Promise<void>((resolve) => setTimeout(resolve, 10));
 const show = async (ui: React.ReactElement) => {
@@ -38,7 +36,7 @@ const type = (element: ReturnType<typeof screen.getByLabelText>, text: string) =
 const token = (seed: string) => (seed + "x".repeat(43)).slice(0, 43);
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
-const missing = ["display_name", "photos", "bio_or_prompts", "seeks", "age_window"];
+const missing = ["display_name", "photos", "seeks", "age_window"];
 
 /** A stored document with these fields, as GET /profile answers it. */
 const stored = (fields: Record<string, unknown>) => ({
@@ -214,20 +212,21 @@ describe("SectionScreen", () => {
     });
   });
 
-  it("stars the name in the basics, says under the bio that a bio or the questions are enough, and what the star means (#616)", async () => {
+  it("stars the name in the basics and says what the star means, and nothing of the bio, which a card no longer needs (#616, #681)", async () => {
     fakeApi();
     await show(<SectionScreen section="basics" />);
     await waitFor(() => expect(screen.getByLabelText("Name on your card")).toBeTruthy());
     expect(screen.getByText("Name on your card *")).toBeTruthy();
     expect(screen.getByLabelText("Name on your card").props.accessibilityHint).toBe(NEEDED);
-    expect(screen.getByText(EITHER)).toBeTruthy();
+    expect(screen.queryByText(/^Your card needs/)).toBeNull();
     expect(screen.getByText(`* ${NEEDED}`).props.accessibilityLabel).toBe(NEEDED);
   });
 
-  it("says under the questions that either is enough, with no star and no note of one (#616)", async () => {
+  it("says nothing of what the card needs under the questions: neither star nor note (#681)", async () => {
     fakeApi();
     await show(<SectionScreen section="prompts" />);
-    await waitFor(() => expect(screen.getByText(EITHER)).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Questions")).toBeTruthy());
+    expect(screen.queryByText(/^Your card needs/)).toBeNull();
     expect(screen.queryByText(`* ${NEEDED}`)).toBeNull();
     expect(screen.queryByText(/ \*$/)).toBeNull();
   });
@@ -236,7 +235,7 @@ describe("SectionScreen", () => {
     fakeApi();
     await show(<SectionScreen section="lifestyle" />);
     await waitFor(() => expect(screen.getByText("Smoking")).toBeTruthy());
-    expect(screen.queryByText(EITHER)).toBeNull();
+    expect(screen.queryByText(/^Your card needs/)).toBeNull();
     expect(screen.queryByText(`* ${NEEDED}`)).toBeNull();
   });
 

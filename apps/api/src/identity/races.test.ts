@@ -347,7 +347,7 @@ describe("the status read racing another request", () => {
     expect(res.status).toBe(200);
     const status = OnboardingStatus.parse(await res.json());
     expect(status.state).toBe("active");
-    expect(status.missing).toEqual(["name", "intent", "photos", "prompts_or_bio"]);
+    expect(status.missing).toEqual(["name", "intent", "photos"]);
     // The activation was the other read's: this one leaves no line of its own.
     expect(logs().filter((l) => l.msg === "account activated")).toEqual([]);
     expect((await accountRow(ctx, me.accountId))?.state).toBe("active");

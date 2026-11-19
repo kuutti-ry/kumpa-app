@@ -87,7 +87,7 @@ flowchart TB
 15. Later, the person signs in with their bank again, as in [Signing in](sign-in.md#part-1-signing-in).
 16. The API checks the identity's cooldown. Not over: 17. Over: 18. A banned identity is refused there whatever the cooldown.
 17. The sign-in screen says "Sign-in did not complete" and "You deleted your account recently. The earliest day for a new one:" and the date, with "Sign in with your bank" under it rather than "Try again", since another try only repeats the refusal. Each such refusal is counted on the identity.
-18. A new account begins with nothing of the old one restored, at the start of [onboarding](onboarding.md#part-1-arriving-the-consents-and-a-friends-code).
+18. A new account begins with nothing of the old one restored, at the start of [onboarding](onboarding.md#part-2-after-the-bank-arriving-the-terms-and-a-friends-code), or with the answers given before the bank on this phone.
 
 ## Part 2: downloading one's data
 

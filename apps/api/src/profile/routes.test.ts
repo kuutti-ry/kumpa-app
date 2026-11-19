@@ -84,7 +84,7 @@ describe("profile routes", () => {
     expect(body.profile).toBeNull();
     expect(body.completeness).toEqual({
       complete: false,
-      missing: ["display_name", "photos", "bio_or_prompts", "seeks", "age_window"],
+      missing: ["display_name", "photos", "seeks", "age_window"],
     });
   });
 
@@ -104,17 +104,16 @@ describe("profile routes", () => {
       prompts: update.prompts,
       specialCategoryConsent: null,
     });
-    // Two prompts stand in for the bio; photos and onboarding are still missing.
+    // Photos and onboarding are still missing.
     expect(body.completeness.missing).toEqual(["photos", "seeks", "age_window"]);
     const again = await put(app, a.headers, { ...update, displayName: "Aino V.", prompts: [] });
     const answered = ProfileResponse.parse(await again.json());
     expect(answered.profile?.displayName).toBe("Aino V.");
-    // No prompt left, but the ready line stands in for the bio (#239).
     expect(answered.completeness.missing).toEqual(["photos", "seeks", "age_window"]);
+    // No words at all are missing nothing since #681 (option b): a card is shown without them.
     const bare = await put(app, a.headers, { ...update, bioPreset: null, prompts: [] });
     expect(ProfileResponse.parse(await bare.json()).completeness.missing).toEqual([
       "photos",
-      "bio_or_prompts",
       "seeks",
       "age_window",
     ]);
@@ -949,7 +948,7 @@ describe("the profile routes' remaining branches", () => {
       card: null,
       completeness: {
         complete: false,
-        missing: ["display_name", "photos", "bio_or_prompts", "seeks", "age_window"],
+        missing: ["display_name", "photos", "seeks", "age_window"],
       },
     });
   });

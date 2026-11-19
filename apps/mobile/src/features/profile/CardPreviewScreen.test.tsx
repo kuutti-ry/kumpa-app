@@ -207,7 +207,7 @@ describe("CardPreviewScreen", () => {
     const EXPLAIN = "This is what others see.";
 
     it("puts what the card still needs above the card, and does not call it what others see", async () => {
-      serveCard({ complete: false, missing: ["photos", "bio_or_prompts"] });
+      serveCard({ complete: false, missing: ["photos", "seeks"] });
       await show();
       await waitFor(() => expect(screen.getByText("Aino, 36")).toBeTruthy());
       const order = textsOf(screen.toJSON());
@@ -215,11 +215,9 @@ describe("CardPreviewScreen", () => {
         "Your card",
         "Before your card can be shown",
         "At least 2 approved photos",
-        "A bio of 50 characters, a ready line, or two answered questions",
+        "Whom you are looking for",
       ]);
-      expect(
-        order.indexOf("A bio of 50 characters, a ready line, or two answered questions"),
-      ).toBeLessThan(order.indexOf("Aino, 36"));
+      expect(order.indexOf("Whom you are looking for")).toBeLessThan(order.indexOf("Aino, 36"));
       expect(screen.queryByText(EXPLAIN)).toBeNull();
     });
 

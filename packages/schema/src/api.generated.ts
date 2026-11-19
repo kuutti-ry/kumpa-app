@@ -8356,7 +8356,7 @@ export interface components {
             missing: components["schemas"]["CompletenessItem"][];
         };
         /** @enum {string} */
-        CompletenessItem: "display_name" | "photos" | "bio_or_prompts" | "seeks" | "age_window";
+        CompletenessItem: "display_name" | "photos" | "seeks" | "age_window";
         HomeSummary: {
             town: components["schemas"]["PlaceName"];
             area: components["schemas"]["PlaceName"] & unknown;
@@ -8436,7 +8436,7 @@ export interface components {
             special_category: string;
         };
         /** @enum {string} */
-        OnboardingStep: "terms" | "privacy" | "name" | "gender" | "seeks" | "intent" | "age_window" | "home" | "photos" | "prompts_or_bio";
+        OnboardingStep: "name" | "gender" | "seeks" | "home" | "terms" | "privacy" | "age_window" | "intent" | "photos";
         GenderUpdate: {
             gender: components["schemas"]["Gender"];
         };

@@ -41,9 +41,6 @@ export const POND_COUNTER_LOCK_KEY = 725_121_154;
 
 type FactsRow = {
   display_name: string | null;
-  bio: string | null;
-  bio_preset: string | null;
-  prompts: unknown;
   approved_photos: string;
   seeks: unknown;
   age_window: unknown;
@@ -65,7 +62,7 @@ type FactsRow = {
  */
 export async function countPond(db: Queryable): Promise<PondCounterCounts> {
   const { rows } = await db.query<FactsRow>(
-    `SELECT p.display_name, p.bio, p.bio_preset, p.prompts,
+    `SELECT p.display_name,
             ${PROFILE_FACTS},
             EXISTS (SELECT 1 FROM consent c
               WHERE c.account_id = a.id AND c.kind = 'special_category'

@@ -16,7 +16,7 @@ import { Backdrop } from "@/components/backdrop";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { sayAloud } from "@/components/Notice";
 import { ScreenHeader } from "@/components/ScreenHeader";
-import { StepProgress, StepTitle } from "@/components/step-heading";
+import { StepTitle } from "@/components/step-heading";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
@@ -103,18 +103,18 @@ const ONE_COLUMN_FONT_SCALE = 1.3;
  * Opened from the profile, it has the arrow back at the top that other screens
  * have, and Done at the end (#616): the route has no back gesture, which the
  * grid's drag would start. It is onboarding's photos step too (#146, #581):
- * under that step's number, heading and line, with no arrow and the step's
+ * under that step's heading and line, with no arrow and the step's
  * Continue in place of Done, the step's only end.
  */
 export function PhotosScreen({
   step,
 }: {
   /**
-   * Onboarding's step, when this is it: where it stands, whether the status its
-   * Continue asked for is still being read, and that Continue, the way on once
-   * two photos count as the API counts them.
+   * Onboarding's step, when this is it: whether the status its Continue asked
+   * for is still being read, and that Continue, the way on once two photos
+   * count as the API counts them. After the bank no step is numbered (#681).
    */
-  step?: { position: number; total: number; reading: boolean; onContinue: () => void };
+  step?: { reading: boolean; onContinue: () => void };
 }) {
   const { t } = useT();
   // The Organic Pop try (outside production): rounder tiles, the main photo's
@@ -182,7 +182,6 @@ export function PhotosScreen({
       >
         {step && (
           <>
-            <StepProgress step={step.position} total={step.total} />
             <StepTitle>{t("onboarding.photos.title")}</StepTitle>
             <Text>{t("onboarding.photos.explain")}</Text>
           </>

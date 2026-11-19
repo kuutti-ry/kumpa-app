@@ -579,10 +579,7 @@ describe("relaxing a deal-breaker for the day", () => {
     const { headers } = await signInAs(ctx.client, a);
     await added(await relax(app, headers, ASIDE));
     // The profile loses what made it complete: the pond no longer counts A.
-    await ctx.client.query(
-      "UPDATE profile SET bio = NULL, bio_preset = NULL WHERE account_id = $1",
-      [a],
-    );
+    await ctx.client.query("DELETE FROM photo WHERE account_id = $1", [a]);
 
     expect(await offers(app, headers)).toEqual({ short: false, offers: [], relaxed: [ASIDE] });
     expect((await relax(app, headers, { field: "smoking", kind: "unanswered" })).status).toBe(409);

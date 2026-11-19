@@ -1,50 +1,66 @@
-# Onboarding from the bank login to the home screen, one question per screen
-# in the field sheet's order, the question the screen's heading with no greeting
-# over it, every answer a button (#146, ADR-010 §9 to §13, #581):
-# the name; the gender, and the label only after non-binary; whom one seeks,
-# which waits for the article 9 consent on the same screen; the intent on its
-# whole-width rows; the ages as two steppers around the person's own age; the
-# home, a postal code and what the card shows of it (#514); three photos on the
-# step's own grid; a bio; home. The norms with both texts
-# come before the bank (#418, ADR-010 §15): on a fresh phone
-# bank-login.yaml accepts them there; on a phone that recorded them at an
-# earlier sign-in, the welcome step asks Onni for the texts, counting no step
-# (welcome-step.yaml). Then a friend's invitation code, offered once, with no
-# step number either, and skipped (#107). The app is closed after whom one
-# seeks and opens again at the intent with the answer kept (#219), the
-# invitation code not offered again. Onni (26) is registered and never
-# onboarded after `pnpm demo:reset`; the photos are his from the release of
-# pictures, which the local check queues, so home says the profile still
-# lacks something.
+# A newcomer's way into Kumpa (#681, ADR-010 §22; #146, ADR-010 §9 to §13,
+# #581), one question per screen, the question the screen's heading with no
+# greeting over it, every answer a button. The first screen says what Kumpa
+# is, with no legal text, and Get started opens the four questions before the
+# bank, counted "Step 1 of 4" to "Step 4 of 4": the name; the gender, and the
+# label only after non-binary; whom one seeks, which waits for the article 9
+# consent on the same screen; the home as a postal code. The answers stay on
+# the phone: the app is closed after whom one seeks and the first screen
+# offers to continue, at the home, with the answers kept. Then the terms, with
+# the line on why the login comes now, and Identification, then the bank,
+# which saves the answers and records the terms, so no welcome step comes and
+# no question answered before the bank is asked again. After it, nothing is
+# numbered: a friend's invitation code, offered once and skipped (#107); what
+# the card shows of the home (#514); the ages as two steppers around the
+# person's own age; the intent on its whole-width rows, where the app is closed
+# again and opens at the intent (#219), the invitation code not offered again;
+# three photos on the step's own grid; and the offer of a fuller profile,
+# once, declined with Not now. Onni (26) is registered and never onboarded
+# after `pnpm demo:reset`, so one run per reset; the photos are his from the
+# release of pictures, which the local check queues, so home says the profile
+# still lacks something.
 appId: fi.kumpa
-name: A registered person is taken through onboarding one question per screen, and resumes at the intent after the app is closed
+name: A newcomer answers four questions before the bank, keeps them over a restart, and is taken through the rest one question per screen
 ---
 - addMedia:
     - ../media/faces/onni/1.jpg
     - ../media/faces/onni/2.jpg
     - ../media/faces/onni/3.jpg
-- runFlow:
-    file: ../common/sign-in.yaml
-    env:
-      PERSONA: Onni Korhonen
+- runFlow: ../common/open-app.yaml
+- runFlow: ../common/sign-out.yaml
 
-# The welcome step when it comes, then the invitation code.
-- runFlow: ../common/welcome-step.yaml
-
-# A friend's invitation code, offered once before the name, counting no step
-# (#418), and skipped (#107; using one is the API's test).
+# The first screen: what Kumpa is and why the bank, with no legal text.
 - extendedWaitUntil:
-    visible: "Did a friend invite you\\?|Kutsuiko ystävä sinut\\?|Bjöd en vän in dig\\?"
+    visible: "A more confident start to dating|Varmempi alku deittailuun|En mer självsäker start på dejtandet"
     timeout: 15000
-- assertNotVisible: "Step \\d+ of \\d+|Vaihe \\d+ / \\d+|Steg \\d+ av \\d+"
-- tapOn: "Skip|Ohita|Hoppa över"
+- assertNotVisible: "Read the Terms of Use|Lue käyttöehdot|Läs användarvillkoren"
+- assertNotVisible: "Agree and continue|Hyväksy ja jatka|Godkänn och fortsätt"
+- assertVisible: "I already have an account|Minulla on jo tili|Jag har redan ett konto"
+# Answers an earlier run left on this phone, within their hour, are offered
+# to be continued: started over. Asked as `notVisible`, in half a second,
+# and tapped behind a flag the condition clears (README).
+- evalScript: ${output.heldBefore = true}
+- runFlow:
+    when:
+      notVisible: "Start over|Aloita alusta|Börja om"
+    commands:
+      - evalScript: ${output.heldBefore = false}
+- runFlow:
+    when:
+      true: ${output.heldBefore}
+    commands:
+      - tapOn: "Start over|Aloita alusta|Börja om"
+- runFlow:
+    when:
+      true: ${!output.heldBefore}
+    commands:
+      - tapOn: "Get started|Aloita|Kom igång"
 
-# 1: the name, typed, never the bank's. Over the question only its number.
+# 1 of 4: the name, typed, never the bank's.
 - extendedWaitUntil:
     visible: "What should we call you\\?|Miksi sinua kutsutaan\\?|Vad ska vi kalla dig\\?"
     timeout: 15000
-- assertVisible: "Step 1 of 8|Vaihe 1 / 8|Steg 1 av 8"
-- assertNotVisible: "Welcome to Kuutti|Tervetuloa Kuuttiin|Välkommen till Kuutti"
+- assertVisible: "Step 1 of 4|Vaihe 1 / 4|Steg 1 av 4"
 # The field, below its name drawn over it (#581); an empty field has no text to match.
 - tapOn:
     below: "Name on your card|Nimi kortillasi|Namn på ditt kort"
@@ -53,18 +69,18 @@ name: A registered person is taken through onboarding one question per screen, a
 - tapOn: "What should we call you\\?|Miksi sinua kutsutaan\\?|Vad ska vi kalla dig\\?"
 - tapOn: "Continue|Jatka|Fortsätt"
 
-# 2: the gender; non-binary opens the label, still step 2, and it can be skipped.
+# 2 of 4: the gender; non-binary opens the label, still step 2, and it can be skipped.
 - extendedWaitUntil:
     visible: "How do you describe yourself\\?|Miten kuvailet itseäsi\\?|Hur beskriver du dig själv\\?"
     timeout: 15000
-- assertVisible: "Step 2 of 8|Vaihe 2 / 8|Steg 2 av 8"
+- assertVisible: "Step 2 of 4|Vaihe 2 / 4|Steg 2 av 4"
 - assertVisible: "Yours to choose, not the bank's\\. This is shown on your card\\.|Sinun valintasi, ei pankin\\. Tämä näkyy kortillasi\\.|Ditt val, inte bankens\\. Det här visas på ditt kort\\."
 - tapOn: "Non-binary|Muunsukupuolinen|Icke-binär"
 - tapOn: "Continue|Jatka|Fortsätt"
 - extendedWaitUntil:
     visible: "A word for it, if you like|Sana sille, jos haluat|Ett ord för det, om du vill"
     timeout: 15000
-- assertVisible: "Step 2 of 8|Vaihe 2 / 8|Steg 2 av 8"
+- assertVisible: "Step 2 of 4|Vaihe 2 / 4|Steg 2 av 4"
 - assertVisible: "Shown on your card, never used for matching\\.|Näytetään kortillasi, ei koskaan käytetä yhdistämiseen\\.|Visas på ditt kort, används aldrig för matchning\\."
 # Under its seven whole-width rows (#581), near the screen's bottom edge.
 - scrollUntilVisible:
@@ -74,11 +90,11 @@ name: A registered person is taken through onboarding one question per screen, a
     timeout: 60000
 - tapOn: "Skip|Ohita|Hoppa över"
 
-# 3: whom one seeks; nothing moves on before the article 9 consent on this screen.
+# 3 of 4: whom one seeks; nothing moves on before the article 9 consent on this screen.
 - extendedWaitUntil:
     visible: "Whom are you looking for\\?|Ketä etsit\\?|Vem söker du\\?"
     timeout: 15000
-- assertVisible: "Step 3 of 8|Vaihe 3 / 8|Steg 3 av 8"
+- assertVisible: "Step 3 of 4|Vaihe 3 / 4|Steg 3 av 4"
 - assertVisible: "Nobody outside your choice is ever shown to you, and you are never shown to anyone who did not pick you\\.|Ketään valintasi ulkopuolelta ei koskaan näytetä sinulle, eikä sinua näytetä kenellekään, joka ei valinnut sinua\\.|Ingen utanför ditt val visas någonsin för dig, och du visas aldrig för någon som inte valde dig\\."
 - tapOn: "Anyone|Kenet tahansa|Vem som helst"
 - scrollUntilVisible:
@@ -90,8 +106,7 @@ name: A registered person is taken through onboarding one question per screen, a
     text: "Continue|Jatka|Fortsätt"
     enabled: false
 # A switch's text, to Maestro, is its value ("0" off, "1" on); its words are the
-# text's beside it. So the switch is the "0" right of them. The consent is
-# saved before Continue opens.
+# text's beside it. So the switch is the "0" right of them.
 - tapOn:
     text: "0|(I consent to Kuutti ry storing whom I seek|Annan Kuutti ry:lle luvan tallentaa, kenen seuraa etsin|Jag samtycker till att Kuutti ry lagrar vem jag söker), off"
     rightOf: "I consent to Kuutti ry storing whom I seek|Annan Kuutti ry:lle luvan tallentaa, kenen seuraa etsin|Jag samtycker till att Kuutti ry lagrar vem jag söker"
@@ -108,59 +123,80 @@ name: A registered person is taken through onboarding one question per screen, a
     timeout: 60000
 - tapOn: "Continue|Jatka|Fortsätt"
 
-# 4: the intent. Closed here and opened again: the screen's memory is gone,
-# whom one seeks was saved on leaving its screen.
+# 4 of 4: the home. Closed here and opened again: the first screen offers to
+# continue, and the questions open at the home, the three answers kept.
 - extendedWaitUntil:
-    visible: "What are you here for\\?|Mitä etsit täältä\\?|Vad är du här för\\?"
+    visible: "Where do you live\\?|Missä asut\\?|Var bor du\\?"
     timeout: 15000
 - stopApp
 - runFlow: ../common/open-app.yaml
 - extendedWaitUntil:
-    visible: "What are you here for\\?|Mitä etsit täältä\\?|Vad är du här för\\?"
+    visible: "Continue where you left off|Jatka siitä, mihin jäit|Fortsätt där du slutade"
     timeout: 15000
-- assertVisible: "Step 4 of 8|Vaihe 4 / 8|Steg 4 av 8"
-- assertNotVisible: "Whom are you looking for\\?|Ketä etsit\\?|Vem söker du\\?"
-- assertVisible: "You're shown only to people who want the same thing\\.|Sinut näytetään vain niille, jotka haluavat samaa\\.|Du visas bara för dem som vill samma sak\\."
-# A whole-width row, whose name carries the tick (#581).
-- tapOn: "Something long-term|Jotain pitkäaikaista|Något långvarigt"
-- assertVisible: "✓ Something long-term|✓ Jotain pitkäaikaista|✓ Något långvarigt"
-- tapOn: "Continue|Jatka|Fortsätt"
-
-# 5: the ages start five years either side of 26 and move by buttons.
-- extendedWaitUntil:
-    visible: "What ages\\?|Minkä ikäisiä\\?|Vilka åldrar\\?"
-    timeout: 15000
-- assertVisible: "Step 5 of 8|Vaihe 5 / 8|Steg 5 av 8"
-- assertVisible: "21"
-- assertVisible: "31"
-- tapOn: "Oldest, one year older|Vanhin, vuotta vanhempi|Äldsta, ett år äldre"
-- tapOn: "Oldest, one year older|Vanhin, vuotta vanhempi|Äldsta, ett år äldre"
-- assertVisible: "33"
-- tapOn: "Continue|Jatka|Fortsätt"
-
-# 6: the home, typed into a number field nothing focuses by itself, and the
-# area chosen from the list under it. A row's label says the digits one at a
-# time, so a row is found by its name (ADR-061 §1).
+- assertVisible: "Start over|Aloita alusta|Börja om"
+- assertVisible: "I already have an account|Minulla on jo tili|Jag har redan ett konto"
+- tapOn: "Continue where you left off|Jatka siitä, mihin jäit|Fortsätt där du slutade"
 - extendedWaitUntil:
     visible: "Where do you live\\?|Missä asut\\?|Var bor du\\?"
     timeout: 15000
-- assertVisible: "Step 6 of 8|Vaihe 6 / 8|Steg 6 av 8"
+- assertVisible: "Step 4 of 4|Vaihe 4 / 4|Steg 4 av 4"
+- assertNotVisible: "Whom are you looking for\\?|Ketä etsit\\?|Vem söker du\\?"
 # Both sentences here, where the digits are first asked for; Home keeps the second alone (#581).
 - assertVisible: "Your postal code tells Kumpa how far people are\\. Others see a town or your area by name, never the digits\\.|Postinumerostasi Kumpa tietää, kuinka kaukana ihmiset ovat\\. Muut näkevät kaupungin tai alueesi nimen, eivät koskaan numeroita\\.|Ditt postnummer berättar för Kumpa hur långt bort folk är\\. Andra ser en stad eller ditt område med namn, aldrig siffrorna\\."
-# The field, below its label of the same name; an empty field has no text to match.
+# Typed into a number field nothing focuses by itself, the area chosen from
+# the list under it. A row's label says the digits one at a time, so a row is
+# found by its name (ADR-061 §1).
 - tapOn:
     below: "Postal code|Postinumero|Postnummer"
 - inputText: "00530"
 - tapOn: "Where do you live\\?|Missä asut\\?|Var bor du\\?"
 - tapOn: ".*(Kallio|Berghäll).*"
 
-# Still 6: Kallio is large enough to keep, so the card may show it or the town,
-# and the filled one says which it will, with no line to say it again (ADR-061
-# §3, #581).
+# The terms, opening on why the login comes now, the rules in one line and the
+# two texts as links; then Identification, which says what Kumpa keeps.
+- extendedWaitUntil:
+    visible: "Accept terms of use|Hyväksy käyttöehdot|Godkänn användarvillkoren"
+    timeout: 15000
+- assertVisible: "To keep your answers.*|Tallentaaksesi vastauksesi.*|För att spara dina svar.*"
+- assertVisible: "Be respectful\\..*|Käyttäydy kunnioittavasti\\..*|Var respektfull\\..*"
+- assertNotVisible: "Step \\d+ of \\d+|Vaihe \\d+ / \\d+|Steg \\d+ av \\d+"
+- scrollUntilVisible:
+    element: "Agree and continue|Hyväksy ja jatka|Godkänn och fortsätt"
+    direction: DOWN
+    centerElement: true
+    timeout: 60000
+- assertVisible: "Read the Terms of Use|Lue käyttöehdot|Läs användarvillkoren"
+- assertVisible: "Read the Privacy Notice|Lue tietosuojaseloste|Läs dataskyddsmeddelandet"
+- tapOn: "Agree and continue|Hyväksy ja jatka|Godkänn och fortsätt"
+- extendedWaitUntil:
+    visible: "Identification|Tunnistautuminen|Identifiering"
+    timeout: 15000
+- assertVisible: "Kumpa does not keep your name or your identity code from the bank\\..*|Kumpa ei tallenna pankilta saatua nimeäsi eikä henkilötunnustasi\\..*|Kumpa sparar inte ditt namn eller din personbeteckning från banken\\..*"
+# The bank's button, with nothing before it left to tap (before-sign-in.yaml).
+- runFlow:
+    file: ../common/bank-login.yaml
+    env:
+      PERSONA: Onni Korhonen
+
+# After the bank the terms are recorded, so no welcome step comes; a friend's
+# invitation code, offered once and counting no step, is skipped (#107; using
+# one is the API's test).
+- extendedWaitUntil:
+    visible: "Did a friend invite you\\?|Kutsuiko ystävä sinut\\?|Bjöd en vän in dig\\?"
+    timeout: 30000
+- assertNotVisible: "Accept terms of use|Hyväksy käyttöehdot|Godkänn användarvillkoren"
+- assertNotVisible: "Step \\d+ of \\d+|Vaihe \\d+ / \\d+|Steg \\d+ av \\d+"
+- tapOn: "Skip|Ohita|Hoppa över"
+
+# The four answers were saved, so no question before the bank comes again:
+# what the card shows of the home is next. Kallio is large enough to keep, so
+# the card may show it or the town, and the filled one says which it will,
+# with no line to say it again (ADR-061 §3, #581).
 - extendedWaitUntil:
     visible: "What should your card show\\?|Mitä korttisi näyttää\\?|Vad ska ditt kort visa\\?"
     timeout: 15000
-- assertVisible: "Step 6 of 8|Vaihe 6 / 8|Steg 6 av 8"
+- assertNotVisible: "What should we call you\\?|Miksi sinua kutsutaan\\?|Vad ska vi kalla dig\\?"
+- assertNotVisible: "Step \\d+ of \\d+|Vaihe \\d+ / \\d+|Steg \\d+ av \\d+"
 - assertVisible: "✓ Helsinki|✓ Helsingfors"
 - assertNotVisible: "On your card: .*|Kortillasi: .*|På ditt kort: .*"
 - tapOn: "Kallio|Berghäll"
@@ -170,13 +206,42 @@ name: A registered person is taken through onboarding one question per screen, a
 - assertVisible: "Helsinki|Helsingfors"
 - tapOn: "Continue|Jatka|Fortsätt"
 
-# 7: the step is the grid itself, under its number, its heading and the reason,
-# with no press before it and no screen of its own (#581). Three photos, through
-# the system picker one at a time; Continue ends the step, and takes two.
+# The ages start five years either side of 26 and move by buttons.
+- extendedWaitUntil:
+    visible: "What ages\\?|Minkä ikäisiä\\?|Vilka åldrar\\?"
+    timeout: 15000
+- assertVisible: "21"
+- assertVisible: "31"
+- tapOn: "Oldest, one year older|Vanhin, vuotta vanhempi|Äldsta, ett år äldre"
+- tapOn: "Oldest, one year older|Vanhin, vuotta vanhempi|Äldsta, ett år äldre"
+- assertVisible: "33"
+- tapOn: "Continue|Jatka|Fortsätt"
+
+# The intent. Closed here and opened again: the screen's memory is gone, the
+# ages were saved on leaving their screen, and the code is not offered again.
+- extendedWaitUntil:
+    visible: "What are you here for\\?|Mitä etsit täältä\\?|Vad är du här för\\?"
+    timeout: 15000
+- stopApp
+- runFlow: ../common/open-app.yaml
+- extendedWaitUntil:
+    visible: "What are you here for\\?|Mitä etsit täältä\\?|Vad är du här för\\?"
+    timeout: 15000
+- assertNotVisible: "What ages\\?|Minkä ikäisiä\\?|Vilka åldrar\\?"
+- assertNotVisible: "Did a friend invite you\\?|Kutsuiko ystävä sinut\\?|Bjöd en vän in dig\\?"
+- assertVisible: "You're shown only to people who want the same thing\\.|Sinut näytetään vain niille, jotka haluavat samaa\\.|Du visas bara för dem som vill samma sak\\."
+# A whole-width row, whose name carries the tick (#581).
+- tapOn: "Something long-term|Jotain pitkäaikaista|Något långvarigt"
+- assertVisible: "✓ Something long-term|✓ Jotain pitkäaikaista|✓ Något långvarigt"
+- tapOn: "Continue|Jatka|Fortsätt"
+
+# The photos: the step is the grid itself, under its heading and the reason,
+# with no press before it and no screen of its own (#581). Three photos,
+# through the system picker one at a time; Continue ends the step, and takes two.
 - extendedWaitUntil:
     visible: "Two photos of you|Kaksi kuvaa sinusta|Två bilder på dig"
     timeout: 15000
-- assertVisible: "Step 7 of 8|Vaihe 7 / 8|Steg 7 av 8"
+- assertNotVisible: "Step \\d+ of \\d+|Vaihe \\d+ / \\d+|Steg \\d+ av \\d+"
 - assertVisible: "Profiles with a face photo get seen\\.|Profiilit, joissa on kasvokuva, tulevat nähdyiksi\\.|Profiler med en ansiktsbild blir sedda\\."
 - assertNotVisible: "Your photos|Kuvasi|Dina foton|Add photos|Lisää kuvia|Lägg till bilder|Done|Valmis|Klar"
 # Add a photo opens once the list is read.
@@ -230,27 +295,20 @@ name: A registered person is taken through onboarding one question per screen, a
     timeout: 60000
 - tapOn: "Continue|Jatka|Fortsätt"
 
-# 8: a bio of at least 50 characters instead of two questions.
+# The offer of a fuller profile, once and with a way to go on (#681): no bio
+# and no question is a step any more.
 - extendedWaitUntil:
-    visible: "A few words|Muutama sana|Några ord"
+    visible: "Finish your profile|Viimeistele profiilisi|Gör klart din profil"
     timeout: 15000
-- assertVisible: "Step 8 of 8|Vaihe 8 / 8|Steg 8 av 8"
-- assertVisible: "Answer two questions, write a bio of at least 50 characters, or pick a ready line\\.|Vastaa kahteen kysymykseen, kirjoita vähintään 50 merkin esittely tai valitse valmis rivi\\.|Svara på två frågor, skriv en presentation på minst 50 tecken eller välj en färdig rad\\."
-# The field, below its label of the same name; an empty field has no text to match.
-- tapOn:
-    below: "About you|Sinusta|Om dig"
-- inputText: "Frisbeegolfia Keskuspuistossa ja kahvia termarista. Etsin juttuseuraa."
-- tapOn: "A few words|Muutama sana|Några ord"
-- scrollUntilVisible:
-    element: "Save and continue|Tallenna ja jatka|Spara och fortsätt"
-    direction: DOWN
-    centerElement: true
-    timeout: 60000
-- tapOn: "Save and continue|Tallenna ja jatka|Spara och fortsätt"
+- assertVisible: "A fuller profile brings much better suggestions\\..*|Täydempi profiili tuo paljon parempia ehdotuksia\\..*|En fylligare profil ger mycket bättre förslag\\..*"
+- assertVisible: "Finish my profile|Viimeistele profiilini|Gör klart min profil"
+- assertNotVisible: "A few words|Muutama sana|Några ord"
+- tapOn: "Not now|Ei nyt|Inte nu"
 
-# Home straight after the bio. The one pond's counter; the photos wait in the
-# local queue, so matching waits for them.
+# Home. The one pond's counter; the photos wait in the local queue, so
+# matching waits for them, and nothing else is missing.
 - extendedWaitUntil:
     visible: "People on Kumpa|Ihmiset Kumpa-sovelluksessa|Människor på Kumpa"
     timeout: 15000
 - assertVisible: "Matching opens for finished profiles\\. Yours still lacks something\\.|Seuranhaku avautuu valmiille profiileille\\. Sinun profiilistasi puuttuu vielä jotakin\\.|Matchningen öppnar för färdiga profiler\\. I din saknas ännu något\\."
+- assertNotVisible: "Finish your profile|Viimeistele profiilisi|Gör klart din profil"
