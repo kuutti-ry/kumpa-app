@@ -41,7 +41,7 @@ flowchart TB
     s2["The matching card asks whether matching is open for the person, whenever home or the app comes to the front"]
     s4["Matching opens for finished profiles. Yours still lacks something."]
     s7["Your profile is finished. Matching has not opened yet."]
-    s9["Matching is open for you., with See people, Starred while its list shows somebody, and once the offer of notifications"]
+    s9["Matching is open for you., with See people, Later list while it shows somebody, and once the offer of notifications"]
     s11["People on Kumpa: reads the counter with the person's session, when home opens"]
     s13{"Can a number be said?"}
     s14["Kumpa is just getting started."]
@@ -85,7 +85,7 @@ flowchart TB
 6. Has an admin opened matching? There is one switch, for the whole country (part 2). No: 7. Yes: 9.
 7. "Your profile is finished. Matching has not opened yet." Nothing a person does opens it, and no count, share or night does.
 8. Until an admin opens matching, asking again changes nothing the card says: part 2.
-9. "Matching is open for you.", and under it "See people", the way to the queue; under that "Starred" while the Starred list shows somebody, a star on somebody it leaves out now not counting ([the queue](queue.md), part 4); and once, while this phone has not been asked, the offer of notifications, "Shall Kumpa tell you?", with "Allow notifications" and "No thanks" of equal weight: see [Notifications and notices](notifications.md). Either answer is kept on the phone, and the offer never comes back.
+9. "Matching is open for you.", and under it "See people", the way to the queue; under that "Later list" while the Later list shows somebody, somebody on it whom it leaves out now not counting ([the queue](queue.md), part 4); and once, while this phone has not been asked, the offer of notifications, "Shall Kumpa tell you?", with "Allow notifications" and "No thanks" of equal weight: see [Notifications and notices](notifications.md). Either answer is kept on the phone, and the offer never comes back.
 10. The person chooses "See people": see [the queue](queue.md).
 11. "People on Kumpa", the last card on home: when home opens, the app reads the counter with the person's session. While it reads the card says "Loading…", and a read that fails says why, with Try again.
 12. The API serves what the night's figures allow it to say (part 3), the same for everybody and naming nobody: the number of finished profiles, said only where at least `pond_counter_k` people stand behind it, a threshold the panel may raise above a floor in code but never lower. For the person's own session it adds the shares of whom those people seek; the public site reads the same number with no session and hears no shares.
@@ -214,3 +214,4 @@ flowchart TB
 - 2026-11-05 (#581, PR #602): home puts what there is to do first: the matching card under the notices, then Your profile and Conversations, and People on Kuutti last.
 - 2026-11-15 (#607, PR #683): no row stands for the pond any more. The switch is a setting of its own, read and turned at `/admin/matching`, and the counter answers one set of figures and no list. Nothing a person or an admin sees or does changes.
 - 2026-11-16 (#700, PR #701): home's title and its card name the app Kumpa: People on Kumpa, and below k "Kumpa is just getting started."
+- 2026-11-18 (#681): "Starred" is "Later list", the list Later puts people on.

@@ -67,10 +67,10 @@ executionOrder:
     - What you seek lists whom, the ages, why and the deal-breakers, and each change is kept by going back
     # Laura and Emmi, the report's pair (#351): a block is final, so once per reset.
     - A report from a conversation takes it from the reporter's list, and the other finds it ended and can still report it
-    # Iida, the star's (#575), which decides nothing and leaves her queue as it found it.
-    - A star on a card brings the person to a Starred list only they see, and taking it off leaves everything as it was
     # Iida, the queue's (#379): a match and a report are final, so once per reset.
     - The queue shows one card at a time, liking back makes a match, Later and Undo leave a decision open, and a report takes a card away
+    # Iida, the Later list's (#575, #681): from the person the queue's flow left for later.
+    - Later puts the person on a Later list only they see, the list opens the card, and a flower from there takes them off
     # Riikka, a card of that queue, whose filters the short pool's flow changes and puts
     # back (#99, #581): after it, so that one stopping half-way takes no card from it.
     - With few people left, the queue's end offers the deal-breakers to relax for today in two groups, and reading them relaxes nothing

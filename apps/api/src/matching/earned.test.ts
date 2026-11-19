@@ -548,6 +548,7 @@ describe("two devices", () => {
       await first.query("COMMIT");
       expect(await racing.outcome).toEqual({
         match: null,
+        later: null,
         fishToSend: false,
         likesLeft: 9,
         yourTurn: 0,

@@ -25,14 +25,14 @@ In the sequences a solid arrow is a request or an action and a dotted arrow is a
 ```mermaid
 sequenceDiagram
   accTitle: The photo upload, part 1: from the phone to the bucket
-  accDescr: The person picks a photo. The app runs the phone's own check, which passes everything until its classifier is built, pre-resizes the picture and posts it to the API, never to the bucket. The API checks the session, the size and the type, counts the photos, reads the header, decodes with sharp, drops the metadata and makes three WebP variants. It puts the three objects in the media bucket and inserts the photo as pending. Nothing of the original is kept.
+  accDescr: The person picks photos, each going through what follows in turn. The app runs the phone's own check, which passes everything until its classifier is built, pre-resizes the picture and posts it to the API, never to the bucket. The API checks the session, the size and the type, counts the photos, reads the header, decodes with sharp, drops the metadata and makes three WebP variants. It puts the three objects in the media bucket and inserts the photo as pending. Nothing of the original is kept.
   autonumber
   participant person as The person
   participant app as The app
   participant api as The API
   participant db as The database
   participant s3 as The media bucket
-  person->>app: Picks a photo from the library
+  person->>app: Picks photos from the library, as many as there is room for: each in turn, in the order picked
   app->>app: The phone's own check on the picked file: a pass-through until its classifier is built, #35;184
   app->>app: Pre-resizes to 1600 px on the long edge and saves a new JPEG without the original's EXIF
   app->>api: POST /photos, multipart, one part named photo, only while the initiating session is current
@@ -47,7 +47,7 @@ sequenceDiagram
 
 ### Steps
 
-1. The person picks a photo from the phone's library.
+1. The person picks photos from the phone's library, as many as `max_photos` still leaves room for (#681). Each goes through the steps below in the order picked, one after another; a refusal of the API's stops those still to go.
 2. The app runs the phone's own nudity check on the picked file, before any byte leaves the phone. Its classifier is native and not built yet (#184): until then every picture passes, and on the web preview always. A classifier that fails refuses the picture, and a refusal sends nothing.
 3. The app pre-resizes the picture to 1600 px on the long edge with `expo-image-manipulator` and saves a new JPEG, which carries none of the original's EXIF, so location and camera data never leave the phone.
 4. The app posts it to `POST /photos` as multipart with one part, `photo`, using the session that began the upload. It refreshes that session first when its token is stale and may retry once after a 401. Before either send, including after building the multipart body or waiting for refresh, it checks that the same session still owns the upload; a sign-out or replacement stops that submission. This cannot recall a request that has already left the phone. Each send times out after two minutes, so a stalled upload can be retried. There is no path from the phone to the bucket (rule 4).

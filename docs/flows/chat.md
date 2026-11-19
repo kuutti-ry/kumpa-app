@@ -81,7 +81,7 @@ flowchart TB
 
 ### Steps
 
-1. The person likes someone in [People](queue.md) who has already liked them, or does so on a starred person's card: it's a match. The screen says "It's a match", with "Go to the conversation" and "Back to people" ("Back to Starred" on a starred person's card).
+1. The person likes someone in [People](queue.md) who has already liked them, or does so on a card opened from the Later list: it's a match. The screen says "It's a match", with "Go to the conversation" and "Back to people" ("Back to Later list" on a card opened from it).
 2. In the same moment the API opens a new conversation for the two, with nothing said in it yet, so it is both people's turn. A conversation of the same two left archived from an earlier match ends then, as an end does, with what either shared there (part 4): a pair has one conversation they can write in.
 3. After the like's answer, the API pushes the other person, the one whose earlier like the match met: "You have a new match", never saying with whom, whether or not they have the app open, if their Matches switch is on, it is not the quiet hours, and a phone of theirs is signed in and lets Kuutti notify ([Notifications](notifications.md)). The person who just liked is pushed nothing: they saw the match.
 4. The other person finds the conversation at their next look at Conversations, under Your turn, with no line under the name; a tap on the push opens Conversations. Nothing else tells them: there is no notice in the app.
@@ -289,3 +289,4 @@ flowchart TB
 - 2026-11-05 (#581, PR #602): an ended conversation reads by its heading, and a screen reader hears when one ends on the screen; the composer's count goes, and past the longest message the line beside Send says it is too long; the match and the share dialog explain less, and More's first step only chooses.
 - 2026-11-13 (#657): a failed send preserves a newer draft, and a failed background refresh preserves an already loaded empty conversation. Settings asks before leaving an unsent contact or a save still pending; choosing to leave sends no discarded draft.
 - 2026-11-16 (#700, PR #701): the refusals of a photo name the app Kumpa.
+- 2026-11-18 (#681): a match on a card opened from the Later list, the list Later puts people on, leads back to it as "Back to Later list".

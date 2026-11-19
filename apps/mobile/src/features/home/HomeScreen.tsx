@@ -98,7 +98,7 @@ export function HomeScreen() {
             {/* What must reach the person even without a push, unread, first (#176). */}
             <Notices />
             {/* Whether matching is open for the person (#500); once it is, the way to the
-                queue (#379), the way to the people the person starred while there are any
+                queue (#379), the way to the Later list while it shows somebody
                 (#575), and the one offer of notifications, since now there is something to
                 tell (#102, ADR-055 §9). */}
             <GateCard

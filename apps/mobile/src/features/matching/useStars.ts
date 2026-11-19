@@ -10,7 +10,7 @@ export type StarsView =
   | { status: "failed"; error: unknown };
 
 /**
- * The Starred list (#575, ADR-064 §6), read whenever the screen comes to the front,
+ * The Later list (#575, ADR-064 §6, #681), read whenever the screen comes to the front,
  * since the API asks the filters on every read and a card opened from it may have
  * taken a star off. What is shown stays until the new answer is there, and a read
  * that fails takes nothing away that was known. It signs nothing: a row's thumb is

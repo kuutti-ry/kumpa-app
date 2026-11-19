@@ -481,7 +481,7 @@ describe("OnboardingScreen", () => {
     // What it earns, the field and the way past it: nothing explains them, and nothing points to Settings (#581).
     expect(drawn()).toEqual([
       "Did a friend invite you?",
-      "The code earns you a fish and your friend a fish once your profile is complete.",
+      "The code earns you a flower and your friend a flower once your profile is complete.",
       "Invitation code",
       "Use the code",
       "Skip",
@@ -531,9 +531,12 @@ describe("OnboardingScreen", () => {
   it.each([
     [
       { inviterFish: 1, friendFish: 1 },
-      "The code earns you a fish and your friend a fish once your profile is complete.",
+      "The code earns you a flower and your friend a flower once your profile is complete.",
     ],
-    [{ inviterFish: 0, friendFish: 2 }, "The code earns you 2 fish once your profile is complete."],
+    [
+      { inviterFish: 0, friendFish: 2 },
+      "The code earns you 2 flowers once your profile is complete.",
+    ],
   ])(
     "says at the step what the reward %j read from the API earns (#503)",
     async (reward, words) => {

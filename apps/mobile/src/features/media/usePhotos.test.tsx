@@ -250,6 +250,172 @@ describe("usePhotos: adding", () => {
   });
 });
 
+describe("usePhotos: adding several at once (#681)", () => {
+  const asset = (name: string) => ({ uri: `file:///${name}.jpg`, width: 1200, height: 900 });
+  const picks = (...names: string[]) =>
+    launch.mockResolvedValueOnce({ canceled: false, assets: names.map(asset) });
+  const sentFiles = () =>
+    FakeXhr.sent.map(
+      (request) =>
+        (request.body as unknown as { getParts(): Array<{ uri: string }> }).getParts()[0]?.uri,
+    );
+
+  it.each([
+    ["two of six", [1, 2], 4],
+    ["five of six", [1, 2, 3, 4, 5], 1],
+  ])("asks the picker for as many as there is room for, %s held", async (_, held, room) => {
+    serve(listing(() => json(list(...held))));
+    const { result } = await ready();
+    await act(async () => result.current.add());
+    expect(launch).toHaveBeenCalledWith(
+      expect.objectContaining(
+        room > 1
+          ? { allowsMultipleSelection: true, selectionLimit: room }
+          : { allowsMultipleSelection: false },
+      ),
+    );
+  });
+
+  it("asks for one while the list is not known", async () => {
+    serve(listing(() => refusal("internal_error", 500)));
+    const { result } = await ready();
+    await act(async () => result.current.add());
+    expect(launch).toHaveBeenCalledWith(
+      expect.objectContaining({ allowsMultipleSelection: false }),
+    );
+  });
+
+  it("uploads them one after another in the order picked, saying which of how many, and reads the list once at the end", async () => {
+    // The list read at the end is the server's word, and holds both.
+    const seen = serve(
+      listing(
+        () => json(list(1)),
+        () => json(list(1, 2, 3)),
+      ),
+    );
+    picks("b", "a");
+    (globalThis as { XMLHttpRequest: unknown }).XMLHttpRequest = SteppedXhr;
+    // The check takes a moment, as on a phone, and every state the screen
+    // renders is kept, so a flash of idle between the two would show.
+    setLocalCheck(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      return "allow";
+    });
+    const kinds: string[] = [];
+    const { result } = await renderHook(() => {
+      const photos = usePhotos();
+      kinds.push(photos.busy.kind);
+      return photos;
+    });
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    let adding: Promise<void> | undefined;
+    await act(async () => {
+      adding = result.current.add();
+    });
+    await waitFor(() =>
+      expect(result.current.busy).toEqual({ kind: "uploading", percent: 0, index: 1, count: 2 }),
+    );
+    await act(async () =>
+      SteppedXhr.current?.upload.onprogress?.({ lengthComputable: true, loaded: 1, total: 2 }),
+    );
+    expect(result.current.busy).toEqual({ kind: "uploading", percent: 50, index: 1, count: 2 });
+    await act(async () => SteppedXhr.current?.answer(201, JSON.stringify(photo(2))));
+    // The first is on the list while the second goes: never idle in between.
+    await waitFor(() =>
+      expect(result.current.busy).toEqual({ kind: "uploading", percent: 0, index: 2, count: 2 }),
+    );
+    expect(ids(result.current)).toEqual([
+      [photo(1).id, 0],
+      [photo(2).id, 1],
+    ]);
+    await act(async () => {
+      SteppedXhr.current?.answer(201, JSON.stringify(photo(3)));
+      await adding;
+    });
+    expect(result.current.busy).toEqual({ kind: "idle" });
+    expect(result.current.notice).toBeNull();
+    expect(ids(result.current)?.map(([id]) => id)).toEqual([photo(1).id, photo(2).id, photo(3).id]);
+    expect(sentFiles()).toEqual(["file:///b.jpg#resized", "file:///a.jpg#resized"]);
+    expect(seen.filter(isList)).toHaveLength(2);
+    // The add button stays away from the first photo's end to the last's.
+    expect(kinds.join(" ")).toMatch(/uploading.*idle/);
+    expect(kinds.join(" ")).not.toMatch(/uploading( idle)+ uploading/);
+  });
+
+  it("skips a photo the check refuses, sends the rest, and says how many were refused once, at the end", async () => {
+    serve(
+      listing(
+        () => json(list(1)),
+        () => json(list(1, 2, 3)),
+      ),
+    );
+    picks("a", "nude", "c");
+    setLocalCheck(async (uri) => (uri.includes("nude") ? "refuse" : "allow"));
+    FakeXhr.answers = [
+      { status: 201, body: JSON.stringify(photo(2)) },
+      { status: 201, body: JSON.stringify(photo(3)) },
+    ];
+    const { result } = await ready();
+    await act(async () => result.current.add());
+    expect(sentFiles()).toEqual(["file:///a.jpg#resized", "file:///c.jpg#resized"]);
+    expect(result.current.notice).toEqual({ kind: "refused_local", refused: 1 });
+    expect(result.current.busy).toEqual({ kind: "idle" });
+    expect(result.current.list?.photos).toHaveLength(3);
+  });
+
+  it("says every refusal when the check refuses them all, and sends nothing", async () => {
+    const seen = serve(listing(() => json(list(1))));
+    picks("x", "y");
+    setLocalCheck(async () => "refuse");
+    const { result } = await ready();
+    await act(async () => result.current.add());
+    expect(FakeXhr.sent).toHaveLength(0);
+    expect(result.current.notice).toEqual({ kind: "refused_local", refused: 2 });
+    expect(seen.filter(isList)).toHaveLength(1);
+  });
+
+  it("stops at an upload the API refuses, keeps what went before it, and reads the list for that", async () => {
+    const seen = serve(
+      listing(
+        () => json(list(1)),
+        () => json(list(1, 2)),
+      ),
+    );
+    picks("a", "b", "c");
+    FakeXhr.answers = [
+      { status: 201, body: JSON.stringify(photo(2)) },
+      {
+        status: 409,
+        body: JSON.stringify({ error: { code: "photo_limit", message: "x", requestId: "r" } }),
+      },
+    ];
+    const { result } = await ready();
+    await act(async () => result.current.add());
+    // The third is never sent.
+    expect(FakeXhr.sent).toHaveLength(2);
+    expect(result.current.notice).toEqual({ kind: "error", code: "photo_limit" });
+    expect(result.current.busy).toEqual({ kind: "idle" });
+    expect(ids(result.current)?.map(([id]) => id)).toEqual([photo(1).id, photo(2).id]);
+    expect(seen.filter(isList)).toHaveLength(2);
+  });
+
+  it("reads nothing again when the first upload fails", async () => {
+    const seen = serve(listing(() => json(list(1))));
+    picks("a", "b");
+    FakeXhr.answers = [
+      {
+        status: 500,
+        body: JSON.stringify({ error: { code: "internal_error", message: "x", requestId: "r" } }),
+      },
+    ];
+    const { result } = await ready();
+    await act(async () => result.current.add());
+    expect(FakeXhr.sent).toHaveLength(1);
+    expect(result.current.notice).toEqual({ kind: "error", code: "internal_error" });
+    expect(seen.filter(isList)).toHaveLength(1);
+  });
+});
+
 describe("usePhotos: appealing (#253)", () => {
   it("puts the photo back as the API answers it, queued, in its place", async () => {
     const queued = { ...photo(2), state: "queued" };

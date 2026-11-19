@@ -130,7 +130,7 @@ describe("Notices", () => {
     await renderWithTheme(<Notices />);
     expect(await screen.findByText("An invitation of yours counted")).toBeTruthy();
     expect(
-      screen.getByText("Somebody you invited has finished their profile. You earned a fish."),
+      screen.getByText("Somebody you invited has finished their profile. You earned a flower."),
     ).toBeTruthy();
     expect(screen.getByText(BODY)).toBeTruthy();
     // The invitation's notice first, as the API ordered them.
@@ -153,7 +153,7 @@ describe("Notices", () => {
     expect(await screen.findByText("The invitation you used counted")).toBeTruthy();
     expect(screen.getByText("An invitation of yours counted")).toBeTruthy();
     expect(
-      screen.getByText("Somebody you invited has finished their profile. You earned 2 fish."),
+      screen.getByText("Somebody you invited has finished their profile. You earned 2 flowers."),
     ).toBeTruthy();
     noProblems();
     const first = screen.getAllByRole("button", { name: "Got it" })[0];
@@ -175,13 +175,13 @@ describe("Notices", () => {
       "en",
       1,
       "An invitation of yours counted",
-      "Somebody you invited has finished their profile. You earned a fish.",
+      "Somebody you invited has finished their profile. You earned a flower.",
     ],
     [
       "en",
       2,
       "An invitation of yours counted",
-      "Somebody you invited has finished their profile. You earned 2 fish.",
+      "Somebody you invited has finished their profile. You earned 2 flowers.",
     ],
     [
       "fi",
@@ -193,13 +193,13 @@ describe("Notices", () => {
       "fi",
       1,
       "Yksi kutsuistasi laskettiin",
-      "Joku kutsumasi on saanut profiilinsa valmiiksi. Ansaitsit kalan.",
+      "Joku kutsumasi on saanut profiilinsa valmiiksi. Ansaitsit kukan.",
     ],
     [
       "fi",
       2,
       "Yksi kutsuistasi laskettiin",
-      "Joku kutsumasi on saanut profiilinsa valmiiksi. Ansaitsit 2 kalaa.",
+      "Joku kutsumasi on saanut profiilinsa valmiiksi. Ansaitsit 2 kukkaa.",
     ],
     [
       "sv",
@@ -211,13 +211,13 @@ describe("Notices", () => {
       "sv",
       1,
       "En av dina inbjudningar räknades",
-      "Någon du bjöd in har gjort klart sin profil. Du fick en fisk.",
+      "Någon du bjöd in har gjort klart sin profil. Du fick en blomma.",
     ],
     [
       "sv",
       2,
       "En av dina inbjudningar räknades",
-      "Någon du bjöd in har gjort klart sin profil. Du fick 2 fiskar.",
+      "Någon du bjöd in har gjort klart sin profil. Du fick 2 blommor.",
     ],
   ] as const)(
     "says in %s what a counted invitation earned its inviter, %i fish, and nothing of who",
@@ -233,12 +233,12 @@ describe("Notices", () => {
   );
 
   it.each([
-    ["en", 1, "The invitation you used counted", "The invitation earned you a fish."],
-    ["en", 2, "The invitation you used counted", "The invitation earned you 2 fish."],
-    ["fi", 1, "Käyttämäsi kutsu laskettiin", "Kutsu toi sinulle kalan."],
-    ["fi", 2, "Käyttämäsi kutsu laskettiin", "Kutsu toi sinulle 2 kalaa."],
-    ["sv", 1, "Inbjudan du använde räknades", "Inbjudan gav dig en fisk."],
-    ["sv", 2, "Inbjudan du använde räknades", "Inbjudan gav dig 2 fiskar."],
+    ["en", 1, "The invitation you used counted", "The invitation earned you a flower."],
+    ["en", 2, "The invitation you used counted", "The invitation earned you 2 flowers."],
+    ["fi", 1, "Käyttämäsi kutsu laskettiin", "Kutsu toi sinulle kukan."],
+    ["fi", 2, "Käyttämäsi kutsu laskettiin", "Kutsu toi sinulle 2 kukkaa."],
+    ["sv", 1, "Inbjudan du använde räknades", "Inbjudan gav dig en blomma."],
+    ["sv", 2, "Inbjudan du använde räknades", "Inbjudan gav dig 2 blommor."],
   ] as const)(
     "says in %s what the invitation earned the friend who used it, %i fish, and nothing of who or of how a fish is spent",
     async (locale, fish, title, body) => {

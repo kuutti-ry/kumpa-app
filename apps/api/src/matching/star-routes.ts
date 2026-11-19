@@ -1,5 +1,5 @@
 import { createRoute, OpenAPIHono } from "@hono/zod-openapi";
-import { QueueEntryParams, QueueResponse, StarAnswer, StarList, StarParams } from "@kuutti/schema";
+import { QueueResponse, StarList, StarParams } from "@kuutti/schema";
 import type { MiddlewareHandler } from "hono";
 import type { Deps } from "../app.ts";
 import { callerOf } from "../lib/auth-middleware.ts";
@@ -7,10 +7,11 @@ import type { AppEnv } from "../lib/env.ts";
 import { bearer, errorContent, json, unauthenticated } from "../lib/openapi.ts";
 import { filteringDealBreakers, type OwnFieldsReader } from "./deal-breakers.ts";
 import type { CardOf, Matches, QueueDeps } from "./queue.ts";
-import { clearStar, openStar, putStar, type Stars } from "./stars.ts";
+import { clearStar, openStar, type Stars } from "./stars.ts";
 
-// The stars for the app (#575, ADR-064). A star is put on a card by its place, and
-// read, opened and cleared by its own id; no route takes another person's id.
+// The stars for the app (#575, ADR-064), the Later list since #681. A star is put
+// by Later, the queue's skip (`decide`), and read, opened and cleared here by its
+// own id; no route takes another person's id.
 
 const noStar = errorContent(
   "not_found: no such star of the caller's, or somebody the list leaves out now.",
@@ -19,34 +20,13 @@ const noStar = errorContent(
 const listRoute = createRoute({
   method: "get",
   path: "/stars",
-  summary: "The people the caller starred",
+  summary: "The people the caller saved for later",
   description:
     "Those who may be shown now, the latest star first and in no other order: both people's filters, the accounts' state and the inbox stop are asked on every read, and whoever does not pass is left out with no word why. Each with a name, an age and the main one of the photos the caller was shown, whose thumb is asked for as any photo's. It serves no card and signs no photo.",
   ...bearer,
   responses: {
     200: { description: "The list, perhaps empty.", ...json(StarList) },
     401: unauthenticated,
-  },
-});
-
-const putRoute = createRoute({
-  method: "put",
-  path: "/queue/{day}/entries/{position}/star",
-  summary: "Put a star on a card",
-  description:
-    "Marks the card's person for later: it spends nothing and decides nothing, and the same star again answers the one that stands. It reaches nobody. A card holding a like or a pass takes none. first says this is the only star the list shows.",
-  ...bearer,
-  request: { params: QueueEntryParams },
-  responses: {
-    200: { description: "The star, and whether it is the first.", ...json(StarAnswer) },
-    400: errorContent("Validation failed."),
-    401: unauthenticated,
-    404: errorContent(
-      "not_found: no such card in today's queue, one that can no longer be shown, or one holding a like or a pass.",
-    ),
-    409: errorContent(
-      "day_ended: the day named has ended; stars_full: the list shows matching_config stars_max people. Nothing was written.",
-    ),
   },
 });
 
@@ -99,7 +79,7 @@ export function starRoutes(
   readOwnFields: OwnFieldsReader,
 ) {
   const app = new OpenAPIHono<AppEnv>();
-  for (const route of [listRoute, putRoute, clearRoute, openRoute]) {
+  for (const route of [listRoute, clearRoute, openRoute]) {
     app.use(route.getRoutingPath(), requireSession);
   }
   const queueDeps = (): QueueDeps => ({
@@ -110,16 +90,6 @@ export function starRoutes(
 
   app.openapi(listRoute, async (c) => {
     return c.json({ items: await stars.people(callerOf(c).accountId) }, 200);
-  });
-
-  app.openapi(putRoute, async (c) => {
-    const { day, position } = c.req.valid("param");
-    const star = await putStar(queueDeps(), stars, {
-      accountId: callerOf(c).accountId,
-      day,
-      position,
-    });
-    return c.json(star, 200);
   });
 
   app.openapi(clearRoute, async (c) => {

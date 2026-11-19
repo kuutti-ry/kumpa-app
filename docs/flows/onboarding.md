@@ -241,7 +241,7 @@ flowchart TB
 47. What the card will show of the home, still step 6. Where an area is kept, "What should your card show?" with the town and the area as two buttons, the town chosen; otherwise "On your card:" and the one place there is. The town is the kept place's own municipality when it has at least `home_town_min_inhabitants` people, else the nearest one that has.
 48. The person chooses the town or the area where there is a choice, which is saved at once, and "Continue".
 49. The photos step, "Step 7 of 8", is the photos screen itself: "Two photos of you", "Profiles with a face photo get seen.", the grid of photos, "Add a photo" and "Continue", its only way on.
-50. The person adds photos one at a time from the phone, as on the photos screen of the profile (see [Photos](photos.md)), and chooses "Continue", which opens once enough photos count as the API counts them: one waiting for the check or for a moderator counts, a refused one does not. How many is under Open below.
+50. The person adds photos from the phone, several at once if they like, as on the photos screen of the profile (see [Photos](photos.md)), and chooses "Continue", which opens once enough photos count as the API counts them: one waiting for the check or for a moderator counts, a refused one does not. How many is under Open below.
 51. Continue reads the photos and the open steps again: does the person have enough photos the check has not refused? A photo refused meanwhile keeps the step, and its tile says why. Yes: 52. No: 49. The card and matching wait for the photos' approval.
 52. "A few words": "Answer two questions, write a bio of at least {min, number} characters, or pick a ready line.", where min is the length the code holds for a bio. "Step 8 of 8".
 53. The person writes a bio, picks a ready line or answers prompts, and chooses "Save and continue", which opens only once the words count as the profile's completeness reads them. A save the API refuses is said in the profile's own words.
@@ -287,3 +287,4 @@ flowchart TB
 - 2026-11-16 (#700, PR #701): the home step names the app Kumpa, and the consent to store whom one seeks is given to Kuutti ry.
 - 2026-11-16 (#208): research leaves the app, consent and all; onboarding already asked nothing about it.
 - 2026-11-17 (#184, PR #723): a friend's code that came by their link, or with an Android install, is already in the code's field.
+- 2026-11-18 (#681): the photos step picks several photos at once, as the photos screen does.

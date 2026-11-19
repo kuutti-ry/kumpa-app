@@ -601,7 +601,6 @@ export type MessageParams = {
   "errors.session_expired": Record<never, never>;
   "errors.session_revoked": Record<never, never>;
   "errors.special_category_locked": Record<never, never>;
-  "errors.stars_full": Record<never, never>;
   "errors.text_contact_details": Record<never, never>;
   "errors.too_many_changes": Record<never, never>;
   "errors.unauthenticated": Record<never, never>;
@@ -902,6 +901,7 @@ export type MessageParams = {
   "photos.notice.dismiss": Record<never, never>;
   "photos.open": { "position": number };
   "photos.refused.local": Record<never, never>;
+  "photos.refused.localSome": { "refused": number };
   "photos.rejected.contact_details": Record<never, never>;
   "photos.rejected.minor": Record<never, never>;
   "photos.rejected.no_person": Record<never, never>;
@@ -919,6 +919,7 @@ export type MessageParams = {
   "photos.state.rejected": Record<never, never>;
   "photos.title": Record<never, never>;
   "photos.uploading": { "percent": number };
+  "photos.uploading.many": { "index": number; "photos": number; "percent": number };
   "photos.zoom.back": Record<never, never>;
   "photos.zoom.label": { "position": number; "total": number };
   "photos.zoom.labelCaption": { "position": number; "total": number; "caption": string };
@@ -1386,6 +1387,8 @@ export type MessageParams = {
   "queue.hello.title": Record<never, never>;
   "queue.hello.you": Record<never, never>;
   "queue.home.open": Record<never, never>;
+  "queue.later.first": Record<never, never>;
+  "queue.later.full": Record<never, never>;
   "queue.like": Record<never, never>;
   "queue.likesLeft": { "likes": number };
   "queue.match.continue": Record<never, never>;
@@ -1412,10 +1415,6 @@ export type MessageParams = {
   "queue.short.unanswered": { "field": string };
   "queue.short.unanswered.title": Record<never, never>;
   "queue.skip": Record<never, never>;
-  "queue.star": Record<never, never>;
-  "queue.star.first": Record<never, never>;
-  "queue.star.label": { "name": string };
-  "queue.star.on": Record<never, never>;
   "queue.title": Record<never, never>;
   "queue.undo": Record<never, never>;
   "queue.undo.label": Record<never, never>;
