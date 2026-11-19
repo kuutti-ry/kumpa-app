@@ -30,7 +30,7 @@ export const PHOTOS_FOR_COMPLETENESS = 2;
 /**
  * Whether a profile has its words (#239): a bio of BIO_MIN_FOR_COMPLETENESS
  * characters, a ready line, or PROMPTS_FOR_COMPLETENESS answered prompts.
- * Since #681 (the maintainer, 18–19/11/2026, option b) a card is shown
+ * Since #681 (the maintainer, 18/11/2026, option b) a card is shown
  * without them: neither completeness nor onboarding asks for them, and the
  * offer at the end of onboarding reads this rule to ask once when they are
  * missing; the synthetic population gives everybody them.

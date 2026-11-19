@@ -5,7 +5,7 @@ import { type Completeness, type CompletenessItem, PHOTOS_FOR_COMPLETENESS } fro
  * least two approved photos (an automatic approval requires a face, ADR-006;
  * two since #56, where a third became a tip), and the two things onboarding
  * sets (#46), seeks and the age window. No bio or prompts since #681 (the
- * maintainer, 18–19/11/2026, option b): a card is shown without words, and
+ * maintainer, 18/11/2026, option b): a card is shown without words, and
  * onboarding offers them once at its end. Pure: the callers gather the
  * snapshot; the tips of #56 and the queue's builder read the same answer.
  */
