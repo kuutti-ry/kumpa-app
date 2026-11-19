@@ -72,6 +72,8 @@ export type PushDeps = {
   pusher?: Pusher;
   /** An announcement's email goes with its push (ADR-068 §5), a sanction's alone (ADR-073 §4); absent where MAIL is off. */
   mailer?: Mailer;
+  /** The base of an announcement email's one-click unsubscribe (#196, `unsubscribeBase`); absent, the email carries none. */
+  unsubscribe?: string;
   /** Whether the account has a live socket now (#349): the chat's registry. */
   online: (accountId: string) => boolean;
   schedule?: Schedule;
@@ -402,7 +404,13 @@ export function createPush(deps: PushDeps) {
       if (mailer) {
         inTheBackground("announcement", async () => {
           await mailAnnouncement(
-            { db: deps.db, logger: deps.logger, mailer, pause },
+            {
+              db: deps.db,
+              logger: deps.logger,
+              mailer,
+              pause,
+              ...(deps.unsubscribe ? { unsubscribe: deps.unsubscribe } : {}),
+            },
             input.announcementId,
           );
         });

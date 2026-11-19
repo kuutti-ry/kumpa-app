@@ -187,7 +187,7 @@ export async function exportedNotices(
   }));
 }
 
-/** Erasure (ADR-007 §4): the person's choices and notices go. */
+/** Erasure (ADR-007 §4): the person's choices, notices and unsubscribe secret go. */
 export async function deleteOf(
   db: Queryable,
   accountId: string,
@@ -196,7 +196,58 @@ export async function deleteOf(
   const choices = await db.query("DELETE FROM notification_preference WHERE account_id = $1", [
     accountId,
   ]);
+  await db.query("DELETE FROM unsubscribe_token WHERE account_id = $1", [accountId]);
   return { choices: choices.rowCount ?? 0, notices: notices.rowCount ?? 0 };
+}
+
+/**
+ * The account's unsubscribe secret (#196, ADR-068 §5): `fresh` becomes it the
+ * first time, and every later call answers the one kept, so the links in
+ * older emails keep working. Null when the account is erased; the account row
+ * is held as every writer holds it, so an erasure under way either finishes
+ * first or deletes what this wrote.
+ */
+export async function unsubscribeTokenOf(
+  db: Queryable,
+  accountId: string,
+  fresh: string,
+): Promise<string | null> {
+  const { rows } = await db.query<{ token: string }>(
+    `INSERT INTO unsubscribe_token (account_id, token)
+     SELECT a.id, $2 FROM account a WHERE a.id = $1 AND a.state <> 'deleted'
+     FOR SHARE
+     ON CONFLICT (account_id) DO UPDATE SET token = unsubscribe_token.token
+     RETURNING token`,
+    [accountId, fresh],
+  );
+  return rows[0]?.token ?? null;
+}
+
+/**
+ * One click (#196, RFC 8058): the Announcements switch of the account whose
+ * secret this is goes off, as Settings would set it; its id, or null when no
+ * live account holds the secret. The one statement here not scoped by a
+ * session's account, since a mail provider's POST carries nothing but the
+ * link (RFC 8058 §3.2): the secret, 256 random bits, is the scope, found by
+ * the database's index and never compared in the process.
+ */
+export async function unsubscribeByToken(
+  db: Queryable,
+  token: string,
+  at: Date,
+): Promise<string | null> {
+  const { rows } = await db.query<{ account_id: string }>(
+    `INSERT INTO notification_preference (account_id, kind, enabled, updated_at)
+     SELECT a.id, 'announcement', false, $2
+       FROM unsubscribe_token u JOIN account a ON a.id = u.account_id
+      WHERE u.token = $1 AND a.state <> 'deleted'
+     FOR SHARE OF a
+     ON CONFLICT (account_id, kind)
+       DO UPDATE SET enabled = false, updated_at = EXCLUDED.updated_at
+     RETURNING account_id`,
+    [token, at],
+  );
+  return rows[0]?.account_id ?? null;
 }
 
 // Announcements (#573, ADR-068): the panel's rows, and whom one reaches. Every

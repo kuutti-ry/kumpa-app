@@ -7,6 +7,7 @@ apps/api/src/notifications/announcements.ts
 apps/api/src/notifications/repo.ts
 apps/api/src/notifications/push.ts
 apps/api/src/notifications/notifications.ts
+apps/api/src/notifications/unsubscribe.ts
 apps/mobile/app/index.tsx
 apps/mobile/src/features/notifications/Notices.tsx
 apps/mobile/src/features/notifications/PushNotifications.tsx
@@ -14,7 +15,7 @@ apps/mobile/src/features/notifications/NotificationChoices.tsx
 apps/mobile/src/features/home/HomeScreen.tsx
 -->
 
-How Kuutti tells everybody something they must know, such as a service break or a change in the rules: one admin writes it in the moderation panel, another admin approves it, and only then does it reach every account, as a notice in the app, a push and an e-mail. It is for the admins who write and approve it, and for everybody who reads it.
+How Kuutti tells everybody something they must know, such as a service break or a change in the rules: one admin writes it in the moderation panel, another admin approves it, and only then does it reach every account, as a notice in the app, a push and an e-mail, whose Unsubscribe turns the person's announcements off. It is for the admins who write and approve it, and for everybody who reads it.
 
 ## Part 1: one admin writes it
 
@@ -152,7 +153,7 @@ flowchart TB
 
 22. A second admin has approved the announcement, and its notice is written for every account (part 2). After the approval's answer, the API's own process sends the e-mails and the pushes.
 23. The API e-mails every person its notice reached whose address is confirmed ([E-mail and its confirmation](email.md)) and whose Announcements switch is on, each read again just before their e-mail, one at a time and spaced to stay within the mail service's pace. Each is worded in the language the person read the terms in: Finnish for Finnish and Stadi, Swedish where it was written in Swedish, English otherwise. A failed e-mail is not tried again, and the rest go on.
-24. The e-mail's subject is "Kumpa: " and the title; its body is the title, the text, "You get this because you confirmed this address in the Kumpa app. Announcements can be turned off in Settings, under Notifications." and "Kuutti ry". Plain text, with no link. An address not confirmed gets nothing.
+24. The e-mail's subject is "Kumpa: " and the title; its body is the title, the text, "You get this because you confirmed this address in the Kumpa app. Announcements can be turned off in Settings, under Notifications." and "Kuutti ry". Plain text, with no link in its words; its headers carry the person's own unsubscribe (part 4). An address not confirmed gets nothing.
 25. In the quiet hours, from `push_quiet_from_hour` to `push_quiet_to_hour` in Helsinki: 26. Otherwise: 27.
 26. Unlike a message's or a match's, the push is not dropped: it waits until the quiet hours end, and then goes to those who have not read the notice meanwhile: 27.
 27. The API pushes everybody whose notice is still unread, whose Announcements switch is on, and who has a signed-in phone that lets Kuutti notify: "An announcement from Kumpa", in the phone's language, with its kind alone and never its words ([Notifications](notifications.md), part 3). Switched off, there is no push and no e-mail, but the notice stays.
@@ -161,14 +162,48 @@ flowchart TB
 30. The person chooses Got it.
 31. The notice leaves home; the person's data export still lists it, with when it came and when it was read. An announcement's own words are in nobody's export.
 
+## Part 4: one click turns them off
+
+```mermaid
+flowchart TB
+  accTitle: Announcements, part 4: one click turns them off
+  accDescr: An announcement's e-mail carries the person's own unsubscribe link in its headers, never in its words, so a mail app that reads them shows its own Unsubscribe. One press posts to the API with no sign-in, and the API turns that person's Announcements switch off, as Settings would. A link nobody holds is refused, and one that is only opened changes nothing and opens no page.
+  subgraph person["The person"]
+    s32(["Presses Unsubscribe beside the e-mail in their mail app"])
+  end
+  subgraph mail["The mail app"]
+    s33["Posts to the link in the e-mail's headers, with no sign-in"]
+    s37(["Says, in its own words, that the person is unsubscribed"])
+  end
+  subgraph api["The API"]
+    s34{"Does an account not erased hold the link?"}
+    s35["Turns that person's Announcements switch off, as Settings would"]
+    s36(["Answers that there is no such link, and changes nothing"])
+  end
+  s32 --> s33
+  s33 --> s34
+  s34 -->|"yes"| s35
+  s35 --> s37
+  s34 -->|"no"| s36
+```
+
+### Steps
+
+32. Beside an announcement's e-mail, a mail app that reads its headers shows an Unsubscribe of its own, as the large mail services do. The e-mail's words carry no link: the link is in its headers, `List-Unsubscribe` and `List-Unsubscribe-Post`, made for the person at their first announcement e-mail and the same in every later one. Only an announcement's e-mail carries it; a code's and a sanction's do not. The person presses it.
+33. The mail app posts to the link from its own servers, with no sign-in and the same words for everybody, so the link alone says whose switch it is.
+34. The link is the API's own address and a secret of 43 characters, the person's alone. Held by an account not erased: 35. Otherwise: 36.
+35. The API turns the person's Announcements switch off, the push's and the e-mail's, exactly as Settings would; the notice of an announcement still reaches them. It answers with nothing, and a second press answers the same. Settings shows the switch off, and turning it on there again is the way back; the link of an older e-mail keeps working.
+36. The API answers that there is no such link and changes nothing. A link that is only opened, as a browser or a mail scanner opens one, is answered that only a press is taken, and changes nothing either: no page opens.
+37. The mail app says so in its own words. Kumpa sends nothing to say it.
+
 ## Where it lives
 
 - Admin: [Announcements.tsx](../../apps/admin/src/features/notifications/Announcements.tsx), shown to admins alone by the panel's route table in [app.tsx](../../apps/admin/src/app.tsx) ([admin README](../../apps/admin/README.md)); its Playwright flow [announcements.spec.ts](../../apps/admin/e2e/announcements.spec.ts), one admin writing and another approving
 - Screens: home [index.tsx](../../apps/mobile/app/index.tsx), with the notice in [Notices.tsx](../../apps/mobile/src/features/notifications/Notices.tsx); a push's tap in [PushNotifications.tsx](../../apps/mobile/src/features/notifications/PushNotifications.tsx); the switch in [NotificationChoices.tsx](../../apps/mobile/src/features/notifications/NotificationChoices.tsx)
-- API: `GET` and `POST /admin/announcements`, `DELETE /admin/announcements/{id}` and `POST /admin/announcements/{id}/approve` in the notifications slice's [admin-routes.ts](../../apps/api/src/notifications/admin-routes.ts) ([README](../../apps/api/src/notifications/README.md)), with [announcements.ts](../../apps/api/src/notifications/announcements.ts) (the words a reader gets, the approval, the e-mail) and [repo.ts](../../apps/api/src/notifications/repo.ts) (a notice for every account, and how many it reaches); the push in [push.ts](../../apps/api/src/notifications/push.ts); the notice's words through `GET /notices` in [notifications.ts](../../apps/api/src/notifications/notifications.ts); the e-mail through [lib/mail.ts](../../apps/api/src/lib/mail.ts)
+- API: `GET` and `POST /admin/announcements`, `DELETE /admin/announcements/{id}` and `POST /admin/announcements/{id}/approve` in the notifications slice's [admin-routes.ts](../../apps/api/src/notifications/admin-routes.ts) ([README](../../apps/api/src/notifications/README.md)), with [announcements.ts](../../apps/api/src/notifications/announcements.ts) (the words a reader gets, the approval, the e-mail) and [repo.ts](../../apps/api/src/notifications/repo.ts) (a notice for every account, and how many it reaches); the push in [push.ts](../../apps/api/src/notifications/push.ts); the one-click unsubscribe, `POST /mail/unsubscribe/{secret}`, in [unsubscribe.ts](../../apps/api/src/notifications/unsubscribe.ts), its headers in [mail.ts](../../apps/api/src/lib/mail.ts); the notice's words through `GET /notices` in [notifications.ts](../../apps/api/src/notifications/notifications.ts); the e-mail through [lib/mail.ts](../../apps/api/src/lib/mail.ts)
 - Spec: [announcements.feature](../../features/notifications/announcements.feature)
 - Maestro: no flow sends an announcement; [notification-settings.yaml](../../apps/mobile/e2e/flows/notification-settings.yaml) opens the Notifications row, whose line names announcements
-- ADRs: [ADR-068](../adr/068-announcements.md) (§1 the texts, §2 two admins, §3 everybody's notice, §4 the push, §5 the e-mail, §6 the switch, §8 what is kept), [ADR-055](../adr/055-push.md) §1 and §7 (amended for the announcement's push), [ADR-032](../adr/032-notification-choices-and-notices.md) §1 and §2 (amended for its switch and notice), [ADR-043](../adr/043-email-confirmation.md) §1 (amended for its e-mail)
+- ADRs: [ADR-068](../adr/068-announcements.md) (§1 the texts, §2 two admins, §3 everybody's notice, §4 the push, §5 the e-mail and its one-click unsubscribe, §6 the switch, §8 what is kept), [ADR-055](../adr/055-push.md) §1 and §7 (amended for the announcement's push), [ADR-032](../adr/032-notification-choices-and-notices.md) §1 and §2 (amended for its switch and notice), [ADR-043](../adr/043-email-confirmation.md) §1 (amended for its e-mail)
 - Rules: the register's [Notifications](../decisions.md#notifications) and [E-mail](../decisions.md#e-mail) rows
 
 ## History
@@ -178,3 +213,4 @@ flowchart TB
 
 - 2026-11-13 (#380): Send starts with focus on its question, pending sends and deletions cannot be dismissed, confirmed outcomes receive focus, and newer typed words survive saving or a failed refresh.
 - 2026-11-16 (#700, PR #701): the e-mail's subject and its last lines, and the push, name the app Kumpa.
+- 2026-11-18 (#196): part 4, the one-click unsubscribe: the e-mail's headers carry the person's own link, and their mail app's Unsubscribe turns their Announcements switch off, as Settings would.

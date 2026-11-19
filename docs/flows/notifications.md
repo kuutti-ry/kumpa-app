@@ -114,7 +114,7 @@ flowchart TB
 16. "Open the phone's settings" opens the phone's own settings for Kuutti; "Allow notifications" shows the phone's own question, as the home screen's offer does (part 1), and waits while it is open. No dialog of Kuutti's asks.
 17. When the app comes back to the front it reads the phone's answer again; a change is said aloud, as "This phone shows Kumpa's notifications.", and the row's value follows.
 18. The API takes the change for the person's own account; every switch waits while it is on its way. Taken: 19. Not taken (no answer, or the account deleted meanwhile): 21.
-19. The API keeps the choice for the account, not on the phone, so every phone of the person's and every push reads the same: Messages and Matches decide their pushes, Announcements an announcement's push and e-mail but never its notice, and Moderators' decisions nothing yet (part 3). A sanction's e-mail goes whatever any switch says (part 4).
+19. The API keeps the choice for the account, not on the phone, so every phone of the person's and every push reads the same: Messages and Matches decide their pushes, Announcements an announcement's push and e-mail but never its notice, and Moderators' decisions nothing yet (part 3). The Unsubscribe of an announcement's e-mail, pressed in the person's mail app, turns the same Announcements switch off ([Announcements](announcements.md#part-4-one-click-turns-them-off)). A sanction's e-mail goes whatever any switch says (part 4).
 20. The app shows every switch as the API now keeps it, and the row's value says so. The choice is there the next time, on any phone.
 21. The app says "That did not go through. Try again." and the switch stays as it was.
 
@@ -250,3 +250,4 @@ flowchart TB
 - 2026-11-07 (#573, PR #643): an announcement to everybody leaves a notice in Kuutti's own words and has its own push and its own switch, which stops the push and the e-mail, never the notice; a tap on its push opens home.
 - 2026-11-16 (#700, PR #701): the offer, the settings and the announcement's push name the app Kumpa.
 - 2026-11-17 (#715, PR #719): a moderator's shadow ban leaves a notice too, an automatic rule's none, and a warning's and a shadow ban's notice say why and how to contest it; every sanction staff applies is e-mailed once to a confirmed address whatever the switches say.
+- 2026-11-18 (#196): the Unsubscribe of an announcement's e-mail turns the Announcements switch off, as Settings would.

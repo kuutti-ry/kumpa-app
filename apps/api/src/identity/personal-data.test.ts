@@ -204,6 +204,13 @@ const REGISTER: Record<string, Entry> = {
   },
   session: { erasure: "goes", by: "deleteAccountSessions", exported: ["sessions"] },
   star: { erasure: "goes", by: "eraseStarsOf", exported: ["stars"] },
+  unsubscribe_token: {
+    erasure: "goes",
+    by: "eraseNotificationsOf",
+    exported: {
+      not: "The secret of the one-click unsubscribe in their own emails (#196): as a session's token, it is not repeated.",
+    },
+  },
   pond_counter: {
     erasure: "nobody",
     why: "The counts of everybody, one row, no history (ADR-013).",

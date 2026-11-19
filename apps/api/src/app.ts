@@ -60,6 +60,8 @@ import {
   createPush,
   notificationRoutes,
   type Push,
+  unsubscribeBase,
+  unsubscribeRoutes,
 } from "./notifications/index.ts";
 import { pondAdminRoutes, pondRoutes } from "./pond/index.ts";
 import { buildCard, exportProfile, profileRoutes } from "./profile/index.ts";
@@ -155,6 +157,11 @@ export const PUBLIC_ROUTES = new Set([
   // The app's links to the legal texts (#208, ADR-010 §4): a redirect to the website, no page.
   "GET /legal/terms",
   "GET /legal/privacy",
+  // One-click unsubscribe from the announcement email (#196, RFC 8058): the
+  // mail app's POST carries the link alone, whose secret is the scope; a GET
+  // changes nothing and is answered 405, no page.
+  "POST /mail/unsubscribe/:token",
+  "GET /mail/unsubscribe/:token",
   "GET /admin/auth/start",
   "POST /admin/auth/exchange",
   // The chat's socket (#349): its first frame carries the session's token, checked
@@ -253,6 +260,7 @@ export function createApp(deps: Deps) {
   app.route("/", appLinkRoutes(deps));
   app.route("/", legalTextRoutes());
   app.route("/", invitationLinkRoutes(deps));
+  app.route("/", unsubscribeRoutes(deps));
   // A URL of somebody else's photo is checked by the velocity rule (#86,
   // ADR-041): the safety slice decides, the media slice only issues.
   app.route(
@@ -285,6 +293,8 @@ export function createApp(deps: Deps) {
   // The pushes (#102, ADR-055): the notifications slice decides whom to tell,
   // the chat, the queue's and the sanctions' routes only say when; a
   // sanction staff applied is mailed to its person (#715, ADR-073 §4).
+  // An announcement's email carries its one-click unsubscribe (#196).
+  const unsubscribe = unsubscribeBase(deps.config);
   const push =
     deps.push ??
     createPush({
@@ -293,6 +303,7 @@ export function createApp(deps: Deps) {
       now: deps.now ?? (() => new Date()),
       ...(deps.pusher ? { pusher: deps.pusher } : {}),
       ...(deps.mailer ? { mailer: deps.mailer } : {}),
+      ...(unsubscribe ? { unsubscribe } : {}),
       online: (accountId) => live.online(accountId),
     });
   // The conversations a match opens and their text messages (#348, ADR-031).

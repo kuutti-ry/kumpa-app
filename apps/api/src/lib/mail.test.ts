@@ -15,6 +15,8 @@ const MESSAGE: MailMessage = {
   subject: "Your code for Kuutti",
   text: "Your code is 042042. It works for 30 minutes.\n\nKuutti ry",
 };
+/** An announcement's one-click link (#196): the API's host, the path and a secret of 43 characters. */
+const UNSUBSCRIBE = `https://api.kumpa.fi/mail/unsubscribe/${"Q".repeat(43)}`;
 /** Anything shaped like an address, however a line would carry it. */
 const ADDRESS_SHAPED = /[\w.+-]+@[\w-]+\.[\w.]+/;
 
@@ -59,6 +61,21 @@ describe("the SES mailer (ADR-043 §5)", () => {
         },
       },
     });
+  });
+
+  it("puts an announcement's one-click unsubscribe in the two headers RFC 8058 names, never in the text", async () => {
+    const { client, sent } = answering(async () => ({ MessageId: "m-2" }));
+    await sesMailer(client, FROM).send({ ...MESSAGE, unsubscribe: UNSUBSCRIBE });
+    const simple = (sent[0] as SendEmailCommand).input.Content?.Simple;
+    expect(simple?.Headers).toEqual([
+      { Name: "List-Unsubscribe", Value: `<${UNSUBSCRIBE}>` },
+      { Name: "List-Unsubscribe-Post", Value: "List-Unsubscribe=One-Click" },
+    ]);
+    expect(simple?.Body).toEqual({ Text: { Data: MESSAGE.text, Charset: "UTF-8" } });
+    // SES's own limits on a header: printable ASCII, at most 995 characters.
+    for (const header of simple?.Headers ?? []) {
+      expect(header.Value).toMatch(/^[\x20-\x7e]{1,995}$/);
+    }
   });
 
   it("turns a refusal into the SDK's error name and HTTP status, and names no address", async () => {
@@ -119,6 +136,12 @@ describe("the log mailer (ADR-043 §4)", () => {
     // The code is there to be typed; the address is in no key and no value.
     expect(JSON.stringify(written)).toContain("042042");
     expect(JSON.stringify(written)).not.toMatch(ADDRESS_SHAPED);
+  });
+
+  it("leaves an announcement's unsubscribe link out of the log", async () => {
+    const { logger, lines } = await captureLogger();
+    await logMailer(logger).send({ ...MESSAGE, unsubscribe: UNSUBSCRIBE });
+    expect(JSON.stringify(lines())).not.toContain("/mail/unsubscribe/");
   });
 });
 

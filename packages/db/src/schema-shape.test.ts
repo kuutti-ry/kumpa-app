@@ -93,6 +93,8 @@ describe("the tables", () => {
       "session",
       // One person's private mark on another (#575, ADR-064).
       "star",
+      // The secret of the one-click unsubscribe in announcement emails (#196, ADR-068 §5).
+      "unsubscribe_token",
     ]);
   });
 
@@ -266,6 +268,8 @@ describe("the foreign keys", () => {
       // Who put a star and on whom (#575): gone at the erasure of either.
       "star",
       "star",
+      // The one-click unsubscribe's secret (#196), deleted at erasure.
+      "unsubscribe_token",
     ]);
     const toIdentity = references
       .filter((reference) => reference.includes(" -> identity.id"))

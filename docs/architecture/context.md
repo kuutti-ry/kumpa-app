@@ -81,7 +81,7 @@ flowchart TB
 ```mermaid
 flowchart TB
   accTitle: Context, part 2: the API and the AWS services it calls
-  accDescr: The API reads its configuration and secrets from SSM Parameter Store, keeps its data in RDS PostgreSQL, writes photos to the media bucket, and asks Rekognition to check photos. CloudFront reads the media bucket and the panel's bucket. Every container's logs go to CloudWatch, whose alarms mail through SNS, and Route 53 probes the API from outside. SES sends the e-mail code.
+  accDescr: The API reads its configuration and secrets from SSM Parameter Store, keeps its data in RDS PostgreSQL, writes photos to the media bucket, and asks Rekognition to check photos. CloudFront reads the media bucket and the panel's bucket. Every container's logs go to CloudWatch, whose alarms mail through SNS, and Route 53 probes the API from outside. SES sends the e-mail code, an announcement and a sanction's statement.
   subgraph kuutti2["Kuutti"]
     n13["The API, in a container on the EC2 box"]
   end
@@ -93,7 +93,7 @@ flowchart TB
     n18["S3, the panel's bucket"]
     n19["CloudFront, the panel's distribution"]
     n20["Rekognition: the photo check"]
-    n21["SES: the e-mail code, in the sandbox. More mail planned, #196"]
+    n21["SES: the e-mail code, announcements and a sanction's statement, in the sandbox. More mail planned, #196"]
     n22["CloudWatch: logs, metrics and alarms"]
     n23["SNS: alert mail"]
     n24["Route 53: DNS and the outside health probe"]
@@ -104,7 +104,7 @@ flowchart TB
   n17 -->|"reads media/ for a validly signed URL"| n16
   n19 -->|"reads the panel's files"| n18
   n13 -->|"a photo's bytes, for labels and faces"| n20
-  n13 -->|"the code from noreply@kuutti.app"| n21
+  n13 -->|"the code, an announcement or a sanction's statement, from noreply@kuutti.app"| n21
   n13 -->|"every container's log lines"| n22
   n22 -->|"an alarm"| n23
   n24 -->|"asks /health every 30 seconds"| n13
@@ -122,7 +122,7 @@ flowchart TB
 18. S3, the panel's private bucket: `main`'s build at its root, written by CI ([Delivery](delivery.md)); Saiga's faces under `fonts/`, which the maintainer uploads by hand (38).
 19. CloudFront, the panel's distribution: the only reader of the panel's bucket. It adds the panel's security headers to every answer and answers a page's path with `index.html`.
 20. Rekognition: three detect calls (moderation labels, faces, labels), on when the parameter `moderation` says `rekognition`, as it does on staging. The photo's bytes travel in the request and nothing is stored on Rekognition's side. Without the parameter every photo waits for a person in the moderation queue.
-21. SES: the code that confirms the optional e-mail address, from `noreply@kuutti.app`, an alias at the association's Google Workspace (#385, ADR-043). The domain's identity lives in `infra/bootstrap`, which only the maintainer applies; he applied it on 2026-10-25, SES verified the domain, its DKIM and the MAIL FROM `mail.kuutti.app`, and staging's parameter `mail` says `ses`. SES is in its sandbox until the maintainer asks AWS for production access, so it delivers only to verified identities, the addresses of `kuutti.app` among them, and staging's role may mail only what the repository variable `MAIL_TESTERS` matches, `*@kuutti.app` since 2026-10-25. A second identity, `kumpa.fi`, with its DKIM and the MAIL FROM `mail.kumpa.fi`, is declared there for the move of ADR-072 and waits for his apply; the role may send as `noreply@` of either domain, and nothing sends as `kumpa.fi` until `MAIL_FROM` names it. Further mail is planned, #196.
+21. SES: the code that confirms the optional e-mail address, and to a confirmed one an announcement to everybody and the statement of a sanction (ADR-068 §5, ADR-073 §4), from `noreply@kuutti.app`, an alias at the association's Google Workspace (#385, ADR-043). The domain's identity lives in `infra/bootstrap`, which only the maintainer applies; he applied it on 2026-10-25, SES verified the domain, its DKIM and the MAIL FROM `mail.kuutti.app`, and staging's parameter `mail` says `ses`. SES is in its sandbox until the maintainer asks AWS for production access, so it delivers only to verified identities, the addresses of `kuutti.app` among them, and staging's role may mail only what the repository variable `MAIL_TESTERS` matches, `*@kuutti.app` since 2026-10-25. A second identity, `kumpa.fi`, with its DKIM and the MAIL FROM `mail.kumpa.fi`, is declared there for the move of ADR-072 and waits for his apply; the role may send as `noreply@` of either domain, and nothing sends as `kumpa.fi` until `MAIL_FROM` names it. An announcement's e-mail carries the person's one-click unsubscribe in its headers (#196, RFC 8058): their mail service posts it back to the API on the API's own name, through CloudFront as any request, and the API turns their Announcements switch off. Further mail is planned, #196.
 22. CloudWatch: Docker on the box sends every container's log lines to `/kuutti/staging/api`, Dokploy's own included. Metric filters count the API's 5xx answers, photo refusals, Rekognition calls, failed nightly jobs, bank identifications (#471) and the API's refusals for its limits (#41). Alarms watch each of those counts but the Rekognition one, the instance's status check, the instance's and the database's CPU credits, the database's free storage, and the box's free memory, which the box itself pushes every minute (#77).
 23. SNS: the topic `kuutti-staging-alerts` mails the address of the repository variable `ALERT_EMAIL`. The probe's alarm and the edge's, on the web ACL's refusals, have a topic of their own in us-east-1 with the same address, and the bootstrap's billing alarm and budget a third.
 24. Route 53: the zone `kuutti.app`, adopted from the domain's registration, holds every record but the second names. Its health check asks `https://api.staging.kuutti.app/health` every 30 seconds from three regions and wants the body to say the API is up; it is the one alarm that sees a stopped container. The zone `kumpa.fi`, the second domain's, adopted the same way, holds Google Workspace's mail records, a DMARC and a CAA like the home's, the records Amplify wrote for the website and, since #703, the second names of `api`, `origin.api`, `dokploy` and `admin` with their certificates' validation records (ADR-072). The zone `kunpa.fi`, of the misspelling registered at Zoner, is the one the bootstrap creates and does not adopt: it holds the records Amplify wrote to redirect the name to `kumpa.fi`, and records that say it has no mail (#726).
