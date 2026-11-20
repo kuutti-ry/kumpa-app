@@ -194,6 +194,7 @@ const LOOK_LABELS: Record<Look, PlainMessageKey> = {
   today: "tech.look.today",
   neubrutalism: "tech.look.neubrutalism",
   organic: "tech.look.organic",
+  kumpa: "tech.look.kumpa",
   glass: "tech.look.glass",
   bold: "tech.look.bold",
 };

@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { readPreference, writePreference } from "@/lib/preferences";
 import { cn } from "@/lib/utils";
-import { isLook, LOOK_CLASS, type Look, type LookTraits, traitsOf } from "./looks";
+import { DEFAULT_LOOK, isLook, LOOK_CLASS, type Look, type LookTraits, traitsOf } from "./looks";
 import { useMotionDuration } from "./useReducedMotion";
 
 export type SchemePreference = "system" | "light" | "dark";
@@ -70,7 +70,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [preference, setPreferenceState] = React.useState<SchemePreference>("system");
   const systemHighContrast = useSystemHighContrast();
   const [chosenHighContrast, setChosenHighContrast] = React.useState<boolean | null>(null);
-  const [look, setLookState] = React.useState<Look>("today");
+  const [look, setLookState] = React.useState<Look>(DEFAULT_LOOK);
   const highContrast = chosenHighContrast ?? systemHighContrast;
   const scheme = colorScheme === "dark" ? "dark" : "light";
 
@@ -102,7 +102,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, []);
   const setLook = React.useCallback((next: Look) => {
     setLookState(next);
-    void writePreference("look", next === "today" ? null : next);
+    void writePreference("look", next === DEFAULT_LOOK ? null : next);
   }, []);
 
   // What was chosen last time, read once; nothing stored is the OS's setting.

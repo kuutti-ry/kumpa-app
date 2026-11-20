@@ -9317,6 +9317,13 @@ tech.look.bold:
   sv: "Bold Contrast"
   machine: { fi: true, sv: true }
 
+tech.look.kumpa:
+  en: "Kumpa"
+  description: "Kumpa's own style, the design shown to Helsingin Sanomat on 20/11/2026: cream ground, ink outlines with hard shadows, royal blue, lavender and orange, pastel chips, and the card as a poster with round buttons, one of the tech screen's choices of style. The app's name, kept as it is in every language."
+  fi: "Kumpa"
+  sv: "Kumpa"
+  machine: { fi: true, sv: true }
+
 tech.errorTest.sent:
   en: "Test error sent. It shows up in the error tracker within a minute if reporting is on in this build."
   description: "Tech config, under the test error button after it was pressed."

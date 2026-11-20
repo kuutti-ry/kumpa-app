@@ -20,6 +20,7 @@ import {
   StyleSheet,
   View,
 } from "react-native";
+import Svg, { Path } from "react-native-svg";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
@@ -31,6 +32,8 @@ import { usePhotoDescriptionText } from "@/lib/photo-descriptions";
 import { cn } from "@/lib/utils";
 import { DECORATIVE, MINIMUM_TARGET } from "@/theme/a11y";
 import { useHapticTap } from "@/theme/haptics";
+import { useTokenColour } from "@/theme/shadow";
+import { useLookTraits } from "@/theme/ThemeProvider";
 import { FIELD_ICONS, HOBBY_GROUP_ICONS } from "./fieldIcons";
 import { OptionGlyph, optionGlyph } from "./glyphs";
 import {
@@ -168,8 +171,11 @@ export function ProfileCardView({
   distance,
   onRefused,
   onGone,
+  bleed = false,
 }: {
   card: ProfileCard;
+  /** Kumpa's poster only: the photo runs to the edges of a screen padded 24 pt on each side (the queue's). */
+  bleed?: boolean;
   /** How far the person lives, as their queue entry froze it (ADR-061 §5); a card outside a queue has none. */
   distance?: DistanceBand | null;
   /** A photo URL the API refused (#52 budget or another code): the screen says so instead of a silent placeholder. */
@@ -178,6 +184,7 @@ export function ProfileCardView({
   onGone?: (accountId: string) => void;
 }) {
   const { t, locale } = useT();
+  const { poster } = useLookTraits();
   const tap = useHapticTap();
   const [safetyOpen, setSafetyOpen] = useState(false);
   /** The person whose whole card is open: another person's card starts short. */
@@ -300,149 +307,202 @@ export function ProfileCardView({
   const content = keyChips.length > 0 || firstPrompt !== undefined || bio !== null || more;
   const toggleText = t(whole ? "profile.card.showLess" : "profile.card.showWhole");
 
-  return (
-    <Card>
-      <CardHeader>
-        {/* The name and the line under it in one column, Block or report beside both,
-            so its 44 pt target puts no gap between them (#644). */}
-        <View className="flex-row items-start gap-2">
-          <View className="flex-1 gap-1.5">
-            {/* The age in the title, as visible as the name: every account is bank-verified,
-                so the card does not say so (#239). */}
-            <CardTitle
-              {...(onGone && {
-                // A screen reader reaches block or report from the name too.
-                accessibilityActions: [{ name: SAFETY_ACTION, label: t("safety.actions.title") }],
-                onAccessibilityAction: (event: AccessibilityActionEvent) => {
-                  if (event.nativeEvent.actionName === SAFETY_ACTION) setSafetyOpen(true);
-                },
-              })}
-            >
-              {t("profile.card.nameAge", { name: card.displayName, years: card.age.years })}
-            </CardTitle>
-            {line.length > 0 && <HeaderLine words={line} />}
-          </View>
-          {onGone && (
-            <SafetyActions
-              accountId={card.accountId}
-              // The report may name one of these (#476): named as here, in the variant
-              // painted here, so the phone's cache has each the card showed and nothing
-              // is signed again; one never shown is its blurhash.
-              photos={card.photos.map((photo, at) => ({
-                id: photo.id,
-                variant: "card",
-                blurhash: photo.blurhash,
-                label: photoLabel(photo, at + 1),
-                text: photoText(photo, at + 1),
-              }))}
-              open={safetyOpen}
-              onOpenChange={setSafetyOpen}
-              onGone={onGone}
+  // The name and the line under it in one column, Block or report beside both,
+  // so its 44 pt target puts no gap between them (#644).
+  const title = (
+    <View className="flex-row items-start gap-2">
+      <View className="flex-1 gap-1.5">
+        {/* The age in the title, as visible as the name: every account is bank-verified,
+            so the card does not say so (#239). */}
+        <CardTitle
+          className={poster ? POSTER_TITLE : undefined}
+          {...(onGone && {
+            // A screen reader reaches block or report from the name too.
+            accessibilityActions: [{ name: SAFETY_ACTION, label: t("safety.actions.title") }],
+            onAccessibilityAction: (event: AccessibilityActionEvent) => {
+              if (event.nativeEvent.actionName === SAFETY_ACTION) setSafetyOpen(true);
+            },
+          })}
+        >
+          {t("profile.card.nameAge", { name: card.displayName, years: card.age.years })}
+        </CardTitle>
+        {line.length > 0 && <HeaderLine words={line} />}
+      </View>
+      {onGone && (
+        <SafetyActions
+          accountId={card.accountId}
+          // The report may name one of these (#476): named as here, in the variant
+          // painted here, so the phone's cache has each the card showed and nothing
+          // is signed again; one never shown is its blurhash.
+          photos={card.photos.map((photo, at) => ({
+            id: photo.id,
+            variant: "card",
+            blurhash: photo.blurhash,
+            label: photoLabel(photo, at + 1),
+            text: photoText(photo, at + 1),
+          }))}
+          open={safetyOpen}
+          onOpenChange={setSafetyOpen}
+          onGone={onGone}
+        />
+      )}
+    </View>
+  );
+  const photos = front ? (
+    <View
+      style={poster && bleed ? POSTER_BLEED : PHOTO_FRAME}
+      className={poster && !bleed ? "overflow-hidden rounded-3xl" : undefined}
+    >
+      {card.photos.map((photo, at) =>
+        seen.has(photo.id) ? (
+          <View
+            key={photo.id}
+            style={StyleSheet.absoluteFill}
+            className={at === index ? undefined : "opacity-0"}
+            pointerEvents="none"
+            {...(at === index ? {} : BEHIND)}
+          >
+            <PhotoImage
+              id={photo.id}
+              variant="card"
+              blurhash={photo.blurhash}
+              accessibilityLabel={photoLabel(photo, at + 1)}
+              style={{ width: "100%", height: "100%" }}
+              onRefused={onRefused}
             />
-          )}
-        </View>
-      </CardHeader>
-      {front && (
-        <View style={{ width: "100%", aspectRatio: 3 / 4 }}>
-          {card.photos.map((photo, at) =>
-            seen.has(photo.id) ? (
+          </View>
+        ) : null,
+      )}
+      {total > 1 && (
+        <>
+          {/* Where in the photos the card is: the label says it in words. */}
+          <View
+            className="absolute inset-x-0 top-0 flex-row gap-1 p-2"
+            pointerEvents="none"
+            {...DECORATIVE}
+          >
+            {card.photos.map((photo, at) => (
               <View
                 key={photo.id}
-                style={StyleSheet.absoluteFill}
-                className={at === index ? undefined : "opacity-0"}
-                pointerEvents="none"
-                {...(at === index ? {} : BEHIND)}
-              >
-                <PhotoImage
-                  id={photo.id}
-                  variant="card"
-                  blurhash={photo.blurhash}
-                  accessibilityLabel={photoLabel(photo, at + 1)}
-                  style={{ width: "100%", height: "100%" }}
-                  onRefused={onRefused}
-                />
-              </View>
-            ) : null,
-          )}
-          {total > 1 && (
-            <>
-              {/* Where in the photos the card is: the label says it in words. */}
-              <View
-                className="absolute inset-x-0 top-0 flex-row gap-1 p-2"
-                pointerEvents="none"
-                {...DECORATIVE}
-              >
-                {card.photos.map((photo, at) => (
-                  <View
-                    key={photo.id}
-                    className={cn(
-                      "h-1.5 flex-1 rounded-full border border-background",
-                      at === index && "bg-background",
-                    )}
-                  />
-                ))}
-              </View>
-              {(
-                [
-                  [-1, "profile.card.photoPrevious", "left-0"],
-                  [1, "profile.card.photoNext", "right-0"],
-                ] as const
-              ).map(([step, label, side]) => {
-                const none = !card.photos[index + step];
-                return (
-                  <Pressable
-                    key={label}
-                    accessibilityRole="button"
-                    accessibilityLabel={t(label)}
-                    accessibilityState={{ disabled: none }}
-                    disabled={none}
-                    className={cn("absolute inset-y-0 w-1/2", side)}
-                    style={MINIMUM_TARGET}
-                    onPress={() => go(step)}
-                  />
-                );
-              })}
-            </>
-          )}
-        </View>
-      )}
-      {(front?.caption || frontWords) && (
-        <View className="gap-1.5 px-6">
-          {front?.caption ? <Caption text={t(captionKey(front.caption))} /> : null}
-          {frontWords ? <PhotoDescriptionText text={frontWords} /> : null}
-        </View>
-      )}
-      {content && (
-        <CardContent className="gap-4">
-          {keyChips.length > 0 && <Chips chips={keyChips} />}
-          {firstPrompt ? prompt(firstPrompt) : bio ? <Text>{bio}</Text> : null}
-          {more && (
-            <Button
-              variant="outline"
-              accessibilityLabel={toggleText}
-              accessibilityState={{ expanded: whole }}
-              onPress={() => {
-                tap();
-                setOpened(whole ? null : card.accountId);
-              }}
-            >
-              <Text>{toggleText}</Text>
-              <Icon as={whole ? ChevronUp : ChevronDown} size={18} />
-            </Button>
-          )}
-          {whole && moreWords}
-          {whole &&
-            sections.map((section) => (
-              <View key={section.id} className="gap-2">
-                <Text variant="small" role="heading">
-                  {t(sectionTitleKey(section.id))}
-                </Text>
-                <Chips chips={section.chips} />
-              </View>
+                className={cn(
+                  "h-1.5 flex-1 rounded-full border border-background",
+                  at === index && "bg-background",
+                )}
+              />
             ))}
-        </CardContent>
+          </View>
+          {(
+            [
+              [-1, "profile.card.photoPrevious", "left-0"],
+              [1, "profile.card.photoNext", "right-0"],
+            ] as const
+          ).map(([step, label, side]) => {
+            const none = !card.photos[index + step];
+            return (
+              <Pressable
+                key={label}
+                accessibilityRole="button"
+                accessibilityLabel={t(label)}
+                accessibilityState={{ disabled: none }}
+                disabled={none}
+                className={cn("absolute inset-y-0 w-1/2", side)}
+                style={MINIMUM_TARGET}
+                onPress={() => go(step)}
+              />
+            );
+          })}
+        </>
       )}
+      {poster && <PosterWave />}
+    </View>
+  ) : null;
+  const captions =
+    front?.caption || frontWords ? (
+      <View className={cn("gap-1.5", !poster && "px-6")}>
+        {front?.caption ? <Caption text={t(captionKey(front.caption))} /> : null}
+        {frontWords ? <PhotoDescriptionText text={frontWords} /> : null}
+      </View>
+    ) : null;
+  const details = (
+    <>
+      {keyChips.length > 0 && <Chips chips={keyChips} poster={poster} />}
+      {firstPrompt ? prompt(firstPrompt) : bio ? <Text>{bio}</Text> : null}
+      {more && (
+        <Button
+          variant="outline"
+          accessibilityLabel={toggleText}
+          accessibilityState={{ expanded: whole }}
+          onPress={() => {
+            tap();
+            setOpened(whole ? null : card.accountId);
+          }}
+        >
+          <Text>{toggleText}</Text>
+          <Icon as={whole ? ChevronUp : ChevronDown} size={18} />
+        </Button>
+      )}
+      {whole && moreWords}
+      {whole &&
+        sections.map((section) => (
+          <View key={section.id} className="gap-2">
+            <Text variant="small" role="heading">
+              {t(sectionTitleKey(section.id))}
+            </Text>
+            <Chips chips={section.chips} poster={poster} />
+          </View>
+        ))}
+    </>
+  );
+
+  // Kumpa's poster (the HS design): the name, large, then the photo at the
+  // screen's edges where the screen asks for it, and the rest, with no card
+  // around them. The design draws the name under the photo; on a phone the
+  // queue's floating buttons would cover it there, so it keeps the card's
+  // order, name and line on top, in view without a scroll (#644).
+  if (poster) {
+    return (
+      <View className="gap-4">
+        {title}
+        {photos}
+        {captions}
+        {content && <View className="gap-4">{details}</View>}
+      </View>
+    );
+  }
+  return (
+    <Card>
+      <CardHeader>{title}</CardHeader>
+      {photos}
+      {captions}
+      {content && <CardContent className="gap-4">{details}</CardContent>}
     </Card>
+  );
+}
+
+const PHOTO_FRAME = { width: "100%", aspectRatio: 3 / 4 } as const;
+// Kumpa's poster in the queue: the photo to the screen's sides, out through the
+// queue's 24 pt padding, since a width of 100 % would keep it. Its top stays,
+// under the card's reason label.
+const POSTER_BLEED = { aspectRatio: 3 / 4, marginHorizontal: -24 } as const;
+const POSTER_TITLE = "text-[40px] leading-[46px] font-bold";
+const POSTER_TONES = ["bg-chip-1", "bg-chip-2", "bg-chip-3"] as const;
+
+/** The poster photo's wavy end, in the ground's colour, drawn over the photo's last strip. */
+function PosterWave() {
+  const ground = useTokenColour("background");
+  if (!ground) return null;
+  return (
+    <Svg
+      width="100%"
+      height={44}
+      viewBox="0 0 400 44"
+      preserveAspectRatio="none"
+      style={{ position: "absolute", left: 0, right: 0, bottom: -1 }}
+      pointerEvents="none"
+      {...DECORATIVE}
+    >
+      <Path d="M0 22 C 60 -4 140 2 205 22 S 335 50 400 12 L 400 45 L 0 45 Z" fill={ground} />
+    </Svg>
   );
 }
 
@@ -471,11 +531,11 @@ function HeaderLine({ words }: { words: readonly string[] }) {
 }
 
 /** Chips that wrap onto as many lines as they need, never a sideways scroll (#644). */
-function Chips({ chips }: { chips: readonly Chip[] }) {
+function Chips({ chips, poster }: { chips: readonly Chip[]; poster: boolean }) {
   return (
     <View className="flex-row flex-wrap gap-2">
-      {chips.map((chip) => (
-        <FactChip key={chip.id} chip={chip} />
+      {chips.map((chip, at) => (
+        <FactChip key={chip.id} chip={chip} tone={poster ? POSTER_TONES[at % 3] : undefined} />
       ))}
     </View>
   );
@@ -487,7 +547,7 @@ function Chips({ chips }: { chips: readonly Chip[] }) {
  * bold, so the meaning never rests on the colour (CLAUDE.md Accessibility),
  * and the chip is heard as one element.
  */
-function FactChip({ chip }: { chip: Chip }) {
+function FactChip({ chip, tone }: { chip: Chip; tone?: string }) {
   const group =
     chip.field === "hobbies" && chip.option ? HOBBY_GROUP_OF.get(chip.option) : undefined;
   const inner = (
@@ -528,10 +588,15 @@ function FactChip({ chip }: { chip: Chip }) {
         // background, and there the bold alone tells it, still a chip.
         "border-border",
         chip.shared && "bg-secondary",
+        // Kumpa's pastels, in turn; a shared one keeps its bold and takes the ink's outline.
+        tone && cn("py-1.5", tone, chip.shared ? "border-2 border-stroke" : "border-transparent"),
       )}
     >
       {chip.shared ? (
-        <TextClassContext.Provider value="font-semibold text-secondary-foreground">
+        // On a pastel, a shared chip's words are the ink, as every chip's are.
+        <TextClassContext.Provider
+          value={cn("font-semibold", tone ? "text-foreground" : "text-secondary-foreground")}
+        >
           {inner}
         </TextClassContext.Provider>
       ) : (

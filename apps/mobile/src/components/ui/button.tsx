@@ -118,6 +118,31 @@ const pillButton = (outline: string, tall = false) =>
     defaultVariants: { variant: "default", size: "default" },
   });
 
+// Kumpa, the HS design (20/11/2026): pills in a 2 px outline in the ink on
+// every drawn variant, raised on the ink's hard shadow as Neobrutalism's are.
+const kumpaButton = cva(cn(BASE, "rounded-full border-2 border-stroke"), {
+  variants: {
+    variant: {
+      default: cn(
+        "bg-primary active:bg-primary/85",
+        Platform.select({ web: "hover:bg-primary/90" }),
+      ),
+      destructive: cn(
+        "bg-destructive active:bg-destructive/85",
+        Platform.select({ web: "hover:bg-destructive/90" }),
+      ),
+      outline: cn("bg-card", PRESS_FILL.tint),
+      secondary: cn(
+        "bg-secondary active:bg-secondary/80",
+        Platform.select({ web: "hover:bg-secondary/80" }),
+      ),
+      ghost: cn("border-transparent", PRESS_FILL.tint),
+    },
+    size: { ...SIZES, default: "min-h-12 min-w-touch px-6 py-2.5" },
+  },
+  defaultVariants: { variant: "default", size: "default" },
+});
+
 const RECIPES: Record<Look, typeof todaysButton> = {
   today: todaysButton,
   neubrutalism: neubrutalistButton,
@@ -126,6 +151,7 @@ const RECIPES: Record<Look, typeof todaysButton> = {
     cn("border-primary bg-card/60 active:bg-card", Platform.select({ web: "hover:bg-card" })),
   ),
   bold: pillButton(cn("border-2 border-foreground bg-transparent", PRESS_FILL.tint), true),
+  kumpa: kumpaButton,
 };
 
 // Saiga Regular: as dark as the system font's Semibold, the weight a phone

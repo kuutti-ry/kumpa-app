@@ -33,6 +33,10 @@ module.exports = {
         stroke: token("stroke"),
         // A style's loudest colour, for its drawn shapes, never under words.
         flourish: token("flourish"),
+        // The poster's chips: Kumpa's pastels in its sets, the muted fill in the others.
+        "chip-1": token("chip-1"),
+        "chip-2": token("chip-2"),
+        "chip-3": token("chip-3"),
         // The bands of the bar of whom people seek (SeeksBar, #581); no text sits on them.
         seeks: {
           men: token("seeks-men"),
