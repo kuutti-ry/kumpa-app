@@ -99,9 +99,10 @@ function useFloat(): { drawn: ViewStyle | undefined; plain: ViewStyle } {
  * in one column at the bottom on that side, Undo brought down from the header,
  * within a thumb's reach. A like that makes a match says so and leads to the
  * conversation; one refused over the conversations waiting says how many, and
- * the card stays (ADR-062 §5). In the designers' try (the tech screen's
- * neubrutalism or Organic Pop, outside production) the match is a hello
- * instead, `MatchHello` or `MatchPop`, with the same two ways on. The queue's
+ * the card stays (ADR-062 §5). In every look but today's (Kumpa, the look
+ * every phone starts in, and the tech screen's tries) the match is a hello
+ * instead, `MatchPop` in the pill styles, Kumpa's among them, and `MatchHello`
+ * in neubrutalism, with the same two ways on. The queue's
  * end says so, with no count and nothing about tomorrow, which in a thin set
  * would be false for a month; then the way to the Later list while it shows
  * somebody, what may be relaxed for today (#99, ADR-042), and one plain way
@@ -164,8 +165,8 @@ export function QueueScreen({ star }: { star?: string }) {
     if (decision === "like" || decision === "fish") setLiked(card);
     void queue.choose(card, decision);
   };
-  // The designers' try (outside production): a match is a hello. Read here, long
-  // before a match, so the setting is known when the hello mounts.
+  // Every look but today's, Kumpa's among them: a match is a hello. Read here,
+  // long before a match, so the setting is known when the hello mounts.
   const still = useReducedMotion();
   const { moment } = useLookTraits();
   const { highContrast } = useTheme();

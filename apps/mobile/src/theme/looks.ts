@@ -2,9 +2,11 @@ import { Platform } from "react-native";
 import { cn } from "@/lib/utils";
 
 /**
- * The designers' try (#408), chosen on the tech screen, which production has
- * not, so a released app always looks as today: today's style, or one of
- * Sini's four from "finding style" of 15/11/2026, each with its own colours.
+ * The app's looks, each with its own colours. Kumpa, the HS design of
+ * 20/11/2026, is the one every phone starts in, a released app's too (the
+ * maintainer, 20/11/2026). The rest are chosen on the tech screen, which
+ * production has not: today's style, the app's look before Kumpa, and the
+ * designers' try (#408), Sini's four from "finding style" of 15/11/2026.
  */
 export const LOOKS = ["today", "neubrutalism", "organic", "glass", "bold", "kumpa"] as const;
 export type Look = (typeof LOOKS)[number];

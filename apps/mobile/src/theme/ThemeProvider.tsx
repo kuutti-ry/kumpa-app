@@ -25,7 +25,7 @@ type Theme = {
   setPreference: (preference: SchemePreference) => void;
   highContrast: boolean;
   setHighContrast: (on: boolean) => void;
-  /** The designers' try's style (looks.ts), "today" unless chosen on the tech screen. */
+  /** The look (looks.ts): Kumpa unless another is chosen on the tech screen. */
   look: Look;
   setLook: (look: Look) => void;
 };

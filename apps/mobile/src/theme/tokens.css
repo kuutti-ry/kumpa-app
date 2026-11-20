@@ -9,15 +9,17 @@
  * (CLAUDE.md Accessibility): ThemeProvider puts .high-contrast or
  * .high-contrast-dark on the root view and every descendant inherits it.
  *
- * The designers' try, outside production only (chosen on the tech screen,
- * #408): Sini's four styles of "finding style" each bring their own colours,
- * light and dark, as a class ThemeProvider puts on the root view instead of
- * the base sets, as it does the high-contrast pair, which wins over them:
+ * Every look but today's brings its own colours, light and dark, as a class
+ * ThemeProvider puts on the root view instead of the base sets, as it does the
+ * high-contrast pair, which wins over them. Kumpa's are the colours every
+ * phone starts in, a released app's too (the HS design; the maintainer,
+ * 20/11/2026). The tech screen, outside production only, offers the others:
+ * the designers' try (#408), Sini's four styles of "finding style",
  * Neobrutalism (cream, lime, lilac and royal blue in a near-black ink),
  * Organic Pop (cream, plum, lavender, lime and violet), Glass (aqua, navy,
  * cyan and teal) and Bold Contrast (Electric Pop's cream, plum, coral, lime
- * and lavender by day, the navy, lime and electric blue board by night). The
- * base sets are today's colours, which a released app keeps.
+ * and lavender by day, the navy, lime and electric blue board by night); and
+ * today's look, the base sets, the app's colours before Kumpa.
  *
  * --stroke, in every set, is the one ink of a style's outline and hard shadow,
  * light on dark. --flourish is a style's loudest colour, for its drawn shapes

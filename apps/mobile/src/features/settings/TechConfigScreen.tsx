@@ -154,9 +154,9 @@ export function TechConfigScreen() {
               </View>
             </Card>
 
-            {/* The designers' try: a style with its own colours (looks.ts,
-                tokens.css). This screen exists outside production only, so a
-                released app keeps today's look. */}
+            {/* The looks, each with its own colours (looks.ts, tokens.css).
+                This screen exists outside production only, so a released app
+                keeps Kumpa, the look every phone starts in. */}
             <StyleChoice />
 
             {/* Proves error reporting end to end (#11): a real JS error with a stack

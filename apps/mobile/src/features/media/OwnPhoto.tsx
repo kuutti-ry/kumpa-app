@@ -5,8 +5,8 @@ import { PhotoImage } from "./PhotoImage";
 const FILL = { width: "100%", height: "100%" } as const;
 
 /**
- * The reader's own first photo, in the card size, filling its frame, for the
- * designers' tries (outside production): beside the other person in a match,
+ * The reader's own first photo, in the card size, filling its frame, for every
+ * look but today's, Kumpa's among them: beside the other person in a match,
  * where it is the first one others see, and at the end of making a profile,
  * where `inReview` lets a photo still being checked stand in, it being the
  * person's own. Nothing while it loads, where there is none, and where the
