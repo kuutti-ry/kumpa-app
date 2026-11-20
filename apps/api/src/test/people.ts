@@ -22,13 +22,15 @@ export type PeopleOptions = {
   gender?: "woman" | "man" | "non_binary" | null;
   state?: "registered" | "active" | "paused" | "shadow_banned" | "suspended" | "banned" | "deleted";
   standing?: "ok" | "suspended" | "banned";
-  /** A complete profile by the rule of #47: a name, a bio, three approved photos (one more than the rule asks), both hard rows, active. */
+  /** A complete profile by the rule of #47 and #681: a name, three approved photos (one more than the rule asks), both hard rows, active; and a bio, which the rule no longer asks. */
   complete?: boolean;
   /** With `complete`: whom they seek (default: men) and the ages (default: 25 to 40). */
   seeks?: ("woman" | "man" | "non_binary")[];
   ageWindow?: { min: number; max: number };
-  /** With `complete`: the bio's part of it, a written bio (default), a ready line in its place (#239), or neither, which leaves the profile one short. */
-  bio?: "written" | "ready_line" | "none";
+  /** With `complete`: a written bio (default), or none, which leaves the profile complete all the same since #681 (option b). */
+  bio?: "written" | "none";
+  /** With `complete`: how many approved photos (default 3, one more than the rule asks); 1 leaves the profile one short. */
+  photos?: number;
   /** With `complete`: what they are here for (default: open to either, which fits everybody but dance partners; #147, #175). */
   intent?: NonNullable<ProfileFields["intent"]>;
   /** With `complete`: their other answers, beside the intent (default: none; #87). */
@@ -64,22 +66,21 @@ export async function completeProfiles(
   options: PeopleOptions = {},
 ): Promise<void> {
   await db.query(
-    `INSERT INTO profile (account_id, display_name, bio, bio_preset, fields, prompts)
-     SELECT id, 'Aino', $2, $3, $4::jsonb, '[]'::jsonb FROM unnest($1::uuid[]) AS id`,
+    `INSERT INTO profile (account_id, display_name, bio, fields, prompts)
+     SELECT id, 'Aino', $2, $3::jsonb, '[]'::jsonb FROM unnest($1::uuid[]) AS id`,
     [
       ids,
-      (options.bio ?? "written") === "written"
-        ? "A bio that is long enough to count as one, by the rule of the profile."
-        : null,
-      options.bio === "ready_line" ? "photos_speak" : null,
+      options.bio === "none"
+        ? null
+        : "A bio that is long enough to count as one, by the rule of the profile.",
       JSON.stringify({ ...options.fields, intent: options.intent ?? "open_to_either" }),
     ],
   );
   await db.query(
     `INSERT INTO photo (account_id, key, blurhash, width, height, state, position)
      SELECT id, md5(id::text || n::text), 'LEHV6nWB2yk8pyo0adR*.7kCMdnj', 800, 1067, 'approved', n
-     FROM unnest($1::uuid[]) AS id, generate_series(0, 2) n`,
-    [ids],
+     FROM unnest($1::uuid[]) AS id, generate_series(0, $2::int - 1) n`,
+    [ids, options.photos ?? 3],
   );
   await db.query(
     `INSERT INTO preferences (account_id, field, value, mode, include_unknown)

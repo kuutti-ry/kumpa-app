@@ -1,6 +1,5 @@
 import { type AnyLocale, type PlainMessageKey, realLocale } from "@kuutti/i18n";
 import {
-  BIO_MIN_FOR_COMPLETENESS,
   type BioPreset,
   type CompletenessItem,
   type DealBreakerField,
@@ -76,8 +75,6 @@ export function completenessText(t: ReturnType<typeof useT>["t"], item: Complete
   switch (item) {
     case "photos":
       return t("profile.completeness.photos", { min: PHOTOS_FOR_COMPLETENESS });
-    case "bio_or_prompts":
-      return t("profile.completeness.bio_or_prompts", { min: BIO_MIN_FOR_COMPLETENESS });
     case "display_name":
       return t("profile.completeness.display_name");
     case "seeks":

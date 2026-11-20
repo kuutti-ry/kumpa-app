@@ -308,18 +308,17 @@ describe("the onboarding steps", () => {
     for (const step of ACTIVATION_STEPS) expect(ONBOARDING_STEPS).toContain(step);
   });
 
-  it("ask the home after the age window, where the pond was (ADR-061 §1)", () => {
+  it("ask the four questions before the bank, then the terms, then what needs an account, and no bio or prompts (#681)", () => {
     expect(ONBOARDING_STEPS).toEqual([
-      "terms",
-      "privacy",
       "name",
       "gender",
       "seeks",
-      "intent",
-      "age_window",
       "home",
+      "terms",
+      "privacy",
+      "age_window",
+      "intent",
       "photos",
-      "prompts_or_bio",
     ]);
     expect(ONBOARDING_STEPS).not.toContain("pond");
   });

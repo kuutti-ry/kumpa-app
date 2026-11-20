@@ -47,10 +47,12 @@ name: Taking a break signs the person out everywhere, and the next bank login br
     visible: "Your account is on a break|Tilisi on tauolla|Ditt konto är på paus"
     timeout: 20000
 - assertVisible: "Sign in with your bank|Kirjaudu pankkitunnuksilla|Logga in med din bank"
-# Reopening the app does not bring the session back.
+# Reopening the app does not bring the session back: it opens on the first
+# screen, where somebody with an account goes on by I already have an
+# account (#681, ADR-010 §22).
 - stopApp
 - runFlow: ../common/open-app.yaml
-- assertVisible: "Sign in with your bank|Kirjaudu pankkitunnuksilla|Logga in med din bank"
+- assertVisible: "I already have an account|Minulla on jo tili|Jag har redan ett konto"
 - assertNotVisible: "Your profile|Profiilisi|Din profil"
 # The next bank login: everything as it was, which for her is the photos step.
 - runFlow:

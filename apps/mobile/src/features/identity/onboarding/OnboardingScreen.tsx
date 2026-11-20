@@ -2,7 +2,6 @@ import { formatDate, realLocale } from "@kuutti/i18n";
 import {
   AGE_MAX,
   AGE_MIN,
-  BIO_MIN_FOR_COMPLETENESS,
   bioOrPromptsComplete,
   type Gender,
   type HomeSummary,
@@ -21,7 +20,7 @@ import { Choice } from "@/components/Choice";
 import { KeyboardScrollView } from "@/components/KeyboardScrollView";
 import { LoadFailedScreen, LoadingScreen } from "@/components/LoadFailed";
 import { useSpokenOnIos } from "@/components/Notice";
-import { StepProgress, StepTitle } from "@/components/step-heading";
+import { StepTitle } from "@/components/step-heading";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -29,14 +28,12 @@ import { Text } from "@/components/ui/text";
 import { OwnPhoto, PhotosScreen } from "@/features/media";
 import {
   AgeWindowSteppers,
-  BioEditor,
   GenderChips,
   IdentityLabelChips,
   NameEditor,
   optionKey,
   PlaceChoice,
   PlacePicker,
-  PromptsEditor,
   profileErrorText,
   SeeksChips,
   saveGender,
@@ -47,14 +44,17 @@ import {
 } from "@/features/profile";
 import { fetchInvitations, InvitationStep } from "@/features/rewards";
 import { useT } from "@/lib/locale";
+import { readPreference, writePreference } from "@/lib/preferences";
 import { useHapticTap } from "@/theme/haptics";
 import { useLookTraits } from "@/theme/ThemeProvider";
 import { useReducedMotion } from "@/theme/useReducedMotion";
 import { agreementsOf, giveAgreements } from "../agreements";
-import { NormsAndConsents } from "../BeforeSignIn";
 import { LegalTextLink } from "../LegalTextLink";
+import { TermsOfUse } from "../TermsOfUse";
 import { bundledVersion, consentLocale, giveConsent } from "./client";
+import { ProfileOffer } from "./ProfileOffer";
 import { ProfileReady } from "./ProfileReady";
+import { takeSavedHome } from "./save-held";
 import { useOnboarding } from "./useOnboarding";
 
 type Step =
@@ -69,22 +69,8 @@ type Step =
   | "home"
   | "homeShown"
   | "photos"
-  | "prompts"
   | "stuck"
   | "done";
-
-/**
- * The screens, for "Step x of n"; the identity label shares the gender's
- * number, and what the card shows shares the home's. The welcome step and a
- * friend's invitation code count no number: the consents come before the bank
- * login (#418), and the welcome step asks them again only when they did not
- * land or a wording changed since; the code is offered once and never required
- * (#107).
- */
-const STEPS: Step[] = ["name", "gender", "seeks", "intent", "age", "home", "photos", "prompts"];
-
-/** The steps that follow another under its number. */
-const NUMBERED_AS: Partial<Record<Step, Step>> = { identityLabel: "gender", homeShown: "home" };
 
 /**
  * A friend's invitation code (#107): not asked yet, asked of the API and
@@ -115,34 +101,44 @@ type LocalAnswers = {
 };
 
 /**
- * The next question, from what the API says is missing, in the sheet's
- * order (#146, ADR-010 §10): the welcome screen with both consents first,
- * so nothing personal is asked before the person has read what happens to
- * it (ADR-010 §9), though since #418 they are given before the bank login
- * and the welcome step is the fallback (ADR-010 §15); a friend's invitation
- * code once, before the name, never required (#107); then the name, the
- * gender, whom one seeks, the intent, the age window, the home, the photos,
- * the prompts.
+ * The next question after the bank, from what the API says is missing
+ * (#681, ADR-010 §22): the terms and the privacy notice first, when the
+ * acceptances given before the bank did not land or a wording changed since
+ * (ADR-010 §15); a friend's invitation code once, on a first walk, never
+ * required (#107); then whatever of the questions before the bank did not
+ * land (the name, the gender, whom one seeks, the home), what the card says
+ * of the home once it is saved, and what only an account can have: the age
+ * window around the bank's age, what one is here for, the photos. The bio and
+ * the prompts are the offer at the end, never a step.
  * A step of the contract this screen has no question for is "stuck".
  */
 function nextStep(status: OnboardingStatus, local: LocalAnswers): Step {
   const missing = new Set(status.missing);
   if (missing.has("terms") || missing.has("privacy")) return "welcome";
-  // Right after the welcome, while the name is still to come: a walk resumed
-  // further on goes on where it was, and Settings takes the code (ADR-044).
-  if (missing.has("name") && local.invitation !== "done") return "invitation";
+  // Right after the welcome, on a first walk (the age window is asked of
+  // everybody once): a walk resumed further on goes on where it was, and
+  // Settings takes the code (ADR-044).
+  if (missing.has("age_window") && local.invitation !== "done") return "invitation";
   if (missing.has("name")) return "name";
   if (missing.has("gender")) return "gender";
   if (local.labelPending) return "identityLabel";
   if (missing.has("seeks") || local.seeksHeld) return "seeks";
-  if (missing.has("intent")) return "intent";
-  if (missing.has("age_window")) return "age";
   if (missing.has("home")) return "home";
   if (local.homeShown) return "homeShown";
+  if (missing.has("age_window")) return "age";
+  if (missing.has("intent")) return "intent";
   if (missing.has("photos") || local.photosHeld) return "photos";
-  if (missing.has("prompts_or_bio")) return "prompts";
   if (missing.size > 0) return "stuck";
   return "done";
+}
+
+/**
+ * Whether the offer to finish the profile is still due (#681): never shown on
+ * this phone, and the profile has no words yet. Marked as shown when it is.
+ */
+async function offerDue(words: Parameters<typeof bioOrPromptsComplete>[0]): Promise<boolean> {
+  if ((await readPreference("profileOffered")) !== null) return false;
+  return !bioOrPromptsComplete(words);
 }
 
 /** The age window the steppers start from: the person's own age, five years each way, inside the bounds. */
@@ -154,16 +150,17 @@ export function defaultAgeWindow(age: number): { min: number; max: number } {
 }
 
 /**
- * The first minutes after the bank login (#46, #146, ADR-010): one question
- * per screen in the field sheet's order, the question its heading (#581), every
- * answer a button, the consents shown as the exact version the person accepts
- * when they are asked again, the article 9 consent on the screen that collects
- * whom one seeks, the photos step the photos screen itself. The API decides what
- * is still missing; this screen asks the next thing and leaves when nothing is.
- * The profile's own draft carries the name, the label, the intent and the
- * prompts (#47). In the designers' try (the tech screen's neubrutalism, outside
- * production) a walk that asked something ends on `ProfileReady`, which leaves
- * for home from its one button.
+ * The first minutes after the bank login (#46, #146, #681, ADR-010): one
+ * question per screen, the question its heading (#581), every answer a
+ * button, the terms as links at the versions the person accepts when they are
+ * asked again, the article 9 consent on the screen that collects whom one
+ * seeks, the photos step the photos screen itself. The API decides what is
+ * still missing; this screen asks the next thing and leaves when nothing is.
+ * No step is numbered after the bank: the count was of the questions before
+ * it (#681). The profile's own draft carries the name, the label and the
+ * intent (#47). A walk that asked something ends on the offer to finish the
+ * profile, once on this phone (`ProfileOffer`); in the designers' try (the
+ * tech screen's neubrutalism, outside production) on `ProfileReady` first.
  */
 export function OnboardingScreen() {
   const { t, locale } = useT();
@@ -178,6 +175,12 @@ export function OnboardingScreen() {
   const [photosHeld, setPhotosHeld] = useState(false);
   const [labelPending, setLabelPending] = useState(false);
   const [homeShown, setHomeShown] = useState<HomeSummary | null>(null);
+  // The home the bank login just saved from the phone: what the card says of
+  // it, once (#681). Taken in an effect, which keeps it past a second run.
+  useEffect(() => {
+    const saved = takeSavedHome();
+    if (saved !== null) setHomeShown(saved);
+  }, []);
   const [gender, setGender] = useState<Gender | null>(null);
   const [ages, setAges] = useState<{ min: number; max: number } | null>(null);
   const current: Step | null =
@@ -210,9 +213,32 @@ export function OnboardingScreen() {
   }, [current]);
   const still = useReducedMotion();
   const celebrate = useLookTraits().moment !== "plain" && walked;
+  const [celebrated, setCelebrated] = useState(false);
+  const ready = current === "done" && celebrate && !celebrated;
+  // The offer, once on this phone, at the end of a walk (#681): asked when
+  // the walk ends, marked as shown as it shows.
+  const [offer, setOffer] = useState<"unasked" | "due" | "not">("unasked");
+  const saved = profile.saved;
   useEffect(() => {
-    if (current === "done" && !celebrate) router.replace("/");
-  }, [current, celebrate, router]);
+    if (current !== "done" || !walked || offer !== "unasked") return;
+    let live = true;
+    void offerDue({
+      bio: saved.bio,
+      bioPreset: saved.bioPreset,
+      // What the API keeps of a prompt is an answer: it refuses a blank one.
+      answeredPrompts: saved.prompts.length,
+    }).then((due) => {
+      if (!live) return;
+      setOffer(due ? "due" : "not");
+      if (due) void writePreference("profileOffered", "shown");
+    });
+    return () => {
+      live = false;
+    };
+  }, [current, walked, offer, saved]);
+  useEffect(() => {
+    if (current === "done" && !ready && (!walked || offer === "not")) router.replace("/");
+  }, [current, ready, walked, offer, router]);
   // Each step starts at its top: the ScrollView kept the last step's offset,
   // so a new step's title began under the status bar (10/10/2026).
   const scroll = useRef<ScrollView>(null);
@@ -297,25 +323,34 @@ export function OnboardingScreen() {
   }
   // Home takes over at once (the effect above), and says what comes next.
   if (current === "done") {
-    return celebrate ? (
-      <ProfileReady
-        still={still}
-        onContinue={() => router.replace("/")}
-        you={<OwnPhoto label={t("queue.hello.you")} inReview />}
-      />
-    ) : (
-      <SafeAreaView className="flex-1 bg-background" />
-    );
+    if (ready) {
+      return (
+        <ProfileReady
+          still={still}
+          onContinue={() => setCelebrated(true)}
+          you={<OwnPhoto label={t("queue.hello.you")} inReview />}
+        />
+      );
+    }
+    if (offer === "due") {
+      return (
+        <ProfileOffer
+          onFinish={() => {
+            router.replace("/");
+            router.push("/profile");
+          }}
+          onLater={() => router.replace("/")}
+        />
+      );
+    }
+    return <SafeAreaView className="flex-1 bg-background" />;
   }
   const { onboarding } = state;
   const { draft, update } = profile;
-  const position = STEPS.indexOf(NUMBERED_AS[current] ?? current) + 1;
   if (current === "photos") {
     return (
       <PhotosScreen
         step={{
-          position,
-          total: STEPS.length,
           reading: busy,
           onContinue: async () => {
             const read = await step(async () => undefined);
@@ -338,9 +373,6 @@ export function OnboardingScreen() {
       <Backdrop />
       {/* The home's list lies under its field: a scroll reaches it past the keyboard. */}
       <KeyboardScrollView ref={scroll} contentContainerClassName="flex-grow gap-4 p-6">
-        {current !== "welcome" && current !== "invitation" && (
-          <StepProgress step={position} total={STEPS.length} />
-        )}
         {failure !== null && <Text accessibilityLiveRegion="assertive">{failure}</Text>}
         {failed && failedCode === "change_too_soon" && changeFrom && (
           <Text>
@@ -350,7 +382,7 @@ export function OnboardingScreen() {
 
         {current === "welcome" && (
           <View className="gap-4">
-            <NormsAndConsents />
+            <TermsOfUse saving={false} />
             {(["terms", "privacy"] as const).some(
               (kind) => bundledVersion(kind) !== onboarding.currentVersions[kind],
             ) ? (
@@ -363,7 +395,7 @@ export function OnboardingScreen() {
                   void step(() => giveAgreements(agreementsOf(locale)));
                 }}
               >
-                {t("onboarding.welcome.accept")}
+                {t("signIn.agree.button")}
               </Button>
             )}
           </View>
@@ -376,7 +408,10 @@ export function OnboardingScreen() {
         {current === "name" && (
           <View className="gap-4">
             <StepTitle>{t("onboarding.name.title")}</StepTitle>
-            <NameEditor draft={draft} update={update} />
+            <NameEditor
+              value={draft.displayName}
+              onChange={(displayName) => update({ displayName })}
+            />
             <Button
               onward
               disabled={busy || profile.saving || draft.displayName.trim().length === 0}
@@ -591,35 +626,6 @@ export function OnboardingScreen() {
               }}
             >
               {t("onboarding.continue")}
-            </Button>
-          </View>
-        )}
-
-        {current === "prompts" && (
-          <View className="gap-4">
-            <StepTitle>{t("onboarding.prompts.title")}</StepTitle>
-            <Text>{t("onboarding.prompts.explain", { min: BIO_MIN_FOR_COMPLETENESS })}</Text>
-            {/* The bio or a ready line, as in the basics: either finishes this step (#239). */}
-            <BioEditor draft={draft} update={update} />
-            <Text variant="small">{t("profile.prompts.label")}</Text>
-            <PromptsEditor draft={draft} update={update} />
-            {/* Waits for words that count (#223): a save of fewer would leave the step where it is, saying nothing. */}
-            <Button
-              disabled={
-                busy ||
-                profile.saving ||
-                !bioOrPromptsComplete({
-                  bio: draft.bio,
-                  bioPreset: draft.bioPreset,
-                  answeredPrompts: draft.prompts.filter((p) => p.answer.trim().length > 0).length,
-                })
-              }
-              onPress={() => {
-                tap();
-                void saveProfileStep();
-              }}
-            >
-              {t("onboarding.prompts.save")}
             </Button>
           </View>
         )}

@@ -4,31 +4,30 @@ The first ten minutes of Kuutti, shown with the demo personas (#144, ADR-014, AD
 
 The personas and their banks: `services/mock-idp/README.md`. Locally every persona is a button on the mock bank's page; on staging each persona of the other scenes is a test user of a bank (`docs/vendors/telia.md` 1.4), and the stories were written by the job of ADR-018.
 
-## Scene 1: Aino signs in (2 min)
+## Scene 1: Aino answers and signs in (3 min)
 
-Aino Virtanen is a newcomer: Kuutti has never seen her.
+Aino Virtanen is a newcomer: Kumpa has never seen her.
 
-1. Open the app. On a phone's first sign-in the first screen is "How we do things here": two norms and the two consents, terms and privacy, with their version, and one tap (ADR-010 §15). Then the sign-in: its title and one button, "Sign in with your bank".
-2. Tap it. The system browser opens the bank chooser. Locally: the mock bank's page, tap **Aino Virtanen**. On staging: Telia's chooser, choose **Nordea**, user `DEMOUSER2`, confirm on the bank's test page.
-3. The bank sends the browser back; the app receives its one-time code, says Signing you in…, and goes on to the first open step. Say what happened: the code was parsed, the age checked, the HMAC derived, the code discarded; nothing of the bank's name for her is kept (rule 1 and 3).
+1. Open the app. The first screen says what Kumpa is and why it asks for a bank ID, with "Get started" and "I already have an account", and no legal text (ADR-010 §22). Tap "Get started".
+2. Four questions, one a screen, "Step 1 of 4" to "Step 4 of 4" above each, and nothing sent anywhere: they wait in the phone's keychain for an hour. Name: what the card will call her, never the bank's; type "Aino". Gender: self-declared, the identity label offered after a non-binary answer only; choose a woman. Whom she seeks: one to three, under it the switch "I consent to Kuutti ry storing whom I seek" (the article 9 consent, ADR-019 §4); choose men. "Where do you live?": "Your postal code tells Kumpa how far people are. Others see a town or your area by name, never the digits." Type five digits; the names under the field come from a list on the phone, so a half-typed home never reaches the server.
+3. "Accept terms of use": the terms in one line and the two texts as links, then "Agree and continue". "Identification": why the bank, that it is not a payment, and that Kumpa keeps neither her name nor her identity code from the bank. Tap "Sign in with your bank".
+4. The system browser opens the bank chooser. Locally: the mock bank's page, tap **Aino Virtanen**. On staging: Telia's chooser, choose **Nordea**, user `DEMOUSER2`, confirm on the bank's test page.
+5. The bank sends the browser back; the app receives its one-time code, says Signing you in…, records the terms, saves the four answers through the account's own routes, and goes on to the first open step. Say what happened: the code was parsed, the age checked, the HMAC derived, the code discarded; nothing of the bank's name for her is kept (rule 1 and 3), and the answers left the phone only now.
 
-## Scene 2: Onboarding (3 min)
+## Scene 2: Onboarding (2 min)
 
-The steps in the order the sheet asks them (ADR-010, #146), one screen each, "Continue" at the bottom and the progress above.
+What is left after the bank, one screen each, "Continue" at the bottom and no step number (ADR-010 §22).
 
-1. Welcome, only on a phone that went straight to the bank, having recorded the consents at an earlier sign-in: the same "How we do things here". One tap.
-2. "Did a friend invite you?": a field for a friend's code, and "Skip". Skip it; the step does not count in the progress.
-3. Name: what the card will call her. Type "Aino".
-4. Gender: self-declared; the identity label is offered after a non-binary answer only. Choose a woman.
-5. Whom she seeks: one to three; under it the line "I consent to Kuutti ry storing whom I seek" (the article 9 consent, ADR-019 §4). Choose men.
-6. Intent: long-term, casual, or open to either.
-7. Age window: buttons, not a number field, around her own age.
-8. "Where do you live?": "Your postal code tells Kumpa how far people are. Others see a town or your area by name, never the digits." Type five digits; the names under the field come from a list on the phone, so a half-typed home never reaches the server. Then "What should your card show?": the town or, where her area is large enough to keep, the area, which she may choose. Where none is, "On your card:" and the town stand in the question's place. Say what happened: what is kept is a place of at least three thousand people, and the home changes whenever she likes (ADR-061).
-9. "Two photos of you": the grid on the step itself, "Add a photo" at least twice, then "Continue". From the camera roll: two or more of Aino's five pictures (the runbook put them there). Each goes through the pipeline: resized, EXIF stripped, three variants, a blurhash, the check. Locally the check queues everything, so the grid shows them "In review"; on staging Rekognition approves a face within seconds.
-10. "A few words": two questions of twelve, or a bio of fifty characters.
-11. The home screen comes at once. Having a home is what puts her in the pond, of which there is one, the whole country; there is no pond step.
+1. Welcome, only where the terms were not recorded before the bank, a wording changed, or a second person signs in on a shared phone: the same "Accept terms of use". One tap.
+2. "Did a friend invite you?": a field for a friend's code, and "Skip". Skip it.
+3. "What should your card show?": the town or, where her area is large enough to keep, the area, which she may choose. Where none is, "On your card:" and the town stand in the question's place. Say what happened: what is kept is a place of at least three thousand people, and the home changes whenever she likes (ADR-061).
+4. Age window: buttons, not a number field, around her own age.
+5. Intent: long-term, casual, open to either, or a dance partner.
+6. "Two photos of you": the grid on the step itself, "Add a photo" at least twice, then "Continue". From the camera roll: two or more of Aino's five pictures (the runbook put them there). Each goes through the pipeline: resized, EXIF stripped, three variants, a blurhash, the check. Locally the check queues everything, so the grid shows them "In review"; on staging Rekognition approves a face within seconds.
+7. "Finish your profile": "A fuller profile brings much better suggestions." once, with "Finish my profile" and "Not now". Tap "Not now": a profile is complete without words.
+8. The home screen comes at once. Having a home is what puts her in the pond, of which there is one, the whole country; there is no pond step.
 
-The account is active once the four matching answers and the two consents are there (ADR-010 §6); the profile steps may be finished later.
+The account is active once the four matching answers and the two consents are there (ADR-010 §6); the profile's words may be added later.
 
 ## Scene 3: Home (1 min)
 

@@ -70,7 +70,7 @@ export type OnboardingAnswers = {
   /** The special-category consent's version when it is the current one: the seek answer counts only with it (ADR-019 §4). */
   specialCategory: string | null;
   /** What the profile already has of the steps the sheet asks here (#146). */
-  profile: { name: boolean; intent: boolean; photos: boolean; promptsOrBio: boolean };
+  profile: { name: boolean; intent: boolean; photos: boolean };
 };
 
 /** Pure: the steps still open, in the order the app asks them. */
@@ -85,7 +85,6 @@ export function missingSteps(input: OnboardingAnswers): OnboardingStep[] {
     age_window: input.preferences.ageWindow !== null,
     home: input.home !== null,
     photos: input.profile.photos,
-    prompts_or_bio: input.profile.promptsOrBio,
   };
   return ONBOARDING_STEPS.filter((step) => !done[step]);
 }
@@ -165,7 +164,6 @@ export async function onboardingStatus(
       intent: profile.profile?.fields.intent !== undefined,
       // Uploaded and not refused by a person: a photo still with the moderator counts here, on the card only once approved (ADR-006).
       photos: photos.filter((p) => p.state !== "rejected").length >= PHOTOS_FOR_COMPLETENESS,
-      promptsOrBio: !profile.completeness.missing.includes("bio_or_prompts"),
     },
   });
   let state = account.state;

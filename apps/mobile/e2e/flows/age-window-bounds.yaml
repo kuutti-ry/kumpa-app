@@ -3,7 +3,9 @@
 # pass the oldest. A woman is not offered the identity label, and her home is
 # an area too small to keep, so the card has nothing to choose from (ADR-061
 # §2, §3). Siiri (99) is a newcomer; the flow stops at the photos, so one run
-# per `pnpm demo:reset`.
+# per `pnpm demo:reset`. After the bank her questions come in the phone's
+# order (#681, ADR-010 §22): the name, the gender, whom she seeks, the home,
+# then the ages and what she is here for.
 appId: fi.kumpa
 name: At 99 the age window starts at 94 to 99 and neither end can leave the bounds
 ---
@@ -59,10 +61,23 @@ name: At 99 the age window starts at 94 to 99 and neither end can leave the boun
     centerElement: true
     timeout: 60000
 - tapOn: "Continue|Jatka|Fortsätt"
+
+# Koli has 271 people, under what is kept, so the card can only say the town:
+# with no question to ask, what it says takes the question's place as the
+# step's heading, and no line says why (#581).
 - extendedWaitUntil:
-    visible: "What are you here for\\?|Mitä etsit täältä\\?|Vad är du här för\\?"
+    visible: "Where do you live\\?|Missä asut\\?|Var bor du\\?"
     timeout: 15000
-- tapOn: "Something casual|Jotain rentoa|Något avslappnat"
+- tapOn:
+    below: "Postal code|Postinumero|Postnummer"
+- inputText: "83960"
+- tapOn: "Where do you live\\?|Missä asut\\?|Var bor du\\?"
+- tapOn: ".*Koli.*"
+- extendedWaitUntil:
+    visible: "On your card: Joensuu|Kortillasi: Joensuu|På ditt kort: Joensuu"
+    timeout: 15000
+- assertNotVisible: "What should your card show\\?|Mitä korttisi näyttää\\?|Vad ska ditt kort visa\\?"
+- assertNotVisible: "Your card shows the nearest town\\.|Korttisi näyttää lähimmän kaupungin\\.|Ditt kort visar närmaste stad\\."
 - tapOn: "Continue|Jatka|Fortsätt"
 
 # 94 to 99; the oldest is at the top already.
@@ -86,25 +101,13 @@ name: At 99 the age window starts at 94 to 99 and neither end can leave the boun
 - tapOn: "Youngest, one year younger|Nuorin, vuotta nuorempi|Yngsta, ett år yngre"
 - assertVisible: "98"
 - tapOn: "Continue|Jatka|Fortsätt"
-
-# Koli has 271 people, under what is kept, so the card can only say the town:
-# with no question to ask, what it says takes the question's place as the
-# step's heading, and no line says why (#581).
 - extendedWaitUntil:
-    visible: "Where do you live\\?|Missä asut\\?|Var bor du\\?"
+    visible: "What are you here for\\?|Mitä etsit täältä\\?|Vad är du här för\\?"
     timeout: 15000
-- tapOn:
-    below: "Postal code|Postinumero|Postnummer"
-- inputText: "83960"
-- tapOn: "Where do you live\\?|Missä asut\\?|Var bor du\\?"
-- tapOn: ".*Koli.*"
-- extendedWaitUntil:
-    visible: "On your card: Joensuu|Kortillasi: Joensuu|På ditt kort: Joensuu"
-    timeout: 15000
-- assertNotVisible: "What should your card show\\?|Mitä korttisi näyttää\\?|Vad ska ditt kort visa\\?"
-- assertNotVisible: "Your card shows the nearest town\\.|Korttisi näyttää lähimmän kaupungin\\.|Ditt kort visar närmaste stad\\."
+- tapOn: "Something casual|Jotain rentoa|Något avslappnat"
 - tapOn: "Continue|Jatka|Fortsätt"
 - extendedWaitUntil:
     visible: "Two photos of you|Kaksi kuvaa sinusta|Två bilder på dig"
     timeout: 15000
-- assertVisible: "Step 7 of 8|Vaihe 7 / 8|Steg 7 av 8"
+# No step number after the bank (#681).
+- assertNotVisible: "Step \\d+ of \\d+|Vaihe \\d+ / \\d+|Steg \\d+ av \\d+"

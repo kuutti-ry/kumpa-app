@@ -111,9 +111,6 @@ export async function completenessOf(
   const preferences = await (deps.readPreferences ?? noPreferencesYet)(deps.db, accountId);
   return completeness({
     displayName: profile?.displayName ?? null,
-    bio: profile?.bio ?? null,
-    bioPreset: profile?.bioPreset ?? null,
-    answeredPrompts: profile?.prompts.length ?? 0,
     approvedPhotos,
     seeks: preferences.seeks,
     ageWindow: preferences.ageWindow,

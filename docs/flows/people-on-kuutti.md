@@ -172,7 +172,7 @@ flowchart TB
 ### Steps
 
 26. Once a night, with the night's other jobs, the counter counts the people of Kuutti, at most once a Finnish calendar day whichever process asks.
-27. It counts every live account in good standing, active or shadow-banned alike, whose profile is finished as the profile's own screen reads it: the name, the approved photos, the words, whom one seeks and the ages. Accounts on a break, suspended, banned or deleted are left out. Of those it counts in three bands whom they seek, men and not women, both, or women and not men, and only somebody whose sensitive-answers consent is of the current wording, the one that names these shares. Only the figures in force are kept, one set, with no history.
+27. It counts every live account in good standing, active or shadow-banned alike, whose profile is finished as the profile's own screen reads it: the name, the approved photos, whom one seeks and the ages. Accounts on a break, suspended, banned or deleted are left out. Of those it counts in three bands whom they seek, men and not women, both, or women and not men, and only somebody whose sensitive-answers consent is of the current wording, the one that names these shares. Only the figures in force are kept, one set, with no history.
 28. Has the number moved by `pond_counter_k` or more since it was last taken? Yes: 29. No: 30. Figures too small to have been said under any threshold are replaced at once.
 29. The number moves, and carries that day: 31.
 30. The number stands as it was, day and all: one person finishing or leaving changes nothing that is said.
@@ -215,3 +215,4 @@ flowchart TB
 - 2026-11-15 (#607, PR #683): no row stands for the pond any more. The switch is a setting of its own, read and turned at `/admin/matching`, and the counter answers one set of figures and no list. Nothing a person or an admin sees or does changes.
 - 2026-11-16 (#700, PR #701): home's title and its card name the app Kumpa: People on Kumpa, and below k "Kumpa is just getting started."
 - 2026-11-18 (#681): "Starred" is "Later list", the list Later puts people on.
+- 2026-11-19 (#681): a finished profile needs no words, so somebody with a name, the approved photos, whom they seek and the ages is complete without a bio or an answered question, and is counted.

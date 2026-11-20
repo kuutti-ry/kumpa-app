@@ -34,12 +34,12 @@ name: Deleting the account asks first, signs the person out, and the next login 
 - assertNotVisible: "Delete your account\\?|Poistetaanko tilisi\\?|Ta bort ditt konto\\?"
 - assertVisible: "Delete my account|Poista tilini|Ta bort mitt konto"
 
-# Deleted: signed out at once.
+# Deleted: signed out at once, to the app's first screen (#681, ADR-010 §22).
 - tapOn: "Delete my account|Poista tilini|Ta bort mitt konto"
 - tapOn: "Delete everything|Poista kaikki|Ta bort allt"
 - openLink: fi.kumpa://
 - extendedWaitUntil:
-    visible: "Sign in with your bank|Kirjaudu pankkitunnuksilla|Logga in med din bank"
+    visible: "I already have an account|Minulla on jo tili|Jag har redan ett konto"
     timeout: 30000
 
 # The same person again: refused until the cooldown ends.

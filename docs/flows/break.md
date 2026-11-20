@@ -86,7 +86,7 @@ flowchart TB
 8. The API puts the account on a break and keeps aside the state it had, in one go with 9 and 10.
 9. It ends every session of the account, and with each session goes its phone's registration for notifications, so nothing is pushed to the person while they are away. The other devices are signed out at their next request to the API.
 10. Nothing is deleted: the profile, the photos, the answers, the consents, the e-mail, the likes the person gave, the people on their Later list and their place on others' stay as they were. While the break lasts, the count on People on Kumpa leaves the person out ([People on Kumpa](people-on-kuutti.md#part-3-the-nights-count)), and their profile photos are refused to everybody else.
-11. The app signs this phone out to the sign-in screen, which says "Your account is on a break" over "Sign in with your bank". Opened again later, the app shows the plain sign-in screen.
+11. The app signs this phone out to the sign-in screen, which says "Your account is on a break" over "Sign in with your bank". Opened again later, the app shows its first screen, with "I already have an account".
 12. Meanwhile nobody meets the person's card in People, not even a card already in someone's queue for today ([People](queue.md#part-1-people-reads-the-queue)), and the person leaves the Later list of whoever put them there, while their place on it waits for their return ([People](queue.md#part-4-the-later-list)). So no new like or match reaches them.
 13. Somebody the person matched with keeps the conversation, with the person's name but without their photo, and can still write; the messages wait for the person's return, pushed to nobody, since the person has no session.
 14. The clocks run on as at any other time: a like waiting for the person runs out once `like_expiry_days` have passed since it was given.
@@ -124,3 +124,4 @@ flowchart TB
 - 2026-11-16 (#700, PR #701): the break's screen names the app Kumpa, and the home card is People on Kumpa.
 - 2026-11-16 (#208): research leaves the app, so a break and a return note nothing for it.
 - 2026-11-18 (#681): the star is the Later list, which Later puts people on: the person leaves it during a break and is back on it after.
+- 2026-11-19 (#681): opened again after a break, the signed-out app shows its first screen, with I already have an account, in the plain sign-in screen's place.

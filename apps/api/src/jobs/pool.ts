@@ -16,7 +16,7 @@ import {
   type QueueCandidate,
 } from "../matching/index.ts";
 import { homeRules, keptPlace, pointOf } from "../pond/index.ts";
-import { ageInYears, answeredFieldsOf, answeredPromptsOf, completeness } from "../profile/index.ts";
+import { ageInYears, answeredFieldsOf, completeness } from "../profile/index.ts";
 
 /**
  * Who is complete, and what their pools ask of them (#94, #500, ADR-060): one
@@ -41,9 +41,6 @@ type FactsRow = {
   birth_year: number | null;
   birth_month: number | null;
   display_name: string | null;
-  bio: string | null;
-  bio_preset: string | null;
-  prompts: unknown;
   fields: unknown;
   intent: string | null;
   approved_photos: string;
@@ -77,20 +74,11 @@ export const PROFILE_FACTS = `(SELECT count(*) FROM photo ph
  * cannot disagree.
  */
 export function profileComplete(
-  row: {
-    display_name: string | null;
-    bio: string | null;
-    bio_preset: string | null;
-    prompts: unknown;
-    approved_photos: string;
-  },
+  row: { display_name: string | null; approved_photos: string },
   preferences: PreferencesResponse,
 ): boolean {
   return completeness({
     displayName: row.display_name,
-    bio: row.bio,
-    bioPreset: row.bio_preset,
-    answeredPrompts: answeredPromptsOf(row.prompts),
     approvedPhotos: Number(row.approved_photos),
     seeks: preferences.seeks,
     ageWindow: preferences.ageWindow,
@@ -101,7 +89,7 @@ export function profileComplete(
 // (no consents yet), paused, suspended and banned accounts are hidden or gone.
 const FACTS = `
   SELECT a.id, a.identity_id, a.gender, a.home_place, a.state, a.birth_year, a.birth_month,
-         p.display_name, p.bio, p.bio_preset, p.prompts, p.fields, p.fields->>'intent' AS intent,
+         p.display_name, p.fields, p.fields->>'intent' AS intent,
          ${PROFILE_FACTS},
          EXISTS (SELECT 1 FROM consent c WHERE c.account_id = a.id AND c.kind = 'terms'
                   AND c.withdrawn_at IS NULL AND c.version = $2) AS terms,

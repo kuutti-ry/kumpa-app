@@ -71,11 +71,11 @@ describe("the figures", () => {
     expect(await countPond(ctx.client)).toMatchObject({ finished: 1 });
   });
 
-  test("a ready line in place of a bio completes the profile, and neither leaves it uncounted (#239)", async ({
+  test("a profile with no words is counted, and one a photo short is not (#681, option b)", async ({
     ctx,
   }) => {
-    await people(ctx.client, 1, { complete: true, bio: "ready_line" });
     await people(ctx.client, 1, { complete: true, bio: "none" });
+    await people(ctx.client, 1, { complete: true, bio: "none", photos: 1 });
     expect(await countPond(ctx.client)).toMatchObject({ finished: 1 });
   });
 
@@ -94,7 +94,7 @@ describe("the figures", () => {
   test("A profile that is not complete is not counted", async ({ ctx }) => {
     await people(ctx.client, 10, { complete: true });
     // One thing short of complete on an active account, and those who have only begun.
-    await people(ctx.client, 9, { complete: true, bio: "none" });
+    await people(ctx.client, 9, { complete: true, photos: 1 });
     await people(ctx.client, 3, { state: "active" });
     await people(ctx.client, 3, { state: "registered" });
     await taken(ctx, DAY_1);
@@ -371,12 +371,12 @@ describe("the bands of the bar (#507)", () => {
 
   test("Only finished profiles stand in a band", async ({ ctx }) => {
     await people(ctx.client, 10, { complete: true, consented: true, seeks: ["man"] });
-    // Everything a finished profile has, but for its bio.
+    // Everything a finished profile has, but for its second photo.
     await people(ctx.client, 10, {
       complete: true,
       consented: true,
       seeks: ["man"],
-      bio: "none",
+      photos: 1,
     });
     expect(await bandsOf(ctx)).toEqual([10, 0, 0]);
     expect(await countPond(ctx.client)).toMatchObject({ finished: 10 });
