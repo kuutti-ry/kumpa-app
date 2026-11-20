@@ -175,7 +175,7 @@ flowchart TB
     s35["Goes to the conversation: see Chat"]
   end
   subgraph app["The app"]
-    s33["Says: It's a match, with Go to the conversation and Back to people"]
+    s33["Says: Well, hello!, with Say hello and Back to people"]
     s36(["Shows the next card: part 2, step 27"])
   end
   subgraph api["The API"]
@@ -190,7 +190,7 @@ flowchart TB
   end
   s32 --> s33
   s33 --> s34
-  s34 -->|"Go to the conversation"| s35
+  s34 -->|"Say hello"| s35
   s34 -->|"Back to people"| s36
   s35 -->|"back"| s36
   s32 --> s37
@@ -201,8 +201,8 @@ flowchart TB
 ### Steps
 
 32. The API opens a conversation for the two, in the decision's own transaction: a match. The like that made it is final, and changing it is refused (part 2, step 23). An earlier conversation of the two that stands archived is closed, so a pair has one conversation to write in. Then 33 for the person, 37 for the other person, and 39 while nobody writes.
-33. The app says "It's a match", with "Go to the conversation" and "Back to people". Nothing offers the like back.
-34. Which does the person choose? Go to the conversation: 35. Back to people: 36.
+33. The app says "Well, hello!" over the two people's first photos, "You would both like to hear more about each other.", with "Say hello" and "Back to people"; in today's look, chosen on the tech screen, "It's a match", with "Go to the conversation". Nothing offers the like back.
+34. Which does the person choose? Say hello: 35. Back to people: 36.
 35. The conversation opens over People: see [Chat](chat.md). Coming back, People goes on (36). After reporting one of the conversation's photos, the conversation list takes the conversation's place, and Back from the list leads to People.
 36. People shows the next card: part 2, step 27.
 37. The other person, whose earlier like the match met, is told by push, "You have a new match", never by whom, unless it is the quiet hours or they switched matches off ([Notifications and notices](notifications.md)).
@@ -274,7 +274,7 @@ flowchart TB
 53. The app says "That card is no longer available.", with "Back to Later list".
 54. The API writes the card into today's log, or finds it there as it stands, so it is decided through the queue's own routes, every check of part 2 with it. Its reason is the one the queue would give: "Liked you" or "Sent you a flower" where a like waits; "Relaxed for today: {field}" for somebody who fits only through today's relaxations, so that a like on them can arrive; otherwise "Seen before".
 55. The app shows the card as in part 2: Like, the flower, Pass and Later spend what they spend anywhere, Later keeping the person on the list, and Block or report is beside the name.
-56. After a decision or a block, "Back to Later list" stands alone, with Undo still there for the decision; a like that makes a match says "It's a match", with "Go to the conversation" and "Back to Later list" (part 3).
+56. After a decision or a block, "Back to Later list" stands alone, with Undo still there for the decision; a like that makes a match says "Well, hello!", with "Say hello" and "Back to Later list" (part 3).
 
 ## Part 5: the queue's end and the short pool
 
@@ -388,3 +388,4 @@ flowchart TB
 - 2026-11-16 (#208): research leaves the app, so a star has no research event to stay out of.
 - 2026-11-18 (#681): Later puts the person on the Later list, which takes the star's place and its button, thirty at most, with its way in at the queue's end too; the decision buttons float over the foot of the card; the fish is shown as a flower, a dandelion's seed head.
 - 2026-11-19 (#681): a profile needs no words to be complete, so a card may come with neither a bio nor an answered question.
+- 2026-11-20 (#411): the Kumpa look is the one a phone starts in: each card a poster, Pass, Like and Later round buttons with their words, and a match says "Well, hello!" with "Say hello".
