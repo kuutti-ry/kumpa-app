@@ -19,7 +19,7 @@ import { fieldLabelKey, ProfileCardView, SEEK_PATH } from "@/features/profile";
 import { useDecisionButtons } from "@/lib/decision-buttons";
 import { useT } from "@/lib/locale";
 import { cn } from "@/lib/utils";
-import { focusOnMount } from "@/theme/a11y";
+import { focusOnMount, MINIMUM_TARGET } from "@/theme/a11y";
 import { useHapticTap } from "@/theme/haptics";
 import { HARD_SHADOW, useHardShadow, useLift } from "@/theme/shadow";
 import { useLookTraits, useTheme } from "@/theme/ThemeProvider";
@@ -721,6 +721,7 @@ function RoundChoice({
       onPressIn={() => setPressed(true)}
       onPressOut={() => setPressed(false)}
       className="max-w-[92px] flex-1 items-center gap-2"
+      style={MINIMUM_TARGET}
     >
       <View
         className={cn(

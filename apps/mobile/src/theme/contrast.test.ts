@@ -41,6 +41,8 @@ describe("contrast", () => {
       ".look-glass-dark",
       ".look-bold",
       ".look-bold-dark",
+      ".look-kumpa",
+      ".look-kumpa-dark",
     ]);
   });
 
@@ -136,7 +138,7 @@ describe("contrast", () => {
     const { foreground: _dropped, ...withoutForeground } = light;
     const failures = checkContrast({ ":root": withoutForeground });
     expect(failures.filter((f) => f.foreground === "foreground").map((f) => f.ratio)).toEqual([
-      0, 0,
+      0, 0, 0, 0, 0,
     ]);
   });
 });
