@@ -8,10 +8,12 @@ import type { LookTraits } from "@/theme/looks";
 import { useTokenColour } from "@/theme/shadow";
 import { useLookTraits, useTheme } from "@/theme/ThemeProvider";
 
-// What the try's pill styles (outside production) draw behind a screen and
-// under a moment's words, after Sini's boards of "finding style": Organic
+// What the tech screen's pill styles (outside production) draw behind a screen
+// and under a moment's words, after Sini's boards of "finding style": Organic
 // Pop's soft blobs, Glass's bubbles and frosted panes, Bold Contrast's colour
-// blocks. Every colour is a token, so the shapes follow every set of
+// blocks. Kumpa, the pill style every phone starts in, draws none of them
+// there, only Organic Pop's blob as a moment's patch.
+// Every colour is a token, so the shapes follow every set of
 // tokens.css; all of it is hidden from screen readers and takes no touch.
 
 /**
@@ -269,8 +271,8 @@ function Blocks({ room, alpha }: Layer) {
  * The ground of a moment's headline (the hello, Profile ready), in the pill
  * styles, `width` by `height`: Organic Pop's gradient shape, a frosted pane on
  * a bubble in Glass, a tilted block of the accent on a block of the flourish in
- * Bold Contrast; nothing in high contrast, which keeps the room. `momentInk`
- * is the colour the words take on it.
+ * Bold Contrast; nothing in Kumpa or in high contrast, which keep the room.
+ * `momentInk` is the colour the words take on it.
  */
 export function MomentGround({
   width,
@@ -341,9 +343,9 @@ export function momentInk(backdrop: LookTraits["backdrop"]): string {
 }
 
 /**
- * A small shape beside a photo in a moment: Organic Pop's gradient blob, a
- * bubble in Glass, a block in Bold Contrast; `run` picks its colours as a
- * blob's would (`soft` the accent, `lavender` the secondary).
+ * A small shape beside a photo in a moment: Organic Pop's gradient blob, also
+ * Kumpa's, a bubble in Glass, a block in Bold Contrast; `run` picks its
+ * colours as a blob's would (`soft` the accent, `lavender` the secondary).
  */
 export function Patch({
   width,

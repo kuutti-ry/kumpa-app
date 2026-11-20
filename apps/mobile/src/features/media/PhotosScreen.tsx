@@ -121,8 +121,10 @@ export function PhotosScreen({
   step?: { reading: boolean; onContinue: () => void };
 }) {
   const { t } = useT();
-  // The Organic Pop try (outside production): rounder tiles, the main photo's
-  // word as a lime tag and Add a photo as a soft button, as Sini's photo step.
+  // The pill styles (Kumpa, the look every phone starts in, and the tech
+  // screen's Organic Pop, Glass and Bold Contrast): rounder tiles, the main
+  // photo's word as a tag of the accent colour and Add a photo as a soft
+  // button, as Sini's photo step.
   const pop = useLookTraits().pill;
   const router = useRouter();
   const tap = useHapticTap();

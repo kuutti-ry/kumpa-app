@@ -159,8 +159,8 @@ export function defaultAgeWindow(age: number): { min: number; max: number } {
  * No step is numbered after the bank: the count was of the questions before
  * it (#681). The profile's own draft carries the name, the label and the
  * intent (#47). A walk that asked something ends on the offer to finish the
- * profile, once on this phone (`ProfileOffer`); in the designers' try (the
- * tech screen's neubrutalism, outside production) on `ProfileReady` first.
+ * profile, once on this phone (`ProfileOffer`); in every look but today's,
+ * Kumpa's, which every phone starts in, among them, on `ProfileReady` first.
  */
 export function OnboardingScreen() {
   const { t, locale } = useT();
@@ -204,9 +204,9 @@ export function OnboardingScreen() {
       live = false;
     };
   }, [current, invitation]);
-  // The designers' try (outside production): a walk that asked something ends on
-  // a celebration, and home waits for its button. Somebody sent here with
-  // nothing missing saw no step, and goes home at once, as today.
+  // Every look but today's, Kumpa's among them: a walk that asked something ends
+  // on a celebration, and home waits for its button. Somebody sent here with
+  // nothing missing saw no step, and goes home at once, as in today's look.
   const [walked, setWalked] = useState(false);
   useEffect(() => {
     if (current !== null && current !== "done") setWalked(true);

@@ -2,9 +2,10 @@ import type { PlainMessageKey } from "@kuutti/i18n";
 import type { QueueChoice, QueueReason } from "@kuutti/schema";
 import { useFocusEffect, useRouter } from "expo-router";
 import ArrowRight from "lucide-react-native/icons/arrow-right";
+import Star from "lucide-react-native/icons/star";
 import Undo2 from "lucide-react-native/icons/undo-2";
 import { type ReactNode, type Ref, useCallback, useRef, useState } from "react";
-import { ScrollView, useWindowDimensions, View, type ViewStyle } from "react-native";
+import { Pressable, ScrollView, useWindowDimensions, View, type ViewStyle } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Backdrop } from "@/components/backdrop";
 import { LoadFailed } from "@/components/LoadFailed";
@@ -18,7 +19,7 @@ import { fieldLabelKey, ProfileCardView, SEEK_PATH } from "@/features/profile";
 import { useDecisionButtons } from "@/lib/decision-buttons";
 import { useT } from "@/lib/locale";
 import { cn } from "@/lib/utils";
-import { focusOnMount } from "@/theme/a11y";
+import { focusOnMount, MINIMUM_TARGET } from "@/theme/a11y";
 import { useHapticTap } from "@/theme/haptics";
 import { HARD_SHADOW, useHardShadow, useLift } from "@/theme/shadow";
 import { useLookTraits, useTheme } from "@/theme/ThemeProvider";
@@ -98,9 +99,10 @@ function useFloat(): { drawn: ViewStyle | undefined; plain: ViewStyle } {
  * in one column at the bottom on that side, Undo brought down from the header,
  * within a thumb's reach. A like that makes a match says so and leads to the
  * conversation; one refused over the conversations waiting says how many, and
- * the card stays (ADR-062 §5). In the designers' try (the tech screen's
- * neubrutalism or Organic Pop, outside production) the match is a hello
- * instead, `MatchHello` or `MatchPop`, with the same two ways on. The queue's
+ * the card stays (ADR-062 §5). In every look but today's (Kumpa, the look
+ * every phone starts in, and the tech screen's tries) the match is a hello
+ * instead, `MatchPop` in the pill styles, Kumpa's among them, and `MatchHello`
+ * in neubrutalism, with the same two ways on. The queue's
  * end says so, with no count and nothing about tomorrow, which in a thin set
  * would be false for a month; then the way to the Later list while it shows
  * somebody, what may be relaxed for today (#99, ADR-042), and one plain way
@@ -118,6 +120,7 @@ function useFloat(): { drawn: ViewStyle | undefined; plain: ViewStyle } {
  */
 export function QueueScreen({ star }: { star?: string }) {
   const { t } = useT();
+  const { poster } = useLookTraits();
   const router = useRouter();
   const tap = useHapticTap();
   const queue = useQueue(star);
@@ -162,8 +165,8 @@ export function QueueScreen({ star }: { star?: string }) {
     if (decision === "like" || decision === "fish") setLiked(card);
     void queue.choose(card, decision);
   };
-  // The designers' try (outside production): a match is a hello. Read here, long
-  // before a match, so the setting is known when the hello mounts.
+  // Every look but today's, Kumpa's among them: a match is a hello. Read here,
+  // long before a match, so the setting is known when the hello mounts.
   const still = useReducedMotion();
   const { moment } = useLookTraits();
   const { highContrast } = useTheme();
@@ -351,6 +354,7 @@ export function QueueScreen({ star }: { star?: string }) {
               )}
               {current.entry.decision !== null && <Text>{t(REVISIT[current.entry.decision])}</Text>}
               <ProfileCardView
+                bleed={poster}
                 card={current.entry.card}
                 distance={current.entry.distance}
                 // No block or report while a decision is on its way: one finishing
@@ -422,6 +426,7 @@ export function QueueScreen({ star }: { star?: string }) {
                 left={placement.hand === "left"}
                 oneHanded={placement.oneHanded}
                 icons={DECISION_ICONS[placement.style]}
+                poster={poster}
                 undo={undo}
                 float={float}
                 onChoose={choose}
@@ -492,6 +497,7 @@ function DecisionBar({
   left,
   oneHanded,
   icons,
+  poster,
   undo,
   float,
   onChoose,
@@ -506,6 +512,8 @@ function DecisionBar({
   oneHanded: boolean;
   /** Like's and Pass's icons, in the person's style (#520); nothing else changes with it. */
   icons: DecisionIcons;
+  /** Kumpa's poster (the HS design): Pass, Like and Later as round buttons in a row of their own. */
+  poster: boolean;
   /** Undo, which comes down from the header in one-handed mode; nothing while there is nothing to undo. */
   undo: ReactNode;
   /** How the pieces stand off the card (`useFloat`). */
@@ -587,6 +595,34 @@ function DecisionBar({
       </Button>
     </Afloat>
   );
+  const round = poster && !oneHanded;
+  const rounds = round && [
+    <RoundChoice
+      key="pass"
+      label={t("queue.pass")}
+      icon={icons.pass}
+      selected={entry.decision === "pass"}
+      disabled={busy}
+      onPress={() => onChoose(card, "pass")}
+    />,
+    <RoundChoice
+      key="like"
+      label={t("queue.like")}
+      icon={icons.like}
+      filled
+      selected={entry.decision === "like"}
+      disabled={busy}
+      onPress={() => onChoose(card, "like")}
+    />,
+    <RoundChoice
+      key="later"
+      label={t("queue.skip")}
+      icon={Star}
+      selected={entry.decision === "skip"}
+      disabled={busy}
+      onPress={() => onChoose(card, "skip")}
+    />,
+  ];
   return (
     <View pointerEvents="box-none" className="gap-3">
       {oneHanded ? (
@@ -627,14 +663,97 @@ function DecisionBar({
               )}
             >
               {fish}
-              {later}
+              {!round && later}
             </View>
           </View>
-          <View pointerEvents="box-none" className="flex-row gap-4">
-            {left ? [like, pass] : [pass, like]}
-          </View>
+          {rounds ? (
+            <View pointerEvents="box-none" className="flex-row items-start justify-center gap-5">
+              {left ? [...rounds].reverse() : rounds}
+            </View>
+          ) : (
+            <View pointerEvents="box-none" className="flex-row gap-4">
+              {left ? [like, pass] : [pass, like]}
+            </View>
+          )}
         </>
       )}
     </View>
+  );
+}
+
+/** Where a pressed round button sits: in its own hard shadow, which it covers. */
+const ROUND_SHADOW = 4;
+const ROUND_PRESSED: ViewStyle = {
+  transform: [{ translateX: ROUND_SHADOW }, { translateY: ROUND_SHADOW }],
+};
+
+/**
+ * Kumpa's round buttons (the HS design): a disc in the ink's outline on its
+ * hard shadow, Like filled in the blue, each with its word under it on the
+ * ground's fill, so the meaning rests on neither the icon nor the colour. The
+ * word is inside the press, so a tap on it decides as a tap on the disc does,
+ * and a screen reader meets one button. Busy, the disc is drawn as every
+ * disabled control is, a dashed outline with no fill, never faded.
+ */
+function RoundChoice({
+  label,
+  icon,
+  filled = false,
+  selected,
+  disabled,
+  onPress,
+}: {
+  label: string;
+  icon: DecisionIcons["like"];
+  filled?: boolean;
+  selected: boolean;
+  disabled: boolean;
+  onPress: () => void;
+}) {
+  const shadow = useHardShadow(ROUND_SHADOW);
+  const [pressed, setPressed] = useState(false);
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ selected, disabled }}
+      disabled={disabled}
+      onPress={onPress}
+      onPressIn={() => setPressed(true)}
+      onPressOut={() => setPressed(false)}
+      className="max-w-[92px] flex-1 items-center gap-2"
+      style={MINIMUM_TARGET}
+    >
+      <View
+        className={cn(
+          "aspect-square w-full items-center justify-center rounded-full border-[2.5px]",
+          disabled
+            ? "border-dashed border-input bg-transparent"
+            : cn("border-solid border-stroke", filled ? "bg-primary" : "bg-card"),
+        )}
+        style={pressed || disabled ? ROUND_PRESSED : shadow}
+      >
+        <Icon
+          as={icon}
+          size={34}
+          strokeWidth={2.5}
+          className={
+            disabled
+              ? "text-muted-foreground"
+              : filled
+                ? "text-primary-foreground"
+                : "text-foreground"
+          }
+        />
+      </View>
+      <Afloat className="rounded-full px-2" style={undefined}>
+        <Text
+          variant="small"
+          className={cn("text-center font-sans", disabled && "text-muted-foreground")}
+        >
+          {label}
+        </Text>
+      </Afloat>
+    </Pressable>
   );
 }

@@ -9,15 +9,17 @@
  * (CLAUDE.md Accessibility): ThemeProvider puts .high-contrast or
  * .high-contrast-dark on the root view and every descendant inherits it.
  *
- * The designers' try, outside production only (chosen on the tech screen,
- * #408): Sini's four styles of "finding style" each bring their own colours,
- * light and dark, as a class ThemeProvider puts on the root view instead of
- * the base sets, as it does the high-contrast pair, which wins over them:
+ * Every look but today's brings its own colours, light and dark, as a class
+ * ThemeProvider puts on the root view instead of the base sets, as it does the
+ * high-contrast pair, which wins over them. Kumpa's are the colours every
+ * phone starts in, a released app's too (the HS design; the maintainer,
+ * 20/11/2026). The tech screen, outside production only, offers the others:
+ * the designers' try (#408), Sini's four styles of "finding style",
  * Neobrutalism (cream, lime, lilac and royal blue in a near-black ink),
  * Organic Pop (cream, plum, lavender, lime and violet), Glass (aqua, navy,
  * cyan and teal) and Bold Contrast (Electric Pop's cream, plum, coral, lime
- * and lavender by day, the navy, lime and electric blue board by night). The
- * base sets are today's colours, which a released app keeps.
+ * and lavender by day, the navy, lime and electric blue board by night); and
+ * today's look, the base sets, the app's colours before Kumpa.
  *
  * --stroke, in every set, is the one ink of a style's outline and hard shadow,
  * light on dark. --flourish is a style's loudest colour, for its drawn shapes
@@ -64,6 +66,11 @@
     --stroke: 222 47% 11%;
     --flourish: 224 76% 48%;
     --radius: 8px;
+    /* The poster's chips (Kumpa's pastels, in its sets). Elsewhere the muted
+     * fill, so that every set has them: high contrast under Kumpa reads these. */
+    --chip-1: 210 40% 96%;
+    --chip-2: 210 40% 96%;
+    --chip-3: 210 40% 96%;
   }
 
   .dark:root {
@@ -93,6 +100,9 @@
     --seeks-women: 269 100% 92%;
     --stroke: 220 14% 80%;
     --flourish: 212 96% 78%;
+    --chip-1: 217 33% 17%;
+    --chip-2: 217 33% 17%;
+    --chip-3: 217 33% 17%;
   }
 
   .high-contrast {
@@ -122,6 +132,9 @@
     --seeks-women: 273 80% 22%;
     --stroke: 0 0% 0%;
     --flourish: 224 90% 25%;
+    --chip-1: 0 0% 100%;
+    --chip-2: 0 0% 100%;
+    --chip-3: 0 0% 100%;
   }
 
   .high-contrast-dark {
@@ -151,6 +164,9 @@
     --seeks-women: 269 100% 92%;
     --stroke: 0 0% 100%;
     --flourish: 212 100% 85%;
+    --chip-1: 0 0% 0%;
+    --chip-2: 0 0% 0%;
+    --chip-3: 0 0% 0%;
   }
 
   /* Neobrutalism: Sini's cream, lime, lilac and royal blue, in a near-black ink. */
@@ -181,6 +197,9 @@
     --seeks-women: 273 67% 39%;
     --stroke: 240 6% 10%;
     --flourish: 227 68% 37%;
+    --chip-1: 36 30% 89%;
+    --chip-2: 36 30% 89%;
+    --chip-3: 36 30% 89%;
   }
 
   /* Neobrutalism in the dark: a spruce night, lime to press and a lilac slab. */
@@ -211,6 +230,9 @@
     --seeks-women: 269 100% 92%;
     --stroke: 40 25% 80%;
     --flourish: 268 100% 86%;
+    --chip-1: 150 16% 17%;
+    --chip-2: 150 16% 17%;
+    --chip-3: 150 16% 17%;
   }
 
   /* Organic Pop, Sini's of 15/11/2026: warm cream, deep plum ink, soft
@@ -242,6 +264,9 @@
     --seeks-women: 273 67% 39%;
     --stroke: 254 60% 19%;
     --flourish: 244 67% 57%;
+    --chip-1: 36 30% 88%;
+    --chip-2: 36 30% 88%;
+    --chip-3: 36 30% 88%;
   }
 
   /* Organic Pop in the dark: a deep plum night, cream words, and the lavender
@@ -273,6 +298,9 @@
     --seeks-women: 269 100% 92%;
     --stroke: 259 60% 88%;
     --flourish: 245 100% 78%;
+    --chip-1: 254 35% 22%;
+    --chip-2: 254 35% 22%;
+    --chip-3: 254 35% 22%;
   }
 
   /* Glass, after Sini's "Clarity · Depth · Connection" board: an aqua sky,
@@ -305,6 +333,9 @@
     --seeks-women: 273 67% 39%;
     --stroke: 202 97% 15%;
     --flourish: 241 83% 88%;
+    --chip-1: 195 45% 88%;
+    --chip-2: 195 45% 88%;
+    --chip-3: 195 45% 88%;
   }
 
   /* Glass at night: the deep water under the board's navy, cyan to press,
@@ -336,6 +367,9 @@
     --seeks-women: 269 100% 92%;
     --stroke: 190 60% 85%;
     --flourish: 241 70% 72%;
+    --chip-1: 203 55% 15%;
+    --chip-2: 203 55% 15%;
+    --chip-3: 203 55% 15%;
   }
 
   /* Bold Contrast by day, Sini's "Electric Pop": a warm cream, plum words and
@@ -367,6 +401,9 @@
     --seeks-women: 273 67% 39%;
     --stroke: 259 63% 20%;
     --flourish: 12 98% 64%;
+    --chip-1: 15 55% 92%;
+    --chip-2: 15 55% 92%;
+    --chip-3: 15 55% 92%;
   }
 
   /* Bold Contrast by night, her navy board: off-white words, lime to press,
@@ -398,5 +435,77 @@
     --seeks-women: 269 100% 92%;
     --stroke: 0 33% 90%;
     --flourish: 241 84% 57%;
+    --chip-1: 240 45% 22%;
+    --chip-2: 240 45% 22%;
+    --chip-3: 240 45% 22%;
+  }
+
+  /* Kumpa, the design shown to Helsingin Sanomat on 20/11/2026 (Figma "Kumpa -
+     work in progress", the Phone screen of "finding style (or nemo)"): cream
+     ground, deep ink words and outlines, the heart's royal blue, lavender and
+     orange, and pastel chips. */
+  .look-kumpa {
+    --background: 30 78% 96%;
+    --foreground: 250 64% 13%;
+    --card: 30 100% 99%;
+    --card-foreground: 250 64% 13%;
+    --popover: 30 100% 99%;
+    --popover-foreground: 250 64% 13%;
+    --primary: 222 67% 54%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 282 92% 85%;
+    --secondary-foreground: 250 64% 13%;
+    --muted: 30 45% 90%;
+    --muted-foreground: 250 22% 34%;
+    --accent: 29 97% 59%;
+    --accent-foreground: 250 64% 13%;
+    --destructive: 0 70% 38%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 30 30% 80%;
+    --input: 250 15% 45%;
+    --ring: 222 67% 54%;
+    --overlay: 250 64% 13%;
+    --logo-plate: 0 0% 100%;
+    --seeks-men: 224 76% 48%;
+    --seeks-everyone: 174 55% 59%;
+    --seeks-women: 273 67% 39%;
+    --stroke: 250 64% 13%;
+    --flourish: 29 97% 59%;
+    --chip-1: 37 65% 88%;
+    --chip-2: 221 79% 91%;
+    --chip-3: 80 69% 77%;
+  }
+
+  /* Kumpa in the dark: an ink night, cream words, the blue lightened. */
+  .look-kumpa-dark {
+    --background: 250 55% 10%;
+    --foreground: 30 78% 96%;
+    --card: 250 42% 16%;
+    --card-foreground: 30 78% 96%;
+    --popover: 250 42% 16%;
+    --popover-foreground: 30 78% 96%;
+    --primary: 222 90% 74%;
+    --primary-foreground: 250 64% 13%;
+    --secondary: 282 92% 85%;
+    --secondary-foreground: 250 64% 13%;
+    --muted: 250 35% 21%;
+    --muted-foreground: 282 30% 80%;
+    --accent: 29 97% 59%;
+    --accent-foreground: 250 64% 13%;
+    --destructive: 0 90% 80%;
+    --destructive-foreground: 0 60% 15%;
+    --border: 250 25% 30%;
+    --input: 282 18% 62%;
+    --ring: 222 90% 74%;
+    --overlay: 0 0% 0%;
+    --logo-plate: 0 0% 100%;
+    --seeks-men: 212 96% 78%;
+    --seeks-everyone: 175 77% 26%;
+    --seeks-women: 269 100% 92%;
+    --stroke: 30 60% 88%;
+    --flourish: 29 97% 59%;
+    --chip-1: 37 40% 24%;
+    --chip-2: 221 40% 26%;
+    --chip-3: 80 35% 21%;
   }
 }

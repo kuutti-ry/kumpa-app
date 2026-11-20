@@ -3834,3 +3834,34 @@ describe("a match as a hello, in the designers' try", () => {
     });
   });
 });
+
+// Kumpa, the look a phone starts in since the HS design (20/11/2026): the card
+// is a poster and Pass, Like and Later are round buttons with their words under
+// them, in today's order and with today's outcomes.
+describe("in the Kumpa look", () => {
+  beforeEach(() => store.set("kuutti.preference.look", "kumpa"));
+
+  it("shows the poster card with its reason and decides each with a round button", async () => {
+    const sent = api();
+    await show();
+    expect(heading("Henna, 31")).toBeTruthy();
+    expect(screen.getByText("Liked you")).toBeTruthy();
+    const decisions = screen
+      .getAllByRole("button")
+      .map((button) => button.props.accessibilityLabel)
+      .filter((label) => label === "Like" || label === "Pass" || label === "Later");
+    expect(decisions).toEqual(["Pass", "Like", "Later"]);
+    // Each round button's word is inside its press: one target, one name.
+    for (const name of ["Pass", "Like", "Later"]) {
+      const button = screen.getByRole("button", { name });
+      expect(within(button).getByText(name, { includeHiddenElements: true })).toBeTruthy();
+    }
+    noProblems();
+
+    await press("Like");
+    expect(heading("Katja, 32")).toBeTruthy();
+    await press("Pass");
+    expect(heading("Minna, 34")).toBeTruthy();
+    expect(sent.decisions()).toEqual([`${DAY}/1 like`, `${DAY}/2 pass`]);
+  });
+});

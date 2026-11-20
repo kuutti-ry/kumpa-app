@@ -5,6 +5,7 @@ apps/mobile/app/queue.tsx
 apps/mobile/app/stars/
 apps/mobile/src/features/matching/QueueButton.tsx
 apps/mobile/src/features/matching/QueueScreen.tsx
+apps/mobile/src/features/matching/MatchPop.tsx
 apps/mobile/src/features/matching/useQueue.ts
 apps/mobile/src/features/matching/ShortPool.tsx
 apps/mobile/src/features/matching/StarsButton.tsx
@@ -175,7 +176,7 @@ flowchart TB
     s35["Goes to the conversation: see Chat"]
   end
   subgraph app["The app"]
-    s33["Says: It's a match, with Go to the conversation and Back to people"]
+    s33["Says: Well, hello!, with Say hello and Back to people"]
     s36(["Shows the next card: part 2, step 27"])
   end
   subgraph api["The API"]
@@ -190,7 +191,7 @@ flowchart TB
   end
   s32 --> s33
   s33 --> s34
-  s34 -->|"Go to the conversation"| s35
+  s34 -->|"Say hello"| s35
   s34 -->|"Back to people"| s36
   s35 -->|"back"| s36
   s32 --> s37
@@ -201,8 +202,8 @@ flowchart TB
 ### Steps
 
 32. The API opens a conversation for the two, in the decision's own transaction: a match. The like that made it is final, and changing it is refused (part 2, step 23). An earlier conversation of the two that stands archived is closed, so a pair has one conversation to write in. Then 33 for the person, 37 for the other person, and 39 while nobody writes.
-33. The app says "It's a match", with "Go to the conversation" and "Back to people". Nothing offers the like back.
-34. Which does the person choose? Go to the conversation: 35. Back to people: 36.
+33. The app says "Well, hello!" over the two people's first photos, "You would both like to hear more about each other.", with "Say hello" and "Back to people"; in today's look, chosen on the tech screen, "It's a match", with "Go to the conversation". Nothing offers the like back.
+34. Which does the person choose? Say hello: 35. Back to people: 36.
 35. The conversation opens over People: see [Chat](chat.md). Coming back, People goes on (36). After reporting one of the conversation's photos, the conversation list takes the conversation's place, and Back from the list leads to People.
 36. People shows the next card: part 2, step 27.
 37. The other person, whose earlier like the match met, is told by push, "You have a new match", never by whom, unless it is the quiet hours or they switched matches off ([Notifications and notices](notifications.md)).
@@ -274,7 +275,7 @@ flowchart TB
 53. The app says "That card is no longer available.", with "Back to Later list".
 54. The API writes the card into today's log, or finds it there as it stands, so it is decided through the queue's own routes, every check of part 2 with it. Its reason is the one the queue would give: "Liked you" or "Sent you a flower" where a like waits; "Relaxed for today: {field}" for somebody who fits only through today's relaxations, so that a like on them can arrive; otherwise "Seen before".
 55. The app shows the card as in part 2: Like, the flower, Pass and Later spend what they spend anywhere, Later keeping the person on the list, and Block or report is beside the name.
-56. After a decision or a block, "Back to Later list" stands alone, with Undo still there for the decision; a like that makes a match says "It's a match", with "Go to the conversation" and "Back to Later list" (part 3).
+56. After a decision or a block, "Back to Later list" stands alone, with Undo still there for the decision; a like that makes a match says "Well, hello!", with "Say hello" and "Back to Later list" (part 3).
 
 ## Part 5: the queue's end and the short pool
 
@@ -349,7 +350,7 @@ flowchart TB
 
 ## Where it lives
 
-- Screens: [queue.tsx](../../apps/mobile/app/queue.tsx) (People) delegates to [QueueScreen.tsx](../../apps/mobile/src/features/matching/QueueScreen.tsx), with [useQueue.ts](../../apps/mobile/src/features/matching/useQueue.ts), [ShortPool.tsx](../../apps/mobile/src/features/matching/ShortPool.tsx), [faceButtons.tsx](../../apps/mobile/src/features/matching/faceButtons.tsx), [dandelion.tsx](../../apps/mobile/src/features/matching/dandelion.tsx) (the flower's icon) and [client.ts](../../apps/mobile/src/features/matching/client.ts); [stars/index.tsx](../../apps/mobile/app/stars/index.tsx) delegates to [StarredScreen.tsx](../../apps/mobile/src/features/matching/StarredScreen.tsx) with [useStars.ts](../../apps/mobile/src/features/matching/useStars.ts), and [stars/[id].tsx](../../apps/mobile/app/stars/%5Bid%5D.tsx) to QueueScreen for one card; the ways in are [QueueButton.tsx](../../apps/mobile/src/features/matching/QueueButton.tsx) and [StarsButton.tsx](../../apps/mobile/src/features/matching/StarsButton.tsx) on the home screen's [GateCard.tsx](../../apps/mobile/src/features/pond/GateCard.tsx); the card and its Block or report are [ProfileCardView.tsx](../../apps/mobile/src/features/profile/ProfileCardView.tsx) and [SafetyActions.tsx](../../apps/mobile/src/features/safety/SafetyActions.tsx); the Like and Pass row of Settings is [DecisionButtonChoices.tsx](../../apps/mobile/src/features/settings/DecisionButtonChoices.tsx), kept on the phone by [decision-buttons.tsx](../../apps/mobile/src/lib/decision-buttons.tsx) of `src/lib`. Slice: [matching](../../apps/mobile/src/features/matching/README.md).
+- Screens: [queue.tsx](../../apps/mobile/app/queue.tsx) (People) delegates to [QueueScreen.tsx](../../apps/mobile/src/features/matching/QueueScreen.tsx), with [useQueue.ts](../../apps/mobile/src/features/matching/useQueue.ts), [ShortPool.tsx](../../apps/mobile/src/features/matching/ShortPool.tsx), [MatchPop.tsx](../../apps/mobile/src/features/matching/MatchPop.tsx) (the hello at a match, in Kumpa), [faceButtons.tsx](../../apps/mobile/src/features/matching/faceButtons.tsx), [dandelion.tsx](../../apps/mobile/src/features/matching/dandelion.tsx) (the flower's icon) and [client.ts](../../apps/mobile/src/features/matching/client.ts); [stars/index.tsx](../../apps/mobile/app/stars/index.tsx) delegates to [StarredScreen.tsx](../../apps/mobile/src/features/matching/StarredScreen.tsx) with [useStars.ts](../../apps/mobile/src/features/matching/useStars.ts), and [stars/[id].tsx](../../apps/mobile/app/stars/%5Bid%5D.tsx) to QueueScreen for one card; the ways in are [QueueButton.tsx](../../apps/mobile/src/features/matching/QueueButton.tsx) and [StarsButton.tsx](../../apps/mobile/src/features/matching/StarsButton.tsx) on the home screen's [GateCard.tsx](../../apps/mobile/src/features/pond/GateCard.tsx); the card and its Block or report are [ProfileCardView.tsx](../../apps/mobile/src/features/profile/ProfileCardView.tsx) and [SafetyActions.tsx](../../apps/mobile/src/features/safety/SafetyActions.tsx); the Like and Pass row of Settings is [DecisionButtonChoices.tsx](../../apps/mobile/src/features/settings/DecisionButtonChoices.tsx), kept on the phone by [decision-buttons.tsx](../../apps/mobile/src/lib/decision-buttons.tsx) of `src/lib`. Slice: [matching](../../apps/mobile/src/features/matching/README.md).
 - API: `GET /queue/today`, `POST /queue/{day}/entries/{position}/seen`, `PUT /queue/{day}/entries/{position}/decision`, `GET` and `POST /queue/{day}/relaxations`, `DELETE /queue/{day}/relaxations/{field}` in [queue-routes.ts](../../apps/api/src/matching/queue-routes.ts); `GET /stars`, `POST /stars/{id}/open` and `DELETE /stars/{id}` in [star-routes.ts](../../apps/api/src/matching/star-routes.ts); the day's log, the read, the decision, the budgets, the match and the relaxations in [queue.ts](../../apps/api/src/matching/queue.ts); the Later list's place and its card in [stars.ts](../../apps/api/src/matching/stars.ts); the pool both ways in [pool.ts](../../apps/api/src/matching/pool.ts); the order in [queue-order.ts](../../apps/api/src/matching/queue-order.ts); the conversation a match opens and whose turn it is in the chat slice's [conversations.ts](../../apps/api/src/chat/conversations.ts); the match's push in [push.ts](../../apps/api/src/notifications/push.ts). Slice: [matching](../../apps/api/src/matching/README.md).
 - Jobs: who comes next, the clocks, the inbox stop, whether two fit now and the short pool's offers in [queue-builder.ts](../../apps/api/src/jobs/queue-builder.ts); the Later list's reads in [stars.ts](../../apps/api/src/jobs/stars.ts); who is complete in [pool.ts](../../apps/api/src/jobs/pool.ts); the night's prune of old logs and the archive of silent conversations ([archive.ts](../../apps/api/src/chat/archive.ts)) in [boot.ts](../../apps/api/src/boot.ts), run by [nightly.ts](../../apps/api/src/jobs/nightly.ts); all wired in [app.ts](../../apps/api/src/app.ts).
 - Spec: [queue.feature](../../features/matching/queue.feature), [decisions.feature](../../features/matching/decisions.feature), [fish.feature](../../features/matching/fish.feature), [earned.feature](../../features/matching/earned.feature), [matches.feature](../../features/matching/matches.feature), [short-pool.feature](../../features/matching/short-pool.feature), [stars.feature](../../features/matching/stars.feature), [filters.feature](../../features/matching/filters.feature), [your-turn.feature](../../features/chat/your-turn.feature), [push.feature](../../features/notifications/push.feature).
@@ -388,3 +389,4 @@ flowchart TB
 - 2026-11-16 (#208): research leaves the app, so a star has no research event to stay out of.
 - 2026-11-18 (#681): Later puts the person on the Later list, which takes the star's place and its button, thirty at most, with its way in at the queue's end too; the decision buttons float over the foot of the card; the fish is shown as a flower, a dandelion's seed head.
 - 2026-11-19 (#681): a profile needs no words to be complete, so a card may come with neither a bio nor an answered question.
+- 2026-11-20 (#411): the Kumpa look is the one a phone starts in: each card a poster, Pass, Like and Later round buttons with their words, and a match says "Well, hello!" with "Say hello".

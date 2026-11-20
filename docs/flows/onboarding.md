@@ -8,6 +8,7 @@ apps/mobile/src/features/identity/TermsOfUse.tsx
 apps/mobile/src/features/identity/onboarding/OnboardingScreen.tsx
 apps/mobile/src/features/identity/onboarding/save-held.ts
 apps/mobile/src/features/identity/onboarding/ProfileOffer.tsx
+apps/mobile/src/features/identity/onboarding/ProfileReady.tsx
 apps/mobile/src/features/identity/onboarding/useOnboarding.ts
 apps/mobile/src/features/identity/onboarding/useOnboardingGate.ts
 apps/mobile/src/features/rewards/InvitationStep.tsx
@@ -151,7 +152,7 @@ flowchart TB
 20. The API lists the steps still open, in the order the app asks them, and the person's age from the bank's year and month of birth.
 21. Nothing open: 22. Something open: 23. A new account always has something open: the ages at least.
 22. Home: see [People on Kumpa](people-on-kuutti.md).
-23. The app opens onboarding at the first open step, each step under its question as its one heading, and no step after the bank numbered. After every answer it asks the API again and shows the next open step; a step already answered is passed over, so a walk left midway goes on where it stopped (step 66). A step the API does not take says why in its own words where it has them, else "Something did not load. Try again." Nothing under onboarding is a screen to go back to.
+23. The app opens onboarding at the first open step, each step under its question as its one heading, and no step after the bank numbered. After every answer it asks the API again and shows the next open step; a step already answered is passed over, so a walk left midway goes on where it stopped (step 68). A step the API does not take says why in its own words where it has them, else "Something did not load. Try again." Nothing under onboarding is a screen to go back to.
 24. The terms or the privacy notice missing for their current wording: 25. Otherwise: 30.
 25. Does this app carry the current version of both texts? No: 26. Yes: 27.
 26. "This text has a newer version than the one built into this app. Update the app to continue." There is no button: nothing goes further until the app is updated.
@@ -237,22 +238,24 @@ flowchart TB
 ```mermaid
 flowchart TB
   accTitle: Onboarding, part 4: after the bank: the ages, the intent, photos and the offer
-  accDescr: The person sets the age window with buttons, chooses what they are here for, and adds photos on the step itself; no step is numbered. The account turns active once the ages are in with the answers saved after the bank. A walk that asked something ends on one offer to finish the profile, shown once on a phone while the profile has no words, then home. A person who leaves midway comes back where they stopped.
+  accDescr: The person sets the age window with buttons, chooses what they are here for, and adds photos on the step itself; no step is numbered. The account turns active once the ages are in with the answers saved after the bank. A walk that asked something ends, in Kumpa, the look every phone starts in, on Profile ready!, then on one offer to finish the profile, shown once on a phone while the profile has no words, then home. A person who leaves midway comes back where they stopped.
   subgraph person["The person"]
     s52["Moves either end with its buttons, chooses Continue"]
     s56["Chooses Something long-term, Something casual, Open to either or A dance partner, then Continue"]
     s59["Adds photos, several at once if they like, and chooses Continue: see Photos"]
-    s63["Chooses Finish my profile, or Not now"]
-    s65(["Closes the app midway"])
+    s65["Chooses Finish my profile, or Not now"]
+    s67(["Closes the app midway"])
   end
   subgraph app["The app"]
     s51["What ages?: Youngest and Oldest, around the person's own age"]
     s55["What are you here for?"]
     s58["Two photos of you: the grid, Add a photo and Continue"]
-    s61{"First offer on this phone, and the profile without words?"}
-    s62["Finish your profile: A fuller profile brings much better suggestions."]
-    s64(["Home, or the profile over it: see People on Kumpa and Profile"])
-    s66(["Opened again later: home asks where onboarding stands, part 2, step 19"])
+    s61{"Did this walk ask something?"}
+    s62["In Kumpa: Profile ready! Nicely done. That was the hard part."]
+    s63{"First offer on this phone, and the profile without words?"}
+    s64["Finish your profile: A fuller profile brings much better suggestions."]
+    s66(["Home, or the profile over it: see People on Kumpa and Profile"])
+    s68(["Opened again later: home asks where onboarding stands, part 2, step 19"])
   end
   subgraph api["The API"]
     s53["Stores the age window"]
@@ -272,10 +275,14 @@ flowchart TB
   s60 -->|"no"| s58
   s60 -->|"yes"| s61
   s61 -->|"yes"| s62
-  s61 -->|"no"| s64
-  s62 --> s63
-  s63 --> s64
+  s61 -->|"yes, in today's look"| s63
+  s61 -->|"no"| s66
+  s62 -->|"Continue"| s63
+  s63 -->|"yes"| s64
+  s63 -->|"no"| s66
+  s64 --> s65
   s65 --> s66
+  s67 --> s68
 ```
 
 ### Steps
@@ -290,12 +297,14 @@ flowchart TB
 58. The photos step is the photos screen itself: "Two photos of you", "Profiles with a face photo get seen.", the grid of photos, "Add a photo" and "Continue", its only way on.
 59. The person adds photos from the phone, several at once if they like, as on the photos screen of the profile (see [Photos](photos.md)), and chooses "Continue", which opens once enough photos count as the API counts them: one waiting for the check or for a moderator counts, a refused one does not. How many is under Open below.
 60. Continue reads the photos and the open steps again: does the person have enough photos the check has not refused? A photo refused meanwhile keeps the step, and its tile says why. Yes: 61. No: 58. The card and matching wait for the photos' approval. A bio, a ready line or prompts are no step: a profile is complete without them.
-61. Nothing is open now. Did this walk ask something, has this phone never shown the offer, and has the profile no words, neither a bio of the length the code holds, a ready line, nor two answered prompts? Yes: 62. No: 64.
-62. "Finish your profile": "A fuller profile brings much better suggestions. Add a few words about yourself or answer a few questions, or go on as you are." It is marked as shown as it shows, and never comes back on this phone: there is no reminder.
-63. The person chooses "Finish my profile" or "Not now".
-64. "Finish my profile" opens the profile, with home under it; "Not now", or no offer, goes home, with nothing between: see [People on Kumpa](people-on-kuutti.md). The optional questions and the rest of the profile wait there: see [Profile](profile.md).
-65. The person closes the app, or leaves it, midway.
-66. When they open it again, home asks where onboarding stands (step 19) and onboarding opens at the first open step; nothing answered is asked again. Each answer after the bank was stored with its Continue, the sensitive-answers consent with its switch, the home with its tap. What lived only on the screen is gone: a choice not yet continued, the steppers (they start around the person's age again), the label's offer after non-binary (not offered again here), the choice of what the card shows of the home (the town stays, and the profile still offers the area), and a friend's code typed and not used (the step is offered again only while the age window is still open; a code that came by a link stays on the phone, for this step or for Settings).
+61. Nothing is open now. Did this walk ask something? Yes: 62. No, the person came here with nothing missing: 66.
+62. In Kumpa, the look every phone starts in, and in every style of the tech screen but today's: "Profile ready!", "Nicely done. That was the hard part.", the person's own first photo among drawn shapes, and "Continue", the one way on: 63. It promises nothing about who will see the profile or when, which home's matching card says. With reduce motion on it stands as it ends. In today's look, chosen on the tech screen outside production, nothing shows here: 63 at once.
+63. Has this phone never shown the offer, and has the profile no words, neither a bio of the length the code holds, a ready line, nor two answered prompts? Yes: 64. No: 66.
+64. "Finish your profile": "A fuller profile brings much better suggestions. Add a few words about yourself or answer a few questions, or go on as you are." It is marked as shown as it shows, and never comes back on this phone: there is no reminder.
+65. The person chooses "Finish my profile" or "Not now".
+66. "Finish my profile" opens the profile, with home under it; "Not now", or no offer, goes home, with nothing between: see [People on Kumpa](people-on-kuutti.md). The optional questions and the rest of the profile wait there: see [Profile](profile.md).
+67. The person closes the app, or leaves it, midway.
+68. When they open it again, home asks where onboarding stands (step 19) and onboarding opens at the first open step; nothing answered is asked again. Each answer after the bank was stored with its Continue, the sensitive-answers consent with its switch, the home with its tap. What lived only on the screen is gone: a choice not yet continued, the steppers (they start around the person's age again), the label's offer after non-binary (not offered again here), the choice of what the card shows of the home (the town stays, and the profile still offers the area), and a friend's code typed and not used (the step is offered again only while the age window is still open; a code that came by a link stays on the phone, for this step or for Settings).
 
 ## Open
 
@@ -303,7 +312,7 @@ flowchart TB
 
 ## Where it lives
 
-- Screens: [onboarding.tsx](../../apps/mobile/app/onboarding.tsx); in the identity feature [OnboardingScreen.tsx](../../apps/mobile/src/features/identity/onboarding/OnboardingScreen.tsx) (the steps and their order), [useOnboarding.ts](../../apps/mobile/src/features/identity/onboarding/useOnboarding.ts), [useOnboardingGate.ts](../../apps/mobile/src/features/identity/onboarding/useOnboardingGate.ts) (home sends an unfinished account here), [client.ts](../../apps/mobile/src/features/identity/onboarding/client.ts), the welcome step's [TermsOfUse.tsx](../../apps/mobile/src/features/identity/TermsOfUse.tsx) and [agreements.ts](../../apps/mobile/src/features/identity/agreements.ts); the questions before the bank in [FirstQuestions.tsx](../../apps/mobile/src/features/identity/FirstQuestions.tsx), held by [held-answers.ts](../../apps/mobile/src/features/identity/held-answers.ts) and saved after the bank by [save-held.ts](../../apps/mobile/src/features/identity/onboarding/save-held.ts); the offer's [ProfileOffer.tsx](../../apps/mobile/src/features/identity/onboarding/ProfileOffer.tsx); the code step's [InvitationStep.tsx](../../apps/mobile/src/features/rewards/InvitationStep.tsx) and [RedeemInvitation.tsx](../../apps/mobile/src/features/rewards/RedeemInvitation.tsx); the home's [PlaceEditor.tsx](../../apps/mobile/src/features/profile/PlaceEditor.tsx); the photos step [PhotosScreen.tsx](../../apps/mobile/src/features/media/PhotosScreen.tsx)
+- Screens: [onboarding.tsx](../../apps/mobile/app/onboarding.tsx); in the identity feature [OnboardingScreen.tsx](../../apps/mobile/src/features/identity/onboarding/OnboardingScreen.tsx) (the steps and their order), [ProfileReady.tsx](../../apps/mobile/src/features/identity/onboarding/ProfileReady.tsx) (Profile ready!, in every look but today's), [useOnboarding.ts](../../apps/mobile/src/features/identity/onboarding/useOnboarding.ts), [useOnboardingGate.ts](../../apps/mobile/src/features/identity/onboarding/useOnboardingGate.ts) (home sends an unfinished account here), [client.ts](../../apps/mobile/src/features/identity/onboarding/client.ts), the welcome step's [TermsOfUse.tsx](../../apps/mobile/src/features/identity/TermsOfUse.tsx) and [agreements.ts](../../apps/mobile/src/features/identity/agreements.ts); the questions before the bank in [FirstQuestions.tsx](../../apps/mobile/src/features/identity/FirstQuestions.tsx), held by [held-answers.ts](../../apps/mobile/src/features/identity/held-answers.ts) and saved after the bank by [save-held.ts](../../apps/mobile/src/features/identity/onboarding/save-held.ts); the offer's [ProfileOffer.tsx](../../apps/mobile/src/features/identity/onboarding/ProfileOffer.tsx); the code step's [InvitationStep.tsx](../../apps/mobile/src/features/rewards/InvitationStep.tsx) and [RedeemInvitation.tsx](../../apps/mobile/src/features/rewards/RedeemInvitation.tsx); the home's [PlaceEditor.tsx](../../apps/mobile/src/features/profile/PlaceEditor.tsx); the photos step [PhotosScreen.tsx](../../apps/mobile/src/features/media/PhotosScreen.tsx)
 - API: `GET /onboarding`, `PUT /account/gender` and `POST /consents` in the identity slice's [onboarding-routes.ts](../../apps/api/src/identity/onboarding-routes.ts), with [onboarding.ts](../../apps/api/src/identity/onboarding.ts) (the open steps, activation); `PUT /preferences` in the matching slice's [routes.ts](../../apps/api/src/matching/routes.ts), with [preferences.ts](../../apps/api/src/matching/preferences.ts) (whom one seeks with its consent, the ages); `PUT /account/home` in the pond slice's [routes.ts](../../apps/api/src/pond/routes.ts), with [home.ts](../../apps/api/src/pond/home.ts) and [places.ts](../../apps/api/src/pond/places.ts) (the place kept, the town); `PUT /profile` in the profile slice's [routes.ts](../../apps/api/src/profile/routes.ts); `GET /invitations` and `POST /invitations/redeem` in the rewards slice's [routes.ts](../../apps/api/src/rewards/routes.ts) with [invitations.ts](../../apps/api/src/rewards/invitations.ts); the steps, activation's six and the age bounds in [packages/schema/src/onboarding.ts](../../packages/schema/src/onboarding.ts), the photos a finished profile needs, and the words the offer looks for, in [packages/schema/src/profile.ts](../../packages/schema/src/profile.ts)
 - Spec: [onboarding.feature](../../features/identity/onboarding.feature), [preferences.feature](../../features/matching/preferences.feature), [home.feature](../../features/pond/home.feature)
 - Maestro: [onboarding.yaml](../../apps/mobile/e2e/flows/onboarding.yaml) (the whole walk, the questions before the bank in three languages, closed and resumed), [age-window-bounds.yaml](../../apps/mobile/e2e/flows/age-window-bounds.yaml), [identity-label-on-card.yaml](../../apps/mobile/e2e/flows/identity-label-on-card.yaml), [terms-asked-again.yaml](../../apps/mobile/e2e/flows/terms-asked-again.yaml), [sensitive-answers-withdrawal.yaml](../../apps/mobile/e2e/flows/sensitive-answers-withdrawal.yaml); the shared step [welcome-step.yaml](../../apps/mobile/e2e/common/welcome-step.yaml)
@@ -336,3 +345,4 @@ flowchart TB
 - 2026-11-17 (#184, PR #723): a friend's code that came by their link, or with an Android install, is already in the code's field.
 - 2026-11-18 (#681): the photos step picks several photos at once, as the photos screen does.
 - 2026-11-19 (#681): turned round: the name, the gender and its label, whom one seeks with the sensitive-answers consent, and the home are asked before the bank, counted as four, held on the phone for an hour, the consent in memory for whoever is at the phone, and saved by the bank login once the account holds the terms; after it come a friend's code, what the card shows of the home, the ages, the intent and the photos, with no step number, and a question the save did not land; the welcome step is the terms in one line and two links; a few words are no step, and a walk ends on one offer to finish the profile, once on a phone.
+- 2026-11-20 (#411): in Kumpa, the look every phone starts in, a walk that asked something ends on "Profile ready!" before the offer to finish the profile or home; today's look, on the tech screen, goes straight on.
