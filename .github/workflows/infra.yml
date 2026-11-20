@@ -39,6 +39,8 @@ jobs:
           persist-credentials: false
       - run: .github/scripts/install-tofu.sh
       - run: tofu fmt -check -recursive -diff infra
+      - name: Test the waitlist handler and CAPTCHA
+        run: python3 -B -m unittest discover -s infra/envs/prod/waitlist -v
 
   plan:
     name: plan ${{ matrix.dir }}
