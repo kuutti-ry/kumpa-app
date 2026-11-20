@@ -9,7 +9,7 @@ Commands below use `tofu`. Terraform is command-compatible if you have it instea
 | path | contents | when |
 |---|---|---|
 | `bootstrap/` | state bucket, GitHub OIDC provider, CI roles, budget and billing alarm, the hosted zones of the project domain, of `kumpa.fi` and of its misspelling `kunpa.fi` (#726), an SES identity for each of the first two (#385, ADR-043; #703, ADR-072) | once, before anything else |
-| `modules/` | `network`, `compute`, `data` (#7); `observability` (#11); `media` (#48, ADR-005: live on staging since 2026-10-09, dormant in production until its cutover below); `admin` (#313, ADR-025: the moderation panel's host, composed by staging; production with #25) | as the work needs them |
+| `modules/` | `network`, `compute`, `data` (#7); `observability` (#11); `media` (#48, ADR-005: live on staging since 2026-10-09, dormant in production until its cutover below); `admin` (#313, ADR-025: the moderation panel's host, composed by both environments, live in production since 2026-11-05) | as the work needs them |
 | `envs/staging`, `envs/prod` | one composition per environment: the modules plus the non-secret parameters | #7 |
 | `github/` | repository settings, branch protection, environments | not adopted; `gh api` below until the GitHub provider question is settled |
 

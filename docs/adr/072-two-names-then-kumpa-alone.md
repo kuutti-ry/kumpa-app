@@ -1,6 +1,6 @@
 # ADR-072: Two names, then kumpa.fi alone
 
-- Status: proposed (#703, on the maintainer's word of 2026-11-16 in chat; §1 to §5 built as written here in the pull request for #703; the applies, the Workspace alias and §6 are his; §7 and §8 wait on Telia's answer and on the installed builds; accepting it is the maintainer's)
+- Status: proposed (#703, on the maintainer's word of 2026-11-16 in chat; §1 to §5 built as written here in the pull request for #703 and applied in both environments on 2026-11-17, Open 1 and 2; the Workspace alias and §6 are his; §7 and §8 wait on Telia's answer and on the installed builds; accepting it is the maintainer's)
 - Date: 2026-11-17
 - Follows: TD-4 (one vendor, AWS, and the association's own accounts and domain), TD-1 (every account is a bank login, so the bank's callback cannot break), ADR-001 (declared in code; the bootstrap applied by hand), ADR-005 §7 (what the box serves on 443 is behind the distribution), ADR-025 §3 and §10 (the panel's CSP and its origin), ADR-043 §5 and §6 (the mail identity and staging's recipients), ADR-048 (the control-plane pin), ADR-070 (no previews), CLAUDE.md rule 8; issues #703, #700, #698, #25. It amends ADR-025 §10 (the panel's origins), ADR-043 §5 and §6 (the identities and staging's list) and ADR-048 §3 (the pin, per name)
 
@@ -41,8 +41,8 @@ The `kumpa.fi` zone is in this account since #698, adopted in `infra/bootstrap/d
 
 ## Open, the maintainer's
 
-1. `tofu apply` in `infra/bootstrap` by hand: the `kumpa.fi` identity, its MAIL FROM and five records, and the CAA changed in place. Then the identity's verification (`infra/README.md`, Mail, step 2).
-2. Staging through `infra.yml` after the merge, a redeploy of the API so that it reads the new origins, `dokploy-setup.sh staging`, and the checks of `infra/README.md`, Two names. Production at its next release tag (`infra-prod.yml`), then `dokploy-setup.sh prod`.
+1. Done on 2026-11-17: `tofu apply` in `infra/bootstrap` by hand, from `main` at 5c581be5: the `kumpa.fi` identity, its MAIL FROM and five records, and the CAA changed in place to admit `letsencrypt.org`. The identity is verified, its DKIM and its MAIL FROM both successful (`infra/README.md`, Mail, step 2).
+2. Done on 2026-11-17: staging through `infra.yml` after the merge, then `dokploy-setup.sh staging`, and the checks of `infra/README.md`, Two names, pass, the API's answer to the new panel origin among them. Production from the rehearsal tag `v0.125.0-rehearsal.1` (`infra-prod.yml`, ADR-049), then `dokploy-setup.sh prod`; the same checks pass there, with `originProof` `unset` under both names until production's cutover (ADR-066).
 3. Asking Telia to register the `kumpa.fi` callbacks and the name Kumpa (§6), and his word once it has.
 4. The Workspace alias `noreply@kumpa.fi`.
 5. At §8, how to tell that no installed build calls `kuutti.app`, for example from Traefik's access log by host or from a minimum app version, and how long a quiet spell is enough.
@@ -64,3 +64,4 @@ The `kumpa.fi` zone is in this account since #698, adopted in `infra/bootstrap/d
 
 - 2026-11-17: written, and §1 to §5 built in the pull request for #703 (#713).
 - 2026-11-17: §6 and Open 3 say what Telia must register, no longer what was asked of it: correspondence with Telia stays off GitHub (the maintainer's word in chat).
+- 2026-11-17: Open 1 and 2 are done, recorded on #703: the bootstrap applied by hand and the `kumpa.fi` identity verified, staging applied through `infra.yml` and production from `v0.125.0-rehearsal.1`, each followed by `dokploy-setup.sh` and the checks of Two names.
