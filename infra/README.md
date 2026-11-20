@@ -728,6 +728,33 @@ A domain is associated with one app at a time: moving it from another app means 
 
 An app does not follow a rename of its repository: GitHub still delivers the pushes and Amplify answers them, but builds nothing. When the site's repository was renamed `kumpa-app-site` on 2026-11-16 (#702), the first app, `kuutti-app-site` from 2026-09-28, was replaced the same day by this one, made as above, with its domains moved over and the old app deleted. A rename of the repository again means the same: a new app, then the domains, then `delete-app` on the old one.
 
+### Website launch notifications
+
+The public website collects email addresses for one Kumpa launch announcement. When a visitor submits the form, the browser requests a one-time proof of work from `POST https://waitlist.kumpa.fi/challenge`. A script served by the website computes the SHA-256 proof in the browser and submits it with the address and language to `POST /join`. The two routes on the regional API Gateway invoke the Python Lambda in `envs/prod/waitlist/`. Production provisions them through `envs/prod/waitlist.tf` (TD-4, ADR-001). DynamoDB stores signups in Frankfurt, separately from app accounts and staging's synthetic population (ADR-018).
+
+Apply the bootstrap IAM change before provisioning the production tables. It limits the pull-request plan role to table metadata and permits the apply role to pass the waiting-list execution role to Lambda. The production apply runs from a release tag behind the `prod` environment approval. API Gateway creates its service-linked role if needed. The zone's existing CAA records permit ACM to issue the regional certificate. Verify that the deployed handler accepts both steps of a signup with an address controlled by the association, then remove the test entry and release the website form.
+
+Each active signup has an email key, a language, a consent version, a signup time and an expiry time. Duplicate requests preserve the original expiry. Eligibility ends at withdrawal, after the launch notice, or 365 days after signup, whichever comes first. The separate `kuutti-prod-launch-waitlist-challenges` table holds random tokens and salted digests. Each token permits one attempt and expires after ten minutes. DynamoDB typically deletes expired rows within a few days. Always check `expiresAt` when selecting launch recipients. [DynamoDB TTL](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/TTL.html)
+
+Production retains seven days of point-in-time recovery for signups. A deleted address can remain in a recovery point during that interval. A restore can bring back withdrawals or completed deliveries. Use a restored row for mailing only after reconciling both since the recovery point.
+
+**Withdrawal.** Handle the request in the association's contact mailbox. With an authorized operator session in a private terminal, delete the address supplied by the requester. This command takes the normalized key from a hidden prompt and requests no row data. A second deletion is harmless.
+
+```sh
+python3 - <<'PY'
+import getpass, json, subprocess
+
+email = getpass.getpass("Email to remove: ").strip().lower()
+subprocess.run([
+    "aws", "--profile", "kuutti", "--region", "eu-central-1", "dynamodb", "delete-item",
+    "--table-name", "kuutti-prod-launch-waitlist", "--key", "file:///dev/stdin",
+    "--return-values", "NONE", "--no-cli-pager",
+], input=json.dumps({"email": {"S": email}}), text=True, check=True)
+PY
+```
+
+**Launch.** Close the form and its submission route before working through the list. The operator handles pending withdrawals first and uses a private, authenticated DynamoDB session. Page through `kuutti-prod-launch-waitlist` with a filter for the current consent version and `expiresAt` greater than the current Unix time. For each address, check that its row is still present and eligible with a strongly consistent read immediately before sending. Send the promised announcement in its recorded language to one recipient per message, using the association's approved sender. Check regional SES production access first if using SES. Once the mail service accepts a message, delete the row. If delivery submission has an uncertain outcome, reconcile it before retrying. Keep addresses out of exports, tickets, chat, logs and shared recipient fields. Remove any rows left when the announcement is complete.
+
 ## What is not here
 
 Dokploy's own configuration (no provider exists; `user_data` installs it, its contents are backed up from `/etc/dokploy`), the registration of the domain itself (its zone and records are code), the Amplify Hosting app for the website (above), SES production access and any address verified to try mail in the sandbox (Mail, above), secret values, the EAS account side (the organisation and project, credentials, the robot token; `apps/mobile/README.md`), store setup, the Telia contract, and creation of the AWS account.

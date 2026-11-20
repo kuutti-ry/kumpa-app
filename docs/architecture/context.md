@@ -14,6 +14,7 @@ apps/mobile/src/lib/api-url.ts
 apps/mobile/src/lib/sentry.ts
 packages/i18n/src/legal.ts
 infra/bootstrap/
+infra/envs/prod/waitlist.tf
 -->
 
 Who uses Kuutti, and which outside services it depends on: the direction of every call and what travels on it. It is for a contributor or a reviewer who wants the whole picture before reading the code or `infra/`. It draws staging, the one environment with every service on; production, applied from rehearsal tags since 2026-10-24 without bank identification (ADR-049), composes the same services less a few ([Deployment](deployment.md), part 5). Outside AWS, Kuutti has six vendors: Expo, GitHub, Telia, Sentry and, for the app's store builds, Google Play and Apple's App Store Connect. This view draws ADR-001, ADR-004, ADR-005, ADR-006, ADR-014, ADR-016, ADR-017, ADR-018, ADR-025, ADR-031, ADR-032, ADR-041, ADR-043, ADR-052, ADR-055, ADR-056, ADR-057, ADR-062, ADR-063 and ADR-072.
@@ -157,6 +158,7 @@ flowchart TB
   subgraph site["The website"]
     n35["kuutti-ry/kumpa-app-site, its own repository"]
     n36["Amplify Hosting: kuutti.app and kumpa.fi"]
+    n41["Production launch notification signup in Frankfurt (#53)"]
   end
   n25 -->|"pushes a branch, opens a pull request"| n26
   n26 -->|"every push and pull request"| n27
@@ -168,6 +170,7 @@ flowchart TB
   n27 -->|"publishes updates, EXPO_TOKEN"| n32
   n27 -->|"uploads source maps, SENTRY_AUTH_TOKEN"| n34
   n35 -->|"a push to its main deploys"| n36
+  n36 -.->|"visitors submit the form to waitlist.kumpa.fi"| n41
   n27 -->|"reads /legal/versions.json"| n36
   n31 -->|"fetches Saiga before the install, FONTS_TOKEN, an EAS secret"| n37
   n36 -->|"fetches Saiga at build, FONTS_TOKEN, the site's own"| n37
@@ -193,6 +196,8 @@ flowchart TB
 38. The panel's bucket, `fonts/saiga-<version>/`: Saiga's faces, which the maintainer uploads from a laptop, since the panel is built on GitHub's runners, which never have them. The deploy leaves the folder alone, and the panel's CSP allows fonts from its own origin.
 39. Google Play, the association's developer account: a build of the profile `staging`, started by hand, is submitted by EAS to the app's internal testing track once it is built, with the key of a Google service account that EAS holds and no workflow sees ([Delivery](delivery.md), part 4; ADR-057). The team installs the staging app from Play. What Google receives: `docs/vendors/google-play.md`.
 40. App Store Connect, the association's Apple team (Kuutti ry): the same build's iOS side is submitted by EAS with an App Store Connect API key that EAS holds and no workflow sees, and reaches TestFlight's internal testing ([Delivery](delivery.md), part 4; ADR-063). The team installs it with TestFlight. What Apple receives: `docs/vendors/app-store.md`.
+
+41. The launch notification form automatically solves a challenge from the association's production collector before submitting the address. API Gateway, Lambda and DynamoDB keep the contact list separate from app accounts. Its deployment and access are shown in [Deployment](deployment.md).
 
 ## Where it lives
 

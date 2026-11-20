@@ -264,11 +264,15 @@ flowchart TB
   n67["kunpa.fi and www.kunpa.fi, the misspelling: a 301 to the same path on kumpa.fi, #726"]
   n68["Zoner, the registrar of kunpa.fi: carries the name servers of its Route 53 zone, entered by hand"]
   n69["Production's API at api.kumpa.fi: its /health, Part 5"]
+  n71["waitlist.kumpa.fi, regional API Gateway and Lambda (#53)"]
+  n72["DynamoDB in Frankfurt, signups and challenges in separate tables"]
   n57 -->|"a push to main deploys"| n58
   n58 -->|"serves"| n59
   n58 -->|"redirects"| n67
   n68 -->|"delegates the name to its zone"| n67
   n58 -->|"fetches /health for /status/health.json"| n69
+  n59 -.->|"the browser requests a challenge, solves it and submits the signup"| n71
+  n71 -.->|"consume the one-time proof and record the signup"| n72
 ```
 
 ### Steps
@@ -279,6 +283,9 @@ flowchart TB
 67. `kunpa.fi`, the misspelling of `kumpa.fi` with an n, and `www.kunpa.fi` (#726): a third custom domain of the same app, which serves no page. Amplify holds a certificate for both names and answers a request over https with a 301 to the same path and query on `https://kumpa.fi`, by two rules beside the ones for `www`; a request over http is first sent to https under the same name. Its zone is the one the bootstrap creates and does not adopt (`infra/bootstrap/dns.tf`): it holds the alias, `www` and validation records Amplify wrote, and a null MX, an SPF that admits nobody, a reject DMARC and a CAA for Amazon's issuers, since the name has no mail.
 68. Zoner, a Finnish registrar, where `kunpa.fi` is registered since 2026-11-17, the one registration outside Route 53. Its Nameserver page carries the four name servers of the zone (the bootstrap's output `kunpa_name_servers`), entered by hand. Zoner's own forwarding is not used: it answers on http alone, with a certificate for its own name over https.
 69. Production's API at `api.kumpa.fi`, the box of Part 5. The site's status panel reads `/status/health.json` on the site's own origin, the only one its content security policy lets it reach. The app's fifth rule, a 200 rewrite set on 2026-11-20, answers that path on `kuutti.app` and `kumpa.fi` with what Amplify fetches from `https://api.kumpa.fi/health`, with no credential. It stays one exact path: the site's origin on the API's CORS allowlist would be answered on every route, and a wildcard would make the site a browser client of the product (rule 8). At production's cutover (#25), `api.kumpa.fi` becomes an alias of the API's distribution, whose edge rule counts `/health` by the address CloudFront took the connection from (ADR-067), here Amplify's. A flood of the site's path could then earn that address five minutes of 429s, which the panel shows as unknown, so the cutover checks the path again.
+
+71. The website's script automatically requests a challenge at `POST /challenge`, computes its SHA-256 proof and submits it to `POST /join` with the email and language. The two POST routes on the default stage invoke the collector Lambda. Production provisions the certificate, DNS, regional API and Lambda independently of the product API.
+72. The Lambda can write a signup, and create and consume challenge rows. The separate production tables expire signups after 365 days and challenges after ten minutes. The operator handles withdrawals and the launch notice as described in [Website launch notifications](../../infra/README.md#website-launch-notifications).
 
 ## Where it lives
 
