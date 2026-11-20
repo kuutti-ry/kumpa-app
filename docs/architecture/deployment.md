@@ -254,25 +254,28 @@ Production is applied by `infra-prod.yml` on a `v*` tag, behind the `prod` envir
 ```mermaid
 flowchart TB
   accTitle: Deployment, part 6: the website
-  accDescr: The website's own repository deploys to an Amplify Hosting app made in the console, which serves kuutti.app and kumpa.fi with certificates and records Amplify wrote into their zones, and answers for the misspelling kunpa.fi, registered at Zoner, with a redirect to kumpa.fi.
+  accDescr: The website's own repository deploys to an Amplify Hosting app made in the console, which serves kuutti.app and kumpa.fi with certificates and records Amplify wrote into their zones, answers for the misspelling kunpa.fi, registered at Zoner, with a redirect to kumpa.fi, and answers the site's status panel with production's health, which it fetches from api.kumpa.fi.
   n57["kuutti-ry/kumpa-app-site: amplify.yml and customHttp.yml"]
   n58["Amplify Hosting app kumpa-app-site, eu-central-1, made in the console"]
   n59["kuutti.app and kumpa.fi: certificates and records written by Amplify"]
   n67["kunpa.fi and www.kunpa.fi, the misspelling: a 301 to the same path on kumpa.fi, #726"]
   n68["Zoner, the registrar of kunpa.fi: carries the name servers of its Route 53 zone, entered by hand"]
+  n69["Production's API at api.kumpa.fi: its /health, Part 5"]
   n57 -->|"a push to main deploys"| n58
   n58 -->|"serves"| n59
   n58 -->|"redirects"| n67
   n68 -->|"delegates the name to its zone"| n67
+  n58 -->|"fetches /health for /status/health.json"| n69
 ```
 
 ### Steps
 
 57. The website's own repository, `kuutti-ry/kumpa-app-site`: its `amplify.yml` is the build spec and its `customHttp.yml` the headers.
 58. The Amplify Hosting app `kumpa-app-site` in eu-central-1, connected to that repository through the Amplify GitHub App: the console-made exception of ADR-001, since the connection is a browser consent no provider performs. A push to the site's `main` deploys it.
-59. `kuutti.app`, the home, and `kumpa.fi`, the same site since 2026-11-16: Amplify issued the certificates and wrote the validation and alias records into each zone itself, outside OpenTofu. The redirects from `www` and the cost tag are commands in `infra/README.md`, run after the console.
+59. `kuutti.app`, the home, and `kumpa.fi`, the same site since 2026-11-16: Amplify issued the certificates and wrote the validation and alias records into each zone itself, outside OpenTofu. The redirects from `www`, the status rewrite (step 69) and the cost tag are commands in `infra/README.md`, run after the console.
 67. `kunpa.fi`, the misspelling of `kumpa.fi` with an n, and `www.kunpa.fi` (#726): a third custom domain of the same app, which serves no page. Amplify holds a certificate for both names and answers a request over https with a 301 to the same path and query on `https://kumpa.fi`, by two rules beside the ones for `www`; a request over http is first sent to https under the same name. Its zone is the one the bootstrap creates and does not adopt (`infra/bootstrap/dns.tf`): it holds the alias, `www` and validation records Amplify wrote, and a null MX, an SPF that admits nobody, a reject DMARC and a CAA for Amazon's issuers, since the name has no mail.
 68. Zoner, a Finnish registrar, where `kunpa.fi` is registered since 2026-11-17, the one registration outside Route 53. Its Nameserver page carries the four name servers of the zone (the bootstrap's output `kunpa_name_servers`), entered by hand. Zoner's own forwarding is not used: it answers on http alone, with a certificate for its own name over https.
+69. Production's API at `api.kumpa.fi`, the box of Part 5. The site's status panel reads `/status/health.json` on the site's own origin, the only one its content security policy lets it reach. The app's fifth rule, a 200 rewrite set on 2026-11-20, answers that path on `kuutti.app` and `kumpa.fi` with what Amplify fetches from `https://api.kumpa.fi/health`, with no credential. It stays one exact path: the site's origin on the API's CORS allowlist would be answered on every route, and a wildcard would make the site a browser client of the product (rule 8). At production's cutover (#25), `api.kumpa.fi` becomes an alias of the API's distribution, whose edge rule counts `/health` by the address CloudFront took the connection from (ADR-067), here Amplify's. A flood of the site's path could then earn that address five minutes of 429s, which the panel shows as unknown, so the cutover checks the path again.
 
 ## Where it lives
 
