@@ -16,7 +16,7 @@ packages/i18n/src/legal.ts
 infra/bootstrap/
 -->
 
-Who uses Kuutti, and which outside services it depends on: the direction of every call and what travels on it. It is for a contributor or a reviewer who wants the whole picture before reading the code or `infra/`. It draws staging, the one environment that runs today; production, applied on 2026-10-24 without bank identification (ADR-049), composes the same services less a few ([Deployment](deployment.md), part 5). Outside AWS, Kuutti has six vendors: Expo, GitHub, Telia, Sentry and, for the app's store builds, Google Play and Apple's App Store Connect. This view draws ADR-001, ADR-004, ADR-005, ADR-006, ADR-014, ADR-016, ADR-017, ADR-018, ADR-025, ADR-031, ADR-032, ADR-041, ADR-043, ADR-052, ADR-055, ADR-056, ADR-057, ADR-062, ADR-063 and ADR-072.
+Who uses Kuutti, and which outside services it depends on: the direction of every call and what travels on it. It is for a contributor or a reviewer who wants the whole picture before reading the code or `infra/`. It draws staging, the one environment with every service on; production, applied from rehearsal tags since 2026-10-24 without bank identification (ADR-049), composes the same services less a few ([Deployment](deployment.md), part 5). Outside AWS, Kuutti has six vendors: Expo, GitHub, Telia, Sentry and, for the app's store builds, Google Play and Apple's App Store Connect. This view draws ADR-001, ADR-004, ADR-005, ADR-006, ADR-014, ADR-016, ADR-017, ADR-018, ADR-025, ADR-031, ADR-032, ADR-041, ADR-043, ADR-052, ADR-055, ADR-056, ADR-057, ADR-062, ADR-063 and ADR-072.
 
 ## Part 1: the people and what their devices reach
 
