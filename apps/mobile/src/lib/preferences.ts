@@ -10,8 +10,9 @@ import { Platform } from "react-native";
  * sent anywhere, since whether a person uses a screen reader is theirs
  * alone), the versions of the terms and the privacy summary this phone
  * recorded after a bank login and whether the app's lock was offered here
- * (#418), whether the home screen's offer of notifications was answered
- * here (#102, ADR-055 §9), which of Settings' rows were left open (#511),
+ * (#418), whether the offer to finish the profile was shown here (#681),
+ * whether the home screen's offer of notifications was answered here (#102,
+ * ADR-055 §9), which of Settings' rows were left open (#511),
  * a friend's invitation code that came by a link or with the install, until
  * it is used, and whether Play was asked what the install came with (#184,
  * ADR-044 §13), and the style tried on the tech screen outside production. expo-secure-store
@@ -27,6 +28,7 @@ export type PreferenceKey =
   | "photoDescriptionsHintSeen"
   | "decisionButtons"
   | "agreedVersions"
+  | "profileOffered"
   | "lockOffered"
   | "pushAsked"
   | "settingsOpen"

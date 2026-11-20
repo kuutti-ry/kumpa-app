@@ -747,16 +747,15 @@ describe.skipIf(!reachable)("the personas, through the mock bank", () => {
 
     // Registered and gone: nothing answered, the home among it (ADR-061 §1).
     expect((await as("onni")).onboarding.missing).toEqual([
-      "terms",
-      "privacy",
       "name",
       "gender",
       "seeks",
-      "intent",
-      "age_window",
       "home",
+      "terms",
+      "privacy",
+      "age_window",
+      "intent",
       "photos",
-      "prompts_or_bio",
     ]);
     expect((await as("noa")).onboarding.gender).toBe("non_binary");
 

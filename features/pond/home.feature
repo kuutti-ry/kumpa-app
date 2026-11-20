@@ -1,9 +1,10 @@
 # features/pond/home.feature
 Feature: The home
   Everybody has one home, whoever commutes, and it alone says where a person
-  is (#514, ADR-061; the maintainer, 31/10/2026). Onboarding asks for it after
-  the age window, as the five digits of a postal code, which are looked up in
-  memory in Statistics Finland's list. What is kept is a place of at least
+  is (#514, ADR-061; the maintainer, 31/10/2026). The app asks for it among the
+  questions before the bank login, held on the phone until the account exists
+  (#681, ADR-010 §22), as the five digits of a postal code, which are looked
+  up in memory in Statistics Finland's list. What is kept is a place of at least
   home_min_inhabitants people (3,000): the postal area, else its municipality,
   else the nearest municipality that has them; and an area keeps its own key
   only while enough people are left behind its municipality's. This is the one
@@ -18,8 +19,8 @@ Feature: The home
   features/matching/filters.feature's. There is no pond to be in: a home is what
   puts a person among the others (ADR-061 §8; the maintainer, 15/11/2026, #607).
 
-  Scenario: The home is a required step, asked after the age window
-    Given a registered account that answered every step before the home
+  Scenario: The home is a required step, missing until a postal code is given
+    Given a registered account that answered every step but the home and the photos
     When it reads its onboarding status
     Then the home is the first step missing and the account is not active
     When it gives a postal code from the list

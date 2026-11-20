@@ -296,24 +296,29 @@ describe("HomeRoute", () => {
   const AGREED = "kuutti.preference.agreedVersions";
   afterEach(() => store.delete(AGREED));
 
-  it("is the sign-in screen for a signed-out person: one button and the bank", async () => {
+  it("is the first screen for a signed-out person: what Kumpa is, one way in, and one for an account (#681)", async () => {
+    await renderWithTheme(<HomeRoute />);
+    expect(
+      await screen.findByRole("heading", { name: "A more confident start to dating" }),
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Get started" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "I already have an account" })).toBeTruthy();
+    // No legal text and no bank on the first screen.
+    expect(screen.queryByRole("button", { name: "Sign in with your bank" })).toBeNull();
+    expect(screen.queryByText(/Terms of Use/)).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Kumpa" })).toBeNull();
+  });
+
+  it("takes somebody with an account on a phone that recorded the terms straight to the bank", async () => {
     // A phone that recorded the wordings it carries after an earlier bank login (#418).
     store.set(
       AGREED,
       JSON.stringify({ terms: CONSENT_VERSIONS.terms, privacy: CONSENT_VERSIONS.privacy }),
     );
     await renderWithTheme(<HomeRoute />);
-    expect(await screen.findByRole("heading", { name: "Sign in" })).toBeTruthy();
+    fireEvent.press(await screen.findByRole("button", { name: "I already have an account" }));
     expect(await screen.findByRole("button", { name: "Sign in with your bank" })).toBeTruthy();
-    expect(screen.queryByRole("heading", { name: "Kumpa" })).toBeNull();
-  });
-
-  it("is the screens before the bank for a signed-out person on a phone that never answered them", async () => {
-    await renderWithTheme(<HomeRoute />);
-    expect(await screen.findByRole("heading", { name: "How we do things here" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "I'm in, and I accept both" })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Sign in with your bank" })).toBeNull();
-    expect(screen.queryByRole("heading", { name: "Kumpa" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Accept terms of use" })).toBeNull();
   });
 
   it("is the home screen for a signed-in person", async () => {

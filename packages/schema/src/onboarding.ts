@@ -173,22 +173,23 @@ export const ConsentsResponse = z
 export type ConsentsResponse = z.infer<typeof ConsentsResponse>;
 
 /**
- * The steps of onboarding in the order the app asks them (#146, the field
- * sheet): the two consents on the welcome screen, the name, the gender, whom
- * one seeks (with the special-category consent), the intent, the age window,
- * the home, three photos, two prompts or a bio.
+ * The steps of onboarding in the order the app asks them (#146, #681,
+ * ADR-010 §22): before the bank, the name, the gender, whom one seeks (with
+ * the special-category consent), the home, then the terms and the privacy
+ * notice; after it, the age window around the bank's age, the intent and the
+ * photos. The bio and the prompts are no step since #681: the app offers them
+ * once at the end.
  */
 export const ONBOARDING_STEPS = [
-  "terms",
-  "privacy",
   "name",
   "gender",
   "seeks",
-  "intent",
-  "age_window",
   "home",
+  "terms",
+  "privacy",
+  "age_window",
+  "intent",
   "photos",
-  "prompts_or_bio",
 ] as const;
 export const OnboardingStep = z.enum(ONBOARDING_STEPS).meta({ id: "OnboardingStep" });
 export type OnboardingStep = z.infer<typeof OnboardingStep>;

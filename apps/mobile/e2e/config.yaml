@@ -15,7 +15,7 @@ executionOrder:
     - At 99 the age window starts at 94 to 99 and neither end can leave the bounds
     - A label chosen after non-binary shows on the card after the gender
     # Onni, new.
-    - A registered person is taken through onboarding one question per screen, and resumes at the intent after the app is closed
+    - A newcomer answers four questions before the bank, keeps them over a restart, and is taken through the rest one question per screen
     # Kerttu, and kids-labels on from her to Sanna.
     - A person who accepted an older wording of the terms is asked for the current one, and nothing else is asked again
     - Once there are kids, the future-kids answers read want more, no more, not sure anymore

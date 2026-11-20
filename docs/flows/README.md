@@ -8,8 +8,8 @@ In the order a person meets them, then the moderators' side.
 
 | Flow | What it covers | Not built yet |
 |---|---|---|
-| [Signing in](sign-in.md) | The screens before the bank, the bank login every time, each refusal and what it offers, a known account or a new one; a session renewed while in use, Log out and Log out everywhere | nothing |
-| [Onboarding](onboarding.md) | From a new account's first sign-in to a finished profile: a friend's code, one question a step, whom one seeks under the sensitive-answers consent, the home postal code, the photos and a few words, leaving midway, the terms asked again | nothing |
+| [Signing in](sign-in.md) | The first screen, a newcomer's way and an account's way to the terms, the bank login every time, each refusal and what it offers, a known account or a new one; a session renewed while in use, Log out and Log out everywhere | nothing |
+| [Onboarding](onboarding.md) | From the first questions to a finished profile: the name, the gender, whom one seeks under the sensitive-answers consent and the home postal code held on the phone before the bank, then a friend's code, the ages, the intent and the photos, one question a step, the offer of a few words once, leaving midway, the terms asked again | nothing |
 | [People on Kumpa and the Matching switch](people-on-kuutti.md) | From a finished profile to the first people: what the matching card says, the number of finished profiles and the bar of whom they seek, an admin opening or closing matching for everybody, the night's count | nothing |
 | [People: the queue, likes, flowers, the Later list and the match](queue.md) | From See people on: the queue's order, like, pass and Later, the flower, the likes left, the inbox stop and the your-turn limit, the Later list, the short card and the whole card, a deal-breaker relaxed at the end, the match | nothing |
 | [The profile, the card and What you seek](profile.md) | The profile's sections, the card as others see it in its two depths, hiding an answer from it, the later questions, and What you seek: whom, the ages, the intent and each deal-breaker | nothing |

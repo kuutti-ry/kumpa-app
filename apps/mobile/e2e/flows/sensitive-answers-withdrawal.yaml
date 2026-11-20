@@ -41,7 +41,8 @@ name: Withdrawing the sensitive-answers consent asks whom one seeks again with t
 - extendedWaitUntil:
     visible: "Whom are you looking for\\?|Ketä etsit\\?|Vem söker du\\?"
     timeout: 15000
-- assertVisible: "Step 3 of 8|Vaihe 3 / 8|Steg 3 av 8"
+# No step number after the bank (#681).
+- assertNotVisible: "Step \\d+ of \\d+|Vaihe \\d+ / \\d+|Steg \\d+ av \\d+"
 # A row chosen carries its tick in its name, so the words alone find one not chosen (README).
 - assertVisible: "Anyone|Kenet tahansa|Vem som helst"
 - tapOn: "Anyone|Kenet tahansa|Vem som helst"

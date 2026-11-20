@@ -1,13 +1,13 @@
 # A consent names the version of the text it is for (ADR-010 §4): Kerttu
 # accepted an older wording of the terms, so the app asks her to accept the
 # current one, and nothing she has answered is asked again. Where it is asked
-# depends on the phone (#418, ADR-010 §15). On a phone that recorded the
-# current wordings at an earlier sign-in, the screens before the bank are
-# skipped and onboarding's welcome step asks her again, counting no step, and
-# accepting it leads home. On a fresh phone bank-login.yaml accepts them before
-# the bank, they land right after the exchange, and no welcome step comes.
-# CI takes the first way: an earlier flow of the same job has signed in on its
-# phone. Home follows.
+# depends on the phone (#418, ADR-010 §15, §22). On a phone that recorded the
+# current wordings at an earlier sign-in, the terms before the bank are
+# skipped and onboarding's welcome step, "Accept terms of use" with no step
+# number, asks her again, and accepting it leads home. On a fresh phone
+# bank-login.yaml accepts them before the bank, they land right after the
+# exchange, and no welcome step comes. CI takes the first way: an earlier flow
+# of the same job has signed in on its phone. Home follows.
 # Her profile is finished (four approved photos, two prompts), so home does
 # not say it lacks anything. One run per `pnpm demo:reset`: afterwards she has
 # accepted the current wording.
@@ -19,35 +19,37 @@ name: A person who accepted an older wording of the terms is asked for the curre
     env:
       PERSONA: Kerttu Åkerlund
 - extendedWaitUntil:
-    visible: "How we do things here|Näin täällä toimitaan|Så här gör vi här|Your profile|Profiilisi|Din profil"
+    visible: "Accept terms of use|Hyväksy käyttöehdot|Godkänn användarvillkoren|Your profile|Profiilisi|Din profil"
     timeout: 15000
 # The welcome step, on a phone that remembered: asked as `notVisible`, in half
 # a second, and accepted behind a flag the condition clears (README).
 - evalScript: ${output.welcomeStep = true}
 - runFlow:
     when:
-      notVisible: "How we do things here|Näin täällä toimitaan|Så här gör vi här"
+      notVisible: "Accept terms of use|Hyväksy käyttöehdot|Godkänn användarvillkoren"
     commands:
       - evalScript: ${output.welcomeStep = false}
 - runFlow:
     when:
       true: ${output.welcomeStep}
     commands:
-      # The norms under their one heading, which greets nobody months in (#581),
-      # with no step line: nothing else is asked.
-      - assertVisible: "No contact details before a match\\.|Ei yhteystietoja ennen matchia\\.|Inga kontaktuppgifter före en match\\."
-      - assertNotVisible: "Welcome to Kuutti|Tervetuloa Kuuttiin|Välkommen till Kuutti"
+      # The rules in one line and the two texts as links (#681), with no step
+      # line and no line about keeping answers: nothing else is asked.
+      - assertVisible: "Be respectful\\..*|Käyttäydy kunnioittavasti\\..*|Var respektfull\\..*"
       - assertNotVisible: "Step \\d+ of \\d+|Vaihe \\d+ / \\d+|Steg \\d+ av \\d+"
+      - assertNotVisible: "To keep your answers.*|Tallentaaksesi vastauksesi.*|För att spara dina svar.*"
       - scrollUntilVisible:
-          element: "I'm in, and I accept both|Olen mukana ja hyväksyn molemmat|Jag är med och godkänner båda"
+          element: "Agree and continue|Hyväksy ja jatka|Godkänn och fortsätt"
           direction: DOWN
           centerElement: true
           timeout: 60000
-      - tapOn: "I'm in, and I accept both|Olen mukana ja hyväksyn molemmat|Jag är med och godkänner båda"
+      - tapOn: "Agree and continue|Hyväksy ja jatka|Godkänn och fortsätt"
 
 # Home either way, nothing else asked: the name, the gender, whom she seeks
-# and the rest stand.
+# and the rest stand, and the offer of a fuller profile does not come, since
+# she has words on her card.
 - extendedWaitUntil:
     visible: "Your profile|Profiilisi|Din profil"
     timeout: 15000
+- assertNotVisible: "Finish your profile|Viimeistele profiilisi|Gör klart din profil"
 - assertNotVisible: "Matching opens for finished profiles\\. Yours still lacks something\\.|Seuranhaku avautuu valmiille profiileille\\. Sinun profiilistasi puuttuu vielä jotakin\\.|Matchningen öppnar för färdiga profiler\\. I din saknas ännu något\\."

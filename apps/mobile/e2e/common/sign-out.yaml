@@ -7,8 +7,7 @@ appId: fi.kumpa
 # lock off, so no flow is ever kept out by another's lock. It is seldom
 # there, so its absence is asked as `notVisible`, in half a second, and it is
 # left behind a flag the condition clears (README). Signed out that way, the
-# sign-in screen goes nowhere near Settings; the screen before the bank does,
-# since nothing tells it from a signed-in welcome step (below).
+# sign-in screen goes nowhere near Settings.
 - evalScript: ${output.locked = true}
 - runFlow:
     when:
@@ -29,15 +28,15 @@ appId: fi.kumpa
           timeout: 60000
       - tapOn: "Sign in with the bank instead|Kirjaudu mieluummin pankkitunnuksilla|Logga in med banken i stället"
       - extendedWaitUntil:
-          visible: "Sign in with your bank|Kirjaudu pankkitunnuksilla|Logga in med din bank|How we do things here|Näin täällä toimitaan|Så här gör vi här"
+          visible: "Sign in with your bank|Kirjaudu pankkitunnuksilla|Logga in med din bank|I already have an account|Minulla on jo tili|Jag har redan ett konto"
           timeout: 15000
-# Signed in: home, or an onboarding step, known by its number or, for the two
-# that count none, by its heading (#581). The welcome step is the screen before
-# the bank to the letter, and that one has no session: only Settings tells them
-# apart, so that screen comes this way too, and finds no row there.
+# Signed in: home, or an onboarding step, known by its heading, none numbered
+# after the bank (#581, #681). The welcome step is the terms screen before the
+# bank to the letter, but a signed-out app opens on its first screen, never on
+# the terms, so Accept terms of use here is the welcome step.
 - runFlow:
     when:
-      visible: "Your profile|Profiilisi|Din profil|Step \\d+ of \\d+|Vaihe \\d+ / \\d+|Steg \\d+ av \\d+|Did a friend invite you\\?|Kutsuiko ystävä sinut\\?|Bjöd en vän in dig\\?|How we do things here|Näin täällä toimitaan|Så här gör vi här"
+      visible: "Your profile|Profiilisi|Din profil|What should we call you\\?|Miksi sinua kutsutaan\\?|Vad ska vi kalla dig\\?|How do you describe yourself\\?|Miten kuvailet itseäsi\\?|Hur beskriver du dig själv\\?|Whom are you looking for\\?|Ketä etsit\\?|Vem söker du\\?|Where do you live\\?|Missä asut\\?|Var bor du\\?|What should your card show\\?|Mitä korttisi näyttää\\?|Vad ska ditt kort visa\\?|On your card: .*|Kortillasi: .*|På ditt kort: .*|What ages\\?|Minkä ikäisiä\\?|Vilka åldrar\\?|What are you here for\\?|Mitä etsit täältä\\?|Vad är du här för\\?|Two photos of you|Kaksi kuvaa sinusta|Två bilder på dig|Finish your profile|Viimeistele profiilisi|Gör klart din profil|Did a friend invite you\\?|Kutsuiko ystävä sinut\\?|Bjöd en vän in dig\\?|Accept terms of use|Hyväksy käyttöehdot|Godkänn användarvillkoren"
     commands:
       # Logging out opens under its row (#511), by a link that names it rather
       # than a scroll to it: a swipe through Settings could pass over its row
@@ -47,7 +46,7 @@ appId: fi.kumpa
       # out everywhere, which puts both buttons in sight (the row is the list's
       # foot, where nothing can be centred), and the list's own scroll ends
       # before the tap. The row is there only with a session (#581): a session
-      # the reset erased, or the screen before the bank, leaves no line to find,
+      # the reset erased leaves no line to find,
       # so the scroll is optional; it keeps the minute a scroll has elsewhere for
       # a slow emulator, and those cases, the first flow after a reset or on a
       # fresh phone at most, spend it. The tap below asks for the button itself.
@@ -68,10 +67,9 @@ appId: fi.kumpa
           commands:
             - tapOn: "Log out|Kirjaudu ulos|Logga ut"
       # Opened over an onboarding step, Settings stays on screen after the
-      # logout, its account rows gone: the root route is the sign-in screen, or
-      # on a phone that has not recorded the current wordings the screen
-      # before the bank (#418), which bank-login.yaml taps through.
+      # logout, its account rows gone: the root route is the sign-in screen,
+      # on its first screen (#681), which bank-login.yaml goes through.
       - openLink: fi.kumpa://
       - extendedWaitUntil:
-          visible: "Sign in with your bank|Kirjaudu pankkitunnuksilla|Logga in med din bank|How we do things here|Näin täällä toimitaan|Så här gör vi här"
+          visible: "Sign in with your bank|Kirjaudu pankkitunnuksilla|Logga in med din bank|I already have an account|Minulla on jo tili|Jag har redan ett konto"
           timeout: 15000
