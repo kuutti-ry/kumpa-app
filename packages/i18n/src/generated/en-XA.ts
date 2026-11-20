@@ -1667,6 +1667,7 @@ export const enXA: Readonly<Record<string, string>> = {
   "tech.licenses.zodiac": "［Štáár šíígñš］",
   "tech.look.bold": "［Bóóld Çóóñtráášt］",
   "tech.look.glass": "［Gláášš］",
+  "tech.look.kumpa": "［Kúúmpáá］",
   "tech.look.neubrutalism": "［Ñééóóbrúútáálííšm］",
   "tech.look.organic": "［ÓÓrgááñííç Póóp］",
   "tech.look.title": "［Štýýléé tóó trýý］",

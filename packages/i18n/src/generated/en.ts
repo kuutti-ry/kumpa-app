@@ -1667,6 +1667,7 @@ export const en: Readonly<Record<string, string>> = {
   "tech.licenses.zodiac": "Star signs",
   "tech.look.bold": "Bold Contrast",
   "tech.look.glass": "Glass",
+  "tech.look.kumpa": "Kumpa",
   "tech.look.neubrutalism": "Neobrutalism",
   "tech.look.organic": "Organic Pop",
   "tech.look.title": "Style to try",

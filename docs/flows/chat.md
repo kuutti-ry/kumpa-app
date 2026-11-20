@@ -33,8 +33,8 @@ flowchart TB
   accTitle: Chat, part 1: from a match to a message
   accDescr: A like that meets a like in People opens a new conversation for the two, and the one who liked first is pushed that there is a new match. The person opens it from the match or from Conversations on the home screen, writes and presses Send. The API refuses a message in words or stores it, and the other person sees it at once in an open conversation, on their turn in the list elsewhere in the app, or after a push when they are away from it.
   subgraph person["The person"]
-    s1(["Likes back in People: It's a match"])
-    s5["Presses Go to the conversation, or Conversations on the home screen"]
+    s1(["Likes back in People: Well, hello!"])
+    s5["Presses Say hello, or Conversations on the home screen"]
     s7["Opens a conversation from its row"]
     s9["Writes in the field and presses Send"]
   end
@@ -63,7 +63,7 @@ flowchart TB
   s3 --> s4
   s2 --> s5
   s5 -->|"Conversations"| s6
-  s5 -->|"Go to the conversation"| s8
+  s5 -->|"Say hello"| s8
   s6 --> s7
   s7 --> s8
   s8 --> s9
@@ -81,11 +81,11 @@ flowchart TB
 
 ### Steps
 
-1. The person likes someone in [People](queue.md) who has already liked them, or does so on a card opened from the Later list: it's a match. The screen says "It's a match", with "Go to the conversation" and "Back to people" ("Back to Later list" on a card opened from it).
+1. The person likes someone in [People](queue.md) who has already liked them, or does so on a card opened from the Later list: it's a match. The screen says "Well, hello!", with "Say hello" and "Back to people" ("Back to Later list" on a card opened from it); in today's look, chosen on the tech screen, "It's a match", with "Go to the conversation".
 2. In the same moment the API opens a new conversation for the two, with nothing said in it yet, so it is both people's turn. A conversation of the same two left archived from an earlier match ends then, as an end does, with what either shared there (part 4): a pair has one conversation they can write in.
 3. After the like's answer, the API pushes the other person, the one whose earlier like the match met: "You have a new match", never saying with whom, whether or not they have the app open, if their Matches switch is on, it is not the quiet hours, and a phone of theirs is signed in and lets Kuutti notify ([Notifications](notifications.md)). The person who just liked is pushed nothing: they saw the match.
 4. The other person finds the conversation at their next look at Conversations, under Your turn, with no line under the name; a tap on the push opens Conversations. Nothing else tells them: there is no notice in the app.
-5. The person presses "Go to the conversation": 8. Or, then or any time later, "Conversations" on the home screen, which shows how many messages wait unread: 6.
+5. The person presses "Say hello": 8. Or, then or any time later, "Conversations" on the home screen, which shows how many messages wait unread: 6.
 6. The list, "Conversations", in groups, each newest first, a group with nobody in it left out: "Your turn", with how many conversations wait on the person, those whose last thing said, a message or a shared contact, came from the other person, and every match where nothing has been said yet; "Their turn"; and "Archived", which holds a conversation quiet for `silent_match_archive_days`, which the night moves there, and one that has ended, which names nobody ("Conversation ended"). From `your_turn_warning` conversations on their turn, a line above the groups says that nobody new can be liked while `your_turn_limit` of them wait (the like itself is refused in [People](queue.md)); with either set to 0 there is no line. A row is the other person's name and age with their photo, the last line ("You: …" before one's own, "Photo" for a photo without words), when, and how many are unread; a match where nothing has been said has no line under the name. With no conversation at all: "No conversations yet." The list moves at once when a message comes, and says "Connection lost. Reconnecting…" while its live connection is down. Pulling it down reads it again.
 7. The person opens a conversation by its row.
 8. The messages, oldest at the top, the person's own on the right, a line where the day changes; "Earlier messages" loads more. While the conversation is on the screen in front of the person, the app marks the other's messages read. "Online" shows under the header while the other person has the app open. An archived conversation says above the field "This conversation was quiet for a week. Write to bring it back."
@@ -290,3 +290,4 @@ flowchart TB
 - 2026-11-13 (#657): a failed send preserves a newer draft, and a failed background refresh preserves an already loaded empty conversation. Settings asks before leaving an unsent contact or a save still pending; choosing to leave sends no discarded draft.
 - 2026-11-16 (#700, PR #701): the refusals of a photo name the app Kumpa.
 - 2026-11-18 (#681): a match on a card opened from the Later list, the list Later puts people on, leads back to it as "Back to Later list".
+- 2026-11-20 (#411): in the Kumpa look, the one a phone starts in, a match says "Well, hello!" and its way to the conversation is "Say hello".

@@ -11,7 +11,9 @@ import { useLookTraits, useTheme } from "@/theme/ThemeProvider";
 // The pieces of the Organic Pop try (outside production, one of the tech
 // screen's styles), after Sini's board of 15/11/2026: soft shapes in a
 // gradient of the style's colours, a display headline, and small marks drawn
-// in the ink; the headline serves the other pill styles too. Every colour is a token, so the shapes follow every set of
+// in the ink. The other pill styles draw some of them too, Kumpa, which every
+// phone starts in, among them: the headline, the sparkle and a moment's
+// patches. Every colour is a token, so the shapes follow every set of
 // tokens.css; all of it but the headline's words is hidden from screen readers.
 
 /** Three shapes on a 200-point grid: a three-lobed puddle, a wide bean, a cloud. */

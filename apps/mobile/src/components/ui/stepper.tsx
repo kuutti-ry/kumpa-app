@@ -24,12 +24,14 @@ import { useLookTraits } from "@/theme/ThemeProvider";
  * width of a line, with what it shows wrapping before its buttons do, so two
  * stand one above the other, never side by side: there they overflow a small phone.
  *
- * The designers' try (outside production, the tech screen's neubrutalism) draws
- * it as Sini's age screen of 15/11/2026: a card with the ink round it and its
+ * The neubrutalism try (outside production, the tech screen's) draws it as
+ * Sini's age screen of 15/11/2026: a card with the ink round it and its
  * hard shadow, the label a tab of the accent colour on its top edge, the number
  * large between two square buttons, the plus in the accent colour. `tone`
  * gives a second card the secondary colour, as hers does the oldest age. The
- * Organic Pop try draws it as her later board: a pill with a tab, on a soft shape.
+ * pill styles draw it as her later board, a pill with a tab: Kumpa, the look
+ * every phone starts in, and the tech screen's Organic Pop, Glass and Bold
+ * Contrast; Organic Pop stands the two of an age window on a soft shape.
  */
 export function Stepper({
   label,

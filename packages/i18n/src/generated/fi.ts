@@ -1295,6 +1295,7 @@ export const fi: Readonly<Record<string, string>> = {
   "tech.licenses.zodiac": "Horoskooppimerkit",
   "tech.look.bold": "Bold Contrast",
   "tech.look.glass": "Lasi",
+  "tech.look.kumpa": "Kumpa",
   "tech.look.neubrutalism": "Neobrutalismi",
   "tech.look.organic": "Organic Pop",
   "tech.look.title": "Kokeiltava tyyli",

@@ -230,7 +230,7 @@ describe("Button", () => {
   });
 });
 
-// Today's look is what a released app draws: no hard shadow, no press offset.
+// Today's look, the tech screen's since Kumpa: no hard shadow, no press offset.
 describe("Button in today's look", () => {
   it("lies flat and stays put when pressed", async () => {
     await renderWithTheme(<Button>Send</Button>);

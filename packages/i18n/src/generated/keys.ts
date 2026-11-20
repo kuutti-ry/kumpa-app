@@ -1668,6 +1668,7 @@ export type MessageParams = {
   "tech.licenses.zodiac": Record<never, never>;
   "tech.look.bold": Record<never, never>;
   "tech.look.glass": Record<never, never>;
+  "tech.look.kumpa": Record<never, never>;
   "tech.look.neubrutalism": Record<never, never>;
   "tech.look.organic": Record<never, never>;
   "tech.look.title": Record<never, never>;

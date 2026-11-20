@@ -57,7 +57,7 @@ describe("the words on a pressed row", () => {
   ];
 
   it("covers every try set", () => {
-    expect(trySets).toHaveLength(8);
+    expect(trySets).toHaveLength(10);
     for (const selector of trySets) expect(SETS[selector]).toBeDefined();
   });
 
@@ -72,5 +72,15 @@ describe("the words on a pressed row", () => {
       }),
     );
     expect(failures).toEqual([]);
+  });
+});
+
+describe("the look a phone starts in", () => {
+  it("is Kumpa, the one look whose card is a poster (the HS design, 20/11/2026)", () => {
+    // jest.setup.js pins the suite to today's look; the real module says what a phone gets.
+    const actual = jest.requireActual<typeof import("@/theme/looks")>("@/theme/looks");
+    expect(actual.DEFAULT_LOOK).toBe("kumpa");
+    expect(LOOKS.filter((look) => traitsOf(look, false).poster)).toEqual(["kumpa"]);
+    expect(LOOKS.filter((look) => traitsOf(look, true).poster)).toEqual(["kumpa"]);
   });
 });

@@ -19,7 +19,7 @@ function Card({
           // Today's, or the try's: Neobrutalism's ink and hard shadow, Glass's
           // frosted pane over the backdrop, or the other pill styles' soft card.
           ink
-            ? "bg-card border-stroke rounded-lg border-2 border-solid"
+            ? cn("bg-card border-stroke border-2 border-solid", pill ? "rounded-3xl" : "rounded-lg")
             : glass
               ? "bg-card/60 border-card/80 rounded-3xl border"
               : pill

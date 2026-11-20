@@ -242,3 +242,11 @@ jest.mock("expo-image-manipulator", () => {
     SaveFormat: { JPEG: "jpeg", PNG: "png", WEBP: "webp" },
   };
 });
+
+// The suite was written for today's look and renders in it. Kumpa, the look a
+// phone starts in since the HS design (20/11/2026), has its own tests, which
+// ask for it through the real module (`jest.requireActual`).
+jest.mock("./src/theme/looks", () => ({
+  ...jest.requireActual("./src/theme/looks"),
+  DEFAULT_LOOK: "today",
+}));
