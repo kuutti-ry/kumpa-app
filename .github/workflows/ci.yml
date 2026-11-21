@@ -50,6 +50,10 @@ jobs:
       # nothing fetched can become code in a generated file (#514, ADR-061 §4).
       - name: places writes the lists and refuses what it should
         run: node scripts/places.ts --self-test
+      # The website's visitor count over made-up logs, never AWS or RIPEstat: whom
+      # it counts, what it leaves out, and the answers it refuses.
+      - name: site-traffic counts made-up logs and refuses what it should
+        run: infra/scripts/site-traffic.sh --self-test
       # What the hooks hold an agent to, over stand-ins of a session's transcript
       # and of GitHub (#525).
       - name: The pull request duties refuse what they should
