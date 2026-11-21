@@ -1,6 +1,7 @@
 # The queue (#379, #502, ADR-034, ADR-062): Iida opens it from the gate card
 # on home, meets Henna first, who liked her yesterday, and likes her back: it
-# is a match, which leads to the conversation and back to the queue. The next
+# is a match, said as a hello in Kumpa's look (#738), which leads to the
+# conversation and back to the queue. The next
 # card she leaves for later, which puts it on her Later list and says so the
 # first time (#681), brings back with Undo, passes, takes back again and likes;
 # the one after she reports and blocks from the card's header with a reason and
@@ -47,12 +48,17 @@ name: The queue shows one card at a time, liking back makes a match, Later and U
 - assertNotVisible: ".*\\d+ ?km.*"
 - waitForAnimationToEnd
 - tapOn: "Like|Tykkää|Gilla"
+# The match is a hello in Kumpa's look, which every phone starts in (#738):
+# the greeting over the two faces, the one sentence on what happened, and Say
+# hello where the plain look has "It's a match" and Go to the conversation.
 - extendedWaitUntil:
-    visible: "It's a match|Se on mätsi|Det är en match"
+    visible: "Well, hello!|Kas moi!|Nämen hej!"
     timeout: 15000
+- assertVisible: "You would both like to hear more about each other\\.|Te molemmat haluatte kuulla toisistanne lisää\\.|Ni vill båda höra mer om varandra\\."
+- assertVisible: "Back to people|Takaisin ihmisiin|Tillbaka till människorna"
 # The queue keeps the match on its screen until it has the focus again, so
 # the next card comes only after Back.
-- tapOn: "Go to the conversation|Siirry keskusteluun|Gå till samtalet"
+- tapOn: "Say hello|Sano moi|Säg hej"
 # The conversation the match opened, with nothing in it yet but the composer.
 - extendedWaitUntil:
     visible: "(Message|Viesti|Meddelande)( .*)?"

@@ -15,8 +15,9 @@
 # (#107); what the card shows of the home (#514); the ages as two steppers
 # around the person's own age; the intent on its whole-width rows, where the
 # app is closed again and opens at the intent (#219), the invitation code not
-# offered again; three photos on the step's own grid; and the offer of a
-# fuller profile, once, declined with Not now. Otto (26) is registered and
+# offered again; three photos on the step's own grid; the celebration of
+# Kumpa's look, "Profile ready!" (#738); and the offer of a fuller profile,
+# once, declined with Not now. Otto (26) is registered and
 # never onboarded after `pnpm demo:reset`, so one run per reset; the photos
 # are of Onni's roll in the release of pictures, the three his own story does
 # not use (#560), which the local check queues, so home says the profile
@@ -328,6 +329,14 @@ name: A newcomer answers four questions before the bank, keeps them over a resta
     direction: DOWN
     centerElement: true
     timeout: 60000
+- tapOn: "Continue|Jatka|Fortsätt"
+
+# The walk ends on the celebration in Kumpa's look, which every phone starts
+# in (#738): the headline, the first photo, one line, and the button onward.
+- extendedWaitUntil:
+    visible: "Profile ready!|Profiili valmis!|Profilen klar!"
+    timeout: 15000
+- assertVisible: "Nicely done\\. That was the hard part\\.|Hienoa\\. Se oli se työläin osa\\.|Snyggt\\. Det där var den jobbiga delen\\."
 - tapOn: "Continue|Jatka|Fortsätt"
 
 # The offer of a fuller profile, once and with a way to go on (#681): no bio

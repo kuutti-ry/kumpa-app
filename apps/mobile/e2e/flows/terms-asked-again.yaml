@@ -44,6 +44,13 @@ name: A person who accepted an older wording of the terms is asked for the curre
           centerElement: true
           timeout: 60000
       - tapOn: "Agree and continue|Hyväksy ja jatka|Godkänn och fortsätt"
+      # A walk that asked something ends on the celebration in Kumpa's look,
+      # which every phone starts in (#738), and home waits for its button. On
+      # a fresh phone no step was asked here, so none comes.
+      - extendedWaitUntil:
+          visible: "Profile ready!|Profiili valmis!|Profilen klar!"
+          timeout: 15000
+      - tapOn: "Continue|Jatka|Fortsätt"
 
 # Home either way, nothing else asked: the name, the gender, whom she seeks
 # and the rest stand, and the offer of a fuller profile does not come, since
