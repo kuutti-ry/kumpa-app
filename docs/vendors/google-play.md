@@ -4,7 +4,7 @@ What Google Play is to Kuutti, and what Google receives through it. Since 2026-1
 
 ## What Play shows of the association
 
-Play Console's Play developer profile lists as public account details the organisation's name Kuutti ry, its registered address (public on `kuutti.app` too), the developer phone number of the account and the developer e-mail `hello@kuutti.app`. They come from the account details Google verified, and change there. Once the app is listed, its page and the developer page show them, with the website `https://kuutti.app/`. Kumpa's own listing names `https://kumpa.fi/` as its website and `hello@kuutti.app` as its contact.
+Play Console's Play developer profile lists as public account details the organisation's name Kuutti ry, its registered address (public on `kuutti.app` too), the developer phone number of the account and the developer e-mail `hello@kumpa.fi`, the website's address (`hello@kuutti.app` until 2026-11-21, when the maintainer changed it in the console). They come from the account details Google verified, and change there. Once the app is listed, its page and the developer page show them, with the website `https://kuutti.app/`. Until then nothing public shows them: a closed test has no public page, and the developer page needs a published app. Kumpa's own listing names `https://kumpa.fi/` as its website and `hello@kumpa.fi` as its contact, changed in the console the same day.
 
 The developer page's own content is set under Developer account, Play developer profile. As the console asked on 2026-10-27:
 - the developer icon, 512 by 512, and the header image, 4096 by 2304, each a JPEG or an opaque 24-bit PNG of at most 1 MB. Google's help asks for a 32-bit PNG icon, but the console refuses transparency;
@@ -144,7 +144,7 @@ Internal testing needs none of this. A closed or public track does, and Google r
 | Icon, 512 by 512 | the app's own icon, a placeholder |
 | Feature graphic, 1024 by 500 | a placeholder |
 | Phone screenshots, 1080 by 1920 | five real screens of the staging app with a caption each, placeholders until #413: the bank sign-in, what you seek, a conversation, your profile, settings |
-| Contact | `hello@kuutti.app`, `https://kumpa.fi/` |
+| Contact | `hello@kumpa.fi` (`hello@kuutti.app` until 2026-11-21, changed in the console), `https://kumpa.fi/` |
 | Category | Dating |
 
 The listing's last step, Review, asks for the AI asset declaration: "Don't label assets", or "Label assets as created or edited using AI", then asset by asset. One of the screenshots holds a generated picture.
