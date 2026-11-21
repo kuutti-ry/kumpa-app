@@ -641,7 +641,7 @@ describe("SignInScreen", () => {
     const BANNED = "This person may not use Kumpa.";
     const SUSPENDED = "This account is suspended. You can sign in again from: 22.10.2026";
     const CONTEST =
-      "If you think we got this wrong, write to hello@kuutti.app. Someone other than the person who decided will look at it again.";
+      "If you think we got this wrong, write to hello@kumpa.fi. Someone other than the person who decided will look at it again.";
     const HARASSMENT = [
       "Why: Harassment.",
       "The terms of use, section 4: you must not threaten, harass or pressure anyone, or ask anyone for money.",
@@ -686,7 +686,7 @@ describe("SignInScreen", () => {
           "Syy: Muiden profiilien kopiointi tai kerääminen.",
           "Käyttöehdot, kohta 4: et saa käyttää Kumpa-sovellusta automaattisin keinoin etkä kopioida, tallentaa tai välittää toisen käyttäjän kuvia tai profiilia.",
           "Tämän päätti moderaattori.",
-          "Jos olemme mielestäsi erehtyneet, kirjoita osoitteeseen hello@kuutti.app. Asian katsoo uudelleen joku muu kuin päätöksen tehnyt.",
+          "Jos olemme mielestäsi erehtyneet, kirjoita osoitteeseen hello@kumpa.fi. Asian katsoo uudelleen joku muu kuin päätöksen tehnyt.",
         ],
       ],
       [
@@ -698,7 +698,7 @@ describe("SignInScreen", () => {
           "Skäl: Kopiering eller insamling av andras profiler.",
           "Användarvillkoren, punkt 4: du får inte använda Kumpa automatiserat eller kopiera, spara eller sprida en annan användares bilder eller profil.",
           "Det här beslutade en moderator.",
-          "Om du tycker att vi har gjort fel, skriv till hello@kuutti.app. Någon annan än den som beslutade går igenom det på nytt.",
+          "Om du tycker att vi har gjort fel, skriv till hello@kumpa.fi. Någon annan än den som beslutade går igenom det på nytt.",
         ],
       ],
     ])("says a suspension's reason on a %s phone in its language", async (languageTag, words) => {
@@ -748,7 +748,7 @@ describe("SignInScreen", () => {
         <SignInScreen error="auth_cooldown" until="2026-10-22T10:00:00.000Z" reason="harassment" />,
       );
       expect(await screen.findByText(/The earliest day for a new one/)).toBeTruthy();
-      expect(screen.queryByText(/Harassment|hello@kuutti\.app/)).toBeNull();
+      expect(screen.queryByText(/Harassment|hello@kumpa\.fi/)).toBeNull();
     });
 
     it("follows a new link's reason, and the plain ban once a link carries none", async () => {

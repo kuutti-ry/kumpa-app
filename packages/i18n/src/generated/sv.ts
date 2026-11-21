@@ -1061,7 +1061,7 @@ export const sv: Readonly<Record<string, string>> = {
   "safety.report.reasonLabel": "Vad är fel?",
   "safety.report.send": "Skicka anmälan",
   "safety.sending": "Skickar…",
-  "sanction.statement.contest": "Om du tycker att vi har gjort fel, skriv till hello@kuutti.app. Någon annan än den som beslutade går igenom det på nytt.",
+  "sanction.statement.contest": "Om du tycker att vi har gjort fel, skriv till hello@kumpa.fi. Någon annan än den som beslutade går igenom det på nytt.",
   "sanction.statement.ground.commercial_use": "Användarvillkoren, punkt 4: du får inte använda Kumpa i kommersiellt syfte eller be någon om pengar.",
   "sanction.statement.ground.harassment": "Användarvillkoren, punkt 4: du får inte hota, trakassera eller pressa någon eller be någon om pengar.",
   "sanction.statement.ground.misrepresentation": "Användarvillkoren, punkt 4: du ska ge sanna uppgifter om dig själv och bara ladda upp bilder som visar dig.",

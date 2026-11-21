@@ -1439,7 +1439,7 @@ export const enXA: Readonly<Record<string, string>> = {
   "safety.report.reasonLabel": "［Wháát ííš wróóñg?］",
   "safety.report.send": "［Šééñd réépóórt］",
   "safety.sending": "［Šééñdííñg…］",
-  "sanction.statement.contest": "［ÍÍf ýýóóúú thííñk wéé góót thííš wróóñg, wríítéé tóó hééllóó@kúúúúttíí.áápp. Šóómééóóñéé óóthéér thááñ théé pééršóóñ whóó dééçíídééd wííll lóóóók áát íít áágááííñ.］",
+  "sanction.statement.contest": "［ÍÍf ýýóóúú thííñk wéé góót thííš wróóñg, wríítéé tóó hééllóó@kúúmpáá.fíí. Šóómééóóñéé óóthéér thááñ théé pééršóóñ whóó dééçíídééd wííll lóóóók áát íít áágááííñ.］",
   "sanction.statement.ground.commercial_use": "［Théé téérmš óóf úúšéé, šééçtííóóñ 4: ýýóóúú múúšt ñóót úúšéé Kúúmpáá fóór áá çóómméérçííáál púúrpóóšéé óór áášk ááñýýóóñéé fóór móóñééýý.］",
   "sanction.statement.ground.harassment": "［Théé téérmš óóf úúšéé, šééçtííóóñ 4: ýýóóúú múúšt ñóót thrééáátééñ, hááráášš óór prééššúúréé ááñýýóóñéé, óór áášk ááñýýóóñéé fóór móóñééýý.］",
   "sanction.statement.ground.misrepresentation": "［Théé téérmš óóf úúšéé, šééçtííóóñ 4: ýýóóúú múúšt gíívéé trúúéé ííñfóórmáátííóóñ áábóóúút ýýóóúúršéélf ááñd úúplóóáád óóñlýý phóótóóš tháát šhóów ýýóóúú.］",

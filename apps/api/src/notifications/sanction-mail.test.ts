@@ -108,9 +108,9 @@ function paragraphsOf(sent: MailMessage[]): string[] {
 }
 
 const FI_CONTEST =
-  "Jos olemme mielestäsi erehtyneet, kirjoita osoitteeseen hello@kuutti.app. Asian katsoo uudelleen joku muu kuin päätöksen tehnyt.";
+  "Jos olemme mielestäsi erehtyneet, kirjoita osoitteeseen hello@kumpa.fi. Asian katsoo uudelleen joku muu kuin päätöksen tehnyt.";
 const EN_CONTEST =
-  "If you think we got this wrong, write to hello@kuutti.app. Someone other than the person who decided will look at it again.";
+  "If you think we got this wrong, write to hello@kumpa.fi. Someone other than the person who decided will look at it again.";
 const EN_WHY =
   "You get this because you confirmed this address in the Kumpa app. A decision about your account is always sent to you, whatever your notification settings say.";
 

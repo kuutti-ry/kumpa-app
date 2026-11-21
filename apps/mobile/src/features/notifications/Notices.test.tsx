@@ -30,7 +30,7 @@ const notice = (n: number, readAt: string | null = null) => ({
 const BODY = "A warning by itself changes nothing in how you use the app.";
 /** How to contest what staff decided (ADR-073 §3). */
 const CONTEST =
-  "If you think we got this wrong, write to hello@kuutti.app. Someone other than the person who decided will look at it again.";
+  "If you think we got this wrong, write to hello@kumpa.fi. Someone other than the person who decided will look at it again.";
 /** A moderator's sanction for harassment, in its statement's words. */
 const HARASSMENT = [
   "Why: Harassment.",
@@ -273,7 +273,7 @@ describe("Notices", () => {
         "Syy: Muu syy.",
         "Käyttöehdot, kohta 6: jos ehtoja rikotaan, Kuutti ry voi rajoittaa tiliä.",
         "Tämän päätti moderaattori.",
-        "Jos olemme mielestäsi erehtyneet, kirjoita osoitteeseen hello@kuutti.app. Asian katsoo uudelleen joku muu kuin päätöksen tehnyt.",
+        "Jos olemme mielestäsi erehtyneet, kirjoita osoitteeseen hello@kumpa.fi. Asian katsoo uudelleen joku muu kuin päätöksen tehnyt.",
       ],
     ],
     [
@@ -284,7 +284,7 @@ describe("Notices", () => {
         "Skäl: Annat skäl.",
         "Användarvillkoren, punkt 6: om villkoren bryts kan Kuutti ry begränsa ett konto.",
         "Det här beslutade en moderator.",
-        "Om du tycker att vi har gjort fel, skriv till hello@kuutti.app. Någon annan än den som beslutade går igenom det på nytt.",
+        "Om du tycker att vi har gjort fel, skriv till hello@kumpa.fi. Någon annan än den som beslutade går igenom det på nytt.",
       ],
     ],
   ] as const)(

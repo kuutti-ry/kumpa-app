@@ -9759,10 +9759,10 @@ sanction.statement.moderator:
   machine: { fi: true, sv: true }
 
 sanction.statement.contest:
-  en: "If you think we got this wrong, write to hello@kuutti.app. Someone other than the person who decided will look at it again."
-  description: "A sanction's statement (#715, ADR-073 §3), last: how to contest a decision staff made. The address is the association's public one, for now (the maintainer, 17/11/2026); the second look is ADR-024 §3's review by somebody else. The address stays exactly as it is in every language."
-  fi: "Jos olemme mielestäsi erehtyneet, kirjoita osoitteeseen hello@kuutti.app. Asian katsoo uudelleen joku muu kuin päätöksen tehnyt."
-  sv: "Om du tycker att vi har gjort fel, skriv till hello@kuutti.app. Någon annan än den som beslutade går igenom det på nytt."
+  en: "If you think we got this wrong, write to hello@kumpa.fi. Someone other than the person who decided will look at it again."
+  description: "A sanction's statement (#715, ADR-073 §3), last: how to contest a decision staff made. The address is the association's public one, for now (the maintainer, 17/11/2026), and the website's: hello@kumpa.fi since his word of 21/11/2026; the second look is ADR-024 §3's review by somebody else. The address stays exactly as it is in every language."
+  fi: "Jos olemme mielestäsi erehtyneet, kirjoita osoitteeseen hello@kumpa.fi. Asian katsoo uudelleen joku muu kuin päätöksen tehnyt."
+  sv: "Om du tycker att vi har gjort fel, skriv till hello@kumpa.fi. Någon annan än den som beslutade går igenom det på nytt."
   machine: { fi: true, sv: true }
 
 notices.read:

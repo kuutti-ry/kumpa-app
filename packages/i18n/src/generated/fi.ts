@@ -1067,7 +1067,7 @@ export const fi: Readonly<Record<string, string>> = {
   "safety.report.reasonLabel": "Mikä on vialla?",
   "safety.report.send": "Lähetä ilmoitus",
   "safety.sending": "Lähetetään…",
-  "sanction.statement.contest": "Jos olemme mielestäsi erehtyneet, kirjoita osoitteeseen hello@kuutti.app. Asian katsoo uudelleen joku muu kuin päätöksen tehnyt.",
+  "sanction.statement.contest": "Jos olemme mielestäsi erehtyneet, kirjoita osoitteeseen hello@kumpa.fi. Asian katsoo uudelleen joku muu kuin päätöksen tehnyt.",
   "sanction.statement.ground.commercial_use": "Käyttöehdot, kohta 4: et saa käyttää Kumpa-sovellusta kaupalliseen tarkoitukseen etkä pyytää keneltäkään rahaa.",
   "sanction.statement.ground.harassment": "Käyttöehdot, kohta 4: et saa uhkailla, häiritä tai painostaa ketään etkä pyytää keneltäkään rahaa.",
   "sanction.statement.ground.misrepresentation": "Käyttöehdot, kohta 4: sinun on annettava itsestäsi oikeat tiedot ja ladattava vain kuvia, joissa olet itse.",
