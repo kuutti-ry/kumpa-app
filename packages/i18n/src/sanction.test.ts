@@ -14,7 +14,7 @@ import {
 const t = (locale: "en" | "fi" | "sv") => typedT(createI18n({ locale }), locale);
 const REASONS = Object.keys(SANCTION_REASON_WORDS) as SanctionStatementReason[];
 const CONTEST =
-  "If you think we got this wrong, write to hello@kuutti.app. Someone other than the person who decided will look at it again.";
+  "If you think we got this wrong, write to hello@kumpa.fi. Someone other than the person who decided will look at it again.";
 
 describe("sanctionStatement", () => {
   it("says a moderator's decision: why, the terms' rule, who decided, and the contest with a second look", () => {
@@ -28,7 +28,7 @@ describe("sanctionStatement", () => {
       expect.stringMatching(/^Syy: .+\.$/),
       "Käyttöehdot, kohta 3: sinun on oltava vähintään 18-vuotias.",
       "Tämän päätti moderaattori.",
-      expect.stringContaining("hello@kuutti.app"),
+      expect.stringContaining("hello@kumpa.fi"),
     ]);
   });
 
@@ -46,9 +46,7 @@ describe("sanctionStatement", () => {
     (locale) => {
       const lines = REASONS.flatMap((reason) => sanctionStatement(t(locale), reason));
       for (const line of lines) expect(line).not.toMatch(/[{}]/);
-      expect(lines.filter((line) => line.includes("hello@kuutti.app"))).toHaveLength(
-        REASONS.length,
-      );
+      expect(lines.filter((line) => line.includes("hello@kumpa.fi"))).toHaveLength(REASONS.length);
       // The court sentence is dropped (the maintainer, 17/11/2026).
       expect(lines.join(" ")).not.toMatch(/court|tuomioistuin|domstol/i);
     },

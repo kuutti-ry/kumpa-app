@@ -1439,7 +1439,7 @@ export const en: Readonly<Record<string, string>> = {
   "safety.report.reasonLabel": "What is wrong?",
   "safety.report.send": "Send report",
   "safety.sending": "Sending…",
-  "sanction.statement.contest": "If you think we got this wrong, write to hello@kuutti.app. Someone other than the person who decided will look at it again.",
+  "sanction.statement.contest": "If you think we got this wrong, write to hello@kumpa.fi. Someone other than the person who decided will look at it again.",
   "sanction.statement.ground.commercial_use": "The terms of use, section 4: you must not use Kumpa for a commercial purpose or ask anyone for money.",
   "sanction.statement.ground.harassment": "The terms of use, section 4: you must not threaten, harass or pressure anyone, or ask anyone for money.",
   "sanction.statement.ground.misrepresentation": "The terms of use, section 4: you must give true information about yourself and upload only photos that show you.",
