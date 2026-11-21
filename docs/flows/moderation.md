@@ -457,4 +457,4 @@ flowchart TB
 - 2026-11-16 (#208): the researcher's role leaves the panel, so every role that signs in opens screens, and a person's page has no research id to leave out.
 - 2026-11-17 (#715, PR #719): every sanction staff applies tells its person what it does, why, the section of the terms and how to contest it, by writing to hello@kuutti.app, a moderator's shadow ban included and at once, in the app or at the bank login and once by e-mail to a confirmed address; each step in the panel says what the person is told. An automatic rule's shadow ban is still never told, and its review hours go from 48 to 168.
 - 2026-11-18 (#681): the star is the Later list, which Later puts people on: opening a card from it is still a read of the queue, and a ban takes the person off others' lists.
-- 2026-11-21 (#715): to contest a sanction the person writes to hello@kumpa.fi, the website's address, which the statement names in the app, at the bank login and in the mail.
+- 2026-11-21 (#715, PR #742): to contest a sanction the person writes to hello@kumpa.fi, the website's address, which the statement names in the app, at the bank login and in the mail.

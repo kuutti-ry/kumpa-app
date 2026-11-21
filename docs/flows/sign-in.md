@@ -218,4 +218,4 @@ flowchart TB
 - 2026-11-17 (#715, PR #719): a ban's and a suspension's refusal says its reason, the section of the terms and how to contest it.
 - 2026-11-17 (#184, PR #723): the bank's return comes in a link that the phone hands to Kumpa alone, where the phone has checked it, and in the app's own kind of link otherwise; an iPhone's build can ask Apple to certify the app.
 - 2026-11-19 (#681): the app opens on what Kumpa is and why it asks for a bank ID, with Get started and I already have an account; a newcomer answers the name, the gender, whom they seek and their home before the bank, held on the phone for an hour, the consent in memory for whoever is at the phone, and saved by the bank login; the terms are one line and two links, Accept terms of use, then Identification; a refusal that rests on the person removes the answers, a cancellation keeps them.
-- 2026-11-21 (#715): a ban's and a suspension's refusal say to write to hello@kumpa.fi to contest it.
+- 2026-11-21 (#715, PR #742): a ban's and a suspension's refusal say to write to hello@kumpa.fi to contest it.

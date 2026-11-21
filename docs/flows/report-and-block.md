@@ -203,4 +203,4 @@ flowchart TB
 - 2026-11-16 (#700, PR #701): a ban's refusal at the bank names the app Kumpa.
 - 2026-11-17 (#715, PR #719): each sanction a moderator applies tells the reported person what it does, why, the section of the terms and how to contest it, a shadow ban included and at once, in the app and once by e-mail to a confirmed address; the automatic rule's shadow ban and the reporter are still not told.
 - 2026-11-18 (#681): Starred is the Later list, the list Later puts people on; Block or report stays on a card opened from it.
-- 2026-11-21 (#715): a sanction's statement says to write to hello@kumpa.fi to contest it.
+- 2026-11-21 (#715, PR #742): a sanction's statement says to write to hello@kumpa.fi to contest it.

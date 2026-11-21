@@ -251,4 +251,4 @@ flowchart TB
 - 2026-11-16 (#700, PR #701): the offer, the settings and the announcement's push name the app Kumpa.
 - 2026-11-17 (#715, PR #719): a moderator's shadow ban leaves a notice too, an automatic rule's none, and a warning's and a shadow ban's notice say why and how to contest it; every sanction staff applies is e-mailed once to a confirmed address whatever the switches say.
 - 2026-11-18 (#196): the Unsubscribe of an announcement's e-mail turns the Announcements switch off, as Settings would.
-- 2026-11-21 (#715): a warning's and a shadow ban's notice say to write to hello@kumpa.fi to contest it.
+- 2026-11-21 (#715, PR #742): a warning's and a shadow ban's notice say to write to hello@kumpa.fi to contest it.

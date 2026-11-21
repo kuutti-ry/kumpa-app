@@ -66,4 +66,4 @@ The panel has asked for a reason since #307: a closed list (harassment, misrepre
 
 - 2026-11-17: written with #715, telling every shadow ban, the reports rule's once a moderator kept it. The same day, on the maintainer's word: a rule's shadow ban is never told, the court sentence goes, `hello@kuutti.app` stands for now, and the review hours go to 168 (§2, §3, §4, §7).
 - 2026-11-17: accepted on the maintainer's word, "Accept ADR-073", in a session of that day, as it stands after the same day's changes (PR #719).
-- 2026-11-21: §3's address is `hello@kumpa.fi`, on the maintainer's word in a session of that day, which moved the website's public address from `hello@kuutti.app` (the website's decision 37). The statement names it in the app, at the bank login and in the mail, in all three languages.
+- 2026-11-21: §3's address is `hello@kumpa.fi`, on the maintainer's word in a session of that day, which moved the website's public address from `hello@kuutti.app` (the website's decision 37). The statement names it in the app, at the bank login and in the mail, in all three languages (PR #742).
