@@ -66,7 +66,7 @@ On 2026-11-02 build 4 went this way, and the maintainer installed it from TestFl
 
 None of this is needed for internal testing. External testing (ADR-063, Open 2) needs:
 
-- the test information: what to test, a feedback address (`hello@kuutti.app`), the privacy policy, and the reviewers' sign-in, which bank identification cannot give them (#560);
+- the test information: what to test, a feedback address (`hello@kumpa.fi`, the website's), the privacy policy, and the reviewers' sign-in, which bank identification cannot give them (#560). On 2026-11-21 neither Kumpa nor Kuutti had any of it (`asc testflight review view --app <id>`, `asc testflight app-localizations list --app <id>`);
 - Apple's review of the first build of each version.
 
 ## The first review (#193, #188, #374, #560)
@@ -91,13 +91,13 @@ What the record holds, in English (U.K.) alone (ADR-063, Open 5):
 | Screenshots | the iPhone 6.9" set, 1320 by 2868: five real screens of the staging app with a caption each, placeholders until #413. The first is the bank sign-in (#374's point 2) |
 | App Privacy | published: nothing is used for tracking. Linked to the person: name, e-mail address, phone number, other contact info, sensitive info, coarse location, photos, other user content, customer support, user ID, device ID, product interaction, fitness, other data. Not linked: crash and performance data, since the app strips the person from every report it sends to Sentry |
 | Digital Services Act | the association's declaration, active since 2026-11-05 (App Store Connect, Business) |
-| App Review Information | a contact of the association with `hello@kuutti.app`; no demo account, since there are no passwords; the notes |
+| App Review Information | a contact of the association with `hello@kumpa.fi`, the website's address (`hello@kuutti.app` when it was sent; changed on 2026-11-21); no demo account, since there are no passwords; the notes |
 
 The notes are plain text of at most 4,000 characters; these take 2,617. Their parts: Signing in (a link to an unlisted video of it, why bank identification is the only login, guideline 4.8, that this is the staging build, the five steps and a second person, `docs/runbooks/store-review.md`); What is different (4.3(b)); User-generated content (1.2); Account deletion (5.1.1(v)); Age.
 
 How it was written:
 
-- **Through the App Store Connect API**, with `asc` and the maintainer's key: the texts, the categories, the age rating, the price and the countries, the version's name and release type, the build, the screenshots, the review contact and the notes. `asc validate --app 6836197661 --version-id <id>` lists what a submission still lacks; on the day it ended at no errors and two warnings (a first version has no "what's new"; the keywords repeat words of the subtitle). `asc review details-for-version --version-id <id>` reads the contact and the notes back, and `asc review details-update --id <id> --notes "$(cat <file>)"` writes the notes.
+- **Through the App Store Connect API**, with `asc` and the maintainer's key: the texts, the categories, the age rating, the price and the countries, the version's name and release type, the build, the screenshots, the review contact and the notes. `asc validate --app 6836197661 --version-id <id>` lists what a submission still lacks; on the day it ended at no errors and two warnings (a first version has no "what's new"; the keywords repeat words of the subtitle). `asc review details-for-version --version-id <id>` reads the contact and the notes back, and `asc review details-update --id <id> --notes "$(cat <file>)"` writes the notes. On 2026-11-21 `--contact-email hello@kumpa.fi` changed the contact the same way while the version waited for review, and it stayed in the queue.
 - **App Privacy**, which the API does not take: `asc web privacy`, after the maintainer's own web sign-in in a terminal (`asc web auth login --apple-id <the Account Holder's Apple Account>`; the password and the code are his to type). `pull` reads the answers, `plan` compares a file with them and changes nothing, `apply` writes a draft, and `publish --confirm` publishes it.
 - **On the website**, by the maintainer: the record itself, the Digital Services Act declaration and the submission.
 
