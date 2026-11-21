@@ -1646,10 +1646,13 @@ describe("the inbox stop (ADR-062 §4)", () => {
 });
 
 describe("over the synthetic population", () => {
-  // Three hundred people and everybody's first page: about twelve seconds here
-  // and more under CI's coverage, past the default fifteen.
+  // Three hundred people and everybody's first page: about twenty seconds on a
+  // laptop. CI's compose job runs it under coverage beside the other packages'
+  // tests: 16 to 24 seconds on a fast runner, 42 to past 60 on a slow one (25
+  // runs, 18–21/11/2026; the panel's tests ran about 1.6 times slower in those
+  // runs too). So it has three minutes: one ran out in PR #742's CI.
   test("every open person opens a day, and nobody a candidate a hard filter excludes, in either direction", {
-    timeout: 60_000,
+    timeout: 180_000,
   }, async ({ ctx }) => {
     await writePopulation(
       ctx.client,
