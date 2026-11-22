@@ -34,13 +34,25 @@ COPY = {
     "fi": {
         "saved": ("Olet odotuslistalla", "Lähetämme sinulle lisätietoja sähköpostitse, kun Kumpa-sovellus julkaistaan."),
         "countdown": ("Palaat Kumpa-sivustolle ", "sekunnin", "sekunnin", " kuluttua."),
-        "email": ("Tarkista sähköpostiosoitteesi", "Palaa lomakkeelle ja kirjoita osoite, johon haluat tiedon julkaisusta."),
+        "email": ("Tarkista sähköpostiosoitteesi", "Palaa lomakkeelle ja kirjoita osoite, johon haluat saada viestejä meiltä."),
         "form": ("Käytä sivuston lomaketta", "Voit liittyä odotuslistalle Kumpa-sivustolla."),
         "busy": ("Tietojen tallennus epäonnistui", "Palaa sivustolle ja yritä hetken kuluttua uudelleen."),
         "retry": ("Yritä liittyä uudelleen", "Automaattinen tarkistus epäonnistui. Palaa sivustolle ja lähetä lomake uudelleen."),
         "home": "Takaisin Kumpa-sivustolle",
     },
+    "sv": {
+        "saved": ("Du står på väntelistan", "Vi skickar dig mer information per e-post när Kumpa lanseras."),
+        "countdown": ("Du kommer tillbaka till Kumpas webbplats om ", "sekunder", "sekund", "."),
+        "email": ("Kontrollera din e-postadress", "Gå tillbaka och skriv den adress där du vill få meddelanden från oss."),
+        "form": ("Använd anmälningsformuläret", "Gå till Kumpas webbplats för att skriva upp dig på väntelistan."),
+        "busy": ("Vi kunde inte spara din anmälan", "Gå tillbaka till webbplatsen och försök igen om en stund."),
+        "retry": ("Försök att skriva upp dig igen", "Den automatiska kontrollen kunde inte slutföras. Gå tillbaka till webbplatsen och skicka formuläret igen."),
+        "home": "Tillbaka till Kumpas webbplats",
+    },
 }
+# A language a machine translated says so on the page until a native
+# speaker's review of it is recorded.
+MACHINE_TRANSLATED = {"fi": "Konekäännös", "sv": "Maskinöversättning"}
 
 STYLE = """
 * { box-sizing: border-box; }
@@ -77,7 +89,7 @@ def response(status, message, locale, origin):
     copy = COPY[locale]
     title, detail = copy[message]
     home = origin if origin in ORIGINS else "https://kumpa.fi"
-    notice = "<small>Konekäännös</small>" if locale == "fi" else ""
+    notice = f"<small>{MACHINE_TRANSLATED[locale]}</small>" if locale in MACHINE_TRANSLATED else ""
     refresh = countdown = ""
     if message == "saved":
         refresh = f'<meta http-equiv="refresh" content="{COUNTDOWN_SECONDS};url={home}/">\n'
@@ -171,7 +183,9 @@ def save(client, email, locale):
 def handler(event, context):
     headers = event.get("headers") or {}
     origin = headers.get("origin")
-    locale = "en" if headers.get("accept-language", "").lower().startswith("en") else "fi"
+    # Until the form says otherwise, the browser's first language, or Finnish.
+    browser = headers.get("accept-language", "").lower()[:2]
+    locale = browser if browser in COPY else "fi"
     route = event.get("routeKey")
     issuing = route == "POST /challenge"
 

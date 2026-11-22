@@ -94,12 +94,18 @@ class WaitlistTests(unittest.TestCase):
         for locale, origin, words in [
             ("en", "https://kuutti.app", ["more information", "in <span id=\"n\">10</span> <span id=\"u\" data-one=\"second\">seconds</span>."]),
             ("fi", "https://www.kumpa.fi", ["lisätietoja", "<span id=\"n\">10</span> <span id=\"u\" data-one=\"sekunnin\">sekunnin</span> kuluttua."]),
+            ("sv", "https://kumpa.fi", [
+                "<h1>Du står på väntelistan</h1>", "mer information per e-post",
+                "webbplats om <span id=\"n\">10</span> <span id=\"u\" data-one=\"sekund\">sekunder</span>.",
+            ]),
         ]:
             with self.subTest(locale=locale):
                 event = answer_request(locale=locale)
                 event["headers"]["origin"] = origin
                 result = handler.handler(event, None)
                 body = result["body"]
+                self.assertEqual(200, result["statusCode"])
+                self.assertIn(f'<html lang="{locale}">', body)
                 self.assertIn(f'<meta http-equiv="refresh" content="10;url={origin}/">', body)
                 for word in words:
                     self.assertIn(word, body)
@@ -109,6 +115,72 @@ class WaitlistTests(unittest.TestCase):
                     allowed = base64.b64encode(hashlib.sha256(inline.encode()).digest()).decode()
                     self.assertIn(f"{directive} 'sha256-{allowed}'", policy)
                 self.assertIn("default-src 'none'", policy)
+
+    def test_swedish_signup_is_kept_in_swedish(self):
+        result = handler.handler(request(locale="sv", route="/challenge"), None)
+        self.assertEqual(200, result["statusCode"])
+        self.issue.assert_called_once_with(self.db, "visitor+news@example.org", "sv")
+        result = handler.handler(answer_request(locale="sv"), None)
+        self.assertEqual(200, result["statusCode"])
+        self.verify.assert_called_once_with(self.db, "solution", "visitor+news@example.org", "sv")
+        self.assertEqual({"S": "sv"}, self.db.put_item.call_args.kwargs["Item"]["locale"])
+
+    def test_refusals_in_swedish(self):
+        self.verify.return_value = False
+        retry = handler.handler(answer_request(locale="sv"), None)
+        self.verify.return_value = True
+        self.db.put_item.side_effect = RuntimeError("down")
+        with self.assertLogs(level="ERROR"):
+            busy = handler.handler(answer_request(locale="sv"), None)
+        email = handler.handler(request(locale="sv", email="bad"), None)
+        foreign = request(locale="sv")
+        foreign["headers"].update({"origin": "https://kumpa.fi.invalid", "accept-language": "sv-FI,sv;q=0.9"})
+        form = handler.handler(foreign, None)
+        for page, status, title, detail in [
+            (retry, 422, "Försök att skriva upp dig igen", "Den automatiska kontrollen kunde inte slutföras."),
+            (busy, 503, "Vi kunde inte spara din anmälan", "försök igen om en stund."),
+            (email, 422, "Kontrollera din e-postadress", "där du vill få meddelanden från oss."),
+            (form, 403, "Använd anmälningsformuläret", "för att skriva upp dig på väntelistan."),
+        ]:
+            with self.subTest(title=title):
+                body = page["body"]
+                self.assertEqual(status, page["statusCode"])
+                self.assertIn('<html lang="sv">', body)
+                self.assertIn(f"<h1>{title}</h1>", body)
+                self.assertIn(detail, body)
+                self.assertIn(">Tillbaka till Kumpas webbplats</a>", body)
+
+    def test_refusals_before_the_form_is_read_follow_the_browser(self):
+        for accept, lang, title in [
+            ("sv-FI,sv;q=0.9,en;q=0.8", "sv", "Använd anmälningsformuläret"),
+            ("SV", "sv", "Använd anmälningsformuläret"),
+            ("en-GB,en;q=0.9", "en", "Please use the signup form"),
+            ("fi-FI,fi;q=0.9", "fi", "Käytä sivuston lomaketta"),
+            ("de-DE,sv;q=0.5", "fi", "Käytä sivuston lomaketta"),
+            ("", "fi", "Käytä sivuston lomaketta"),
+            (None, "fi", "Käytä sivuston lomaketta"),
+        ]:
+            with self.subTest(accept=accept):
+                event = request()
+                event["body"] = "email=x%40example.org&locale=xx"
+                if accept is not None:
+                    event["headers"]["accept-language"] = accept
+                result = handler.handler(event, None)
+                self.assertEqual(400, result["statusCode"])
+                self.assertIn(f'<html lang="{lang}">', result["body"])
+                self.assertIn(f"<h1>{title}</h1>", result["body"])
+        event = request(locale="fi", email="bad")
+        event["headers"]["accept-language"] = "sv-FI"
+        self.assertIn('<html lang="fi">', handler.handler(event, None)["body"])
+
+    def test_machine_translations_say_so(self):
+        for locale, notice in [("en", None), ("fi", "Konekäännös"), ("sv", "Maskinöversättning")]:
+            with self.subTest(locale=locale):
+                body = handler.handler(request(locale=locale, email="bad"), None)["body"]
+                if notice:
+                    self.assertIn(f"<small>{notice}</small></main>", body)
+                else:
+                    self.assertNotIn("<small>", body)
 
     def test_only_the_saved_page_moves_on_by_itself(self):
         self.db.put_item.side_effect = RuntimeError("down")
@@ -175,6 +247,10 @@ class WaitlistTests(unittest.TestCase):
                 result = handler.handler(request(email=email), None)
                 self.assertEqual(422, result["statusCode"])
                 self.assertIn("Check your email address", result["body"])
+        # launch-v2 asks for updates, not for one launch notice (#747).
+        for locale, detail in [("en", "where you'd like to hear from us"), ("fi", "johon haluat saada viestejä meiltä")]:
+            with self.subTest(locale=locale):
+                self.assertIn(detail, handler.handler(request(locale=locale, email="bad"), None)["body"])
         self.db.put_item.assert_not_called()
 
     def test_invalid_forms_and_protocol(self):
