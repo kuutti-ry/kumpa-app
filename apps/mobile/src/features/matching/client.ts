@@ -49,7 +49,8 @@ export async function decide(
 ): Promise<QueueDecisionAnswer> {
   const { data, error, response } = await api.PUT("/queue/{day}/entries/{position}/decision", {
     params: { path: { day, position } },
-    body: { decision },
+    // The answer says where a Later left the person only when asked (#745).
+    body: { decision, later: true },
   });
   if (!data) throw failed(response, error, "decision");
   return QueueDecisionAnswer.parse(data);

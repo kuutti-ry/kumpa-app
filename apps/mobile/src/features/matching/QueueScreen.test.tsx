@@ -3173,6 +3173,38 @@ describe("Later and the Later list (#681, the maintainer's of 18/11/2026)", () =
     },
   );
 
+  it("asks every decision's answer for where a Later left the person (#745)", async () => {
+    const { calls } = api(undefined, STRANGERS);
+    await show();
+
+    await press("Like");
+    await press("Later");
+
+    // The API names `later` only to an app that asks: a store build's own
+    // JavaScript, from before the list, reads the answer without it.
+    expect(calls.filter((c) => c.path.endsWith("/decision")).map((c) => c.body)).toEqual([
+      { decision: "like", later: true },
+      { decision: "skip", later: true },
+    ]);
+  });
+
+  it("takes an answer with no word on Later, says nothing, and moves on", async () => {
+    const sent = api(
+      (call) =>
+        call.path.endsWith("/decision")
+          ? json({ match: null, fishToSend: true, likesLeft: 10, yourTurn: 0 })
+          : undefined,
+      STRANGERS,
+    );
+    await show();
+
+    await press("Later");
+
+    expect(heading("Minna, 34")).toBeTruthy();
+    expect(liveLines()).toEqual([]);
+    expect(sent.decisions()).toEqual([`${DAY}/2 skip`]);
+  });
+
   it("says the list is full after a Later at its most, and moves on all the same", async () => {
     const sent = api(later("full"), STRANGERS);
     await show();

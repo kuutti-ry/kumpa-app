@@ -411,6 +411,7 @@ describe("seen and decided", () => {
     ["another decision", `/queue/${TODAY}/entries/1/decision`, { decision: "superlike" }],
     ["an extra key", `/queue/${TODAY}/entries/1/decision`, { decision: "like", note: "x" }],
     ["no decision", `/queue/${TODAY}/entries/1/decision`, {}],
+    ["the ask without a decision", `/queue/${TODAY}/entries/1/decision`, { later: true }],
   ] as const)("%s is refused with 400", async ([, path, body], { ctx, app }) => {
     const [a] = await cast(ctx, 1);
     if (!a) throw new Error("cast not written");

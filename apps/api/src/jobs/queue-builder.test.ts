@@ -114,6 +114,7 @@ async function readToday(app: App, db: Queryable, accountId: string): Promise<Qu
   return QueueResponse.parse(await answer.json());
 }
 
+/** A decision as the app sends it, asking where a Later left the person (#745). */
 async function decideAs(
   app: App,
   db: Queryable,
@@ -126,7 +127,7 @@ async function decideAs(
   return app.request(`/queue/${day}/entries/${position}/decision`, {
     method: "PUT",
     headers: { ...who.headers, "content-type": "application/json" },
-    body: JSON.stringify({ decision }),
+    body: JSON.stringify({ decision, later: true }),
   });
 }
 
