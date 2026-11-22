@@ -1,5 +1,6 @@
 import type { Queryable } from "@kuutti/db";
 import { QueueDecisionAnswer, QueueResponse, STARS_CEILING, StarList } from "@kuutti/schema";
+import { z } from "zod";
 import { type App, createApp } from "../app.ts";
 import { eraseAccount, exportAccount } from "../identity/index.ts";
 import { starPlace } from "../jobs/stars.ts";
@@ -92,12 +93,47 @@ async function readToday(app: App, who: Person): Promise<QueueResponse> {
   return QueueResponse.parse(await answer.json());
 }
 
-const decide = (app: App, who: Person, day: string, position: number, decision: string) =>
+const put = (app: App, who: Person, day: string, position: number, body: unknown) =>
   app.request(`/queue/${day}/entries/${position}/decision`, {
     method: "PUT",
     headers: { ...who.headers, "content-type": "application/json" },
-    body: JSON.stringify({ decision }),
+    body: JSON.stringify(body),
   });
+
+/** A decision as the app sends it: it asks the answer for its `later` (#745). */
+const decide = (app: App, who: Person, day: string, position: number, decision: string) =>
+  put(app, who, day, position, { decision, later: true });
+
+/** A decision as the JavaScript built into the store builds of 0.127.0 sends it. */
+const decideUnasked = (app: App, who: Person, position: number, decision: string) =>
+  put(app, who, TODAY, position, { decision });
+
+/**
+ * The answer's contract as the store builds of 0.127.0 carry it (commit ddc565cb,
+ * packages/schema/src/matching.ts), written out here and never imported: strict,
+ * and from before the Later list. The JavaScript built into a store build reads
+ * every answer of its first launch with it, whatever main has become (#745).
+ */
+const AnswerOf0127 = z
+  .object({
+    match: z.object({ conversationId: z.uuid() }).strict().nullable(),
+    fishToSend: z.boolean(),
+    likesLeft: z.int().min(0),
+    yourTurn: z.int().min(0),
+  })
+  .strict();
+
+/** What `owner` decided on the card at `position` today, null for nothing. */
+async function decisionOn(db: Queryable, owner: Person, position: number): Promise<string | null> {
+  const { rows } = await db.query<{ decision: string | null }>(
+    `SELECT e.decision FROM queue_entry e JOIN queue_day r ON r.id = e.queue_day_id
+      WHERE r.account_id = $1 AND r.day = $2 AND e.position = $3`,
+    [owner.accountId, TODAY, position],
+  );
+  const row = rows[0];
+  if (!row) throw new Error("no card at that place");
+  return row.decision;
+}
 
 /** Later on the card at `position` (#681): the skip, which puts the person on the list. */
 async function later(
@@ -374,6 +410,82 @@ describe("Later and the list", () => {
     // The skip stands; the list would say a name and an age nobody was shown (ADR-008).
     expect((await later(app, a, 1)).later).toBe("not_listed");
 
+    expect(await starsOf(ctx.client, a)).toEqual([]);
+  });
+});
+
+describe("an app built before the Later list (#745)", () => {
+  test.for(["like", "pass", "skip", "fish"] as const)(
+    "a %s that asks for nothing is answered as 0.127.0 reads it",
+    async (choice, { ctx }) => {
+      const { app, who } = await scene(ctx, 2);
+      const [a, b] = [person(who, 0), person(who, 1)];
+      await queued(ctx.client, a, [b.accountId]);
+
+      const answer = await decideUnasked(app, a, 1, choice);
+
+      expect(answer.status).toBe(200);
+      const body: unknown = await answer.json();
+      expect(AnswerOf0127.safeParse(body).error?.issues).toBeUndefined();
+      expect(Object.keys(body as object).sort()).toEqual([
+        "fishToSend",
+        "likesLeft",
+        "match",
+        "yourTurn",
+      ]);
+      // Recorded all the same; a fish is kept as a like with its mark.
+      expect(await decisionOn(ctx.client, a, 1)).toBe(choice === "fish" ? "like" : choice);
+    },
+  );
+
+  test("a Later that asks for nothing still puts the person on the list", async ({ ctx }) => {
+    const { app, who } = await scene(ctx, 2);
+    const [a, b] = [person(who, 0), person(who, 1)];
+    await queued(ctx.client, a, [b.accountId]);
+
+    expect((await decideUnasked(app, a, 1, "skip")).status).toBe(200);
+
+    expect(await starsOf(ctx.client, a)).toEqual([b.accountId]);
+    expect((await listOf(app, a)).map((item) => item.id)).toEqual([await starOf(ctx.client, a, b)]);
+  });
+
+  test.for([
+    { choice: "like", left: null },
+    { choice: "pass", left: null },
+    { choice: "fish", left: null },
+    { choice: "skip", left: "first" },
+  ] as const)(
+    "a $choice that asks is told where it left the person",
+    async ({ choice, left }, { ctx }) => {
+      const { app, who } = await scene(ctx, 2);
+      const [a, b] = [person(who, 0), person(who, 1)];
+      await queued(ctx.client, a, [b.accountId]);
+
+      const answer = await decide(app, a, TODAY, 1, choice);
+
+      expect(answer.status).toBe(200);
+      const body: unknown = await answer.json();
+      expect(body).toHaveProperty("later", left);
+      // What 0.127.0 would not read: the key is for those who ask.
+      expect(AnswerOf0127.safeParse(body).success).toBe(false);
+    },
+  );
+
+  test.for([
+    ["false", false],
+    ["null", null],
+    ["a word", "true"],
+    ["a place on the list", "first"],
+  ] as const)("an ask as %s is refused and nothing is written", async ([, later], { ctx }) => {
+    const { app, who } = await scene(ctx, 2);
+    const [a, b] = [person(who, 0), person(who, 1)];
+    await queued(ctx.client, a, [b.accountId]);
+
+    const answer = await put(app, a, TODAY, 1, { decision: "skip", later });
+
+    expect(answer.status).toBe(400);
+    expect(await errorCode(answer)).toBe("validation_failed");
+    expect(await decisionOn(ctx.client, a, 1)).toBeNull();
     expect(await starsOf(ctx.client, a)).toEqual([]);
   });
 });

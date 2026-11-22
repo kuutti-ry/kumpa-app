@@ -90,6 +90,26 @@ describe("a decision", () => {
       "unrecognized_keys",
     ]);
   });
+
+  it("may ask the answer for where a Later left the person (#745)", () => {
+    for (const decision of ["like", "pass", "fish", "skip"] as const) {
+      expect(QueueDecisionUpdate.parse({ decision, later: true })).toEqual({
+        decision,
+        later: true,
+      });
+    }
+  });
+
+  // The ask is the one word: an app that does not want the key sends none.
+  it.each([
+    ["false", false],
+    ["null", null],
+    ["a word", "true"],
+    ["a number", 1],
+    ["a place on the list", "first"],
+  ] as const)("refuses the ask as %s", (_, later) => {
+    expect(codes(QueueDecisionUpdate, { decision: "skip", later })).toEqual(["invalid_value"]);
+  });
 });
 
 describe("the answer to a decision", () => {
@@ -106,6 +126,13 @@ describe("the answer to a decision", () => {
     expect(QueueDecisionAnswer.parse(later)).toEqual(later);
   });
 
+  it("has no word on Later for an app that did not ask (#745)", () => {
+    const unasked = { match: null, fishToSend: true, likesLeft: 7, yourTurn: 0 };
+    const parsed = QueueDecisionAnswer.parse(unasked);
+    expect(parsed).toEqual(unasked);
+    expect("later" in parsed).toBe(false);
+  });
+
   const answer = { match: null, fishToSend: true, likesLeft: 7, yourTurn: 0, later: null };
 
   it.each([
@@ -118,8 +145,8 @@ describe("the answer to a decision", () => {
     ["the turn below zero", { ...answer, yourTurn: -1 }, "too_small"],
     ["the turn in part", { ...answer, yourTurn: 1.5 }, "invalid_type"],
     ["the turn as a flag", { ...answer, yourTurn: true }, "invalid_type"],
-    ["no word on Later", { ...answer, later: undefined }, "invalid_value"],
     ["Later as a flag", { ...answer, later: true }, "invalid_value"],
+    ["Later as a place no list has", { ...answer, later: "second" }, "invalid_value"],
     ["anything else", { ...answer, liked: true }, "unrecognized_keys"],
   ] as const)("refuses %s", (_, input, code) => {
     expect(codes(QueueDecisionAnswer, input)).toEqual([code]);

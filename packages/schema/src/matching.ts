@@ -176,9 +176,15 @@ export const QueueEntryParams = z
   .object({ day: z.iso.date(), position: z.coerce.number().int().min(1).max(QUEUE_POSITION_MAX) })
   .meta({ id: "QueueEntryParams" });
 
-/** A like, a pass, a fish or a skip; another one the same day replaces it. */
+/**
+ * A like, a pass, a fish or a skip; another one the same day replaces it.
+ * `later: true` asks the answer for its `later` (#681). An app that sends none
+ * gets the answer as it was before that key: the JavaScript built into a store
+ * build reads answers strictly and runs on the first launch after an install,
+ * whatever main has become since (#745).
+ */
 export const QueueDecisionUpdate = z
-  .object({ decision: QueueChoice })
+  .object({ decision: QueueChoice, later: z.literal(true).optional() })
   .strict()
   .meta({ id: "QueueDecisionUpdate" });
 export type QueueDecisionUpdate = z.infer<typeof QueueDecisionUpdate>;
@@ -201,7 +207,8 @@ export type Later = z.infer<typeof Later>;
  * match. `fishToSend` as the queue says it, after this decision: a fish sent
  * may spend the last, one changed to a like or a pass gives it back (#475).
  * `likesLeft` and `yourTurn` likewise, so the screen follows each decision
- * without a read. `later` for a skip, null for any other decision.
+ * without a read. `later` only when the update asked for it (#745): for a
+ * skip, null for any other decision.
  */
 export const QueueDecisionAnswer = z
   .object({
@@ -209,7 +216,7 @@ export const QueueDecisionAnswer = z
     fishToSend,
     likesLeft,
     yourTurn,
-    later: Later.nullable(),
+    later: Later.nullable().optional(),
   })
   .strict()
   .meta({ id: "QueueDecisionAnswer" });

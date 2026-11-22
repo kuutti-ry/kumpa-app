@@ -6716,7 +6716,7 @@ export interface paths {
         get?: never;
         /**
          * Like, pass or skip a card
-         * @description Recorded, or replacing the day's earlier decision on the card; the same decision again writes nothing. A day that has ended answers day_ended. A skip moves on, spends nothing and answers no like; the card returns another day. A like counts against the day's matching_config like_budget_balanced, a like back on a liked_you or fish card too; a pass or a skip never does. A new like or fish answers your_turn_limit with matching_config your_turn_limit conversations waiting on the caller, and not_found where either side's filters no longer let the two meet. A like of somebody whose like of the caller stands is a match: the answer names its conversation, and that like is final. A fish is a like with a mark, matching_config fish_budget of them in each fish_window_days counted from a Monday, the calendar week; on a liked_you or fish card it is a like. Past the fish's budget, a fish invitations earned the caller is used by itself, left out of the count after, and given back when the decision changes the same day. The answer's fishToSend, likesLeft and yourTurn are the queue's after this decision.
+         * @description Recorded, or replacing the day's earlier decision on the card; the same decision again writes nothing. A day that has ended answers day_ended. A skip moves on, spends nothing and answers no like; the card returns another day. A like counts against the day's matching_config like_budget_balanced, a like back on a liked_you or fish card too; a pass or a skip never does. A new like or fish answers your_turn_limit with matching_config your_turn_limit conversations waiting on the caller, and not_found where either side's filters no longer let the two meet. A like of somebody whose like of the caller stands is a match: the answer names its conversation, and that like is final. A fish is a like with a mark, matching_config fish_budget of them in each fish_window_days counted from a Monday, the calendar week; on a liked_you or fish card it is a like. Past the fish's budget, a fish invitations earned the caller is used by itself, left out of the count after, and given back when the decision changes the same day. The answer's fishToSend, likesLeft and yourTurn are the queue's after this decision. A body with later: true asks the answer for later as well, where a skip left the person on the caller's Later list, null for any other decision; without it the answer has no such key, which is the answer an app built before the Later list reads.
          */
         put: {
             parameters: {
@@ -9142,12 +9142,14 @@ export interface components {
             fishToSend: boolean;
             likesLeft: number;
             yourTurn: number;
-            later: components["schemas"]["Later"];
+            later?: components["schemas"]["Later"];
         };
         /** @enum {string|null} */
         Later: "first" | "listed" | "full" | "not_listed" | null;
         QueueDecisionUpdate: {
             decision: components["schemas"]["QueueChoice"];
+            /** @enum {boolean} */
+            later?: true;
         };
         RelaxationsResponse: {
             short: boolean;
