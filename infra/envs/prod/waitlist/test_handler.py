@@ -1,5 +1,7 @@
 import base64
+import hashlib
 import json
+import re
 import unittest
 from datetime import datetime, timedelta
 from unittest.mock import Mock, patch
@@ -71,7 +73,7 @@ class WaitlistTests(unittest.TestCase):
         self.assertEqual({"email", "locale", "createdAt", "expiresAt", "consentVersion"}, set(row))
         self.assertEqual({"S": "visitor&co@example.org"}, row["email"])
         self.assertEqual({"S": "en"}, row["locale"])
-        self.assertEqual({"S": "launch-v1"}, row["consentVersion"])
+        self.assertEqual({"S": "launch-v2"}, row["consentVersion"])
         created = datetime.fromisoformat(row["createdAt"]["S"])
         self.assertEqual(int((created + timedelta(days=365)).timestamp()), int(row["expiresAt"]["N"]))
         self.assertEqual(str(int(created.timestamp())), args["ExpressionAttributeValues"][":now"]["N"])
@@ -87,6 +89,38 @@ class WaitlistTests(unittest.TestCase):
         event["body"] = urlencode({"locale": "fi", "email": "example", "website": "bot"})
         self.assertEqual(result, handler.handler(event, None))
         self.db.put_item.assert_not_called()
+
+    def test_saved_page_counts_down_to_the_site_it_came_from(self):
+        for locale, origin, words in [
+            ("en", "https://kuutti.app", ["more information", "in <span id=\"n\">10</span> <span id=\"u\" data-one=\"second\">seconds</span>."]),
+            ("fi", "https://www.kumpa.fi", ["lisätietoja", "<span id=\"n\">10</span> <span id=\"u\" data-one=\"sekunnin\">sekunnin</span> kuluttua."]),
+        ]:
+            with self.subTest(locale=locale):
+                event = answer_request(locale=locale)
+                event["headers"]["origin"] = origin
+                result = handler.handler(event, None)
+                body = result["body"]
+                self.assertIn(f'<meta http-equiv="refresh" content="10;url={origin}/">', body)
+                for word in words:
+                    self.assertIn(word, body)
+                policy = result["headers"]["Content-Security-Policy"]
+                for tag, directive in [("script", "script-src"), ("style", "style-src")]:
+                    inline = re.search(rf"<{tag}>(.*?)</{tag}>", body, re.S).group(1)
+                    allowed = base64.b64encode(hashlib.sha256(inline.encode()).digest()).decode()
+                    self.assertIn(f"{directive} 'sha256-{allowed}'", policy)
+                self.assertIn("default-src 'none'", policy)
+
+    def test_only_the_saved_page_moves_on_by_itself(self):
+        self.db.put_item.side_effect = RuntimeError("down")
+        with self.assertLogs(level="ERROR"):
+            pages = [handler.handler(answer_request(), None), handler.handler(request(email="bad"), None)]
+        self.verify.return_value = False
+        pages.append(handler.handler(answer_request(locale="fi"), None))
+        self.assertEqual([503, 422, 422], [page["statusCode"] for page in pages])
+        for page in pages:
+            self.assertNotIn("http-equiv", page["body"])
+            self.assertNotIn("<script", page["body"])
+            self.assertIn('<a href="https://kumpa.fi/">', page["body"])
 
     def test_cannot_skip_challenge(self):
         self.verify.return_value = False
