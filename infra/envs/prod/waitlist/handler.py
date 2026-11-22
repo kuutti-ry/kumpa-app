@@ -16,14 +16,15 @@ ORIGINS = {
 }
 MAX_FORM_BYTES = 2048
 RETENTION = timedelta(days=365)
-CONSENT_VERSION = "launch-v1"
+CONSENT_VERSION = "launch-v2"
 ATOM = r"[a-z0-9!#$%&'*+/=?^_`{|}~-]+"
 LABEL = r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?"
 ADDRESS = re.compile(rf"{ATOM}(?:\.{ATOM})*@{LABEL}(?:\.{LABEL})+", re.ASCII)
 
 COPY = {
     "en": {
-        "saved": ("You're on the list", "We'll email you when Kumpa launches."),
+        "saved": ("You're on the list", "We'll email you more information when Kumpa launches."),
+        "countdown": ("Taking you back to the Kumpa website in ", "seconds", "second", "."),
         "email": ("Check your email address", "Go back and enter the address where you'd like to hear from us."),
         "form": ("Please use the signup form", "Visit the Kumpa website to join the waiting list."),
         "busy": ("We couldn't save your signup", "Please return to the website and try again in a moment."),
@@ -31,7 +32,8 @@ COPY = {
         "home": "Back to the Kumpa website",
     },
     "fi": {
-        "saved": ("Olet odotuslistalla", "Lähetämme sinulle sähköpostia, kun Kumpa-sovellus julkaistaan."),
+        "saved": ("Olet odotuslistalla", "Lähetämme sinulle lisätietoja sähköpostitse, kun Kumpa-sovellus julkaistaan."),
+        "countdown": ("Palaat Kumpa-sivustolle ", "sekunnin", "sekunnin", " kuluttua."),
         "email": ("Tarkista sähköpostiosoitteesi", "Palaa lomakkeelle ja kirjoita osoite, johon haluat tiedon julkaisusta."),
         "form": ("Käytä sivuston lomaketta", "Voit liittyä odotuslistalle Kumpa-sivustolla."),
         "busy": ("Tietojen tallennus epäonnistui", "Palaa sivustolle ja yritä hetken kuluttua uudelleen."),
@@ -50,7 +52,25 @@ a { display: inline-flex; align-items: center; min-height: 44px; color: #2049b0;
 :focus-visible { outline: 3px solid #2049b0; outline-offset: 3px; }
 small { display: block; margin-top: 2rem; }
 """
-STYLE_HASH = base64.b64encode(hashlib.sha256(STYLE.encode()).digest()).decode()
+# The saved page counts down and returns to the site (the maintainer's word of
+# 22/11/2026, with no control to stop it): the meta refresh moves, this script
+# only shows the seconds left, so the page still returns without it.
+COUNTDOWN_SECONDS = 10
+SCRIPT = """
+const n = document.getElementById("n"), u = document.getElementById("u");
+setInterval(() => {
+  if (n.textContent > 1) n.textContent -= 1;
+  if (n.textContent == 1) u.textContent = u.dataset.one;
+}, 1000);
+"""
+
+
+def digest(text):
+    return base64.b64encode(hashlib.sha256(text.encode()).digest()).decode()
+
+
+STYLE_HASH = digest(STYLE)
+SCRIPT_HASH = digest(SCRIPT)
 
 
 def response(status, message, locale, origin):
@@ -58,13 +78,21 @@ def response(status, message, locale, origin):
     title, detail = copy[message]
     home = origin if origin in ORIGINS else "https://kumpa.fi"
     notice = "<small>Konekäännös</small>" if locale == "fi" else ""
+    refresh = countdown = ""
+    if message == "saved":
+        refresh = f'<meta http-equiv="refresh" content="{COUNTDOWN_SECONDS};url={home}/">\n'
+        before, many, one, after = copy["countdown"]
+        countdown = (
+            f'<p>{before}<span id="n">{COUNTDOWN_SECONDS}</span> '
+            f'<span id="u" data-one="{one}">{many}</span>{after}</p><script>{SCRIPT}</script>'
+        )
     return {
         "statusCode": status,
         "headers": {
             "Content-Type": "text/html; charset=utf-8",
             "Cache-Control": "no-store",
             "Content-Security-Policy": (
-                f"default-src 'none'; style-src 'sha256-{STYLE_HASH}'; "
+                f"default-src 'none'; style-src 'sha256-{STYLE_HASH}'; script-src 'sha256-{SCRIPT_HASH}'; "
                 "base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
             ),
             "Referrer-Policy": "no-referrer",
@@ -74,8 +102,8 @@ def response(status, message, locale, origin):
         "body": f"""<!doctype html>
 <html lang="{locale}"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{title} · Kumpa</title><style>{STYLE}</style></head>
-<body><header>Kumpa</header><main><h1>{title}</h1><p>{detail}</p>
+{refresh}<title>{title} · Kumpa</title><style>{STYLE}</style></head>
+<body><header>Kumpa</header><main><h1>{title}</h1><p>{detail}</p>{countdown}
 <a href="{home}/">{copy["home"]}</a>{notice}</main></body></html>""",
     }
 
