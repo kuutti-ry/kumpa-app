@@ -1664,6 +1664,8 @@ export type MessageParams = {
   "tech.licenses.provided": { "provider": string; "version": string; "license": string };
   "tech.licenses.texts": Record<never, never>;
   "tech.licenses.title": Record<never, never>;
+  "tech.licenses.typeface": Record<never, never>;
+  "tech.licenses.typefaceCredit": { "designer": string; "foundry": string };
   "tech.licenses.version": { "version": string; "license": string };
   "tech.licenses.zodiac": Record<never, never>;
   "tech.look.bold": Record<never, never>;

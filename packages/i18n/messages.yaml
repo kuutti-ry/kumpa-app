@@ -9394,6 +9394,20 @@ tech.licenses.credit:
   sv: "Upphovsperson: {author}. Källa: {source}. Licens: {licence}, {licenceUrl}"
   machine: { fi: true, sv: true }
 
+tech.licenses.typeface:
+  en: "Typeface"
+  description: "Licences screen (#405): the heading over the typeface the app's headings and buttons are set in (Saiga), after the images and before the licence texts. Shown only in a build that carries the typeface."
+  fi: "Kirjasin"
+  sv: "Typsnitt"
+  machine: { fi: true, sv: true }
+
+tech.licenses.typefaceCredit:
+  en: "Designer: {designer}. Foundry: {foundry}"
+  description: "Licences screen (#405): under the typeface's name (Saiga), its credit, read after the name as one sentence, in the form of tech.licenses.credit. {designer} is the person who designed it (Teo Tuominen) and {foundry} the type foundry the designer is part of (Spoke Type); both stay as they are, in the nominative."
+  fi: "Suunnittelija: {designer}. Kirjasinvalimo: {foundry}"
+  sv: "Formgivare: {designer}. Typsnittsgjuteri: {foundry}"
+  machine: { fi: true, sv: true }
+
 tech.licenses.texts:
   en: "Licence texts"
   description: "Licences screen (#512): the last row, and the title of the screen it opens, which holds the licence texts, copyright lines and notices the packages' licences ask to go with every copy of the app, in English as the packages wrote them."

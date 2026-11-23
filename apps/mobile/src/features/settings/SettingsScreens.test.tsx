@@ -31,6 +31,16 @@ jest.mock("nativewind", () => ({
   useColorScheme: () => ({ colorScheme: "light", setColorScheme: mockSetColorScheme }),
 }));
 
+// The fonts the build embeds, which jest-expo's native mock never names: by
+// default a build without Saiga, as a fork's is (#405).
+jest.mock("expo-font", () => ({
+  ...jest.requireActual("expo-font"),
+  getLoadedFonts: jest.fn(() => []),
+}));
+const { getLoadedFonts: loadedFonts } = jest.requireMock("expo-font") as {
+  getLoadedFonts: jest.Mock;
+};
+
 const ok = {
   status: "ok",
   version: "0.0.0-test",
@@ -355,6 +365,55 @@ describe("the licences screen", () => {
         await renderWithTheme(<LicensesScreen />);
         expect(await screen.findByText(heading)).toBeTruthy();
         expect(screen.getByLabelText(title).props.accessibilityValue.text).toBe(credit);
+      } finally {
+        (useLocales as jest.Mock).mockReturnValue([{ languageTag: "en-US" }]);
+      }
+    });
+  });
+
+  describe("the typeface (#405)", () => {
+    const saiga = "Designer: Teo Tuominen. Foundry: Spoke Type";
+    beforeEach(() => loadedFonts.mockReturnValue(["Saiga-Regular", "Saiga-Bold"]));
+    afterEach(() => loadedFonts.mockReturnValue([]));
+
+    it("stands after the images and before the texts, read as one sentence and not pressed", async () => {
+      await renderWithTheme(<LicensesScreen />);
+      const flat = JSON.stringify(screen.toJSON());
+      const at = (text: string) => flat.indexOf(text);
+      expect(at('"Star signs"')).toBeLessThan(at('"Typeface"'));
+      expect(at('"Typeface"')).toBeLessThan(at('"Saiga"'));
+      expect(at('"Saiga"')).toBeLessThan(at('"Licence texts"'));
+      expect(screen.getByRole("heading", { name: "Typeface" })).toBeTruthy();
+      const row = screen.getByLabelText("Saiga");
+      expect(row.props.accessible).toBe(true);
+      expect(row.props.accessibilityValue.text).toBe(saiga);
+      // Drawn as it is heard.
+      expect(within(row).getByText(saiga)).toBeTruthy();
+      // The way back and the row to the texts are still the only presses.
+      expect(screen.getAllByRole("button").map((node) => node.props.accessibilityLabel)).toEqual([
+        "Back",
+        "Licence texts",
+      ]);
+      noProblems();
+    });
+
+    it("is not there in a build without Saiga", async () => {
+      loadedFonts.mockReturnValue(["MaterialSymbols"]);
+      await renderWithTheme(<LicensesScreen />);
+      expect(await screen.findByText("Images")).toBeTruthy();
+      expect(screen.queryByText("Typeface")).toBeNull();
+      expect(screen.queryByLabelText("Saiga")).toBeNull();
+    });
+
+    it.each([
+      ["fi-FI", "Kirjasin", "Suunnittelija: Teo Tuominen. Kirjasinvalimo: Spoke Type"],
+      ["sv-FI", "Typsnitt", "Formgivare: Teo Tuominen. Typsnittsgjuteri: Spoke Type"],
+    ])("speaks %s", async (tag, heading, credit) => {
+      (useLocales as jest.Mock).mockReturnValue([{ languageTag: tag }]);
+      try {
+        await renderWithTheme(<LicensesScreen />);
+        expect(await screen.findByText(heading)).toBeTruthy();
+        expect(screen.getByLabelText("Saiga").props.accessibilityValue.text).toBe(credit);
       } finally {
         (useLocales as jest.Mock).mockReturnValue([{ languageTag: "en-US" }]);
       }

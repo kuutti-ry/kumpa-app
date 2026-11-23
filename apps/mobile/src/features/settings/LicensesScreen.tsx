@@ -10,6 +10,7 @@ import { IMAGE_CREDITS } from "./image-credits";
 import { LICENCES } from "./licences";
 import { licenseGroups } from "./license-families";
 import { SettingsPage } from "./SettingsPage";
+import { TYPEFACE_CREDIT, useCarriesSaiga } from "./typeface-credit";
 
 const GROUPS = licenseGroups(LICENCES.packages);
 
@@ -24,13 +25,15 @@ const GROUPS = licenseGroups(LICENCES.packages);
  * changed, as the list itself says it, in Finnish or English, and CC BY 4.0
  * asks no more languages. The images whose terms ask for credit follow the
  * data (#405), each set read as one sentence: who made it, where it was
- * found, and its licence with the licence's address. The texts the licences
- * ask to go with every copy are behind the last row.
+ * found, and its licence with the licence's address. The typeface follows
+ * the images, in a build that carries it: Saiga and its designer (#405). The
+ * texts the licences ask to go with every copy are behind the last row.
  */
 export function LicensesScreen() {
   const { t, locale } = useT();
   const router = useRouter();
   const tap = useHapticTap();
+  const saiga = useCarriesSaiga();
   const credit = realLocale(locale) === "fi" ? POSTAL_AREAS_CREDIT.fi : POSTAL_AREAS_CREDIT.en;
   return (
     <SettingsPage title={t("tech.licenses.title")}>
@@ -76,6 +79,25 @@ export function LicensesScreen() {
           }))}
         />
       </View>
+      {saiga && (
+        <View className="gap-2">
+          <Text variant="h3" accessibilityRole="header">
+            {t("tech.licenses.typeface")}
+          </Text>
+          <RowGroup
+            rows={[
+              {
+                key: "saiga",
+                title: TYPEFACE_CREDIT.name,
+                summary: t("tech.licenses.typefaceCredit", {
+                  designer: TYPEFACE_CREDIT.designer,
+                  foundry: TYPEFACE_CREDIT.foundry,
+                }),
+              },
+            ]}
+          />
+        </View>
+      )}
       <RowGroup
         rows={[
           {

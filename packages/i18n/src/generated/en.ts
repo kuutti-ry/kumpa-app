@@ -1663,6 +1663,8 @@ export const en: Readonly<Record<string, string>> = {
   "tech.licenses.provided": "{provider}, version {version}, {license}",
   "tech.licenses.texts": "Licence texts",
   "tech.licenses.title": "Licences of the packages",
+  "tech.licenses.typeface": "Typeface",
+  "tech.licenses.typefaceCredit": "Designer: {designer}. Foundry: {foundry}",
   "tech.licenses.version": "Version {version}, {license}",
   "tech.licenses.zodiac": "Star signs",
   "tech.look.bold": "Bold Contrast",
