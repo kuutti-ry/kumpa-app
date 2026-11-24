@@ -1285,6 +1285,8 @@ export const sv: Readonly<Record<string, string>> = {
   "tech.licenses.provided": "{provider}, version {version}, {license}",
   "tech.licenses.texts": "Licenstexter",
   "tech.licenses.title": "Paketens licenser",
+  "tech.licenses.typeface": "Typsnitt",
+  "tech.licenses.typefaceCredit": "Formgivare: {designer}. Typsnittsgjuteri: {foundry}",
   "tech.licenses.version": "Version {version}, {license}",
   "tech.licenses.zodiac": "Stjärntecken",
   "tech.look.bold": "Bold Contrast",

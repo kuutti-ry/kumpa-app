@@ -1663,6 +1663,8 @@ export const enXA: Readonly<Record<string, string>> = {
   "tech.licenses.provided": "［{provider}, vééršííóóñ {version}, {license}］",
   "tech.licenses.texts": "［Lííçééñçéé tééxtš］",
   "tech.licenses.title": "［Lííçééñçééš óóf théé pááçkáágééš］",
+  "tech.licenses.typeface": "［Týýpééfááçéé］",
+  "tech.licenses.typefaceCredit": "［Dééšíígñéér: {designer}. Fóóúúñdrýý: {foundry}］",
   "tech.licenses.version": "［Vééršííóóñ {version}, {license}］",
   "tech.licenses.zodiac": "［Štáár šíígñš］",
   "tech.look.bold": "［Bóóld Çóóñtráášt］",

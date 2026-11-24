@@ -1291,6 +1291,8 @@ export const fi: Readonly<Record<string, string>> = {
   "tech.licenses.provided": "{provider}, versio {version}, {license}",
   "tech.licenses.texts": "Lisenssitekstit",
   "tech.licenses.title": "Pakettien lisenssit",
+  "tech.licenses.typeface": "Kirjasin",
+  "tech.licenses.typefaceCredit": "Suunnittelija: {designer}. Kirjasinvalimo: {foundry}",
   "tech.licenses.version": "Versio {version}, {license}",
   "tech.licenses.zodiac": "Horoskooppimerkit",
   "tech.look.bold": "Bold Contrast",
