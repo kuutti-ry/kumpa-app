@@ -7,17 +7,18 @@ What Telia's identification broker is to us, what we owe them and what they owe 
 Telia Tunnistus is a contracted service, not a self-service API. The association's agreement with Telia Finland Oyj (business ID 1475607-9) covers production; its Appendix 4 names the **technical contact**, the one person allowed to exchange keys with Telia, who is the maintainer. The pre-production environment (`tunnistus-pp.telia.fi`) is free and needs no agreement. A client that passes there is moved to production (`tunnistus.telia.fi`) on request, and billing starts with production.
 
 - Contacts: provisioning, metadata and technical questions, **id-maintenance@teliacompany.com**; faults 24/7, 0200 20 300.
+- The production client exists since 2026-11-24 (account TVP00648, Telia's reference 01166030): `client_id` `8c3bff8e-e313-4b51-a550-6970176a8fbc`, display name Kumpa, redirect URIs `https://api.kumpa.fi/auth/callback` and `https://api.kuutti.app/auth/callback`; the id is the default of `telia_client_id` in `infra/envs/prod/variables.tf`. Telia enables it once the technical contact has signed the public keys, done the same day.
 - The pre-production client exists since 2026-10-08: `client_id` `b9b08a7a-ebb4-4a8c-a3e7-52824d3231e5`, redirect URI `https://api.staging.kuutti.app/auth/callback`; the id is the default of `telia_client_id` in `infra/envs/staging/variables.tf`.
 
 Sales entry, for the record: https://www.telia.fi/yrityksille/palvelut/tietoturva/tunnistautuminen (*Telia Tunnistus*, "ota yhteyttä").
 
 ## The bill (#471)
 
-Production is billed from the move to production; the pre-production bed is free. The package and its prices are in the agreement, in the association's mailbox. No production connection has been requested yet (#25). In the trust network the law caps what a bank may charge a broker at 3 cents for each identification it passes on (Act 617/2009 §12 c).
+Production is billed from the move to production; the pre-production bed is free. The package and its prices are in the agreement, in the association's mailbox. The production connection was requested and created on 2026-11-24, to be live on 2026-12-01 (#25). In the trust network the law caps what a bank may charge a broker at 3 cents for each identification it passes on (Act 617/2009 §12 c).
 
 What Kuutti counts: one API line `identified at the bank` for each callback whose broker answer is verified and fresh, before the rule decides anything, so a new account, a resume, the end of a break, a staff sign-in and a refusal each count once; a cancel at the bank, a failed token call and an answer older than its attempt (ADR-016 §2) do not. The observability module sums the lines as `BankIdentifications` in `Kuutti/<env>` and mails when a day reaches `bank_identifications_per_day` (`docs/runbooks/alerts.md`). The month's count, to choose the package from, is the metric's sum over the month (the alarm's row has the command).
 
-Months counted: none, since billing starts at the move to production and none has been requested.
+Months counted: none yet; billing starts with production traffic, planned from 2026-12-01.
 
 ## What Telia needs from us (guide section 2.1)
 
@@ -39,6 +40,8 @@ A client is registered by one mail from the project mailbox to id-maintenance@te
 3. The client metadata, `kuutti-<env>-telia-client.json`, written by `infra/scripts/telia-keys.sh <env> <offline-medium>` in the shape of the Python sample's `client.json` (`KUUTTI_TELIA_CONTACT` supplies the contact address, so none is in the repository): the redirect URI (Telia's whitelist; each environment's client has its own, and its own keys), `client_name#fi/sv/en` and `ftn_spname`, the organisation and contact, the algorithms (`private_key_jwt`, RS256 request objects and ID tokens, `RSA-OAEP` with `A128CBC-HS256`), and the two public keys as JWKs: `use: sig` (signs request objects and client assertions) and `use: enc` (the ID token is encrypted to it). The mail says which key is which.
 
 Registered kids, staging, generated 2026-10-07 (public values; the API logs the same two at boot): `sig` `h3459Y74bDyIP_F8RPGkACWjOouvJzgdw0vGtZ9bi7I`, `enc` `faflNFy64dbC2qZ25QUUPN1bfBePnOpcJAaUfV3l-QQ`. The three staging secrets exist in SSM since the same day (`telia-signing-key`, `telia-encryption-key`, `hetu-hmac-key`).
+
+Registered kids, production, generated 2026-11-24 onto the offline medium: `sig` `UjRegjx_ywxoLwb8oB-nxg4yJPWScw87SaExW2PCc5k`, `enc` `pKqNs04P2zSKsuO_-NCEUpFaduFeusVjMvQMH3NO9-U`. Both private halves are in SSM since the same day (`/kuutti/prod/telia-signing-key`, `-encryption-key`, version 1); production's `hetu-hmac-key` must exist before an apply writes the client id, since the API refuses to boot with bank identification half configured.
 
 Telia answers with the `client_id`. It is public (every authorization URL carries it): set it as the default of `telia_client_id` in `infra/envs/staging/variables.tf` and merge; CI's apply then writes `oidc-issuer`, `oidc-client-id`, `oidc-redirect-uri` and `oidc-acr-values` under `/kuutti/staging/`. The two private keys must be in SSM before that (`telia-keys.sh … --put`): the API refuses to boot against a Telia issuer without them. Redeploy the API in Dokploy and read the boot line "bank identification": the two kids it logs must equal the kids of the JWKs Telia registered.
 
