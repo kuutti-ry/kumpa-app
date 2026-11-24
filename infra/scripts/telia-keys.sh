@@ -15,7 +15,119 @@
 # id-maintenance@teliacompany.com. Refuses to overwrite a key: a Telia key is
 # replaced by rotation (docs/runbooks/custody.md), never in place.
 # Needs openssl and node; --put needs aws, signed in (pnpm aws:login).
+# --self-test runs it against throwaway folders with a stand-in for aws, as
+# CI's lint job does: no real medium, no AWS.
 set -euo pipefail
+
+if [ "${1:-}" = "--self-test" ]; then
+  base=${TMPDIR:-/tmp}
+  tmp=$(mktemp -d "${base%/}/telia-keys.XXXXXX") # named, so a folder left behind says whose it is
+  trap 'rm -rf "$tmp"' EXIT
+  self=$0
+  fail() { echo "self-test failed: $*" >&2; exit 1; }
+  sum() { openssl dgst -sha256 "$@" | sed 's/.*= //' | tr '\n' ' '; }
+  # refuses <exit code> <what stderr says> <args...>
+  refuses() {
+    local code=$1 says=$2 got=0
+    shift 2
+    KUUTTI_TELIA_CONTACT= "$self" "$@" >"$tmp/out" 2>"$tmp/err" || got=$?
+    [ "$got" = "$code" ] || fail "$* exited $got, not $code"
+    grep -qF -- "$says" "$tmp/err" || fail "$* did not say: $says"
+  }
+  # holds <dir> <env> <name> <site> <contact> <redirect URIs...>: the files and
+  # their modes, the metadata, the kids as RFC 7638 has them, 3072 bits, and no
+  # private part in anything meant for Telia.
+  holds() {
+    local dir=$1 env=$2 use mode
+    for use in sig enc; do
+      mode=$(node -e 'console.log((require("node:fs").statSync(process.argv[1]).mode & 0o777).toString(8))' "$dir/kuutti-$env-telia-$use.pem")
+      [ "$mode" = 600 ] || fail "$env $use.pem has mode $mode"
+      [ "$(openssl pkey -in "$dir/kuutti-$env-telia-$use.pem" -pubout)" = "$(cat "$dir/kuutti-$env-telia-$use.pub.pem")" ] ||
+        fail "$env $use.pub.pem is not the public half of $use.pem"
+    done
+    node - "$@" <<'EOF' || fail "$env metadata (above)"
+const { readFileSync } = require("node:fs");
+const { createHash, createPublicKey } = require("node:crypto");
+const [dir, env, name, site, contact, ...redirects] = process.argv.slice(2);
+const prefix = `${dir}/kuutti-${env}-telia`;
+const client = JSON.parse(readFileSync(`${prefix}-client.json`, "utf8"));
+const jwks = JSON.parse(readFileSync(`${prefix}-jwks.json`, "utf8"));
+const wrong = [];
+const want = (what, got, expected) => {
+  if (JSON.stringify(got) !== JSON.stringify(expected)) wrong.push(`${what}: ${JSON.stringify(got)}, not ${JSON.stringify(expected)}`);
+};
+for (const field of ["client_name#fi", "client_name#sv", "client_name#en", "ftn_spname"]) want(field, client[field], name);
+want("client_uri", client.client_uri, site);
+want("redirect_uris", client.redirect_uris, redirects);
+want("contacts", client.contacts, [contact]);
+want("organization_name", client.organization_name, "Kuutti ry");
+want("token_endpoint_auth_method", client.token_endpoint_auth_method, "private_key_jwt");
+want("id_token encryption", [client.id_token_encrypted_response_alg, client.id_token_encrypted_response_enc], ["RSA-OAEP", "A128CBC-HS256"]);
+want("client.json's keys", client.jwks, jwks);
+want("uses", jwks.keys.map((k) => [k.use, k.alg]), [["sig", "RS256"], ["enc", "RSA-OAEP"]]);
+for (const key of jwks.keys) {
+  want(`${key.use} fields`, Object.keys(key).sort(), ["alg", "e", "kid", "kty", "n", "use"]);
+  want(`${key.use} bits`, Buffer.from(key.n, "base64url").length * 8, 3072);
+  const pem = createPublicKey(readFileSync(`${prefix}-${key.use}.pub.pem`)).export({ format: "jwk" });
+  want(`${key.use} modulus`, key.n, pem.n);
+  // RFC 7638 §3.2 written out by hand, not by the script's own code
+  const thumbprint = createHash("sha256").update(`{"e":"${key.e}","kty":"RSA","n":"${key.n}"}`).digest("base64url");
+  want(`${key.use} kid`, key.kid, thumbprint);
+}
+if (jwks.keys[0].kid === jwks.keys[1].kid) wrong.push("sig and enc are one key");
+for (const file of ["client.json", "jwks.json"]) {
+  if (/PRIVATE|"(d|p|q|dp|dq|qi)"/.test(readFileSync(`${prefix}-${file}`, "utf8"))) wrong.push(`${file} carries a private part`);
+}
+if (wrong.length) {
+  console.error(wrong.join("\n"));
+  process.exit(1);
+}
+EOF
+  }
+
+  mkdir "$tmp/bin" "$tmp/staging" "$tmp/prod" "$tmp/bare"
+  printf '#!/bin/sh\nprintf "%%s\\n" "$*" >>"%s"\n' "$tmp/aws.log" >"$tmp/bin/aws"
+  chmod +x "$tmp/bin/aws"
+  KUUTTI_TELIA_CONTACT=a@example.org "$self" staging "$tmp/staging" >/dev/null || fail "staging exited $?"
+  holds "$tmp/staging" staging Kuutti https://kuutti.app a@example.org https://api.staging.kuutti.app/auth/callback
+  KUUTTI_TELIA_CONTACT=a@example.org "$self" prod "$tmp/prod" >/dev/null || fail "prod exited $?"
+  holds "$tmp/prod" prod Kumpa https://kumpa.fi a@example.org https://api.kumpa.fi/auth/callback https://api.kuutti.app/auth/callback
+
+  # A second run generates nothing; without a contact it keeps the metadata,
+  # with one it writes the metadata again around the same keys.
+  keys=$(sum "$tmp/staging"/*.pem)
+  KUUTTI_TELIA_CONTACT= "$self" staging "$tmp/staging" >"$tmp/out" || fail "second staging run exited $?"
+  grep -qF "generating nothing" "$tmp/out" || fail "a second run did not say it generates nothing"
+  grep -qF "kept as it was" "$tmp/out" || fail "a second run without a contact did not keep the metadata"
+  holds "$tmp/staging" staging Kuutti https://kuutti.app a@example.org https://api.staging.kuutti.app/auth/callback
+  KUUTTI_TELIA_CONTACT=b@example.org "$self" staging "$tmp/staging" >/dev/null || fail "third staging run exited $?"
+  holds "$tmp/staging" staging Kuutti https://kuutti.app b@example.org https://api.staging.kuutti.app/auth/callback
+  [ "$(sum "$tmp/staging"/*.pem)" = "$keys" ] || fail "a run over existing keys changed them"
+
+  # Without a contact on a fresh medium, the placeholder, and it says so.
+  KUUTTI_TELIA_CONTACT= "$self" staging "$tmp/bare" >"$tmp/out" || fail "bare run exited $?"
+  grep -qF "contacts is a placeholder" "$tmp/out" || fail "a placeholder contact went unmentioned"
+  holds "$tmp/bare" staging Kuutti https://kuutti.app "<the association's mailbox>" https://api.staging.kuutti.app/auth/callback
+
+  # --put hands aws the files by file://, under the environment's names, and
+  # never --overwrite.
+  PATH="$tmp/bin:$PATH" KUUTTI_TELIA_CONTACT= "$self" prod "$tmp/prod" --put >/dev/null || fail "--put exited $?"
+  [ "$(cat "$tmp/aws.log")" = "ssm put-parameter --name /kuutti/prod/telia-signing-key --type SecureString --value file://$tmp/prod/kuutti-prod-telia-sig.pem
+ssm put-parameter --name /kuutti/prod/telia-encryption-key --type SecureString --value file://$tmp/prod/kuutti-prod-telia-enc.pem" ] ||
+    fail "--put called aws as: $(cat "$tmp/aws.log")"
+
+  refuses 2 "environment must be staging or prod" production "$tmp/prod"
+  refuses 2 "unknown argument --overwrite" prod "$tmp/prod" --overwrite
+  refuses 2 "is not a directory" prod "$tmp/nowhere"
+  refuses 1 "usage: telia-keys.sh" prod
+  rm "$tmp/bare/kuutti-staging-telia-enc.pem"
+  keys=$(sum "$tmp/bare/kuutti-staging-telia-sig.pem")
+  refuses 3 "exists without the other" staging "$tmp/bare"
+  [ ! -e "$tmp/bare/kuutti-staging-telia-enc.pem" ] && [ "$(sum "$tmp/bare/kuutti-staging-telia-sig.pem")" = "$keys" ] ||
+    fail "a run over half a pair touched it"
+  echo "self-test passed" >&2
+  exit 0
+fi
 
 usage="usage: telia-keys.sh <staging|prod> <offline-dir> [--put]"
 env="${1:?$usage}"

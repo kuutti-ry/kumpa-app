@@ -138,4 +138,4 @@ What the guide does not say in so many words, and how the design holds without i
 
 ## Custody
 
-The agreement, the contact, and the two private keys are rows in `docs/runbooks/custody.md`. Keys are generated onto the offline medium by `infra/scripts/telia-keys.sh` and put into SSM from there (`--put`, by file reference); they never sit in a shell history, a command line, a mailbox or a chat. Only the JWKs file it writes leaves the medium, and that holds public keys.
+The agreement, the contact, and the two private keys are rows in `docs/runbooks/custody.md`. Keys are generated onto the offline medium by `infra/scripts/telia-keys.sh` and put into SSM from there (`--put`, by file reference); they never sit in a shell history, a command line, a mailbox or a chat. Only the JWKs file it writes leaves the medium, and that holds public keys. `telia-keys.sh --self-test`, in CI's lint job, runs it over throwaway folders with a stand-in for `aws`: each environment's names and callbacks, the kids as RFC 7638 computes them, the modes, and the refusals.
