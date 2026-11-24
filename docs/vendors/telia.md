@@ -24,8 +24,8 @@ Months counted: none, since billing starts at the move to production and none ha
 | item | ours |
 |---|---|
 | public keys, RSA 2048 or longer, **two separate JWKs**: `"use": "sig"` (signs our request objects and client assertions) and `"use": "enc"` (Telia encrypts the ID token to it) | generated per `infra/README.md` Secrets; the private halves live in SSM `/kuutti/<env>/telia-signing-key` and `/kuutti/<env>/telia-encryption-key`; the public JWKs go to Telia by e-mail (an OpenID Federation entity statement is the alternative; not used yet) |
-| redirect URIs, HTTPS, **no wildcards** | staging `https://api.staging.kuutti.app/auth/callback`; production `https://api.kuutti.app/auth/callback` (#25) |
-| display name `ftn_spname`, at most 40 characters, shown to the user during login | `Kuutti` |
+| redirect URIs, HTTPS, **no wildcards** | staging `https://api.staging.kuutti.app/auth/callback`; production `https://api.kumpa.fi/auth/callback` and `https://api.kuutti.app/auth/callback` (#25, ADR-072 §6) |
+| display name `ftn_spname`, at most 40 characters, shown to the user during login | staging `Kuutti`; production `Kumpa` (the maintainer, 24/11/2026) |
 | technical contact (Appendix 4) | the maintainer, with the project mailbox in copy |
 
 Production keys are confirmed through Telia's e-signature service: the technical contact signs the offered keys (or the entity statement) with strong identification.
@@ -46,7 +46,7 @@ The first login on the test bed (2026-10-08) showed what was left to watch: `acr
 
 ### The second name, `kumpa.fi` (#703, ADR-072)
 
-The app is called Kumpa since 2026-11-16, and its hosts get names under `kumpa.fi` beside the `kuutti.app` ones (ADR-072). Telia matches the redirect URI exactly, so the bank's callback moves only once Telia has registered `https://api.staging.kumpa.fi/auth/callback` beside the present one; production's client carries `https://api.kumpa.fi/auth/callback` beside `https://api.kuutti.app/auth/callback` when it is requested. Until then, `oidc-redirect-uri`, `telia-keys.sh`'s metadata and the table above keep `kuutti.app`'s callback, and `ftn_spname` stays Kuutti (#700). Asking Telia is the maintainer's, and the correspondence stays off GitHub.
+The app is called Kumpa since 2026-11-16, and its hosts get names under `kumpa.fi` beside the `kuutti.app` ones (ADR-072). Telia matches the redirect URI exactly, so the bank's callback moves only once Telia has registered `https://api.staging.kumpa.fi/auth/callback` beside the present one; production's client carries `https://api.kumpa.fi/auth/callback` beside `https://api.kuutti.app/auth/callback` when it is requested. Production's metadata (`telia-keys.sh prod`) carries both callbacks and the name Kumpa from its first registration. The pre-production client keeps Kuutti and its one `kuutti.app` callback until the store reviews are through, then swaps (the maintainer, 24/11/2026); until each client's yes, `oidc-redirect-uri` keeps `kuutti.app`'s callback (#700). Asking Telia is the maintainer's, and the correspondence stays off GitHub.
 
 ## What Telia gives us
 

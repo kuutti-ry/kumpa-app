@@ -55,21 +55,24 @@ fi
 # thumbprint, as in Telia's own Python sample, and the API computes the same
 # from the private key, keyIdOf), and around them the client metadata in the
 # shape of that sample's client.json: what "the protocol's metadata" of Telia's
-# offer means for OIDC. Telia answers with the client_id. The redirect URI is
-# the one envs/<env>/dns.tf gives the API; the contact is the association's
+# offer means for OIDC. Telia answers with the client_id. The redirect URIs are
+# the ones envs/<env>/dns.tf gives the API; the contact is the association's
 # mailbox (TD-4), from KUUTTI_TELIA_CONTACT so that no address is in the repo.
+# Production registers both names from the start (ADR-072 §6) and shows the
+# person Kumpa at the bank; the pre-production client keeps Kuutti and its one
+# callback until the store reviews are through (the maintainer, 24/11/2026).
 case "$env" in
-  staging) redirect="https://api.staging.kuutti.app/auth/callback" ;;
-  prod) redirect="https://api.kuutti.app/auth/callback" ;;
+  staging) redirect="https://api.staging.kuutti.app/auth/callback" name="Kuutti" site="https://kuutti.app" ;;
+  prod) redirect="https://api.kumpa.fi/auth/callback https://api.kuutti.app/auth/callback" name="Kumpa" site="https://kumpa.fi" ;;
 esac
 # A metadata file that exists is kept when no contact is given, so a later
 # run (--put, say) cannot replace a finished file with a placeholder.
 keep_client=0
 if [ -z "${KUUTTI_TELIA_CONTACT:-}" ] && [ -e "$prefix-client.json" ]; then keep_client=1; fi
-node - "$prefix" "$redirect" "${KUUTTI_TELIA_CONTACT:-}" "$keep_client" <<'EOF'
+node - "$prefix" "$redirect" "${KUUTTI_TELIA_CONTACT:-}" "$keep_client" "$name" "$site" <<'EOF'
 const { createHash, createPublicKey } = require("node:crypto");
 const { readFileSync, writeFileSync } = require("node:fs");
-const [prefix, redirect, contact, keepClient] = process.argv.slice(2);
+const [prefix, redirects, contact, keepClient, name, site] = process.argv.slice(2);
 const keys = ["sig", "enc"].map((use) => {
   const jwk = createPublicKey(readFileSync(`${prefix}-${use}.pub.pem`)).export({ format: "jwk" });
   const kid = createHash("sha256")
@@ -80,12 +83,12 @@ const keys = ["sig", "enc"].map((use) => {
 const client = {
   organization_name: "Kuutti ry",
   contacts: [contact || "<the association's mailbox>"],
-  "client_name#fi": "Kuutti",
-  "client_name#sv": "Kuutti",
-  "client_name#en": "Kuutti",
-  ftn_spname: "Kuutti",
-  client_uri: "https://kuutti.app",
-  redirect_uris: [redirect],
+  "client_name#fi": name,
+  "client_name#sv": name,
+  "client_name#en": name,
+  ftn_spname: name,
+  client_uri: site,
+  redirect_uris: redirects.split(" "),
   grant_types: ["authorization_code"],
   scope: "openid",
   require_signed_request_object: true,
