@@ -111,6 +111,9 @@ EOF
 
   # --put hands aws the files by file://, under the environment's names, and
   # never --overwrite.
+  # The stand-in must be the aws that answers, or a signed-in laptop would call
+  # the real one.
+  [ "$(PATH="$tmp/bin:$PATH" command -v aws)" = "$tmp/bin/aws" ] || fail "the stand-in for aws is not the one on PATH"
   PATH="$tmp/bin:$PATH" KUUTTI_TELIA_CONTACT= "$self" prod "$tmp/prod" --put >/dev/null || fail "--put exited $?"
   [ "$(cat "$tmp/aws.log")" = "ssm put-parameter --name /kuutti/prod/telia-signing-key --type SecureString --value file://$tmp/prod/kuutti-prod-telia-sig.pem
 ssm put-parameter --name /kuutti/prod/telia-encryption-key --type SecureString --value file://$tmp/prod/kuutti-prod-telia-enc.pem" ] ||
