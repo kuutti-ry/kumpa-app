@@ -54,6 +54,10 @@ jobs:
       # it counts, what it leaves out, and the answers it refuses.
       - name: site-traffic counts made-up logs and refuses what it should
         run: infra/scripts/site-traffic.sh --self-test
+      # The Telia keys and client metadata over throwaway folders and a stand-in
+      # for aws: each environment's names and callbacks, the kids, the refusals.
+      - name: telia-keys writes what Telia is sent and refuses what it should
+        run: infra/scripts/telia-keys.sh --self-test
       # What the hooks hold an agent to, over stand-ins of a session's transcript
       # and of GitHub (#525).
       - name: The pull request duties refuse what they should

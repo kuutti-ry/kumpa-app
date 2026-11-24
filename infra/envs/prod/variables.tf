@@ -64,7 +64,7 @@ variable "cors_allowed_origins" {
 variable "telia_client_id" {
   description = "The client_id Telia Tunnistus assigned to Kuutti in production (#25, docs/vendors/telia.md): /kuutti/prod/oidc-client-id. Public by OIDC design (it travels in every authorization URL), so it is a default here once Telia has moved the client to production. Null keeps bank identification off: the issuer, the registered redirect URI and the acr value are written only together with it, because the API refuses half a configuration at boot. The two private keys are /kuutti/prod/telia-signing-key and -encryption-key, never resources (infra/README.md, Secrets)."
   type        = string
-  default     = null
+  default     = "8c3bff8e-e313-4b51-a550-6970176a8fbc"
 }
 
 variable "media_enabled" {
