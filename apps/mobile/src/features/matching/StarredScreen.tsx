@@ -1,6 +1,7 @@
 import type { StarredPerson } from "@kuutti/schema";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import ListMinus from "lucide-react-native/icons/list-minus";
+import { useCallback, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Backdrop } from "@/components/backdrop";
@@ -16,9 +17,19 @@ import { DECORATIVE, MINIMUM_TARGET } from "@/theme/a11y";
 import { useHapticTap } from "@/theme/haptics";
 import { pressFill } from "@/theme/looks";
 import { useLookTraits } from "@/theme/ThemeProvider";
+import { arrange, type LaterOrder, readLaterOrder } from "./later-order";
 import { useStars } from "./useStars";
 
-function Row({ person, onClear }: { person: StarredPerson; onClear: () => void }) {
+function Row({
+  person,
+  fresh,
+  onClear,
+}: {
+  person: StarredPerson;
+  /** Come since the person put the list in order with Kumpa. */
+  fresh: boolean;
+  onClear: () => void;
+}) {
   const { t } = useT();
   const router = useRouter();
   const tap = useHapticTap();
@@ -29,7 +40,7 @@ function Row({ person, onClear }: { person: StarredPerson; onClear: () => void }
     <View className="flex-row items-center gap-1">
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={who}
+        accessibilityLabel={fresh ? t("stars.fresh.label", { name, years: age }) : who}
         className={cn("flex-1 flex-row items-center gap-3 rounded-lg px-2 py-2", pressFill(traits))}
         style={MINIMUM_TARGET}
         onPress={() => {
@@ -50,7 +61,14 @@ function Row({ person, onClear }: { person: StarredPerson; onClear: () => void }
           // the background itself (#467).
           <View className="h-12 w-12 rounded-full border border-border bg-muted" {...DECORATIVE} />
         )}
-        <Text className="flex-1 font-semibold">{who}</Text>
+        <View className="flex-1">
+          <Text className="font-semibold">{who}</Text>
+          {fresh && (
+            <Text variant="small" className="text-muted-foreground">
+              {t("stars.fresh")}
+            </Text>
+          )}
+        </View>
       </Pressable>
       <Button
         variant="ghost"
@@ -69,35 +87,73 @@ function Row({ person, onClear }: { person: StarredPerson; onClear: () => void }
 
 /**
  * The Later list (#575, ADR-064, #681): the people the person chose Later on, the
- * latest first and in no other order, each with their name, their age and a photo
- * they were shown. A row opens the card, with Like, the flower and Pass, spending
+ * latest first, each with their name, their age and a photo they were shown, or
+ * in the person's own order once they have given it one with Kumpa (ADR-064 §6,
+ * the maintainer, 26/11/2026), whoever came since at the top and marked as not
+ * compared yet. Kumpa's button stands in the header while the list shows two
+ * people or more. A row opens the card, with Like, the flower and Pass, spending
  * what those spend anywhere else (`QueueScreen`), and its button takes the person
  * off the list, drawn as a list with a minus, never the cross that is Pass's. Only
  * the person ever sees it. Somebody the list leaves out goes with no word why, and
- * nothing counts them: no number and no order but when they were put on it.
+ * nothing counts them: no number, and no order but when they were put on it or
+ * the person's own.
  */
 export function StarredScreen() {
   const { t } = useT();
+  const router = useRouter();
+  const tap = useHapticTap();
   const { view, clearFailed, clear, retry } = useStars();
+  // Read again whenever the list comes to the front, since Kumpa may have changed it.
+  const [saved, setSaved] = useState<LaterOrder | null>(null);
+  useFocusEffect(
+    useCallback(() => {
+      let live = true;
+      void readLaterOrder().then((read) => {
+        if (live) setSaved(read);
+      });
+      return () => {
+        live = false;
+      };
+    }, []),
+  );
+  const rows = view.status === "ready" && saved !== null ? arrange(view.items, saved) : null;
   return (
     <SafeAreaView className="flex-1 bg-background">
       <Backdrop />
-      <ScreenHeader title={t("stars.title")} backLabel={t("stars.back")} />
+      <ScreenHeader title={t("stars.title")} backLabel={t("stars.back")}>
+        {rows !== null && rows.length > 1 && (
+          <Button
+            variant="outline"
+            accessibilityLabel={t("stars.kumpa.label")}
+            onPress={() => {
+              tap();
+              router.push("/stars/kumpa");
+            }}
+          >
+            <Text>{t("stars.kumpa.open")}</Text>
+          </Button>
+        )}
+      </ScreenHeader>
       {clearFailed && (
         <Text accessibilityLiveRegion="polite" className="px-6 pt-4">
           {t("load.failed.press")}
         </Text>
       )}
       <ScrollView contentContainerClassName="flex-grow gap-4 p-6">
-        {view.status === "loading" && (
+        {(view.status === "loading" || (view.status === "ready" && rows === null)) && (
           <Text accessibilityLiveRegion="polite">{t("load.loading")}</Text>
         )}
         {view.status === "failed" && <LoadFailed error={view.error} onRetry={retry} />}
-        {view.status === "ready" && view.items.length === 0 && <Text>{t("stars.none")}</Text>}
-        {view.status === "ready" && view.items.length > 0 && (
+        {rows !== null && rows.length === 0 && <Text>{t("stars.none")}</Text>}
+        {rows !== null && rows.length > 0 && (
           <View className="gap-1">
-            {view.items.map((person) => (
-              <Row key={person.id} person={person} onClear={() => void clear(person.id)} />
+            {rows.map(({ person, fresh }) => (
+              <Row
+                key={person.id}
+                person={person}
+                fresh={fresh}
+                onClear={() => void clear(person.id)}
+              />
             ))}
           </View>
         )}

@@ -1631,7 +1631,15 @@ export type MessageParams = {
   "stars.back": Record<never, never>;
   "stars.card.back": Record<never, never>;
   "stars.clear.label": { "name": string };
+  "stars.fresh": Record<never, never>;
+  "stars.fresh.label": { "name": string; "years": number };
   "stars.home.open": Record<never, never>;
+  "stars.kumpa.again": Record<never, never>;
+  "stars.kumpa.done": Record<never, never>;
+  "stars.kumpa.label": Record<never, never>;
+  "stars.kumpa.open": Record<never, never>;
+  "stars.kumpa.pick.hint": Record<never, never>;
+  "stars.kumpa.title": Record<never, never>;
   "stars.none": Record<never, never>;
   "stars.photo.label": { "name": string };
   "stars.title": Record<never, never>;

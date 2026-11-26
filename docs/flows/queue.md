@@ -10,6 +10,9 @@ apps/mobile/src/features/matching/useQueue.ts
 apps/mobile/src/features/matching/ShortPool.tsx
 apps/mobile/src/features/matching/StarsButton.tsx
 apps/mobile/src/features/matching/StarredScreen.tsx
+apps/mobile/src/features/matching/KumpaScreen.tsx
+apps/mobile/src/features/matching/later-order.ts
+apps/mobile/src/features/matching/LaterOrderAtSignOut.tsx
 apps/mobile/src/features/matching/useStars.ts
 apps/mobile/src/features/settings/DecisionButtonChoices.tsx
 apps/api/src/matching/queue-routes.ts
@@ -216,11 +219,12 @@ flowchart TB
 ```mermaid
 flowchart TB
   accTitle: The Later list
-  accDescr: Later puts the card's person on the person's Later list, to come back to without a like or a pass. It spends nothing and nobody is told. At the most the list may show, the card comes back another day instead. The list is reached from home and from the queue's end, and its rows open the card to decide, or take the person off.
+  accDescr: Later puts the card's person on the person's Later list, to come back to without a like or a pass. It spends nothing and nobody is told. At the most the list may show, the card comes back another day instead. The list is reached from home and from the queue's end, and its rows open the card to decide, or take the person off; while it shows two people or more, Kumpa? puts it in the person's own order, part 6.
   subgraph person["The person"]
     s40["Chooses Later on a card"]
     s48["Chooses Later list on home or at the queue's end, there while the list shows somebody"]
-    s50{"Opens a row, or takes the person off?"}
+    s50{"Opens a row, takes the person off, or chooses Kumpa?"}
+    s73(["Kumpa?: part 6"])
   end
   subgraph app["The app"]
     s44(["Says over the next card: Your Later list is full, so this person will come back another day."])
@@ -252,6 +256,7 @@ flowchart TB
   s49 --> s50
   s50 -->|"take off"| s51
   s50 -->|"a row"| s52
+  s50 -->|"Kumpa?, with two people or more"| s73
   s52 -->|"no"| s53
   s52 -->|"yes"| s54
   s54 --> s55
@@ -269,14 +274,15 @@ flowchart TB
 46. The app shows the next card. When the person is the only one the list shows, it says "Saved to your Later list. Only you can see it.", the one place that says so.
 47. From the next read the person on the list comes no more as an ordinary card, new or seen before, nor through a relaxation: they come through the Later list. Somebody whose like or flower waits keeps coming as "Liked you" or "Sent you a flower" until the like expires. A like or a pass takes them off the list (part 2, step 24), and Later again leaves them on it.
 48. Later, the person chooses "Later list" on the home screen, under "See people", or at the queue's end (part 5, step 57). The line is there only while the list shows somebody, by its word and no count.
-49. The API lists the people the person may meet now: matching open, both people's filters as a read of the queue asks them, the other seen by others, and not held back by the inbox stop, asked so that the list never tells that somebody's pile is at it. Anybody else is left out with no word why, and comes back by themselves. The latest first and in no other order, each row a name, an age and the main photo the person was shown, under the title "Later". A place on the list has no clock. With nobody on it, the app says "Nobody here right now."
-50. The person opens a row: 52. Or takes them off with the button beside it ("Take off the list: {name}"), without opening the card: 51.
+49. The API lists the people the person may meet now: matching open, both people's filters as a read of the queue asks them, the other seen by others, and not held back by the inbox stop, asked so that the list never tells that somebody's pile is at it. Anybody else is left out with no word why, and comes back by themselves. The latest first, each row a name, an age and the main photo the person was shown, under the title "Later". The app shows them in that order until the person gives the list one of their own with Kumpa? (part 6), which the API never learns. A place on the list has no clock. With nobody on it, the app says "Nobody here right now."
+50. The person opens a row: 52. Or takes them off with the button beside it ("Take off the list: {name}"), without opening the card: 51. Or, while the list shows two people or more, chooses "Kumpa?" in its header: 73.
 51. The API takes them off; the row goes, and the person comes back where the queue would have them. If it fails, the app says "That did not go through. Try again."
 52. Does the list still show them? No: 53. Yes: 54.
 53. The app says "That card is no longer available.", with "Back to Later list".
 54. The API writes the card into today's log, or finds it there as it stands, so it is decided through the queue's own routes, every check of part 2 with it. Its reason is the one the queue would give: "Liked you" or "Sent you a flower" where a like waits; "Relaxed for today: {field}" for somebody who fits only through today's relaxations, so that a like on them can arrive; otherwise "Seen before".
 55. The app shows the card as in part 2, with the part a waiting like named under its reason: Like, the flower, Pass and Later spend what they spend anywhere, Later keeping the person on the list, and Block or report is beside the name.
 56. After a decision or a block, "Back to Later list" stands alone, with Undo still there for the decision; a like that makes a match says "Well, hello!", with "Say hello" and "Back to Later list" (part 3).
+73. Kumpa?: part 6, step 74.
 
 ## Part 5: the queue's end and the short pool
 
@@ -349,9 +355,61 @@ flowchart TB
 71. "What you seek" opens whom the person seeks, the ages, what they are here for and the deal-breakers: [the profile](profile.md), part 5. A change works on the next read: back on People, its end asks again (part 1, step 5).
 72. The next day's queue reads the deal-breakers as stored. A like the person gave on a relaxed card still reaches its person: in that person's queue, the deal-breakers it came in under are set aside for the person alone.
 
+## Part 6: Kumpa?
+
+```mermaid
+flowchart TB
+  accTitle: Kumpa? puts the Later list in the person's own order
+  accDescr: From the Later list's header, Kumpa? shows two people of the list, one under the other on a phone held upright and side by side on a wider window, which of them comes first drawn for each pair, each with the main photo the person was shown, and a tap on one puts them before the other, until everybody has a place. The order stays on the phone and the API is never told of a tap. Leaving keeps what was tapped. The list then shows the person's order, whoever came since at the top and marked Not compared yet, and a sign-out forgets it.
+  subgraph person["The person"]
+    s74["Chooses Kumpa? in the Later list's header"]
+    s78{"Taps one of the two, or leaves?"}
+    s81{"Back to the list, or Start again?"}
+  end
+  subgraph app["The app"]
+    s75{"Anybody on the list without a place in the order?"}
+    s76["Shows two, one under the other or side by side on a wide window, which first drawn for each pair, each with the main photo they were shown, a name and an age: one with a place, one without"]
+    s79["Puts the one tapped before the other, halving the places left, and keeps the order on the phone"]
+    s80(["Says: Your Later list is in order., with Back to Later list and Start again"])
+    s82["Forgets the order"]
+    s83["Shows the list in the person's order: whoever came since at the top, each marked Not compared yet"]
+    s84(["Forgets the order when the phone signs out"])
+  end
+  subgraph api["The API"]
+    s77["Gives the two photos at the card's size, as for a card opened from the list, and is never told of a tap"]
+  end
+  s74 --> s75
+  s75 -->|"yes"| s76
+  s76 --> s77
+  s77 --> s78
+  s78 -->|"taps one"| s79
+  s79 --> s75
+  s75 -->|"no, everybody has a place"| s80
+  s80 --> s81
+  s81 -->|"Start again"| s82
+  s82 --> s75
+  s81 -->|"back"| s83
+  s78 -->|"leaves"| s83
+  s83 -->|"a sign-out"| s84
+```
+
+### Steps
+
+74. On the Later list, while it shows two people or more, the person chooses "Kumpa?" in its header. A screen reader hears "Kumpa? Put your Later list in order, two at a time."
+75. Does anybody on the list still lack a place in the order this phone keeps? With no order yet, the first of the list takes the first place without a tap. Anybody who has left the list leaves the order, and whoever was being placed starts again among those left. Yes: 76. No: 80.
+76. The app shows two people, one under the other on a phone held upright and side by side on a window wider than it is high: one with a place in the order and the one being placed, which of them comes first drawn again for each pair, each with the main photo the person was shown, in a card's shape, their name and their age. Each is a button a screen reader hears by the name and the age, with "Puts them before the other one.", and after a tap it is taken to the next pair. Nothing counts how far the person is.
+77. The API gives the two photos at the card's size, as it gives them for a card opened from the list, and nothing ahead of the two on the screen. It is never told of a tap.
+78. The person taps the one they would rather come back to first: 79. Or leaves by the back arrow, "Back to Later list": 83. What was tapped stays, and Kumpa? goes on where it stopped.
+79. The app puts the one tapped before the other and halves the places left for the one being placed; once one place is left, they take it. The order is kept on this phone alone, never sent and never logged. Then: 75.
+80. The app says "Your Later list is in order.", and a screen reader is taken to it, with "Back to Later list" and "Start again".
+81. The person goes back to the list: 83. Or chooses "Start again": 82.
+82. The app forgets the order, and Kumpa? begins again with nobody placed: 75.
+83. The Later list shows the people in the person's own order. Whoever came since and has no place yet is at the top, in the list's own order, each marked "Not compared yet", until Kumpa? places them. Before anybody has a place, the list is in its own order and nobody is marked.
+84. When this phone signs out, it forgets the order, and so it does at a start that finds it signed out: whoever signs in here next begins with none.
+
 ## Where it lives
 
-- Screens: [queue.tsx](../../apps/mobile/app/queue.tsx) (People) delegates to [QueueScreen.tsx](../../apps/mobile/src/features/matching/QueueScreen.tsx), with [useQueue.ts](../../apps/mobile/src/features/matching/useQueue.ts), [ShortPool.tsx](../../apps/mobile/src/features/matching/ShortPool.tsx), [MatchPop.tsx](../../apps/mobile/src/features/matching/MatchPop.tsx) (the hello at a match, in Kumpa), [faceButtons.tsx](../../apps/mobile/src/features/matching/faceButtons.tsx), [dandelion.tsx](../../apps/mobile/src/features/matching/dandelion.tsx) (the flower's icon) and [client.ts](../../apps/mobile/src/features/matching/client.ts); [stars/index.tsx](../../apps/mobile/app/stars/index.tsx) delegates to [StarredScreen.tsx](../../apps/mobile/src/features/matching/StarredScreen.tsx) with [useStars.ts](../../apps/mobile/src/features/matching/useStars.ts), and [stars/[id].tsx](../../apps/mobile/app/stars/%5Bid%5D.tsx) to QueueScreen for one card; the ways in are [QueueButton.tsx](../../apps/mobile/src/features/matching/QueueButton.tsx) and [StarsButton.tsx](../../apps/mobile/src/features/matching/StarsButton.tsx) on the home screen's [GateCard.tsx](../../apps/mobile/src/features/pond/GateCard.tsx); the card and its Block or report are [ProfileCardView.tsx](../../apps/mobile/src/features/profile/ProfileCardView.tsx) and [SafetyActions.tsx](../../apps/mobile/src/features/safety/SafetyActions.tsx); the Like and Pass row of Settings is [DecisionButtonChoices.tsx](../../apps/mobile/src/features/settings/DecisionButtonChoices.tsx), kept on the phone by [decision-buttons.tsx](../../apps/mobile/src/lib/decision-buttons.tsx) of `src/lib`. Slice: [matching](../../apps/mobile/src/features/matching/README.md).
+- Screens: [queue.tsx](../../apps/mobile/app/queue.tsx) (People) delegates to [QueueScreen.tsx](../../apps/mobile/src/features/matching/QueueScreen.tsx), with [useQueue.ts](../../apps/mobile/src/features/matching/useQueue.ts), [ShortPool.tsx](../../apps/mobile/src/features/matching/ShortPool.tsx), [MatchPop.tsx](../../apps/mobile/src/features/matching/MatchPop.tsx) (the hello at a match, in Kumpa), [faceButtons.tsx](../../apps/mobile/src/features/matching/faceButtons.tsx), [dandelion.tsx](../../apps/mobile/src/features/matching/dandelion.tsx) (the flower's icon) and [client.ts](../../apps/mobile/src/features/matching/client.ts); [stars/index.tsx](../../apps/mobile/app/stars/index.tsx) delegates to [StarredScreen.tsx](../../apps/mobile/src/features/matching/StarredScreen.tsx) with [useStars.ts](../../apps/mobile/src/features/matching/useStars.ts), [stars/kumpa.tsx](../../apps/mobile/app/stars/kumpa.tsx) to [KumpaScreen.tsx](../../apps/mobile/src/features/matching/KumpaScreen.tsx), the order's rules and its keeping on the phone in [later-order.ts](../../apps/mobile/src/features/matching/later-order.ts), forgotten at a sign-out by [LaterOrderAtSignOut.tsx](../../apps/mobile/src/features/matching/LaterOrderAtSignOut.tsx) of the root layout, and [stars/[id].tsx](../../apps/mobile/app/stars/%5Bid%5D.tsx) to QueueScreen for one card; the ways in are [QueueButton.tsx](../../apps/mobile/src/features/matching/QueueButton.tsx) and [StarsButton.tsx](../../apps/mobile/src/features/matching/StarsButton.tsx) on the home screen's [GateCard.tsx](../../apps/mobile/src/features/pond/GateCard.tsx); the card and its Block or report are [ProfileCardView.tsx](../../apps/mobile/src/features/profile/ProfileCardView.tsx) and [SafetyActions.tsx](../../apps/mobile/src/features/safety/SafetyActions.tsx); the Like and Pass row of Settings is [DecisionButtonChoices.tsx](../../apps/mobile/src/features/settings/DecisionButtonChoices.tsx), kept on the phone by [decision-buttons.tsx](../../apps/mobile/src/lib/decision-buttons.tsx) of `src/lib`. Slice: [matching](../../apps/mobile/src/features/matching/README.md).
 - API: `GET /queue/today`, `POST /queue/{day}/entries/{position}/seen`, `PUT /queue/{day}/entries/{position}/decision`, `GET` and `POST /queue/{day}/relaxations`, `DELETE /queue/{day}/relaxations/{field}` in [queue-routes.ts](../../apps/api/src/matching/queue-routes.ts); `GET /stars`, `POST /stars/{id}/open` and `DELETE /stars/{id}` in [star-routes.ts](../../apps/api/src/matching/star-routes.ts); the day's log, the read, the decision, the budgets, the match and the relaxations in [queue.ts](../../apps/api/src/matching/queue.ts); the Later list's place and its card in [stars.ts](../../apps/api/src/matching/stars.ts); the pool both ways in [pool.ts](../../apps/api/src/matching/pool.ts); the order in [queue-order.ts](../../apps/api/src/matching/queue-order.ts); the conversation a match opens and whose turn it is in the chat slice's [conversations.ts](../../apps/api/src/chat/conversations.ts); the match's push in [push.ts](../../apps/api/src/notifications/push.ts). Slice: [matching](../../apps/api/src/matching/README.md).
 - Jobs: who comes next, the clocks, the inbox stop, whether two fit now and the short pool's offers in [queue-builder.ts](../../apps/api/src/jobs/queue-builder.ts); the Later list's reads in [stars.ts](../../apps/api/src/jobs/stars.ts); who is complete in [pool.ts](../../apps/api/src/jobs/pool.ts); the night's prune of old logs and the archive of silent conversations ([archive.ts](../../apps/api/src/chat/archive.ts)) in [boot.ts](../../apps/api/src/boot.ts), run by [nightly.ts](../../apps/api/src/jobs/nightly.ts); all wired in [app.ts](../../apps/api/src/app.ts).
 - Spec: [queue.feature](../../features/matching/queue.feature), [decisions.feature](../../features/matching/decisions.feature), [fish.feature](../../features/matching/fish.feature), [earned.feature](../../features/matching/earned.feature), [matches.feature](../../features/matching/matches.feature), [short-pool.feature](../../features/matching/short-pool.feature), [stars.feature](../../features/matching/stars.feature), [filters.feature](../../features/matching/filters.feature), [your-turn.feature](../../features/chat/your-turn.feature), [push.feature](../../features/notifications/push.feature), [anchored-likes.feature](../../features/matching/anchored-likes.feature).
@@ -393,3 +451,4 @@ flowchart TB
 - 2026-11-20 (#411): the Kumpa look is the one a phone starts in: each card a poster, Pass, Like and Later round buttons with their words, and a match says "Well, hello!" with "Say hello".
 - 2026-11-26 (#752): a card is one scroll, its photos between the person's own words and the rest of its answers at its end; nothing is tapped through or opened, and a photo is asked for once it comes into sight.
 - 2026-11-26 (#463): a like or a flower may name one part of the card, a photo, an answer, the bio or a shared item, marked by a tap; the person liked reads it under the card's reason, a photo with a small copy of it, and a match brings both likes' parts into the conversation.
+- 2026-11-26 (#764): Kumpa? puts the Later list in the person's own order, two at a time, one under the other on a phone held upright and side by side on a wide window, the first of each pair drawn at random, a tap putting one before the other; the order stays on the phone, whoever came since is marked Not compared yet, and a sign-out forgets it.

@@ -5,6 +5,7 @@ import { StatusBar } from "expo-status-bar";
 import * as Updates from "expo-updates";
 import { ChatLiveProvider } from "@/features/chat";
 import { LockProvider, SessionProvider, SignedOutToStart } from "@/features/identity";
+import { LaterOrderAtSignOut } from "@/features/matching";
 import { PushNotifications, unregisterPush } from "@/features/notifications";
 import { ScreenReaderHint } from "@/features/settings";
 import { DecisionButtonsProvider } from "@/lib/decision-buttons";
@@ -43,6 +44,8 @@ function RootLayout() {
                   <PushNotifications />
                   {/* The one-time hint for a screen-reader user (#296); stays on the device. */}
                   <ScreenReaderHint />
+                  {/* The Later list's order, which the phone forgets at sign-out (ADR-064 §6). */}
+                  <LaterOrderAtSignOut />
                 </ChatLiveProvider>
               </LockProvider>
             </SessionProvider>

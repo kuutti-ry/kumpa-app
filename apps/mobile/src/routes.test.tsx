@@ -46,6 +46,8 @@ import LicensesRoute from "../app/settings/licenses";
 import LicenseTextsRoute from "../app/settings/licenses/texts";
 // biome-ignore lint/style/noRestrictedImports: a route file, not a slice internal
 import SupportRoute from "../app/settings/support";
+import StarredRoute from "../app/stars/index";
+import KumpaRoute from "../app/stars/kumpa";
 import TechRoute from "../app/tech";
 
 // The route files of app/ (rules/layout.md: routes only, thin): each renders
@@ -111,9 +113,13 @@ jest.mock("@/features/home", () => {
 jest.mock("@/features/matching", () => {
   const { createElement } = require("react") as typeof import("react");
   const { Text } = require("react-native") as typeof import("react-native");
+  const probe = (name: string) => (props: object) =>
+    createElement(Text, { testID: name }, JSON.stringify(props));
   return {
-    QueueScreen: (props: object) =>
-      createElement(Text, { testID: "QueueScreen" }, JSON.stringify(props)),
+    KumpaScreen: probe("KumpaScreen"),
+    LaterOrderAtSignOut: probe("LaterOrderAtSignOut"),
+    QueueScreen: probe("QueueScreen"),
+    StarredScreen: probe("StarredScreen"),
   };
 });
 jest.mock("@/features/media", () => {
@@ -206,6 +212,8 @@ describe("the screens without params", () => {
     ["/settings/licenses", LicensesRoute, "LicensesScreen"],
     ["/settings/licenses/texts", LicenseTextsRoute, "LicenseTextsScreen"],
     ["/settings/support", SupportRoute, "SupportScreen"],
+    ["/stars", StarredRoute, "StarredScreen"],
+    ["/stars/kumpa", KumpaRoute, "KumpaScreen"],
     ["/tech", TechRoute, "TechConfigScreen"],
   ] as const)("%s renders its screen, with nothing to hand it", async (_path, Route, name) => {
     await render(<Route />);
@@ -466,7 +474,7 @@ describe("the root layout", () => {
     );
   });
 
-  it("puts the stack without headers inside session navigation, with the push and the screen-reader hint beside it", async () => {
+  it("puts the stack without headers inside session navigation, with the push, the screen-reader hint and the Later order's forgetting beside it", async () => {
     await render(<RootLayout />);
     expect(propsOf("Stack")).toEqual({
       screenOptions: { headerShown: false, contentStyle: { backgroundColor: "transparent" } },
@@ -477,6 +485,7 @@ describe("the root layout", () => {
     expect(holder?.props.testID).toBe("SignedOutToStart");
     expect(screen.getByTestId("PushNotifications")).toBeTruthy();
     expect(screen.getByTestId("ScreenReaderHint")).toBeTruthy();
+    expect(screen.getByTestId("LaterOrderAtSignOut")).toBeTruthy();
   });
 
   it("holds the lock inside the session and around the chat's socket and every screen (#418)", async () => {
@@ -492,7 +501,14 @@ describe("the root layout", () => {
     };
     const around = ["ChatLiveProvider", "LockProvider", "SessionProvider"];
     // The push under the lock too: a tapped push opens its screen beneath it (#102).
-    for (const inside of ["Stack", "SignedOutToStart", "PushNotifications", "ScreenReaderHint"]) {
+    for (const inside of [
+      "Stack",
+      "SignedOutToStart",
+      "PushNotifications",
+      "ScreenReaderHint",
+      // Under the session it forgets the order at (ADR-064 §6).
+      "LaterOrderAtSignOut",
+    ]) {
       expect([inside, providersAround(inside)]).toEqual([inside, around]);
     }
   });
