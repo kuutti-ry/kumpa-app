@@ -421,12 +421,19 @@ describe("what the socket carries", () => {
   it("A message committed while the phone is away arrives once at the next resume", async () => {
     const { a, b, id } = await pair();
     const first = await signedIn(a.accessToken, [{ id, seq: 0 }]);
+    // B's phone shows where the hub is: it hears A go away once the server
+    // has let A's phone go, and B's own message only after the hub has asked
+    // whether A listens. A notification still on its way when A's phone came
+    // back would reach it live as well as in the resume.
+    const pb = await signedIn(b.accessToken, [{ id, seq: 0 }]);
+    await first.next((f) => f.type === "presence" && f.conversationId === id && f.online);
     expect((await send(b.headers, id, "Yksi")).status).toBe(201);
     await first.next(isMessage(id, 1));
     first.close();
-    await first.closed;
+    await pb.next((f) => f.type === "presence" && f.conversationId === id && !f.online);
     expect((await send(b.headers, id, "Kaksi")).status).toBe(201);
     expect((await send(b.headers, id, "Kolme")).status).toBe(201);
+    await pb.next(isMessage(id, 3));
     const back = await phone();
     back.send({ type: "auth", token: a.accessToken });
     await back.next((f) => f.type === "ready");
