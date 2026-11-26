@@ -59,13 +59,7 @@ name: With one approved photo the gate says the profile lacks something, and a h
     above: "Photo 1 of 1|Kuva 1 / 1|Foto 1 av 1"
 - assertVisible: "At least 2 approved photos|Vähintään 2 hyväksyttyä kuvaa|Minst 2 godkända foton"
 - assertNotVisible: "This is what others see\\.|Tämän muut näkevät\\.|Det här ser andra\\."
-# The work is on the whole card (#644), a chip heard with its question.
-- scrollUntilVisible:
-    element: "Show the whole card|Näytä koko kortti|Visa hela kortet"
-    direction: DOWN
-    centerElement: true
-    timeout: 60000
-- tapOn: "Show the whole card|Näytä koko kortti|Visa hela kortet"
+# The work is at the card's end, under its section, a chip heard with its question.
 - scrollUntilVisible:
     element: "Work and education|Työ ja koulutus|Arbete och utbildning"
     direction: DOWN

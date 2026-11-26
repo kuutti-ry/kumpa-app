@@ -10,18 +10,11 @@ import {
   type ProfileCard,
   type ProfileFieldKey,
 } from "@kuutti/schema";
-import ChevronDown from "lucide-react-native/icons/chevron-down";
-import ChevronUp from "lucide-react-native/icons/chevron-up";
-import { Fragment, useState } from "react";
-import {
-  type AccessibilityActionEvent,
-  AccessibilityInfo,
-  Pressable,
-  StyleSheet,
-  View,
-} from "react-native";
+import { Image } from "expo-image";
+import { Fragment, type ReactNode, useState } from "react";
+import { type AccessibilityActionEvent, View, type ViewStyle } from "react-native";
 import Svg, { Path } from "react-native-svg";
-import { Button } from "@/components/ui/button";
+import { useInSight } from "@/components/InSight";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
 import { Text, TextClassContext } from "@/components/ui/text";
@@ -30,8 +23,7 @@ import { SafetyActions } from "@/features/safety";
 import { useT } from "@/lib/locale";
 import { usePhotoDescriptionText } from "@/lib/photo-descriptions";
 import { cn } from "@/lib/utils";
-import { DECORATIVE, MINIMUM_TARGET } from "@/theme/a11y";
-import { useHapticTap } from "@/theme/haptics";
+import { DECORATIVE } from "@/theme/a11y";
 import { useTokenColour } from "@/theme/shadow";
 import { useLookTraits } from "@/theme/ThemeProvider";
 import { FIELD_ICONS, HOBBY_GROUP_ICONS } from "./fieldIcons";
@@ -50,19 +42,11 @@ import { PROFILE_SECTIONS, type SectionItem, sectionTitleKey } from "./sections"
 /** The card's own accessibility action, by name; its label is the heard one. */
 const SAFETY_ACTION = "blockOrReport";
 
-/** A photo kept mounted but out of sight and hearing: back in front, it signs nothing again. */
-const BEHIND = {
-  accessibilityElementsHidden: true,
-  importantForAccessibility: "no-hide-descendants",
-} as const;
-
-/** Which photo of which card is in front, and the photos that card has shown so far. */
-type Gallery = { card: string; index: number; seen: readonly string[] };
-
 /**
- * The answers the short card shows (#644, the maintainer's of 07/11/2026):
- * what the person is here for and the six a deal-breaker can be set on,
- * the answers people care enough about to filter on, in the registry's order.
+ * The answers the card shows as chips after its first photo (#644, the
+ * maintainer's of 07/11/2026): what the person is here for and the six a
+ * deal-breaker can be set on, the answers people care enough about to filter
+ * on, in the registry's order.
  */
 const KEY_FACTS: readonly ProfileFieldKey[] = CARD_FIELD_KEYS.filter(
   (key) => key === "intent" || DEAL_BREAKER_FIELDS.includes(key),
@@ -72,9 +56,9 @@ const isCardField = (item: SectionItem): item is ProfileFieldKey =>
   (CARD_FIELD_KEYS as readonly string[]).includes(item);
 
 /**
- * The rest of a card's answers, on the whole card, under the profile's own
- * sections and in their order (#644), the one the person fills them in: the
- * key facts stand above, and the identity label in the header.
+ * The rest of a card's answers, at its end, under the profile's own sections
+ * and in their order (#644), the one the person fills them in: the key facts
+ * stand above, and the identity label in the header.
  */
 const WHOLE_SECTIONS = PROFILE_SECTIONS.map((section) => ({
   id: section.id,
@@ -131,16 +115,17 @@ function mergeFieldAndWork(chips: readonly Unheard[]): Unheard[] {
 }
 
 /**
- * A card as others see it (#47, #150), in two depths (#644, the maintainer's
- * of 07/11/2026). The short card: the name with the age, then the gender
- * with the identity label after it, the name of the home and, in a queue, how
- * far it is in words (ADR-061 §3, §5), on one line with no digits, no
- * kilometres and no meaning in a colour; the photos; the key facts as chips;
- * one answer in the person's own words, the first prompt or the bio when
- * there is none (the field sheet's Hinge takeaway, ADR-009 §7); and "Show the
- * whole card" while there is more. The whole card opens in place under it:
- * the bio, the other prompts and the rest of the answers under the profile's
- * own section titles. A new card starts short, as it starts at its main photo.
+ * A card as others see it (#47, #150), one scroll the way Hinge has it (the
+ * maintainer's of 26/11/2026, after the two depths of #644): the name with the
+ * age, then the gender with the identity label after it, the name of the home
+ * and, in a queue, how far it is in words (ADR-061 §3, §5), on one line with
+ * no digits, no kilometres and no meaning in a colour; the first photo; the key
+ * facts as chips; then each further photo with the next of the person's own
+ * words after it, the first prompt, the bio, the other prompts (the field
+ * sheet's Hinge takeaway, ADR-009 §7); whatever is left of either after the
+ * other ran out; and last the rest of the answers under the profile's own
+ * section titles. Nothing is folded away and nothing is tapped through: the
+ * card is read by scrolling, and a new card starts at its top.
  *
  * A chip is an answer in the person's own words with the field's icon before
  * it, or the option's own glyph (#213), Hinge's way ("<cigarette> Never"),
@@ -149,16 +134,12 @@ function mergeFieldAndWork(chips: readonly Unheard[]): Unheard[] {
  * filled and in bold, heard as shared, never a count or a score (ADR-009 §7);
  * the words "you too" went for reading like "me too".
  *
- * The photos are a gallery in the main photo's place (#513), as the big
- * dating apps have it: a tap on the right half shows the next, on the left
- * half the previous, with a bar per photo above them. The halves are two
- * named buttons, so a screen reader, a keyboard or a switch reaches them, and
- * the photo that comes is said. A photo is asked for when it first comes to
- * the front, never before (rules/mobile.md Images: prefetch counts as
- * exposure), and stays mounted behind, so going back signs nothing again:
- * at most one card-size URL per photo while the card is on the screen
- * (ADR-008, ADR-041 §1). The caption and the description under it follow
- * the photo in front.
+ * A photo is asked for when it first comes into sight on the screen, never
+ * before (rules/mobile.md Images: prefetch counts as exposure), its blurhash
+ * standing in until then, and stays once it has: at most one card-size URL per
+ * photo while the card is on the screen (ADR-008, ADR-041 §1). The screen's
+ * scroll tells the card when it moves (`useSightScroll`). Each photo carries
+ * its caption and the description under it, and is heard with its place.
  *
  * Someone else's card carries "Block or report" (#84, ADR-030 §11): an icon
  * button beside the name, and the same as an accessibility action on the
@@ -174,7 +155,7 @@ export function ProfileCardView({
   bleed = false,
 }: {
   card: ProfileCard;
-  /** Kumpa's poster only: the photo runs to the edges of a screen padded 24 pt on each side (the queue's). */
+  /** Kumpa's poster only: the first photo runs to the edges of a screen padded 24 pt on each side (the queue's). */
   bleed?: boolean;
   /** How far the person lives, as their queue entry froze it (ADR-061 §5); a card outside a queue has none. */
   distance?: DistanceBand | null;
@@ -185,20 +166,10 @@ export function ProfileCardView({
 }) {
   const { t, locale } = useT();
   const { poster } = useLookTraits();
-  const tap = useHapticTap();
   const [safetyOpen, setSafetyOpen] = useState(false);
-  /** The person whose whole card is open: another person's card starts short. */
-  const [opened, setOpened] = useState<string | null>(null);
-  const whole = opened === card.accountId;
   const described = usePhotoDescriptionText();
   const [firstPrompt, ...morePrompts] = card.prompts;
   const total = card.photos.length;
-  const [gallery, setGallery] = useState<Gallery>({ card: card.accountId, index: 0, seen: [] });
-  // Another person's card starts at their main photo, with nothing shown yet.
-  const here = gallery.card === card.accountId ? gallery : { index: 0, seen: [] };
-  const index = Math.min(here.index, Math.max(total - 1, 0));
-  const front = card.photos[index];
-  const seen = new Set([...here.seen, ...(front ? [front.id] : [])]);
   /** A photo's place on the card and the owner's line, as the report step shows it (#476). */
   const photoText = (photo: ProfileCard["photos"][number], position: number) =>
     photo.caption
@@ -212,17 +183,6 @@ export function ProfileCardView({
   // owner's line with the picture, and then what the check saw in it.
   const photoLabel = (photo: ProfileCard["photos"][number], position: number) =>
     described.label(photoText(photo, position), photo.description);
-  /** The description under a photo for the eye, where the setting asks for it. */
-  const wordsUnder = (photo: ProfileCard["photos"][number]) => described.under(photo.description);
-  const frontWords = front ? wordsUnder(front) : null;
-  /** The photo `step` away comes to the front, and a screen reader hears which it is. */
-  const go = (step: -1 | 1) => {
-    const next = card.photos[index + step];
-    if (!next) return;
-    tap();
-    setGallery({ card: card.accountId, index: index + step, seen: [...seen, next.id] });
-    AccessibilityInfo.announceForAccessibility(photoLabel(next, index + step + 1));
-  };
   const fields = card.fields as Record<string, unknown>;
   const identityLabel = typeof fields.identityLabel === "string" ? fields.identityLabel : null;
   /** The header's one line (#644): each word its own text, heard on its own. */
@@ -293,19 +253,59 @@ export function ProfileCardView({
   })).filter((section) => section.chips.length > 0);
   // What the person wrote wins over a ready line, an empty bio being none.
   const bio = card.bio || (card.bioPreset ? t(presetKey(card.bioPreset)) : null);
-  const prompt = (answer: ProfileCard["prompts"][number]) => (
-    <View key={answer.key} className="gap-0.5">
-      <Text variant="small">{t(promptKey(answer.key))}</Text>
-      <Text>{answer.answer}</Text>
+  const panel = cn("gap-2 rounded-3xl border border-border bg-card p-5", !poster && "rounded-xl");
+  /** The person's own words in the card's order: the first prompt, the bio, the other prompts. */
+  const words: ReactNode[] = [
+    ...(firstPrompt ? [firstPrompt] : []).map((answer) => (
+      <Prompt key={answer.key} answer={answer} className={panel} />
+    )),
+    ...(bio
+      ? [
+          <Text key="bio" className={panel}>
+            {bio}
+          </Text>,
+        ]
+      : []),
+    ...morePrompts.map((answer) => <Prompt key={answer.key} answer={answer} className={panel} />),
+  ];
+  const photoAt = (at: number) => {
+    const photo = card.photos[at];
+    if (!photo) return null;
+    const under = described.under(photo.description);
+    const edge = poster && bleed && at === 0;
+    return (
+      <View key={photo.id} className="gap-1.5">
+        <CardPhoto
+          photo={photo}
+          label={photoLabel(photo, at + 1)}
+          onRefused={onRefused}
+          style={edge ? POSTER_BLEED : PHOTO_FRAME}
+          className={
+            edge ? undefined : poster ? "overflow-hidden rounded-3xl" : "overflow-hidden rounded-xl"
+          }
+          wave={poster && at === 0}
+        />
+        {photo.caption ? <Caption text={t(captionKey(photo.caption))} /> : null}
+        {under ? <PhotoDescriptionText text={under} /> : null}
+      </View>
+    );
+  };
+  // The first photo and the key facts, then each further photo with the next of
+  // the person's words under it, then what is left of either: a card with one
+  // photo or none still has its facts and all its words.
+  const stream: ReactNode[] = [photoAt(0)];
+  if (keyChips.length > 0) stream.push(<Chips key="facts" chips={keyChips} poster={poster} />);
+  for (let at = 1; at < Math.max(total, words.length + 1); at += 1) {
+    stream.push(photoAt(at), words[at - 1] ?? null);
+  }
+  const rest = sections.map((section) => (
+    <View key={section.id} className="gap-2">
+      <Text variant="small" role="heading">
+        {t(sectionTitleKey(section.id))}
+      </Text>
+      <Chips chips={section.chips} poster={poster} />
     </View>
-  );
-  // With no prompt, the bio is the short card's words and the whole card has none left.
-  const moreWords = firstPrompt
-    ? [...(bio ? [<Text key="bio">{bio}</Text>] : []), ...morePrompts.map(prompt)]
-    : [];
-  const more = moreWords.length > 0 || sections.length > 0;
-  const content = keyChips.length > 0 || firstPrompt !== undefined || bio !== null || more;
-  const toggleText = t(whole ? "profile.card.showLess" : "profile.card.showWhole");
+  ));
 
   // The name and the line under it in one column, Block or report beside both,
   // so its 44 pt target puts no gap between them (#644).
@@ -348,113 +348,8 @@ export function ProfileCardView({
       )}
     </View>
   );
-  const photos = front ? (
-    <View
-      style={poster && bleed ? POSTER_BLEED : PHOTO_FRAME}
-      className={poster && !bleed ? "overflow-hidden rounded-3xl" : undefined}
-    >
-      {card.photos.map((photo, at) =>
-        seen.has(photo.id) ? (
-          <View
-            key={photo.id}
-            style={StyleSheet.absoluteFill}
-            className={at === index ? undefined : "opacity-0"}
-            pointerEvents="none"
-            {...(at === index ? {} : BEHIND)}
-          >
-            <PhotoImage
-              id={photo.id}
-              variant="card"
-              blurhash={photo.blurhash}
-              accessibilityLabel={photoLabel(photo, at + 1)}
-              style={{ width: "100%", height: "100%" }}
-              onRefused={onRefused}
-            />
-          </View>
-        ) : null,
-      )}
-      {total > 1 && (
-        <>
-          {/* Where in the photos the card is: the label says it in words. */}
-          <View
-            className="absolute inset-x-0 top-0 flex-row gap-1 p-2"
-            pointerEvents="none"
-            {...DECORATIVE}
-          >
-            {card.photos.map((photo, at) => (
-              <View
-                key={photo.id}
-                className={cn(
-                  "h-1.5 flex-1 rounded-full border border-background",
-                  at === index && "bg-background",
-                )}
-              />
-            ))}
-          </View>
-          {(
-            [
-              [-1, "profile.card.photoPrevious", "left-0"],
-              [1, "profile.card.photoNext", "right-0"],
-            ] as const
-          ).map(([step, label, side]) => {
-            const none = !card.photos[index + step];
-            return (
-              <Pressable
-                key={label}
-                accessibilityRole="button"
-                accessibilityLabel={t(label)}
-                accessibilityState={{ disabled: none }}
-                disabled={none}
-                className={cn("absolute inset-y-0 w-1/2", side)}
-                style={MINIMUM_TARGET}
-                onPress={() => go(step)}
-              />
-            );
-          })}
-        </>
-      )}
-      {poster && <PosterWave />}
-    </View>
-  ) : null;
-  const captions =
-    front?.caption || frontWords ? (
-      <View className={cn("gap-1.5", !poster && "px-6")}>
-        {front?.caption ? <Caption text={t(captionKey(front.caption))} /> : null}
-        {frontWords ? <PhotoDescriptionText text={frontWords} /> : null}
-      </View>
-    ) : null;
-  const details = (
-    <>
-      {keyChips.length > 0 && <Chips chips={keyChips} poster={poster} />}
-      {firstPrompt ? prompt(firstPrompt) : bio ? <Text>{bio}</Text> : null}
-      {more && (
-        <Button
-          variant="outline"
-          accessibilityLabel={toggleText}
-          accessibilityState={{ expanded: whole }}
-          onPress={() => {
-            tap();
-            setOpened(whole ? null : card.accountId);
-          }}
-        >
-          <Text>{toggleText}</Text>
-          <Icon as={whole ? ChevronUp : ChevronDown} size={18} />
-        </Button>
-      )}
-      {whole && moreWords}
-      {whole &&
-        sections.map((section) => (
-          <View key={section.id} className="gap-2">
-            <Text variant="small" role="heading">
-              {t(sectionTitleKey(section.id))}
-            </Text>
-            <Chips chips={section.chips} poster={poster} />
-          </View>
-        ))}
-    </>
-  );
 
-  // Kumpa's poster (the HS design): the name, large, then the photo at the
+  // Kumpa's poster (the HS design): the name, large, then the first photo at the
   // screen's edges where the screen asks for it, and the rest, with no card
   // around them. The design draws the name under the photo; on a phone the
   // queue's floating buttons would cover it there, so it keeps the card's
@@ -463,27 +358,99 @@ export function ProfileCardView({
     return (
       <View className="gap-4">
         {title}
-        {photos}
-        {captions}
-        {content && <View className="gap-4">{details}</View>}
+        {stream}
+        {rest}
       </View>
     );
   }
   return (
     <Card>
       <CardHeader>{title}</CardHeader>
-      {photos}
-      {captions}
-      {content && <CardContent className="gap-4">{details}</CardContent>}
+      <CardContent className="gap-4">
+        {stream}
+        {rest}
+      </CardContent>
     </Card>
   );
 }
 
-const PHOTO_FRAME = { width: "100%", aspectRatio: 3 / 4 } as const;
-// Kumpa's poster in the queue: the photo to the screen's sides, out through the
+/** One prompt and its answer, the answer in the person's own words. */
+function Prompt({
+  answer,
+  className,
+}: {
+  answer: ProfileCard["prompts"][number];
+  className: string;
+}) {
+  const { t } = useT();
+  return (
+    <View className={className}>
+      <Text variant="small">{t(promptKey(answer.key))}</Text>
+      <Text>{answer.answer}</Text>
+    </View>
+  );
+}
+
+/**
+ * One of the card's photos: its blurhash until it comes into sight, then the
+ * photo itself, asked for then and kept (ADR-008). Heard as an image with its
+ * place on the card either way.
+ */
+function CardPhoto({
+  photo,
+  label,
+  onRefused,
+  style,
+  className,
+  wave,
+}: {
+  photo: ProfileCard["photos"][number];
+  label: string;
+  onRefused?: OnRefused;
+  style: ViewStyle;
+  className?: string;
+  wave: boolean;
+}) {
+  const { ref, onLayout, inSight } = useInSight();
+  const fill = { width: "100%", height: "100%" } as const;
+  return (
+    <View
+      ref={ref}
+      onLayout={onLayout}
+      style={style}
+      className={className}
+      testID={`card-photo-${photo.id}`}
+    >
+      {inSight ? (
+        <PhotoImage
+          id={photo.id}
+          variant="card"
+          blurhash={photo.blurhash}
+          accessibilityLabel={label}
+          style={fill}
+          onRefused={onRefused}
+        />
+      ) : (
+        <Image
+          source={null}
+          placeholder={{ blurhash: photo.blurhash }}
+          placeholderContentFit="cover"
+          style={fill}
+          accessible
+          accessibilityRole="image"
+          accessibilityLabel={label}
+        />
+      )}
+      {wave && <PosterWave />}
+    </View>
+  );
+}
+
+const PHOTO_FRAME: ViewStyle = { width: "100%", aspectRatio: 3 / 4 };
+// Kumpa's poster in the queue: the first photo to the screen's sides, out through the
 // queue's 24 pt padding, since a width of 100 % would keep it. Its top stays,
 // under the card's reason label.
-const POSTER_BLEED = { aspectRatio: 3 / 4, marginHorizontal: -24 } as const;
+const POSTER_BLEED: ViewStyle = { aspectRatio: 3 / 4, marginHorizontal: -24 };
 const POSTER_TITLE = "text-[40px] leading-[46px] font-bold";
 const POSTER_TONES = ["bg-chip-1", "bg-chip-2", "bg-chip-3"] as const;
 

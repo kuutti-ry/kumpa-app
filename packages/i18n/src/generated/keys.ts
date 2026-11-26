@@ -944,11 +944,7 @@ export type MessageParams = {
   "profile.card.open": Record<never, never>;
   "profile.card.photoLabel": { "position": number; "total": number };
   "profile.card.photoLabelCaption": { "position": number; "total": number; "caption": string };
-  "profile.card.photoNext": Record<never, never>;
-  "profile.card.photoPrevious": Record<never, never>;
   "profile.card.shared": { "option": string };
-  "profile.card.showLess": Record<never, never>;
-  "profile.card.showWhole": Record<never, never>;
   "profile.card.title": Record<never, never>;
   "profile.clear": Record<never, never>;
   "profile.completeness.age_window": Record<never, never>;

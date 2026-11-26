@@ -8,6 +8,7 @@ import { type ReactNode, type Ref, useCallback, useRef, useState } from "react";
 import { Pressable, ScrollView, useWindowDimensions, View, type ViewStyle } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Backdrop } from "@/components/backdrop";
+import { SightProvider, useSightScroll } from "@/components/InSight";
 import { LoadFailed } from "@/components/LoadFailed";
 import { useSpokenOnIos } from "@/components/Notice";
 import { ScreenHeader } from "@/components/ScreenHeader";
@@ -185,6 +186,8 @@ export function QueueScreen({ star }: { star?: string }) {
   const float = useFloat();
   // The floating bar's height, which the card's end scrolls clear of (#681).
   const [barHeight, setBarHeight] = useState(0);
+  // A card's photos further down are asked for as they scroll into sight (ADR-008).
+  const scroll = useSightScroll();
   const { fontScale } = useWindowDimensions();
   // Android sends its scale as a float: 130 % arrives as 1.2999999523.
   const wordless = !placement.oneHanded && fontScale >= Math.fround(WORDLESS_UNDO_FONT_SCALE);
@@ -239,176 +242,184 @@ export function QueueScreen({ star }: { star?: string }) {
         <ScrollView
           key={match ?? entry?.position ?? "queue"}
           contentContainerClassName="flex-grow gap-4 p-6"
+          onScroll={scroll.onScroll}
+          scrollEventThrottle={scroll.scrollEventThrottle}
         >
-          {view.status === "loading" && (
-            <Text accessibilityLiveRegion="polite">{t("load.loading")}</Text>
-          )}
-          {view.status === "failed" && <LoadFailed error={view.error} onRetry={queue.retry} />}
-          {view.status === "budget" && (
-            <Text ref={focusOnMount} accessibilityLiveRegion="polite">
-              {t("errors.card_budget_exceeded")}
-            </Text>
-          )}
-          {view.status === "gone" && (
-            <>
+          <SightProvider value={scroll.sight}>
+            {view.status === "loading" && (
+              <Text accessibilityLiveRegion="polite">{t("load.loading")}</Text>
+            )}
+            {view.status === "failed" && <LoadFailed error={view.error} onRetry={queue.retry} />}
+            {view.status === "budget" && (
               <Text ref={focusOnMount} accessibilityLiveRegion="polite">
-                {t("queue.gone")}
+                {t("errors.card_budget_exceeded")}
               </Text>
-              {backToStars()}
-            </>
-          )}
-          {entries === null && <Text ref={focusOnMount}>{t("queue.none")}</Text>}
-          {match !== null && (
-            <View className="gap-4">
-              {hello ? (
-                <Hello
-                  name={hello.displayName}
-                  still={still}
-                  you={<OwnPhoto label={t("queue.hello.you")} />}
-                  them={
-                    helloPhoto && (
-                      <CachedPhoto
-                        id={helloPhoto.id}
-                        variant="card"
-                        blurhash={helloPhoto.blurhash}
-                        style={{ width: "100%", height: "100%" }}
-                      />
-                    )
+            )}
+            {view.status === "gone" && (
+              <>
+                <Text ref={focusOnMount} accessibilityLiveRegion="polite">
+                  {t("queue.gone")}
+                </Text>
+                {backToStars()}
+              </>
+            )}
+            {entries === null && <Text ref={focusOnMount}>{t("queue.none")}</Text>}
+            {match !== null && (
+              <View className="gap-4">
+                {hello ? (
+                  <Hello
+                    name={hello.displayName}
+                    still={still}
+                    you={<OwnPhoto label={t("queue.hello.you")} />}
+                    them={
+                      helloPhoto && (
+                        <CachedPhoto
+                          id={helloPhoto.id}
+                          variant="card"
+                          blurhash={helloPhoto.blurhash}
+                          style={{ width: "100%", height: "100%" }}
+                        />
+                      )
+                    }
+                  />
+                ) : (
+                  <Text ref={focusOnMount} variant="h2" accessibilityLiveRegion="polite">
+                    {t("queue.match.title")}
+                  </Text>
+                )}
+                <Button
+                  size={hello ? "lg" : "default"}
+                  className={
+                    lime ? "bg-accent active:bg-accent/85 web:hover:bg-accent/90" : undefined
+                  }
+                  accessibilityLabel={t(hello ? "queue.hello.open" : "queue.match.open")}
+                  onPress={() => {
+                    tap();
+                    away.current = true;
+                    router.push(`/chats/${match}`);
+                  }}
+                >
+                  <Text className={lime ? "text-accent-foreground" : undefined}>
+                    {t(hello ? "queue.hello.open" : "queue.match.open")}
+                  </Text>
+                  {hello && (
+                    <Icon as={ArrowRight} className={lime ? "text-accent-foreground" : undefined} />
+                  )}
+                </Button>
+                {star ? (
+                  backToStars()
+                ) : (
+                  <Button
+                    variant="outline"
+                    onPress={() => {
+                      tap();
+                      queue.closeMatch();
+                    }}
+                  >
+                    {t("queue.match.continue")}
+                  </Button>
+                )}
+              </View>
+            )}
+            {match === null && current && (
+              <View className="gap-3">
+                <View className="flex-row flex-wrap items-center justify-between gap-2">
+                  <Text
+                    ref={focusOnMount}
+                    variant="small"
+                    className="rounded-full bg-secondary px-3 py-1 text-secondary-foreground"
+                  >
+                    {current.entry.relaxedField
+                      ? t("queue.reason.relaxedField", {
+                          field: t(fieldLabelKey(current.entry.relaxedField)),
+                        })
+                      : t(REASON[current.entry.reason as Exclude<QueueReason, "relaxed">])}
+                  </Text>
+                </View>
+                {(current.entry.notAnswered ?? []).map((field) => (
+                  <Text key={field} variant="muted">
+                    {t("queue.notAnswered", { field: t(fieldLabelKey(field)) })}
+                  </Text>
+                ))}
+                {current.entry.relaxedField && current.entry.decision === null && (
+                  <Button
+                    variant="ghost"
+                    className="self-start"
+                    disabled={queue.busy}
+                    accessibilityLabel={t("queue.relaxed.undo", {
+                      field: t(fieldLabelKey(current.entry.relaxedField)),
+                    })}
+                    onPress={() => {
+                      tap();
+                      const field = current.entry.relaxedField;
+                      if (field) void queue.unrelax(current.day, field);
+                    }}
+                  >
+                    {t("queue.relaxed.undo", {
+                      field: t(fieldLabelKey(current.entry.relaxedField)),
+                    })}
+                  </Button>
+                )}
+                {current.entry.decision !== null && (
+                  <Text>{t(REVISIT[current.entry.decision])}</Text>
+                )}
+                <ProfileCardView
+                  bleed={poster}
+                  card={current.entry.card}
+                  distance={current.entry.distance}
+                  // No block or report while a decision is on its way: one finishing
+                  // after the next card took this one's place would never take the
+                  // blocked person off, and Undo would bring them back (ADR-030 §11).
+                  onGone={
+                    queue.busy ? undefined : () => queue.drop(current.day, current.entry.position)
+                  }
+                  onRefused={(code) =>
+                    setRefused({
+                      day: current.day,
+                      position: current.entry.position,
+                      code: code ?? "",
+                    })
                   }
                 />
-              ) : (
-                <Text ref={focusOnMount} variant="h2" accessibilityLiveRegion="polite">
-                  {t("queue.match.title")}
-                </Text>
-              )}
-              <Button
-                size={hello ? "lg" : "default"}
-                className={
-                  lime ? "bg-accent active:bg-accent/85 web:hover:bg-accent/90" : undefined
-                }
-                accessibilityLabel={t(hello ? "queue.hello.open" : "queue.match.open")}
-                onPress={() => {
-                  tap();
-                  away.current = true;
-                  router.push(`/chats/${match}`);
-                }}
-              >
-                <Text className={lime ? "text-accent-foreground" : undefined}>
-                  {t(hello ? "queue.hello.open" : "queue.match.open")}
-                </Text>
-                {hello && (
-                  <Icon as={ArrowRight} className={lime ? "text-accent-foreground" : undefined} />
+                {refused?.day === current.day && refused.position === current.entry.position && (
+                  <Text variant="muted" accessibilityLiveRegion="polite">
+                    {t(photoRefusalKey(refused.code))}
+                  </Text>
                 )}
-              </Button>
-              {star ? (
-                backToStars()
-              ) : (
+              </View>
+            )}
+            {/* A card of the Later list, decided or blocked: the way back is all that stands, and the reader is taken to it (#581). */}
+            {star &&
+              match === null &&
+              !entry &&
+              entries &&
+              view.status === "ready" &&
+              backToStars(focusOnMount)}
+            {/* The queue's end (ADR-062 §11): the line the reader is taken to, the way into the Later list while it shows somebody (#681), what may be relaxed for today (#99, ADR-042), and the same way into What you seek for everybody. */}
+            {!star && match === null && !entry && entries && view.status === "ready" && (
+              <>
+                <Text ref={focusOnMount}>{t("queue.done")}</Text>
+                <StarsButton replace />
+                <ShortPool
+                  day={view.queue.day}
+                  busy={queue.busy}
+                  onRelax={(relaxation) => queue.relax(view.queue.day, relaxation)}
+                  onUndo={(field) => queue.unrelax(view.queue.day, field)}
+                />
                 <Button
                   variant="outline"
                   onPress={() => {
                     tap();
-                    queue.closeMatch();
+                    router.push(SEEK_PATH);
                   }}
                 >
-                  {t("queue.match.continue")}
+                  {t("profile.seek.title")}
                 </Button>
-              )}
-            </View>
-          )}
-          {match === null && current && (
-            <View className="gap-3">
-              <View className="flex-row flex-wrap items-center justify-between gap-2">
-                <Text
-                  ref={focusOnMount}
-                  variant="small"
-                  className="rounded-full bg-secondary px-3 py-1 text-secondary-foreground"
-                >
-                  {current.entry.relaxedField
-                    ? t("queue.reason.relaxedField", {
-                        field: t(fieldLabelKey(current.entry.relaxedField)),
-                      })
-                    : t(REASON[current.entry.reason as Exclude<QueueReason, "relaxed">])}
-                </Text>
-              </View>
-              {(current.entry.notAnswered ?? []).map((field) => (
-                <Text key={field} variant="muted">
-                  {t("queue.notAnswered", { field: t(fieldLabelKey(field)) })}
-                </Text>
-              ))}
-              {current.entry.relaxedField && current.entry.decision === null && (
-                <Button
-                  variant="ghost"
-                  className="self-start"
-                  disabled={queue.busy}
-                  accessibilityLabel={t("queue.relaxed.undo", {
-                    field: t(fieldLabelKey(current.entry.relaxedField)),
-                  })}
-                  onPress={() => {
-                    tap();
-                    const field = current.entry.relaxedField;
-                    if (field) void queue.unrelax(current.day, field);
-                  }}
-                >
-                  {t("queue.relaxed.undo", { field: t(fieldLabelKey(current.entry.relaxedField)) })}
-                </Button>
-              )}
-              {current.entry.decision !== null && <Text>{t(REVISIT[current.entry.decision])}</Text>}
-              <ProfileCardView
-                bleed={poster}
-                card={current.entry.card}
-                distance={current.entry.distance}
-                // No block or report while a decision is on its way: one finishing
-                // after the next card took this one's place would never take the
-                // blocked person off, and Undo would bring them back (ADR-030 §11).
-                onGone={
-                  queue.busy ? undefined : () => queue.drop(current.day, current.entry.position)
-                }
-                onRefused={(code) =>
-                  setRefused({
-                    day: current.day,
-                    position: current.entry.position,
-                    code: code ?? "",
-                  })
-                }
-              />
-              {refused?.day === current.day && refused.position === current.entry.position && (
-                <Text variant="muted" accessibilityLiveRegion="polite">
-                  {t(photoRefusalKey(refused.code))}
-                </Text>
-              )}
-            </View>
-          )}
-          {/* A card of the Later list, decided or blocked: the way back is all that stands, and the reader is taken to it (#581). */}
-          {star &&
-            match === null &&
-            !entry &&
-            entries &&
-            view.status === "ready" &&
-            backToStars(focusOnMount)}
-          {/* The queue's end (ADR-062 §11): the line the reader is taken to, the way into the Later list while it shows somebody (#681), what may be relaxed for today (#99, ADR-042), and the same way into What you seek for everybody. */}
-          {!star && match === null && !entry && entries && view.status === "ready" && (
-            <>
-              <Text ref={focusOnMount}>{t("queue.done")}</Text>
-              <StarsButton replace />
-              <ShortPool
-                day={view.queue.day}
-                busy={queue.busy}
-                onRelax={(relaxation) => queue.relax(view.queue.day, relaxation)}
-                onUndo={(field) => queue.unrelax(view.queue.day, field)}
-              />
-              <Button
-                variant="outline"
-                onPress={() => {
-                  tap();
-                  router.push(SEEK_PATH);
-                }}
-              >
-                {t("profile.seek.title")}
-              </Button>
-            </>
-          )}
-          {/* The card's end scrolls clear of the buttons floating over it (#681). */}
-          {floating && <View testID="queue-float-room" style={{ height: barHeight }} />}
+              </>
+            )}
+            {/* The card's end scrolls clear of the buttons floating over it (#681). */}
+            {floating && <View testID="queue-float-room" style={{ height: barHeight }} />}
+          </SightProvider>
         </ScrollView>
         {floating && (
           <View

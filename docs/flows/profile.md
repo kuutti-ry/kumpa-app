@@ -11,6 +11,7 @@ apps/mobile/src/features/profile/PlaceScreen.tsx
 apps/mobile/src/features/profile/gender/GenderScreen.tsx
 apps/mobile/src/features/profile/CardPreviewScreen.tsx
 apps/mobile/src/features/profile/ProfileCardView.tsx
+apps/mobile/src/components/InSight.tsx
 apps/mobile/src/features/profile/later/LaterFieldScreen.tsx
 apps/mobile/src/features/profile/seek/SeekScreen.tsx
 apps/mobile/src/features/profile/DealBreakerRows.tsx
@@ -176,10 +177,10 @@ flowchart TB
 ```mermaid
 flowchart TB
   accTitle: The card as others see it
-  accDescr: From the eye on the profile, the person sees their own card, built the way People builds it, with nothing recorded. What it still lacks stands above it. The card is short first, and the whole card opens in place under it.
+  accDescr: From the eye on the profile, the person sees their own card, built the way People builds it, with nothing recorded. What it still lacks stands above it. The card is one scroll, nothing opened or tapped through: the name and the first photo with the key answers, then each further photo with the person's own words after it, and the rest of the answers at its end. A photo is asked for once it comes into sight.
   subgraph person["The person"]
     s34(["Taps the eye, See your card"])
-    s41{"Shows the whole card, taps through the photos, or goes back?"}
+    s41{"Scrolls down the card, or goes back?"}
     s44(["Goes back to the profile"])
   end
   subgraph app["The app"]
@@ -187,9 +188,9 @@ flowchart TB
     s37{"Complete?"}
     s38["Lists Before your card can be shown, and what is missing"]
     s39["Says: This is what others see."]
-    s40["Shows the short card: the name and age, one line, the photos, the key answers, one answer in words"]
-    s42["Opens the whole card in place: the bio, the other answers to questions, the rest under the profile's sections"]
-    s43["Shows the next or the previous photo, and says which"]
+    s40["Shows the card's top: the name and age, one line, the first photo, the key answers"]
+    s42["Shows what the scroll brings: each further photo with an answer in words after it, then the rest under the profile's sections"]
+    s43["Asks for a photo once it comes into sight, its blurhash until then"]
   end
   subgraph api["The API"]
     s36["Builds the card the way People builds it, recording nothing"]
@@ -202,9 +203,8 @@ flowchart TB
   s38 --> s40
   s39 --> s40
   s40 --> s41
-  s41 -->|"Show the whole card"| s42
-  s42 --> s41
-  s41 -->|"a half of the photo"| s43
+  s41 -->|"down"| s42
+  s42 --> s43
   s43 --> s41
   s41 -->|"back"| s44
 ```
@@ -217,10 +217,10 @@ flowchart TB
 37. Is the profile complete? No: 38. Yes: 39.
 38. Above the card, the app lists "Before your card can be shown" and what is missing (40).
 39. The app says "This is what others see." (40)
-40. The app shows the short card, as People shows it: the name with the age; one line with the gender, the identity label and the home, to which a card in People adds how far the person lives; the photos, the main one first; the key answers as chips, what one is here for and the fields a deal-breaker can be set on, each in the person's own words after its icon; and the first answer to a question, or the bio where there is none. A photo the API will not show is said under the card, never left as a silent gap. On somebody else's card, a hobby or a language both people gave is filled and in bold, heard as shared; the person's own preview has nobody to compare with.
-41. The person chooses. "Show the whole card", there while the card holds more: 42. The right or the left half of the photo: 43. Back, "Back to your profile": 44.
-42. The whole card opens in place under the short one: the bio, the other answers to questions, and the rest of the answers as chips under the profile's own section titles, a field and a work that read the same as one chip. A school and a guild stand under "Work and education", only here and never on the short card; on somebody else's card one both people named is filled and in bold like a shared hobby, "Another guild" never. "Show less" closes it. Then 41.
-43. The next or the previous photo comes to the front, a bar per photo above them saying where, and a screen reader hears which photo it is. A photo is asked for only when it first comes to the front. Then 41.
+40. The app shows the card from its top, as People shows it: the name with the age; one line with the gender, the identity label and the home, to which a card in People adds how far the person lives; the first photo, the main one; and the key answers as chips, what one is here for and the fields a deal-breaker can be set on, each in the person's own words after its icon. A photo the API will not show is said under the card, never left as a silent gap. On somebody else's card, a hobby or a language both people gave is filled and in bold, heard as shared; the person's own preview has nobody to compare with.
+41. The person chooses. Down the card: 42. Back, "Back to your profile": 44.
+42. The scroll brings the rest of the same card, with nothing to open or tap through: each further photo with the next of the person's own words after it, the first answer to a question, then the bio or its ready line, then the other answers to questions; what is left of either once the other runs out, one after another; and at the end the rest of the answers as chips under the profile's own section titles, a field and a work that read the same as one chip. A school and a guild stand under "Work and education", never among the key answers; on somebody else's card one both people named is filled and in bold like a shared hobby, "Another guild" never. Then 43.
+43. A photo is asked for only when it first comes into sight on the screen, its blurhash standing in until then, and it stays once shown; a screen reader hears each photo with its place, "Photo 2 of 5", either way. Then 41.
 44. The person goes back to the profile.
 
 ## Part 4: the later questions
@@ -508,3 +508,4 @@ flowchart TB
 - 2026-11-15 (#677, PR #682): "University" and "Guild or student association" join "Work and education" and the education's later question; both show on the whole card, a shared one filled and in bold. A guild's name leaves out its school's before its own.
 - 2026-11-18 (#681): the filters are asked on every read of the Later list, which took the star's place.
 - 2026-11-19 (#681): a finished profile needs no words: a bio, a ready line or answered questions leave what the card still needs, and the line beside the bio and Questions goes; onboarding offers them once instead.
+- 2026-11-26 (#752): the card is one scroll, its photos between the person's own words and the rest of the answers at its end, with no gallery to tap through and no whole card to open; a photo is asked for once it comes into sight.
