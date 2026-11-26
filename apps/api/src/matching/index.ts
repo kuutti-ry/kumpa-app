@@ -3,6 +3,17 @@
 // people; the queue and its days (#96, #502), the stars (#575) and their
 // rules are the rest.
 
+// The anchored like (#463, ADR-077): a part of a card, kept as a reference; the
+// chat keeps a match's and draws them as the queue does, the profile reads the parts.
+export {
+  type AnchorRow,
+  anchorColumns,
+  anchorOf,
+  type CardParts,
+  exportedAnchor,
+  type PartsOf,
+  partOn,
+} from "./anchor.ts";
 // The queue's builder reads every person's deal-breakers as the person's own read does (#87).
 export {
   type DealBreakerRow,

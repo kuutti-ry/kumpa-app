@@ -277,7 +277,7 @@ describe("reading the queue", () => {
     accountId: string,
   ) {
     const deps = await depsOn(ctx.client);
-    return readQueue(deps, MATCHES, queue, accountId, cardOf);
+    return readQueue(deps, MATCHES, { ...queue, parts: FITS.parts }, accountId, cardOf);
   }
 
   const everybodyFits: Queue["fits"] = async (_db, _accountId, ids) => new Set(ids);
@@ -921,6 +921,7 @@ describe("erasure and the export", () => {
             secondPass: false,
             distance: "nearby",
             distanceInWords: "Nearby",
+            anchor: null,
           },
         ],
       },
@@ -1244,12 +1245,13 @@ describe("the filters on a decision (ADR-062 §8)", () => {
   /** A queue that says who was asked, and that the card fits or does not. */
   function asking(fit: boolean) {
     const asked: { db: Queryable; ids: readonly string[] }[] = [];
-    const queue: Pick<Queue, "fits" | "later"> = {
+    const queue: Pick<Queue, "fits" | "later" | "parts"> = {
       fits: async (db, _accountId, ids) => {
         asked.push({ db, ids });
         return new Set(fit ? ids : []);
       },
       later: FITS.later,
+      parts: FITS.parts,
     };
     return { asked, queue };
   }

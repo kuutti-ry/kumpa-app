@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ExportedAnchor, LikedPart } from "./anchor.ts";
 import { ConversationContacts, ExportedContactShare } from "./contact.ts";
 import {
   EXPORT_DESCRIPTION_TEXT_MAX,
@@ -183,6 +184,17 @@ export const ConversationDetail = ConversationSummary.extend({
    * Report only then.
    */
   reportable: z.boolean(),
+  /**
+   * The parts of each other's cards the two likes of the match named (#463,
+   * ADR-077), shown above the first message: `mine`, what the caller liked of the
+   * counterpart's, and `theirs`, what the counterpart liked of the caller's. Each
+   * drawn from its profile as it stands, null where the like named none or the
+   * part has gone since. They are no messages. Absent on an older API.
+   */
+  anchors: z
+    .object({ mine: LikedPart.nullable(), theirs: LikedPart.nullable() })
+    .strict()
+    .optional(),
 }).meta({ id: "ConversationDetail" });
 export type ConversationDetail = z.infer<typeof ConversationDetail>;
 
@@ -351,6 +363,8 @@ export const ExportedConversation = z
       .max(1_000_000),
     /** The person's own shares of a contact here (#103), oldest first: the record, never the value. */
     shares: z.array(ExportedContactShare).max(10_000),
+    /** The part of the counterpart's card the person's own like of the match named (#463, ADR-077); null with none. The counterpart's like of the person is theirs. */
+    liked: ExportedAnchor.nullable(),
     /** The counterpart's: when, what kind and how long, never the words (the caption's length for a photo). */
     theirs: z
       .array(z.object({ at: z.iso.datetime(), kind: MessageKind, length: z.int().min(0) }))

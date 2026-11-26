@@ -11,6 +11,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { account } from "./identity.ts";
+import { likeAnchorKind } from "./matching.ts";
 import { photo } from "./media.ts";
 
 /**
@@ -83,6 +84,13 @@ export const conversationParticipant = pgTable(
     side: conversationSide("side").notNull(),
     readUpTo: integer("read_up_to").notNull().default(0),
     joinedAt: timestamp("joined_at", { withTimezone: true }).notNull().defaultNow(),
+    // The part of the other side's card this side's like of the match named
+    // (#463, ADR-077), copied from the like when the match was made, since a
+    // queue's day is kept a year (ADR-062 §13); as on queue_entry. Cleared at
+    // either person's erasure.
+    anchorKind: likeAnchorKind("anchor_kind"),
+    anchorRef: text("anchor_ref"),
+    anchorField: text("anchor_field"),
   },
   (table) => [
     uniqueIndex("conversation_participant_side_idx").on(table.conversationId, table.side),
@@ -91,6 +99,11 @@ export const conversationParticipant = pgTable(
     // The list: a person's conversations.
     index("conversation_participant_account_id_idx").on(table.accountId),
     check("conversation_participant_read_check", sql`${table.readUpTo} >= 0`),
+    check(
+      "conversation_participant_anchor_check",
+      sql`(${table.anchorKind} IS NULL OR ${table.anchorKind} = 'bio') = (${table.anchorRef} IS NULL)
+          AND (${table.anchorKind} IS NOT DISTINCT FROM 'shared') = (${table.anchorField} IS NOT NULL)`,
+    ),
   ],
 );
 

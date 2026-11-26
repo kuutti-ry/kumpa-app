@@ -7,7 +7,7 @@ export { DealBreakerFieldScreen } from "./DealBreakerFieldScreen";
 export { profileErrorText } from "./errorText";
 export { GenderChips, IdentityLabelChips } from "./gender/GenderChips";
 export { GenderScreen } from "./gender/GenderScreen";
-export { fieldLabelKey, optionKey } from "./keys";
+export { fieldLabelKey, optionKey, partWords } from "./keys";
 export { LaterFieldScreen } from "./later/LaterFieldScreen";
 export { PlaceChoice, PlacePicker } from "./PlaceEditor";
 export { PlaceScreen } from "./PlaceScreen";

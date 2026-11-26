@@ -10,6 +10,7 @@ import { AppError } from "../lib/errors.ts";
 import { finnishDay } from "../lib/finnish-day.ts";
 import { matchingConfigNumber } from "../lib/matching-config.ts";
 import { wasShown } from "../media/index.ts";
+import type { PartsOf } from "./anchor.ts";
 import {
   addPlaces,
   budgetsOf,
@@ -21,6 +22,7 @@ import {
   notFound,
   type Place,
   type QueueDeps,
+  withLikedYour,
 } from "./queue.ts";
 
 // The stars (#575, ADR-064): somebody saved to come back to, put by Later since
@@ -50,6 +52,8 @@ export type Stars = {
   ) => Promise<ReadonlySet<string>>;
   place: (accountId: string, candidateId: string) => Promise<Place | null>;
   people: (accountId: string) => Promise<StarredPerson[]>;
+  /** What of a card a like may name (#463, ADR-077), as the queue's `parts`: a card opened from the list says what a waiting like named. */
+  parts: PartsOf;
 };
 
 /**
@@ -131,7 +135,7 @@ async function entryOfCandidate(
 export async function openStar(
   deps: QueueDeps,
   matches: Pick<Matches, "yourTurn">,
-  stars: Pick<Stars, "shown" | "place">,
+  stars: Pick<Stars, "shown" | "place" | "parts">,
   cardOf: CardOf,
   dealBreakers: readonly DealBreaker[],
   input: { accountId: string; id: string },
@@ -155,7 +159,13 @@ export async function openStar(
     row = await entryOfCandidate(deps.db, accountId, day, candidateId);
   }
   if (!row) throw notFound();
-  const entries = await entriesOf(accountId, [row], cardOf, dealBreakers);
+  const entries = await withLikedYour(
+    deps.db,
+    stars.parts,
+    accountId,
+    day,
+    await entriesOf(accountId, [row], cardOf, dealBreakers),
+  );
   if (entries.length === 0) throw notFound();
   return { day, entries, ...(await budgetsOf(deps.db, matches, accountId, day)) };
 }

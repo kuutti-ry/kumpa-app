@@ -2951,3 +2951,99 @@ describe("a conversation's More (#351)", () => {
     expect(router.dismissTo).not.toHaveBeenCalled();
   });
 });
+
+describe("what the two likes named (#463, ADR-077)", () => {
+  const THUMB = {
+    id: PHOTO_ID as never,
+    blurhash: BLURHASH,
+    width: 1200,
+    height: 1600,
+    caption: null,
+    description: null,
+  };
+  /** The test ids and the texts inside the messages' scroll, top to bottom. */
+  const inScroll = () => {
+    const found: string[] = [];
+    const walk = (node: unknown) => {
+      if (typeof node === "string") found.push(node);
+      else if (Array.isArray(node)) node.forEach(walk);
+      else if (node && typeof node === "object") {
+        const { props, children } = node as { props?: { testID?: unknown }; children?: unknown };
+        if (typeof props?.testID === "string") found.push(`#${props.testID}`);
+        walk(children);
+      }
+    };
+    walk(screen.getByTestId("messages").children);
+    return found;
+  };
+  const anchored = (anchors: ConversationDetail["anchors"]) => detail({ anchors });
+
+  it("says each like's part above the first message, no message itself, each line heard as its words", async () => {
+    const calls = conversation(
+      anchored({
+        mine: { kind: "photo", photo: THUMB },
+        theirs: { kind: "prompt", prompt: "sunday" },
+      }),
+      [[message(1, "theirs", "Moi", DAY_1)]],
+    );
+    await renderWithTheme(<ConversationScreen id={ID} />);
+    await screen.findByLabelText(`Sanna, ${timeOf("en", DAY_1)}, Moi`);
+    const mine = screen.getByTestId("liked-part-mine");
+    const theirs = screen.getByTestId("liked-part-theirs");
+    expect([mine.props.accessible, mine.props.accessibilityLabel]).toEqual([
+      true,
+      "You liked their photo",
+    ]);
+    expect([theirs.props.accessible, theirs.props.accessibilityLabel]).toEqual([
+      true,
+      "They liked your answer to: My ideal Sunday",
+    ]);
+    const order = inScroll();
+    expect(order.indexOf("#liked-parts")).toBeGreaterThanOrEqual(0);
+    expect(order.indexOf("#liked-parts")).toBeLessThan(order.indexOf("Moi"));
+    // The photo is the other person's, in the small size.
+    await waitFor(() =>
+      expect(calls.map((call) => call.path)).toContain(`/photos/${PHOTO_ID}/thumb`),
+    );
+    noProblems();
+  });
+
+  it("says only the part there is when the other like named nothing, with no photo to sign", async () => {
+    const calls = conversation(anchored({ mine: null, theirs: { kind: "bio" } }), [[]]);
+    await renderWithTheme(<ConversationScreen id={ID} />);
+    expect(await screen.findByLabelText("They liked your bio")).toBeTruthy();
+    expect(screen.queryByTestId("liked-part-mine")).toBeNull();
+    expect(calls.some((call) => call.path.startsWith("/photos/"))).toBe(false);
+  });
+
+  it.each([
+    ["no part on either side", { mine: null, theirs: null }],
+    ["an API that names none", undefined],
+  ] as const)("says nothing with %s", async (_, anchors) => {
+    conversation(anchored(anchors), [[message(1, "theirs", "Moi", DAY_1)]]);
+    await renderWithTheme(<ConversationScreen id={ID} />);
+    await screen.findByLabelText(`Sanna, ${timeOf("en", DAY_1)}, Moi`);
+    expect(screen.queryByTestId("liked-parts")).toBeNull();
+  });
+
+  it("keeps the parts at the very start: only once nothing earlier is left to load", async () => {
+    const newest = Array.from({ length: 50 }, (_, i) =>
+      message(51 - i, i % 2 === 0 ? "theirs" : "mine", `Viesti ${51 - i}`),
+    );
+    api((call) => {
+      if (call.method === "GET" && call.path === `/conversations/${ID}`)
+        return json(anchored({ mine: { kind: "bio" }, theirs: null }));
+      if (call.method === "GET" && call.query.includes("before=2"))
+        return json({ messages: [message(1, "theirs", "Yksi")] });
+      if (call.method === "GET") return json({ messages: newest });
+      return new Response(null, { status: 204 });
+    });
+    await renderWithTheme(<ConversationScreen id={ID} />);
+    await screen.findByLabelText(`Sanna, ${timeOf("en", DAY_2)}, Viesti 51`);
+    expect(screen.queryByTestId("liked-parts")).toBeNull();
+    await press("Earlier messages");
+    expect(screen.getByLabelText("You liked their bio")).toBeTruthy();
+    const order = inScroll();
+    expect(order.indexOf("#liked-parts")).toBeLessThan(order.indexOf("Yksi"));
+  });
+});

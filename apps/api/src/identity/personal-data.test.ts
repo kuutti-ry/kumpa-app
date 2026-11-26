@@ -95,9 +95,10 @@ const REGISTER: Record<string, Entry> = {
   },
   conversation_participant: {
     erasure: "stays",
-    why: "account_id goes null: the counterpart reads a deleted user (#348).",
+    why: "account_id goes null: the counterpart reads a deleted user (#348). The parts the two likes named go from both rows (#463).",
     by: "eraseConversationsOf",
     stays: "account_id conversation_id id joined_at read_up_to side",
+    cleared: "anchor_field anchor_kind anchor_ref",
     exported: ["conversations"],
   },
   email_code: {

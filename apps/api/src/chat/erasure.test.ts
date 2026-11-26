@@ -198,6 +198,7 @@ describe("the chat in an erasure and an export", () => {
           { at: expect.any(String), kind: "text", body: "Kahvilla?", photo: null },
         ],
         shares: [],
+        liked: null,
         theirs: [{ at: expect.any(String), kind: "text", length: [...theirs].length }],
       },
     ]);
