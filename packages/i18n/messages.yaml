@@ -8172,7 +8172,7 @@ pond.counter.small:
 # --- The gate card (#500, ADR-060): whether matching is open for the person ---
 pond.gate.incomplete:
   en: "Matching opens for finished profiles. Yours still lacks something."
-  description: "Gate card when the person's profile or onboarding is not complete. The profile screen says what is missing; this only says that something is."
+  description: "Gate card when the person's profile or onboarding is not complete. Under it the card lists what the profile lacks, a line each in the profile screen's words (profile.completeness.*), then the button to the profile (#745); it stands alone when that list cannot be read or names nothing, as when what is missing is not the profile's."
   fi: "Seuranhaku avautuu valmiille profiileille. Sinun profiilistasi puuttuu vielä jotakin."
   sv: "Matchningen öppnar för färdiga profiler. I din saknas ännu något."
   machine: { fi: true, sv: true }
