@@ -1,5 +1,6 @@
 import type { PondCounterResponse } from "@kuutti/schema";
-import { act, fireEvent } from "@testing-library/react-native";
+import { act, fireEvent, within } from "@testing-library/react-native";
+import { useLocales } from "expo-localization";
 import { FAILED_TO_LOAD } from "@/test/failed";
 import { renderWithTheme } from "@/test/render";
 import { PondCard } from "./PondCard";
@@ -49,6 +50,33 @@ async function cardAnswering(body: PondCounterResponse) {
     .map((node) => node.props.children);
   return { screen, lines };
 }
+
+// The heading's words never break in the middle (#757): Android drew the
+// Finnish at the largest text as "Ihmiset Kumpa-so" over "velluksessa". Once
+// the phone breaks a line inside a word, the heading is drawn as its words.
+describe("PondCard's heading at the largest text (#757)", () => {
+  afterEach(() => (useLocales as jest.Mock).mockReturnValue([{ languageTag: "en-US" }]));
+
+  it.each([
+    ["fi-FI", "Ihmiset Kumpa-sovelluksessa", ["Ihmiset ", "Kumpa-", "sovelluksessa"]],
+    ["sv-FI", "Människor på Kumpa", ["Människor ", "på ", "Kumpa"]],
+    ["en-US", HEADING, ["People ", "on ", "Kumpa"]],
+  ])(
+    "keeps every word whole on a %s phone, read as one heading",
+    async (languageTag, heading, words) => {
+      (useLocales as jest.Mock).mockReturnValue([{ languageTag }]);
+      const { screen } = await cardAnswering(counter({ finished: 477, seeks: BAR }));
+      await fireEvent(screen.getByText(heading), "textLayout", {
+        nativeEvent: { lines: [{ text: heading.slice(0, -4) }, { text: heading.slice(-4) }] },
+      });
+      const title = screen.getByRole("heading", { name: heading });
+      expect(words.map((word) => within(title).getByText(word).props.adjustsFontSizeToFit)).toEqual(
+        words.map(() => true),
+      );
+      expect(screen.queryByText(heading)).toBeNull();
+    },
+  );
+});
 
 describe("PondCard", () => {
   it("says the number in one sentence under one heading that names no area, and the bar right under it", async () => {
