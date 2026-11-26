@@ -8,16 +8,19 @@ import {
   type ConversationState,
   type ConversationSummary,
   type ConversationThumb,
+  type ExportedAnchor,
   type ExportedConversation,
   type ExportedSentPhoto,
+  type LikeAnchor,
   MESSAGE_PREVIEW_LENGTH,
 } from "@kuutti/schema";
 import { AppError } from "../lib/errors.ts";
 import { DAY_MS } from "../lib/finnish-day.ts";
 import type { Logger } from "../lib/logger.ts";
 import { matchingConfigNumber, matchingConfigNumbers } from "../lib/matching-config.ts";
+import { anchorColumns, anchorOf, partOn } from "../matching/index.ts";
 import { issueConversationThumb, type MediaDeps } from "../media/index.ts";
-import { ageInYears } from "../profile/index.ts";
+import { ageInYears, cardParts } from "../profile/index.ts";
 import * as repo from "./repo.ts";
 
 // The conversations a person is in (#348, ADR-031): the list with the
@@ -221,7 +224,35 @@ export async function readConversation(
     contacts,
     // Somebody to report, and the window open (ADR-030 §12).
     reportable: row.counterpartId !== null && reportWindowHolds(row.closedAt, deps.now(), days),
+    anchors: await anchorsOf(deps.db, accountId, row),
   };
+}
+
+/**
+ * The parts the two likes of the match named (#463, ADR-077), shown above the
+ * first message: what the caller liked of the other person's card, and what the
+ * other liked of the caller's, each drawn from its owner's profile as the liker's
+ * card of it would show it now, so a part gone since is none. An ended
+ * conversation shows neither, as it names nobody; a block or an erasure leaves no
+ * card to draw from. Read through the caller's own participant row (rule 6).
+ */
+async function anchorsOf(
+  db: Queryable,
+  accountId: string,
+  row: repo.ConversationRow,
+): Promise<NonNullable<ConversationDetail["anchors"]>> {
+  const counterpartId = row.counterpartId;
+  if (visibleState(row).state === "closed" || counterpartId === null) {
+    return { mine: null, theirs: null };
+  }
+  const found = await repo.findAnchors(db, accountId, row.id);
+  const mine = found ? anchorOf(found.mine) : null;
+  const theirs = found ? anchorOf(found.theirs) : null;
+  const [ofThem, ofMe] = await Promise.all([
+    mine ? cardParts(db, { viewerAccountId: accountId, subjectAccountId: counterpartId }) : null,
+    theirs ? cardParts(db, { viewerAccountId: counterpartId, subjectAccountId: accountId }) : null,
+  ]);
+  return { mine: partOn(ofThem, mine), theirs: partOn(ofMe, theirs) };
 }
 
 /** Whether the caller may read the conversation: theirs, and not hidden from them by their own block. */
@@ -340,7 +371,13 @@ export const conversationsOnTurn = repo.countOnTurn;
  */
 export async function openConversation(
   tx: Queryable,
-  input: { first: string; second: string; at: Date },
+  input: {
+    first: string;
+    second: string;
+    at: Date;
+    /** The parts each person's like named (#463, ADR-077), kept on their own participant row. */
+    anchors?: { first: LikeAnchor | null; second: LikeAnchor | null };
+  },
 ): Promise<string> {
   // shortcut: a send takes no pair's lock, so one that brings the archived
   // conversation back between the caller's read and this close lands in a closed
@@ -360,9 +397,17 @@ export async function openConversation(
   const id = rows[0]?.id;
   if (!id) throw new Error("conversation not written");
   await tx.query(
-    `INSERT INTO conversation_participant (conversation_id, account_id, side, joined_at)
-     VALUES ($1, $2, 'a', $4), ($1, $3, 'b', $4)`,
-    [id, input.first, input.second, input.at],
+    `INSERT INTO conversation_participant
+       (conversation_id, account_id, side, joined_at, anchor_kind, anchor_ref, anchor_field)
+     VALUES ($1, $2, 'a', $4, $5, $6, $7), ($1, $3, 'b', $4, $8, $9, $10)`,
+    [
+      id,
+      input.first,
+      input.second,
+      input.at,
+      ...anchorColumns(input.anchors?.first ?? null),
+      ...anchorColumns(input.anchors?.second ?? null),
+    ],
   );
   return id;
 }
@@ -444,6 +489,9 @@ export async function eraseConversationsOf(
     how: "erasure",
     at: deps.now(),
   });
+  // The parts the two likes named (#463) point into the person's card and the
+  // counterpart's: both rows' go, as a conversation closed by erasure shows none.
+  await repo.clearAnchorsOf(deps.db, accountId);
   const contacts = await repo.deleteContactsOf(deps.db, accountId);
   const unlinked = await repo.unlinkParticipant(deps.db, accountId);
   const emptied = await repo.deleteUnlinkedConversations(deps.db, unlinked);
@@ -459,8 +507,12 @@ export async function eraseConversationsOf(
 export async function exportConversations(
   db: Queryable,
   accountId: string,
-  /** A sent photo's entry by its id (#350), from the media slice's export; null when it has none. */
-  sentPhoto: (photoId: string) => ExportedSentPhoto | null,
+  words: {
+    /** A sent photo's entry by its id (#350), from the media slice's export; null when it has none. */
+    sentPhoto: (photoId: string) => ExportedSentPhoto | null;
+    /** The part the person's own like named (#463), in the request's language. */
+    liked: (anchor: LikeAnchor) => ExportedAnchor;
+  },
 ): Promise<ExportedConversation[]> {
   const rows = await repo.exportConversationsOf(db, accountId);
   return rows.map((row) => {
@@ -471,6 +523,7 @@ export async function exportConversations(
       counterpartLinked: row.counterpartLinked,
       blocked: row.blocked,
     });
+    const liked = anchorOf(row.anchor);
     return {
       openedAt: row.openedAt.toISOString(),
       state,
@@ -481,7 +534,7 @@ export async function exportConversations(
           at: line.at.toISOString(),
           kind: line.kind,
           body: line.body ?? "",
-          photo: line.photoId ? sentPhoto(line.photoId) : null,
+          photo: line.photoId ? words.sentPhoto(line.photoId) : null,
         })),
       shares: row.shares.map((share) => ({
         kind: share.kind,
@@ -489,6 +542,8 @@ export async function exportConversations(
         endedAt: share.endedAt?.toISOString() ?? null,
         endedHow: share.endedHow,
       })),
+      // The part of the other's card the person's like named (#463); never the other's like.
+      liked: liked ? words.liked(liked) : null,
       theirs: row.lines
         .filter((line) => !line.mine)
         .map((line) => ({ at: line.at.toISOString(), kind: line.kind, length: line.length })),

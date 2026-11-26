@@ -11,6 +11,7 @@ import {
 import { AppError } from "../lib/errors.ts";
 import type { Logger } from "../lib/logger.ts";
 import { matchingConfigNumber } from "../lib/matching-config.ts";
+import type { CardParts } from "../matching/index.ts";
 import {
   dayWindow,
   listApprovedPhotos,
@@ -198,14 +199,7 @@ export async function buildCard(
   const onCard = fieldsOnCard(subject.profile);
   // A name and never digits (ADR-061 §3). No band here: a band is the queue's entry's (§5).
   const home = homeSummary(subject.homePlace, subject.homeShowsArea, rules);
-  const cardPhotos: CardPhoto[] = photos.map((p) => ({
-    id: p.id,
-    blurhash: p.blurhash,
-    width: p.width,
-    height: p.height,
-    caption: p.caption,
-    description: p.description,
-  }));
+  const cardPhotos = photos.map(cardPhotoOf);
   return {
     card: {
       accountId: subject.accountId,
@@ -222,5 +216,45 @@ export async function buildCard(
       shared: sharedAnswers(viewer?.fields ?? null, onCard),
     },
     completeness: done,
+  };
+}
+
+/** A photo as a card carries it. */
+function cardPhotoOf(p: Awaited<ReturnType<typeof listApprovedPhotos>>[number]): CardPhoto {
+  return {
+    id: p.id,
+    blurhash: p.blurhash,
+    width: p.width,
+    height: p.height,
+    caption: p.caption,
+    description: p.description,
+  };
+}
+
+/**
+ * The parts of `subject`'s card a like may name (#463, ADR-077), as the card
+ * `buildCard` gives `viewer` would show them now: the approved photos, the
+ * answered prompts, a bio or its ready line (one, the maintainer's of
+ * 26/11/2026), and the "you too" items. Nothing is recorded or counted, since no
+ * card is served: a like checks its part against this, and the person liked and
+ * the conversation draw the part from it. Null where there is no card: no
+ * profile, an erased account, or a block either way (rule 7).
+ */
+export async function cardParts(
+  db: Queryable,
+  input: { viewerAccountId: string; subjectAccountId: string },
+): Promise<CardParts | null> {
+  const subject = await repo.findCardSubject(db, input);
+  if (!subject?.profile || subject.state === "deleted" || subject.blocked) return null;
+  const [photos, viewer] = await Promise.all([
+    listApprovedPhotos(db, subject.accountId),
+    repo.findProfile(db, input.viewerAccountId),
+  ]);
+  const { profile } = subject;
+  return {
+    photos: photos.map(cardPhotoOf),
+    prompts: profile.prompts.map((prompt) => prompt.key),
+    bio: profile.bio !== null || profile.bioPreset !== null,
+    shared: sharedAnswers(viewer?.fields ?? null, fieldsOnCard(profile)),
   };
 }

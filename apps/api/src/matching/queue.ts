@@ -4,6 +4,7 @@ import {
   type DealBreakerField,
   type DistanceBand,
   type Later,
+  type LikeAnchor,
   type ProfileCard,
   QUEUE_PAGE,
   QUEUE_POSITION_MAX,
@@ -22,6 +23,14 @@ import type { Logger } from "../lib/logger.ts";
 import { matchingConfigNumber } from "../lib/matching-config.ts";
 import { dayWindow, secondsUntil } from "../media/index.ts";
 import { earnedFishWaiting, entriesPaidBy, releaseEarned, spendEarned } from "../rewards/index.ts";
+import {
+  type AnchorRow,
+  anchorColumns,
+  anchorOf,
+  type PartsOf,
+  partOn,
+  sameAnchor,
+} from "./anchor.ts";
 
 // The queue and the day's log of it, the queue (#96, #502, TD-11, TD-12,
 // ADR-034, ADR-062): what one person goes through on one Finnish calendar day,
@@ -50,7 +59,8 @@ export type CardOf = (
  * other's pool with the person now, both ways (§8), in the caller's
  * transaction when there is one. `later` puts a Later's person on the list
  * (#681, the stars' `putOnLaterList`), in `decide`'s transaction, under its
- * locks, after the skip is written.
+ * locks, after the skip is written. `parts` is what of a card a like may name
+ * (#463, ADR-077): the profile slice's `cardParts`, which records nothing.
  */
 export type Queue = {
   fill: (accountId: string) => Promise<boolean>;
@@ -63,6 +73,7 @@ export type Queue = {
     tx: Queryable,
     input: { accountId: string; candidateId: string; at: Date },
   ) => Promise<Later>;
+  parts: PartsOf;
 };
 
 /**
@@ -79,7 +90,16 @@ export type Matches = {
     otherAccountId: string,
     since: Date,
   ) => Promise<string | null>;
-  open: (tx: Queryable, input: { first: string; second: string; at: Date }) => Promise<string>;
+  /** `anchors` are the parts the two likes named (#463, ADR-077), the earlier liker's first. */
+  open: (
+    tx: Queryable,
+    input: {
+      first: string;
+      second: string;
+      at: Date;
+      anchors?: { first: LikeAnchor | null; second: LikeAnchor | null };
+    },
+  ) => Promise<string>;
   yourTurn: (db: Queryable, accountId: string) => Promise<number>;
   /**
    * After a match committed: the push to the person whose earlier like it met
@@ -448,17 +468,61 @@ export async function entriesOf(
 }
 
 /**
+ * On the `liked_you` and `fish` cards, the part of the person's own card the
+ * waiting like named (#463, ADR-077), drawn from their profile as the liker's
+ * card of them would show it now: none where the like named none or the part
+ * has gone since. The like is the liker's newest of an ended day, the one that
+ * waits (ADR-037 §2), found through the person's own id as its card (rule 6).
+ * Nothing is recorded, and the liker learns nothing of it.
+ */
+export async function withLikedYour(
+  db: Queryable,
+  parts: PartsOf,
+  accountId: string,
+  day: string,
+  entries: readonly QueueEntry[],
+): Promise<QueueEntry[]> {
+  const likers = entries.flatMap((entry) =>
+    ANSWERS_A_LIKE.includes(entry.reason) ? [entry.card.accountId] : [],
+  );
+  if (likers.length === 0) return [...entries];
+  const { rows } = await db.query<AnchorRow & { liker: string }>(
+    `SELECT DISTINCT ON (r.account_id) r.account_id AS liker, e.anchor_kind, e.anchor_ref, e.anchor_field
+       FROM queue_entry e JOIN queue_day r ON r.id = e.queue_day_id
+      WHERE e.candidate_id = $1 AND r.account_id = ANY($2::uuid[]) AND e.decision = 'like'
+        AND r.day < $3
+      ORDER BY r.account_id, r.day DESC`,
+    [accountId, likers, day],
+  );
+  const named = new Map(rows.map((row) => [row.liker, anchorOf(row)]));
+  return Promise.all(
+    entries.map(async (entry) => {
+      const anchor = ANSWERS_A_LIKE.includes(entry.reason)
+        ? (named.get(entry.card.accountId) ?? null)
+        : null;
+      if (!anchor) return entry;
+      const part = partOn(
+        await parts(db, { viewerAccountId: entry.card.accountId, subjectAccountId: accountId }),
+        anchor,
+      );
+      return part ? { ...entry, likedYour: part } : entry;
+    }),
+  );
+}
+
+/**
  * The next cards of the day's log (`entriesOf`), those undecided that fit now,
  * both ways (ADR-062 §8): one that does not stays in the log, left out while it
  * does not fit. A shadow-banned person's liked-you and fish cards wait for the
  * lift, those queued before the ban too (ADR-037 §7): a like back would make no
  * match, and so tell them of it (ADR-024 §7). A starred card comes through the list
  * alone, unless somebody's like waits on it, which a star does not touch (ADR-064
- * §4). Null with no log for the day.
+ * §4). The liked-you and fish cards say the part the like named (`withLikedYour`).
+ * Null with no log for the day.
  */
 async function nextCards(
   deps: QueueDeps,
-  queue: Pick<Queue, "fits">,
+  queue: Pick<Queue, "fits" | "parts">,
   accountId: string,
   day: string,
   cardOf: CardOf,
@@ -480,12 +544,13 @@ async function nextCards(
   const queued = rows.flatMap((row) => (row.candidate_id ? [row.candidate_id] : []));
   if (queued.length === 0) return [];
   const fitting = await queue.fits(deps.db, accountId, queued);
-  return entriesOf(
+  const entries = await entriesOf(
     accountId,
     rows.filter((row) => row.candidate_id !== null && fitting.has(row.candidate_id)),
     cardOf,
     dealBreakers,
   );
+  return withLikedYour(deps.db, queue.parts, accountId, day, entries);
 }
 
 /**
@@ -497,7 +562,7 @@ async function nextCards(
 export async function readQueue(
   deps: QueueDeps,
   matches: Pick<Matches, "yourTurn">,
-  queue: Pick<Queue, "fill" | "fits">,
+  queue: Pick<Queue, "fill" | "fits" | "parts">,
   accountId: string,
   cardOf: CardOf,
   dealBreakers: readonly DealBreaker[] = [],
@@ -572,7 +637,12 @@ export async function markSeen(
  *
  * A fish past its budget spends one an invitation earned the person, in this
  * transaction, and a change of it gives the unit back (#107, ADR-044 §8); the
- * reward table is the rewards slice's, reached through its index.ts. The
+ * reward table is the rewards slice's, reached through its index.ts.
+ *
+ * A like or a fish may name one part of the card (#463, ADR-077), checked
+ * against the card's parts for that place before anything is written (400
+ * `anchor_not_on_card`); the same part again is the same decision, another a
+ * revision, and a match copies both likes' parts to its conversation. The
  * answer says whether a fish can still go today (#475) and how
  * many likes are left (#524), which the decision moves, read in this
  * transaction after the write.
@@ -580,8 +650,14 @@ export async function markSeen(
 export async function decide(
   deps: QueueDeps,
   matches: Matches,
-  queue: Pick<Queue, "fits" | "later">,
-  input: { accountId: string; day: string; position: number; decision: QueueChoice },
+  queue: Pick<Queue, "fits" | "later" | "parts">,
+  input: {
+    accountId: string;
+    day: string;
+    position: number;
+    decision: QueueChoice;
+    anchor?: LikeAnchor | null;
+  },
 ): Promise<{
   match: string | null;
   fishToSend: boolean;
@@ -591,26 +667,42 @@ export async function decide(
 }> {
   const { at, today } = todayOrRefuse(deps, input.day);
   const decision: QueueDecision = input.decision === "fish" ? "like" : input.decision;
+  // Only a like names a part: the contract refuses one on a pass or a skip.
+  const anchor = decision === "like" ? (input.anchor ?? null) : null;
   const written = await transaction(deps.db, async (tx) => {
     const { queueDayId } = await lockCard(tx, {
       accountId: input.accountId,
       today,
       position: input.position,
     });
-    const found = await tx.query<{
-      id: string;
-      candidate_id: string;
-      reason: QueueReason;
-      decision: QueueDecision | null;
-      fish: boolean;
-    }>(
-      `SELECT e.id, e.candidate_id, e.reason, e.decision, e.fish
+    const found = await tx.query<
+      {
+        id: string;
+        candidate_id: string;
+        reason: QueueReason;
+        decision: QueueDecision | null;
+        fish: boolean;
+      } & AnchorRow
+    >(
+      `SELECT e.id, e.candidate_id, e.reason, e.decision, e.fish,
+              e.anchor_kind, e.anchor_ref, e.anchor_field
          FROM queue_entry e JOIN queue_day r ON r.id = e.queue_day_id
         WHERE r.id = $1 AND r.account_id = $2 AND e.position = $3 AND ${SERVABLE}`,
       [queueDayId, input.accountId, input.position],
     );
     const entry = found.rows[0];
     if (!entry) throw notFound();
+    // The part must be on the card built for this place, as it stands (#463): a
+    // read that records nothing, before anything is written.
+    const parts =
+      anchor &&
+      (await queue.parts(tx, {
+        viewerAccountId: input.accountId,
+        subjectAccountId: entry.candidate_id,
+      }));
+    if (anchor && !partOn(parts ?? null, anchor)) {
+      throw new AppError(400, "anchor_not_on_card", "That part is not on the card");
+    }
     // A fish on a card that answers a like is a like (ADR-039 §2).
     const fish = input.decision === "fish" && !ANSWERS_A_LIKE.includes(entry.reason);
     await tx.query(PAIR_LOCK, [input.accountId, entry.candidate_id]);
@@ -626,7 +718,7 @@ export async function decide(
       decision === "skip"
         ? queue.later(tx, { accountId: input.accountId, candidateId: entry.candidate_id, at })
         : null;
-    if (entry.decision === decision && entry.fish === fish) {
+    if (entry.decision === decision && entry.fish === fish && sameAnchor(anchorOf(entry), anchor)) {
       return {
         match: decision === "like" ? standing : null,
         ...(await budgetsOf(tx, matches, input.accountId, today)),
@@ -683,10 +775,20 @@ export async function decide(
     // The predicate again where it writes: a block or an erasure that
     // committed since the read leaves nothing written.
     const updated = await tx.query(
-      `UPDATE queue_entry e SET decision = $4, decided_at = $5, fish = $6, second_pass = $7
+      `UPDATE queue_entry e SET decision = $4, decided_at = $5, fish = $6, second_pass = $7,
+              anchor_kind = $8, anchor_ref = $9, anchor_field = $10
          FROM queue_day r
         WHERE r.id = e.queue_day_id AND r.id = $1 AND r.account_id = $2 AND e.id = $3 AND ${SERVABLE}`,
-      [queueDayId, input.accountId, entry.id, decision, at, fish, secondPass],
+      [
+        queueDayId,
+        input.accountId,
+        entry.id,
+        decision,
+        at,
+        fish,
+        secondPass,
+        ...anchorColumns(anchor),
+      ],
     );
     if (updated.rowCount !== 1) throw notFound();
     // A like or a pass takes the star off (ADR-064 §3), so the list holds only the
@@ -706,12 +808,15 @@ export async function decide(
       // the filters above. The other's like of the person, still standing and not
       // expired, today's included: under the pair's lock it is committed or it is
       // not there.
-      const mutual = await tx.query(
-        `SELECT 1 FROM queue_entry e JOIN queue_day r ON r.id = e.queue_day_id
+      // The newest standing like, whose part the conversation keeps (#463).
+      const mutual = await tx.query<AnchorRow>(
+        `SELECT e.anchor_kind, e.anchor_ref, e.anchor_field
+           FROM queue_entry e JOIN queue_day r ON r.id = e.queue_day_id
           WHERE r.account_id = $1 AND e.candidate_id = $2 AND e.decision = 'like'
             AND r.day > $3::date - $4::int
             AND EXISTS (SELECT 1 FROM account me WHERE me.id = $2 AND me.state = 'active')
             AND NOT blocked_between($2, $1)
+          ORDER BY r.day DESC
           LIMIT 1`,
         [
           entry.candidate_id,
@@ -720,11 +825,13 @@ export async function decide(
           await matchingConfigNumber(tx, LIKE_EXPIRY_KEY),
         ],
       );
-      if (mutual.rows.length > 0) {
+      const standingLike = mutual.rows[0];
+      if (standingLike) {
         match = await matches.open(tx, {
           first: entry.candidate_id,
           second: input.accountId,
           at,
+          anchors: { first: anchorOf(standingLike), second: anchor },
         });
         opened = true;
       }
@@ -1058,6 +1165,8 @@ export type OwnQueueDay = {
     decidedAt: Date | null;
     secondPass: boolean;
     distance: DistanceBand | null;
+    /** The part the person's like named (#463), null for none. */
+    anchor: LikeAnchor | null;
   }[];
 };
 
@@ -1077,20 +1186,22 @@ export async function exportQueue(
     [accountId, limit],
   );
   if (rows.length === 0) return [];
-  const entries = await db.query<{
-    queue_day_id: string;
-    position: number;
-    reason: QueueReason;
-    relaxed_field: DealBreakerField | null;
-    seen_at: Date | null;
-    decision: QueueDecision | null;
-    fish: boolean;
-    second_pass: boolean;
-    decided_at: Date | null;
-    distance: DistanceBand | null;
-  }>(
+  const entries = await db.query<
+    {
+      queue_day_id: string;
+      position: number;
+      reason: QueueReason;
+      relaxed_field: DealBreakerField | null;
+      seen_at: Date | null;
+      decision: QueueDecision | null;
+      fish: boolean;
+      second_pass: boolean;
+      decided_at: Date | null;
+      distance: DistanceBand | null;
+    } & AnchorRow
+  >(
     `SELECT e.queue_day_id, e.position, e.reason, e.relaxed_field, e.seen_at, e.decision, e.fish,
-            e.second_pass, e.decided_at, e.distance
+            e.second_pass, e.decided_at, e.distance, e.anchor_kind, e.anchor_ref, e.anchor_field
        FROM queue_entry e JOIN queue_day r ON r.id = e.queue_day_id
       WHERE r.account_id = $1 AND r.id = ANY($2::uuid[])
       ORDER BY e.position`,
@@ -1129,6 +1240,7 @@ export async function exportQueue(
         decidedAt: entry.decided_at,
         secondPass: entry.second_pass,
         distance: entry.distance,
+        anchor: anchorOf(entry),
       })),
   }));
 }

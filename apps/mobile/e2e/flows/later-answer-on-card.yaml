@@ -1,4 +1,4 @@
-# An answer saved on its later screen shows on the whole card under its
+# An answer saved on its later screen shows at the card's end under its
 # section, and taking it back takes it off (#148, #213, #644). The article 9
 # fields take the consent given with whom one seeks (#204): Sanna's parties
 # show under Beliefs, a chip each, and the star signs include the corgi. The
@@ -50,17 +50,11 @@ name: A party and a star sign saved on their screens show on the card, and clear
     visible: "A way to stay in touch|Tapa pitää yhteyttä|Ett sätt att hålla kontakten"
     timeout: 15000
 
-# On the whole card, under Beliefs.
+# At the card's end, under Beliefs.
 - openLink: fi.kumpa://profile/card
 - extendedWaitUntil:
     visible: "Your card|Korttisi|Ditt kort"
     timeout: 15000
-- scrollUntilVisible:
-    element: "Show the whole card|Näytä koko kortti|Visa hela kortet"
-    direction: DOWN
-    centerElement: true
-    timeout: 60000
-- tapOn: "Show the whole card|Näytä koko kortti|Visa hela kortet"
 - scrollUntilVisible:
     element: "Beliefs|Vakaumus|Övertygelse"
     direction: DOWN
@@ -119,13 +113,7 @@ name: A party and a star sign saved on their screens show on the card, and clear
 - extendedWaitUntil:
     visible: "Your card|Korttisi|Ditt kort"
     timeout: 15000
-- scrollUntilVisible:
-    element: "Show the whole card|Näytä koko kortti|Visa hela kortet"
-    direction: DOWN
-    centerElement: true
-    timeout: 60000
-- tapOn: "Show the whole card|Näytä koko kortti|Visa hela kortet"
-# Her hobbies end the whole card once Beliefs has nothing left.
+# Her hobbies end the card once Beliefs has nothing left.
 - scrollUntilVisible:
     element: "(.*: )?(Swimming|Uinti|Simning)"
     direction: DOWN

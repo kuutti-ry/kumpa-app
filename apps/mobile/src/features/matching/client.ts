@@ -1,6 +1,7 @@
 import {
   type ApiComponents,
   type DealBreakerField,
+  type LikeAnchor,
   type QueueChoice,
   QueueDecisionAnswer,
   type QueueEntry,
@@ -12,6 +13,7 @@ import {
   StarList,
   type StarredPerson,
 } from "@kuutti/schema";
+import { readAnswer } from "@/lib/answer";
 import { api, failed } from "@/lib/api";
 
 // The queue as the app calls it (#379, #502, ADR-034 §4, ADR-062), through the
@@ -26,7 +28,7 @@ import { api, failed } from "@/lib/api";
 export async function fetchQueue(): Promise<QueueResponse> {
   const { data, error, response } = await api.GET("/queue/today");
   if (!data) throw failed(response, error, "queue");
-  return QueueResponse.parse(data);
+  return readAnswer(QueueResponse, data);
 }
 
 /** The card was on the screen: the first report is recorded, a repeat writes nothing. */
@@ -38,22 +40,25 @@ export async function reportSeen(day: string, position: number): Promise<void> {
 }
 
 /**
- * A like, a pass, a fish or a skip, replacing the day's earlier one; the answer
- * names a match's conversation (#100), and says whether a fish can still go
- * today (#475), the likes left (#524) and the conversations waiting (ADR-062 §5).
+ * A like, a pass, a fish or a skip, replacing the day's earlier one; a like or
+ * a fish may name the part of the card it is for (#463), and one naming none
+ * names none. The answer names a match's conversation (#100), and says whether
+ * a fish can still go today (#475), the likes left (#524) and the conversations
+ * waiting (ADR-062 §5).
  */
 export async function decide(
   day: string,
   position: number,
   decision: QueueChoice,
+  anchor: LikeAnchor | null = null,
 ): Promise<QueueDecisionAnswer> {
   const { data, error, response } = await api.PUT("/queue/{day}/entries/{position}/decision", {
     params: { path: { day, position } },
     // The answer says where a Later left the person only when asked (#745).
-    body: { decision, later: true },
+    body: { decision, later: true, ...(anchor && { anchor }) },
   });
   if (!data) throw failed(response, error, "decision");
-  return QueueDecisionAnswer.parse(data);
+  return readAnswer(QueueDecisionAnswer, data);
 }
 
 /** What a short queue may relax today, and what is relaxed (#99, ADR-042 §4); counted when asked. */
@@ -62,7 +67,7 @@ export async function fetchRelaxations(day: string): Promise<RelaxationsResponse
     params: { path: { day } },
   });
   if (!data) throw failed(response, error, "relaxations");
-  return RelaxationsResponse.parse(data);
+  return readAnswer(RelaxationsResponse, data);
 }
 
 /** One deal-breaker relaxed for today: the first cards it added, to append without a read (§5, ADR-062 §10). */
@@ -73,7 +78,7 @@ export async function relaxToday(day: string, relaxation: Relaxation): Promise<Q
     body: relaxation as ApiComponents["schemas"]["Relaxation"],
   });
   if (!data) throw failed(response, error, "relax");
-  return RelaxationAnswer.parse(data).entries;
+  return readAnswer(RelaxationAnswer, data).entries;
 }
 
 /** Today's relaxation undone: the places of the undecided cards it took back (§6). */
@@ -82,14 +87,14 @@ export async function undoRelaxation(day: string, field: DealBreakerField): Prom
     params: { path: { day, field: field as ApiComponents["schemas"]["DealBreakerField"] } },
   });
   if (!data) throw failed(response, error, "undo relaxation");
-  return RelaxationUndone.parse(data).removed;
+  return readAnswer(RelaxationUndone, data).removed;
 }
 
 /** The people on the person's Later list who may be shown now, the latest first (#575, ADR-064 §6). It serves no card and signs no photo. */
 export async function fetchStars(): Promise<StarredPerson[]> {
   const { data, error, response } = await api.GET("/stars");
   if (!data) throw failed(response, error, "stars");
-  return StarList.parse(data).items;
+  return readAnswer(StarList, data).items;
 }
 
 /** Somebody taken off the Later list (#681). */
@@ -104,5 +109,5 @@ export async function openStar(id: string): Promise<QueueResponse> {
     params: { path: { id } },
   });
   if (!data) throw failed(response, error, "open star");
-  return QueueResponse.parse(data);
+  return readAnswer(QueueResponse, data);
 }

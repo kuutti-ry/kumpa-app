@@ -90,10 +90,6 @@ describe("the pond client", () => {
         ],
       },
     ],
-    [
-      "with a pond beside the number",
-      { k: 10, day: null, finished: null, seeks: null, pond: "suomi" },
-    ],
   ])("refuses an answer of the shape %s", async (_, body) => {
     answering(json(body));
     // The name is what picks the way out: `failureKind` calls a ZodError outdated.

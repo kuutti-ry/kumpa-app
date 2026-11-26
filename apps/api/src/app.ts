@@ -70,7 +70,7 @@ import {
   unsubscribeRoutes,
 } from "./notifications/index.ts";
 import { pondAdminRoutes, pondRoutes } from "./pond/index.ts";
-import { buildCard, exportProfile, profileRoutes } from "./profile/index.ts";
+import { buildCard, cardParts, exportProfile, profileRoutes } from "./profile/index.ts";
 import { invitationLinkRoutes, invitationRoutes } from "./rewards/index.ts";
 import {
   accountAdminRoutes,
@@ -410,6 +410,8 @@ export function createApp(deps: Deps) {
         fits: (db, accountId, candidateIds) => fitsNow(builderDeps(), db, accountId, candidateIds),
         // Later puts the person on the list (#681), which the stars read as their list does.
         later: (tx, input) => putOnLaterList(tx, { shown: shownOnList }, input),
+        // What of a card a like may name (#463, ADR-077), read with nothing recorded.
+        parts: cardParts,
       },
       // A match is a conversation (#100, ADR-031): the chat slice's, handed in
       // here since the chat imports the profile, which imports matching.
@@ -441,6 +443,7 @@ export function createApp(deps: Deps) {
         shown: shownOnList,
         place: (accountId, candidateId) => starPlace(builderDeps(), accountId, candidateId),
         people: (accountId) => starredPeople(builderDeps(), accountId),
+        parts: cardParts,
       },
       { yourTurn: conversationsOnTurn },
       queueRead,

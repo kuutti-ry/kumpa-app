@@ -10,6 +10,7 @@ import {
   TipKind,
 } from "@kuutti/schema";
 import { Platform } from "react-native";
+import { readAnswer } from "@/lib/answer";
 import { ApiError, api, apiBaseUrl, failed } from "@/lib/api";
 import {
   accessTokenIsStale,
@@ -52,8 +53,8 @@ const asKnown = (photo: unknown): unknown => withKnownReason(photoWithKnownDescr
  */
 export function readPhotoList(data: unknown): PhotoList {
   const sent = data as { photos?: unknown; tips?: unknown; fishSpecies?: unknown } | null;
-  if (!sent || !Array.isArray(sent.tips)) return PhotoList.parse(data);
-  return PhotoList.parse({
+  if (!sent || !Array.isArray(sent.tips)) return readAnswer(PhotoList, data);
+  return readAnswer(PhotoList, {
     ...sent,
     photos: Array.isArray(sent.photos) ? sent.photos.map(asKnown) : sent.photos,
     tips: sent.tips.filter((kind) => TipKind.safeParse(kind).success),
@@ -62,7 +63,7 @@ export function readPhotoList(data: unknown): PhotoList {
 }
 
 /** One photo as the API sent it, as this build can say it. */
-const readPhoto = (data: unknown): Photo => Photo.parse(asKnown(data));
+const readPhoto = (data: unknown): Photo => readAnswer(Photo, asKnown(data));
 
 export async function listPhotos(): Promise<PhotoList> {
   const { data, error, response } = await api.GET("/photos");
@@ -106,7 +107,7 @@ export async function fetchPhotoUrl(id: string, variant: PhotoVariant): Promise<
     params: { path: { id, variant } },
   });
   if (!data) throw failed(response, error, "photo url");
-  return PhotoUrlResponse.parse(data);
+  return readAnswer(PhotoUrlResponse, data);
 }
 
 /**

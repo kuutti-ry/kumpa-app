@@ -505,7 +505,11 @@ describe("the checks", () => {
       "conversation_closed_check",
       "conversation_next_seq_check",
     ]);
-    expect(checks("conversation_participant")).toEqual(["conversation_participant_read_check"]);
+    expect(checks("conversation_participant")).toEqual([
+      // The part this side's like named, whole: a reference but for the bio, a field for a shared item (#463).
+      "conversation_participant_anchor_check",
+      "conversation_participant_read_check",
+    ]);
     expect(checks("message")).toEqual([
       "message_photo_check",
       "message_seq_check",

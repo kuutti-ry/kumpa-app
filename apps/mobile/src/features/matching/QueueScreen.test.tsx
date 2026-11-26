@@ -8,6 +8,7 @@ import { a11yProblems, type HostNode, noProblems, pressables } from "@/test/a11y
 import { FAILED_TO_LOAD } from "@/test/failed";
 import { textsInOrder as said } from "@/test/layout";
 import { renderWithTheme, underProviders } from "@/test/render";
+import { layOut, placePhotos, scrollTo } from "@/test/sight";
 import { TOUCH_TARGET } from "@/theme/a11y";
 import { QueueScreen } from "./QueueScreen";
 
@@ -181,6 +182,7 @@ const ancestorsOf = (words: string) => {
 };
 
 beforeEach(async () => {
+  placePhotos();
   store.clear();
   router.push.mockReset();
   router.back.mockReset();
@@ -396,6 +398,26 @@ describe("the queue", () => {
     await settle();
     expect(heading("Katja, 32")).toBeTruthy();
     expect(sent.seen()).toEqual([1, 2]);
+  });
+
+  it("goes on to the next card when a decision answer carries a key this build does not know (#745)", async () => {
+    const sent = api((call) =>
+      call.path.endsWith("/decision")
+        ? json({
+            match: null,
+            later: null,
+            fishToSend: true,
+            likesLeft: 9,
+            yourTurn: 0,
+            sooner: true,
+          })
+        : undefined,
+    );
+    await show();
+    await press("Like");
+    expect(screen.queryByText("That did not go through. Try again.")).toBeNull();
+    expect(heading("Katja, 32")).toBeTruthy();
+    expect(sent.decisions()).toEqual([`${DAY}/1 like`]);
   });
 
   it("goes on with the queue from a match without opening the conversation", async () => {
@@ -1063,6 +1085,7 @@ describe("the queue", () => {
       yourTurn: 0,
     });
     await show();
+    await layOut();
     await waitFor(() => expect(screen.getByText(words)).toBeTruthy());
     // The words are the card's: the next one starts without them.
     await press("Like");
@@ -1102,10 +1125,34 @@ describe("the queue", () => {
       return undefined;
     });
     await show();
+    await layOut();
     await waitFor(() => expect(screen.getByText("The photo could not be shown.")).toBeTruthy());
     await press("Like");
     expect(heading("Riikka, 31")).toBeTruthy();
     expect(screen.queryByText("The photo could not be shown.")).toBeNull();
+  });
+
+  it("asks for a card's photo further down only once the card's scroll brings it into sight (ADR-008)", async () => {
+    const photo = (n: number) => ({
+      id: `0b1c1c4e-9a8e-4a0b-9c3a-0c8d1e2f3a0${n}` as ProfileCard["photos"][number]["id"],
+      blurhash: "LEHV6nWB2yk8pyo0adR*.7kCMdnj",
+      width: 1200,
+      height: 1600,
+      caption: null,
+      description: null,
+    });
+    const withPhotos = entry(1, "Henna", "liked_you");
+    withPhotos.card.photos = [photo(1), photo(2)];
+    const { calls } = api(undefined, { ...READ, entries: [withPhotos, entry(2, "Katja")] });
+    const asked = () => calls.filter((call) => call.path.startsWith("/photos/")).map((c) => c.path);
+    await show();
+    expect(asked()).toEqual([]);
+    await layOut();
+    await settle();
+    expect(asked()).toEqual([`/photos/${photo(1).id}/card`]);
+    await scrollTo(2);
+    await settle();
+    expect(asked()).toEqual([1, 2].map((n) => `/photos/${photo(n).id}/card`));
   });
 });
 
@@ -3895,5 +3942,271 @@ describe("in the Kumpa look", () => {
     await press("Pass");
     expect(heading("Minna, 34")).toBeTruthy();
     expect(sent.decisions()).toEqual([`${DAY}/1 like`, `${DAY}/2 pass`]);
+  });
+
+  /** A round button, its words, and the margin and touches of the room they stand in. */
+  const roundButton = (name: string) => {
+    const button = screen.getByRole("button", { name });
+    const words = within(button).getAllByText(/\S/, { includeHiddenElements: true });
+    let room = {};
+    for (let node = words[0]?.parent; node && node !== button; node = node.parent) {
+      const reach = /(?:^|\s)(-mx-\S+)/.exec(String(node.props.className ?? ""))?.[1];
+      if (reach) room = { reach, pointerEvents: node.props.pointerEvents };
+    }
+    return { button, words, room };
+  };
+
+  // No word under a round button breaks in the middle, at any text size (#753,
+  // #467). A test cannot measure text, so it holds what frees the words: each
+  // disc keeps its width and its target, the words at the row's ends may take
+  // the row's gap on each side of their discs while Like's keeps to its own, so
+  // two words never meet, and each word is a line of its own, which shrinks
+  // only when it alone is wider than its room.
+  it.each([
+    ["en-US", "Pass", "Like", "Later"],
+    ["fi-FI", "Ohita", "Tykkää", "Myöhemmin"],
+    ["sv-FI", "Hoppa över", "Gilla", "Senare"],
+  ] as const)(
+    "gives each round button's word room past its disc in %s, broken only between words",
+    async (languageTag, pass, like, later) => {
+      (useLocales as jest.Mock).mockReturnValue([{ languageTag }]);
+      api();
+      await show();
+      const row = roundButton(like).button.parent;
+      expect(row?.props.className).toMatch(/\bflex-row\b/);
+      expect(row?.props.className).not.toMatch(/\bflex-wrap\b/);
+      const gap = /(?:^|\s)gap-(\S+)/.exec(String(row?.props.className))?.[1];
+      for (const [name, reach] of [
+        [pass, `-mx-${gap}`],
+        [like, undefined],
+        [later, `-mx-${gap}`],
+      ] as const) {
+        const { button, words, room } = roundButton(name);
+        expect(button.props.className).toMatch(/\bmax-w-\[92px\]/);
+        expect(StyleSheet.flatten(button.props.style)).toMatchObject({
+          minHeight: TOUCH_TARGET,
+          minWidth: TOUCH_TARGET,
+        });
+        expect(words.map((word) => word.props.children)).toEqual(name.split(" "));
+        for (const word of words) {
+          expect(word.props).toMatchObject({ numberOfLines: 1, adjustsFontSizeToFit: true });
+        }
+        expect(room).toEqual(reach ? { reach, pointerEvents: "box-none" } : {});
+      }
+      noProblems();
+    },
+  );
+});
+
+describe("a like that names a part of the card (#463, ADR-077)", () => {
+  const SUNDAY: ProfileCard["prompts"][number] = { key: "sunday", answer: "A long breakfast." };
+  const THUMB = {
+    id: PHOTO,
+    blurhash: "LEHV6nWB2yk8pyo0adR*.7kCMdnj",
+    width: 1200,
+    height: 1600,
+    caption: null,
+    description: null,
+  };
+  /** A card with a part of each kind: a photo, an answered prompt, the bio and a shared hobby. */
+  const withParts = (each: QueueEntry): QueueEntry => ({
+    ...each,
+    card: {
+      ...each.card,
+      photos: [THUMB],
+      bio: "Long walks.",
+      prompts: [SUNDAY],
+      fields: { hobbies: ["yoga"] },
+      shared: { ...each.card.shared, hobbies: ["yoga"] },
+    },
+  });
+  const queueOf = (...entries: QueueEntry[]): QueueResponse => ({ ...READ, entries });
+  const bodies = (sent: ReturnType<typeof api>) =>
+    sent.calls.filter((call) => call.path.endsWith("/decision")).map((call) => call.body);
+  /** The line floating over the buttons, or null. */
+  const line = () => screen.queryByTestId("queue-anchor")?.props.children ?? null;
+  const hintOf = (name: string) => screen.getByRole("button", { name }).props.accessibilityHint;
+  const PROMPT = "My ideal Sunday: A long breakfast.";
+
+  it("names the part picked in the like, and says it over the buttons and as Like's hint", async () => {
+    const sent = api(undefined, queueOf(withParts(entry(2, "Katja")), entry(4, "Minna")));
+    await show();
+    expect(line()).toBeNull();
+    expect(hintOf("Like")).toBeUndefined();
+
+    await press(PROMPT);
+    expect(line()).toBe("Liking their answer to: My ideal Sunday");
+    expect(hintOf("Like")).toBe("Liking their answer to: My ideal Sunday");
+    expect(hintOf("Send a flower")).toBe("Liking their answer to: My ideal Sunday");
+    expect(screen.getByRole("button", { name: "Name no part in your like" })).toBeTruthy();
+    noProblems();
+
+    await press("Like");
+    expect(bodies(sent)).toEqual([
+      { decision: "like", later: true, anchor: { kind: "prompt", prompt: "sunday" } },
+    ]);
+    // The next card starts with nothing picked.
+    expect(heading("Minna, 34")).toBeTruthy();
+    expect(line()).toBeNull();
+    expect(hintOf("Like")).toBeUndefined();
+  });
+
+  it.each([
+    ["the photo", "Photo 1 of 1", { kind: "photo", photoId: PHOTO }, "Liking their photo"],
+    ["the bio", "Long walks.", { kind: "bio" }, "Liking their bio"],
+    [
+      "a shared answer",
+      "Hobbies: Yoga, shared",
+      { kind: "shared", field: "hobbies", option: "yoga" },
+      "Liking what you share: Yoga",
+    ],
+  ] as const)("names %s in words and in the like", async (_, part, anchor, words) => {
+    const sent = api(undefined, queueOf(withParts(entry(2, "Katja"))));
+    await show();
+    await press(part);
+    expect(line()).toBe(words);
+    await press("Like");
+    expect(bodies(sent)).toEqual([{ decision: "like", later: true, anchor }]);
+  });
+
+  it("names nothing once Clear or a second tap took the pick back", async () => {
+    const sent = api(
+      undefined,
+      queueOf(withParts(entry(2, "Katja")), withParts(entry(4, "Minna", "seen_before"))),
+    );
+    await show();
+    await press("Long walks.");
+    await press("Name no part in your like");
+    expect(line()).toBeNull();
+    expect(screen.getByRole("button", { name: "Long walks." }).props.accessibilityState).toEqual({
+      selected: false,
+    });
+    await press("Like");
+
+    await press(PROMPT);
+    await press(PROMPT);
+    expect(line()).toBeNull();
+    await press("Like");
+    expect(bodies(sent)).toEqual([
+      { decision: "like", later: true },
+      { decision: "like", later: true },
+    ]);
+  });
+
+  it("names the part in a flower too, and nothing in a pass or Later", async () => {
+    const sent = api(
+      undefined,
+      queueOf(
+        withParts(entry(2, "Katja")),
+        withParts(entry(4, "Minna", "seen_before")),
+        withParts(entry(5, "Noora")),
+      ),
+    );
+    await show();
+    await press("Long walks.");
+    await press("Send a flower");
+    await press("Long walks.");
+    await press("Pass");
+    await press("Long walks.");
+    await press("Later");
+    expect(bodies(sent)).toEqual([
+      { decision: "fish", later: true, anchor: { kind: "bio" } },
+      { decision: "pass", later: true },
+      { decision: "skip", later: true },
+    ]);
+  });
+
+  it("keeps the pick on a card Undo brings back, and names it again in a changed decision", async () => {
+    const sent = api(undefined, queueOf(withParts(entry(2, "Katja")), entry(4, "Minna")));
+    await show();
+    await press("Long walks.");
+    await press("Like");
+    await press("Undo your last decision");
+    expect(heading("Katja, 32")).toBeTruthy();
+    expect(line()).toBe("Liking their bio");
+    expect(screen.getByRole("button", { name: "Long walks." }).props.accessibilityState).toEqual({
+      selected: true,
+    });
+    await press(PROMPT);
+    await press("Like");
+    expect(bodies(sent).map((body) => (body as { anchor?: unknown }).anchor)).toEqual([
+      { kind: "bio" },
+      { kind: "prompt", prompt: "sunday" },
+    ]);
+  });
+
+  it("clears a pick the API finds gone from the card, says so, and keeps the card for another like", async () => {
+    const sent = api(
+      (call) =>
+        call.path.endsWith("/decision") && (call.body as { anchor?: unknown }).anchor
+          ? refusal("anchor_not_on_card", 400)
+          : undefined,
+      queueOf(withParts(entry(2, "Katja")), entry(4, "Minna")),
+    );
+    await show();
+    await press("Long walks.");
+    await press("Like");
+    expect(
+      screen.getByText(
+        "That part of their card has changed since. Pick another, or like without one.",
+      ),
+    ).toBeTruthy();
+    expect(heading("Katja, 32")).toBeTruthy();
+    expect(line()).toBeNull();
+    expect(screen.queryByTestId("part-picked")).toBeNull();
+
+    await press("Like");
+    expect(heading("Minna, 34")).toBeTruthy();
+    expect(bodies(sent)).toEqual([
+      { decision: "like", later: true, anchor: { kind: "bio" } },
+      { decision: "like", later: true },
+    ]);
+  });
+
+  describe("on a card that answers a like", () => {
+    it.each([
+      ["liked_you", { kind: "prompt", prompt: "sunday" }, "Liked your answer to: My ideal Sunday"],
+      ["liked_you", { kind: "bio" }, "Liked your bio"],
+      [
+        "fish",
+        { kind: "shared", field: "languages", option: "fi" },
+        "Liked what you share: Finnish",
+      ],
+    ] as const)("a %s card says the part its like named: %j", async (reason, part, words) => {
+      api(undefined, queueOf({ ...entry(1, "Henna", reason), likedYour: part }));
+      await show();
+      expect(screen.getByTestId("queue-liked-your").props.accessibilityLabel).toBe(words);
+      expect(screen.getByText(words)).toBeTruthy();
+    });
+
+    it("shows a photo it named as a small copy of the reader's own, heard as the words alone", async () => {
+      const sent = api(
+        undefined,
+        queueOf({ ...entry(1, "Henna", "liked_you"), likedYour: { kind: "photo", photo: THUMB } }),
+      );
+      await show();
+      const liked = screen.getByTestId("queue-liked-your");
+      expect(liked.props.accessible).toBe(true);
+      expect(liked.props.accessibilityLabel).toBe("Liked your photo");
+      expect(within(liked).getByText("Liked your photo")).toBeTruthy();
+      await waitFor(() =>
+        expect(sent.calls.map((call) => call.path)).toContain(`/photos/${PHOTO}/thumb`),
+      );
+    });
+
+    it("says nothing where the like named nothing, or on a card that answers no like", async () => {
+      api(
+        undefined,
+        queueOf(entry(1, "Henna", "liked_you"), {
+          ...entry(2, "Katja"),
+          likedYour: { kind: "bio" },
+        }),
+      );
+      await show();
+      expect(screen.queryByTestId("queue-liked-your")).toBeNull();
+      await press("Like");
+      expect(heading("Katja, 32")).toBeTruthy();
+      expect(screen.queryByTestId("queue-liked-your")).toBeNull();
+    });
   });
 });

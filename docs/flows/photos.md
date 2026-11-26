@@ -186,7 +186,7 @@ flowchart TB
     s34["Marks the first approved photo in the order Main photo"]
     s35["Your card shows the approved photos only, in the person's order"]
     s36["Shows one tip at a time by the photos, if one applies"]
-    s38["Your profile lists what is missing, and home says Yours still lacks something"]
+    s38["Your profile lists what is missing, and so does home's matching card, with Your profile"]
     s40(["Home's matching card says the profile is finished, and whether matching is open: see People on Kumpa"])
   end
   subgraph api["The API"]
@@ -214,7 +214,7 @@ flowchart TB
 35. "See your card", the eye at the top of "Your profile", opens "Your card" with the approved photos only, in the person's order, the main one first: one at a time, tapped through on either half ("Previous photo", "Next photo"), each with its caption and, where the setting asks, its automatic description under it. The rest of the card is [Profile](profile.md#part-3-the-card-as-others-see-it)'s.
 36. "Your photos" shows one tip at a time by the photos, under "A tip for your photos", when one applies: the API reads it from what the check saw in the approved photos (sunglasses, a mirror selfie, a tight crop, poor light, a blur, other people, and on the main photo a lot of skin or a fish), each against its `photo_tip_` line in `matching_config`, and suggests more photos below `photo_tip_photos_suggested`. A tip about the main photo is said once for that main photo, and a tip about every photo once for the photos there are, so a new order brings none back and a photo added or removed says it again; both are remembered on the phone, "Got it" or not. It is advice only and never holds a photo back.
 37. Does the profile have the approved photos a finished profile needs, a number the code fixes ([ADR-009](../adr/009-profile-and-card.md) §4; how many onboarding's photos step asks for is under [Onboarding's Open](onboarding.md#open)), and the rest of it done: a name, whom one seeks and the age window? Yes: 40. No: 38.
-38. "Your profile" lists what is missing under "Before your card can be shown", the approved photos among it, and so does "Your card" over the card; home's matching card says "Matching opens for finished profiles. Yours still lacks something."
+38. "Your profile" lists what is missing under "Before your card can be shown", the approved photos among it, and so does "Your card" over the card; home's matching card says "Matching opens for finished profiles. Yours still lacks something." over the same lines, with "Your profile" on it.
 39. The person adds more photos (part 1) or waits for those in review. The flow ends here.
 40. Home's matching card asks again whenever home or the app comes to the front, so nothing waits for the night: "Your profile is finished. Matching has not opened yet." until an admin opens matching, then "Matching is open for you." with "See people" ([People on Kumpa](people-on-kuutti.md#part-1-what-home-shows)). "Your card" now says "This is what others see."
 41. Once matching is open, the card, with its approved photos only, comes into the People of whoever it fits, both ways, and into the Later list of whoever put the person there ([the queue](queue.md#part-2-a-card-and-its-decision), [the Later list](queue.md#part-4-the-later-list)): the photos one at a time, the main one first, each asked for only when it first comes to the front. The main photo is also the person's face in a conversation list ([Chat](chat.md)), and a row of the Later list shows the first approved photo the viewer was shown.
@@ -469,3 +469,4 @@ flowchart TB
 - 2026-11-16 (#700, PR #701): the refusals of a photo name the app Kumpa.
 - 2026-11-18 (#681): Add a photo picks as many pictures as there is room for, sent one after another in the order picked, with which of how many is going; a tip about every photo is said once for the photos there are, so a new order brings none back.
 - 2026-11-19 (#681): a finished profile asks no words, so the approved photos open the card with the name, whom one seeks and the age window alone.
+- 2026-11-26 (#745): home's matching card lists what the profile lacks, as Your profile does, with the way there.

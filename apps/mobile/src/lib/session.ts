@@ -1,6 +1,7 @@
 import { AppAttestation, AuthExchangeRequest, SessionTokens } from "@kuutti/schema";
 import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
+import { readAnswer } from "./answer";
 import { apiBaseUrl } from "./api-url";
 import { assert } from "./app-attest";
 
@@ -85,7 +86,7 @@ export async function loadSession(): Promise<StoredSession | null> {
       if (revision !== read) return memory;
     }
     const raw = await SecureStore.getItemAsync(KEY);
-    loaded = raw ? Stored.parse(JSON.parse(raw)) : null;
+    loaded = raw ? readAnswer(Stored, JSON.parse(raw)) : null;
   } catch {
     loaded = null;
   }
@@ -196,7 +197,7 @@ export function refreshSession(): Promise<StoredSession | null> {
         return null;
       }
       if (!response.ok) return session; // the API is unwell; keep what we have and try again later
-      const next = SessionTokens.parse(await response.json());
+      const next = readAnswer(SessionTokens, await response.json());
       if (!ownsInput()) return null;
       if (next.sessionId !== session.sessionId) throw new Error("refresh changed session");
       // The key is the session's for its life: a rotation keeps it.

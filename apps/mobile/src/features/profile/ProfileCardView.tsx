@@ -6,22 +6,18 @@ import {
   type GuildOption,
   HOBBY_GROUPS,
   type HobbyGroup,
+  type LikeAnchor,
   PROFILE_FIELDS,
   type ProfileCard,
   type ProfileFieldKey,
+  type SharedField,
 } from "@kuutti/schema";
-import ChevronDown from "lucide-react-native/icons/chevron-down";
-import ChevronUp from "lucide-react-native/icons/chevron-up";
-import { Fragment, useState } from "react";
-import {
-  type AccessibilityActionEvent,
-  AccessibilityInfo,
-  Pressable,
-  StyleSheet,
-  View,
-} from "react-native";
+import { Image } from "expo-image";
+import Check from "lucide-react-native/icons/check";
+import { Fragment, type ReactNode, useState } from "react";
+import { type AccessibilityActionEvent, Pressable, View, type ViewStyle } from "react-native";
 import Svg, { Path } from "react-native-svg";
-import { Button } from "@/components/ui/button";
+import { useInSight } from "@/components/InSight";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
 import { Text, TextClassContext } from "@/components/ui/text";
@@ -30,8 +26,7 @@ import { SafetyActions } from "@/features/safety";
 import { useT } from "@/lib/locale";
 import { usePhotoDescriptionText } from "@/lib/photo-descriptions";
 import { cn } from "@/lib/utils";
-import { DECORATIVE, MINIMUM_TARGET } from "@/theme/a11y";
-import { useHapticTap } from "@/theme/haptics";
+import { DECORATIVE, hitSlopFor, MINIMUM_TARGET, TOUCH_TARGET } from "@/theme/a11y";
 import { useTokenColour } from "@/theme/shadow";
 import { useLookTraits } from "@/theme/ThemeProvider";
 import { FIELD_ICONS, HOBBY_GROUP_ICONS } from "./fieldIcons";
@@ -50,31 +45,55 @@ import { PROFILE_SECTIONS, type SectionItem, sectionTitleKey } from "./sections"
 /** The card's own accessibility action, by name; its label is the heard one. */
 const SAFETY_ACTION = "blockOrReport";
 
-/** A photo kept mounted but out of sight and hearing: back in front, it signs nothing again. */
-const BEHIND = {
-  accessibilityElementsHidden: true,
-  importantForAccessibility: "no-hide-descendants",
-} as const;
-
-/** Which photo of which card is in front, and the photos that card has shown so far. */
-type Gallery = { card: string; index: number; seen: readonly string[] };
-
 /**
- * The answers the short card shows (#644, the maintainer's of 07/11/2026):
- * what the person is here for and the six a deal-breaker can be set on,
- * the answers people care enough about to filter on, in the registry's order.
+ * The answers the card shows as chips after its first photo (#644, the
+ * maintainer's of 07/11/2026): what the person is here for and the six a
+ * deal-breaker can be set on, the answers people care enough about to filter
+ * on, in the registry's order.
  */
 const KEY_FACTS: readonly ProfileFieldKey[] = CARD_FIELD_KEYS.filter(
   (key) => key === "intent" || DEAL_BREAKER_FIELDS.includes(key),
 );
 
+/** What can be shared (#150), and so named by a like (#463). */
+const SHARED_FIELDS: readonly ProfileFieldKey[] = ["hobbies", "languages", "university", "guild"];
+const isShared = (key: ProfileFieldKey): key is SharedField => SHARED_FIELDS.includes(key);
+
+/** The same part of a card, or none for none: a pick's second tap takes it back (#463). */
+function samePart(a: LikeAnchor | null, b: LikeAnchor): boolean {
+  if (a === null || a.kind !== b.kind) return false;
+  switch (b.kind) {
+    case "photo":
+      return a.kind === "photo" && a.photoId === b.photoId;
+    case "prompt":
+      return a.kind === "prompt" && a.prompt === b.prompt;
+    case "bio":
+      return true;
+    case "shared":
+      return a.kind === "shared" && a.field === b.field && a.option === b.option;
+  }
+}
+
+/**
+ * The part a like will name and how a tap picks it (#463, ADR-077): a photo,
+ * an answered prompt, the bio or an answer both people gave. Only the queue
+ * passes it, on a card that can still be liked.
+ */
+export type Picking = {
+  anchor: LikeAnchor | null;
+  onPick: (anchor: LikeAnchor | null) => void;
+};
+
+/** A part's tap: picked, or taken back when it was the one. */
+type PartPress = { picked: boolean; onPress: () => void };
+
 const isCardField = (item: SectionItem): item is ProfileFieldKey =>
   (CARD_FIELD_KEYS as readonly string[]).includes(item);
 
 /**
- * The rest of a card's answers, on the whole card, under the profile's own
- * sections and in their order (#644), the one the person fills them in: the
- * key facts stand above, and the identity label in the header.
+ * The rest of a card's answers, at its end, under the profile's own sections
+ * and in their order (#644), the one the person fills them in: the key facts
+ * stand above, and the identity label in the header.
  */
 const WHOLE_SECTIONS = PROFILE_SECTIONS.map((section) => ({
   id: section.id,
@@ -102,6 +121,8 @@ type Chip = {
   text: string;
   /** Both the viewer and the subject answered it (#150): filled and in bold, never a colour alone. */
   shared: boolean;
+  /** What a like names when this chip is picked (#463): a shared answer's alone. */
+  part: LikeAnchor | null;
   /** A field that reads as the work beside it says both answers, with both icons. */
   withWork: boolean;
   heard: string;
@@ -131,16 +152,17 @@ function mergeFieldAndWork(chips: readonly Unheard[]): Unheard[] {
 }
 
 /**
- * A card as others see it (#47, #150), in two depths (#644, the maintainer's
- * of 07/11/2026). The short card: the name with the age, then the gender
- * with the identity label after it, the name of the home and, in a queue, how
- * far it is in words (ADR-061 §3, §5), on one line with no digits, no
- * kilometres and no meaning in a colour; the photos; the key facts as chips;
- * one answer in the person's own words, the first prompt or the bio when
- * there is none (the field sheet's Hinge takeaway, ADR-009 §7); and "Show the
- * whole card" while there is more. The whole card opens in place under it:
- * the bio, the other prompts and the rest of the answers under the profile's
- * own section titles. A new card starts short, as it starts at its main photo.
+ * A card as others see it (#47, #150), one scroll the way Hinge has it (the
+ * maintainer's of 26/11/2026, after the two depths of #644): the name with the
+ * age, then the gender with the identity label after it, the name of the home
+ * and, in a queue, how far it is in words (ADR-061 §3, §5), on one line with
+ * no digits, no kilometres and no meaning in a colour; the first photo; the key
+ * facts as chips; then each further photo with the next of the person's own
+ * words after it, the first prompt, the bio, the other prompts (the field
+ * sheet's Hinge takeaway, ADR-009 §7); whatever is left of either after the
+ * other ran out; and last the rest of the answers under the profile's own
+ * section titles. Nothing is folded away and nothing is tapped through: the
+ * card is read by scrolling, and a new card starts at its top.
  *
  * A chip is an answer in the person's own words with the field's icon before
  * it, or the option's own glyph (#213), Hinge's way ("<cigarette> Never"),
@@ -149,16 +171,18 @@ function mergeFieldAndWork(chips: readonly Unheard[]): Unheard[] {
  * filled and in bold, heard as shared, never a count or a score (ADR-009 §7);
  * the words "you too" went for reading like "me too".
  *
- * The photos are a gallery in the main photo's place (#513), as the big
- * dating apps have it: a tap on the right half shows the next, on the left
- * half the previous, with a bar per photo above them. The halves are two
- * named buttons, so a screen reader, a keyboard or a switch reaches them, and
- * the photo that comes is said. A photo is asked for when it first comes to
- * the front, never before (rules/mobile.md Images: prefetch counts as
- * exposure), and stays mounted behind, so going back signs nothing again:
- * at most one card-size URL per photo while the card is on the screen
- * (ADR-008, ADR-041 §1). The caption and the description under it follow
- * the photo in front.
+ * A photo is asked for when it first comes into sight on the screen, never
+ * before (rules/mobile.md Images: prefetch counts as exposure), its blurhash
+ * standing in until then, and stays once it has: at most one card-size URL per
+ * photo while the card is on the screen (ADR-008, ADR-041 §1). The screen's
+ * scroll tells the card when it moves (`useSightScroll`). Each photo carries
+ * its caption and the description under it, and is heard with its place.
+ *
+ * In the queue, a like may name one part of the card (#463, ADR-077): with
+ * `picking`, each photo, answered prompt, the bio and each shared answer is a
+ * button that picks it, outlined in the ink with a check and the words "In
+ * your like", heard as selected; the picked one tapped again is no longer
+ * picked. Without it the card is read only, as everywhere else.
  *
  * Someone else's card carries "Block or report" (#84, ADR-030 §11): an icon
  * button beside the name, and the same as an accessibility action on the
@@ -171,10 +195,13 @@ export function ProfileCardView({
   distance,
   onRefused,
   onGone,
+  picking,
   bleed = false,
 }: {
   card: ProfileCard;
-  /** Kumpa's poster only: the photo runs to the edges of a screen padded 24 pt on each side (the queue's). */
+  /** The queue's pick of the part a like names (#463); none elsewhere. */
+  picking?: Picking;
+  /** Kumpa's poster only: the first photo runs to the edges of a screen padded 24 pt on each side (the queue's). */
   bleed?: boolean;
   /** How far the person lives, as their queue entry froze it (ADR-061 §5); a card outside a queue has none. */
   distance?: DistanceBand | null;
@@ -185,20 +212,10 @@ export function ProfileCardView({
 }) {
   const { t, locale } = useT();
   const { poster } = useLookTraits();
-  const tap = useHapticTap();
   const [safetyOpen, setSafetyOpen] = useState(false);
-  /** The person whose whole card is open: another person's card starts short. */
-  const [opened, setOpened] = useState<string | null>(null);
-  const whole = opened === card.accountId;
   const described = usePhotoDescriptionText();
   const [firstPrompt, ...morePrompts] = card.prompts;
   const total = card.photos.length;
-  const [gallery, setGallery] = useState<Gallery>({ card: card.accountId, index: 0, seen: [] });
-  // Another person's card starts at their main photo, with nothing shown yet.
-  const here = gallery.card === card.accountId ? gallery : { index: 0, seen: [] };
-  const index = Math.min(here.index, Math.max(total - 1, 0));
-  const front = card.photos[index];
-  const seen = new Set([...here.seen, ...(front ? [front.id] : [])]);
   /** A photo's place on the card and the owner's line, as the report step shows it (#476). */
   const photoText = (photo: ProfileCard["photos"][number], position: number) =>
     photo.caption
@@ -212,16 +229,11 @@ export function ProfileCardView({
   // owner's line with the picture, and then what the check saw in it.
   const photoLabel = (photo: ProfileCard["photos"][number], position: number) =>
     described.label(photoText(photo, position), photo.description);
-  /** The description under a photo for the eye, where the setting asks for it. */
-  const wordsUnder = (photo: ProfileCard["photos"][number]) => described.under(photo.description);
-  const frontWords = front ? wordsUnder(front) : null;
-  /** The photo `step` away comes to the front, and a screen reader hears which it is. */
-  const go = (step: -1 | 1) => {
-    const next = card.photos[index + step];
-    if (!next) return;
-    tap();
-    setGallery({ card: card.accountId, index: index + step, seen: [...seen, next.id] });
-    AccessibilityInfo.announceForAccessibility(photoLabel(next, index + step + 1));
+  /** A part's tap, where the card picks; a second tap of the picked one takes it back. */
+  const press = (part: LikeAnchor | null): PartPress | undefined => {
+    if (!picking || !part) return undefined;
+    const picked = samePart(picking.anchor, part);
+    return { picked, onPress: () => picking.onPick(picked ? null : part) };
   };
   const fields = card.fields as Record<string, unknown>;
   const identityLabel = typeof fields.identityLabel === "string" ? fields.identityLabel : null;
@@ -259,13 +271,20 @@ export function ProfileCardView({
       key === "hobbies" || key === "languages" || key === "university" || key === "guild"
         ? card.shared[key]
         : [];
-    return once.map((answer) => ({
-      ...answer,
-      id: `${key}.${answer.option ?? "value"}`,
-      field: key,
-      shared: answer.option !== null && shared.includes(answer.option),
-      withWork: false,
-    }));
+    return once.map((answer) => {
+      const both = answer.option !== null && shared.includes(answer.option);
+      return {
+        ...answer,
+        id: `${key}.${answer.option ?? "value"}`,
+        field: key,
+        shared: both,
+        part:
+          both && answer.option !== null && isShared(key)
+            ? { kind: "shared", field: key, option: answer.option }
+            : null,
+        withWork: false,
+      };
+    });
   };
   /**
    * How each chip is heard: a field's first chip of its own names its question,
@@ -293,19 +312,85 @@ export function ProfileCardView({
   })).filter((section) => section.chips.length > 0);
   // What the person wrote wins over a ready line, an empty bio being none.
   const bio = card.bio || (card.bioPreset ? t(presetKey(card.bioPreset)) : null);
+  const panel = cn("gap-2 rounded-3xl border border-border bg-card p-5", !poster && "rounded-xl");
+  /** The person's own words in the card's order: the first prompt, the bio, the other prompts. */
   const prompt = (answer: ProfileCard["prompts"][number]) => (
-    <View key={answer.key} className="gap-0.5">
-      <Text variant="small">{t(promptKey(answer.key))}</Text>
-      <Text>{answer.answer}</Text>
-    </View>
+    <Prompt
+      key={answer.key}
+      answer={answer}
+      className={panel}
+      press={press({ kind: "prompt", prompt: answer.key })}
+    />
   );
-  // With no prompt, the bio is the short card's words and the whole card has none left.
-  const moreWords = firstPrompt
-    ? [...(bio ? [<Text key="bio">{bio}</Text>] : []), ...morePrompts.map(prompt)]
-    : [];
-  const more = moreWords.length > 0 || sections.length > 0;
-  const content = keyChips.length > 0 || firstPrompt !== undefined || bio !== null || more;
-  const toggleText = t(whole ? "profile.card.showLess" : "profile.card.showWhole");
+  const bioPress = press({ kind: "bio" });
+  const words: ReactNode[] = [
+    ...(firstPrompt ? [firstPrompt] : []).map(prompt),
+    ...(bio
+      ? [
+          bioPress ? (
+            <Part key="bio" press={bioPress} label={bio} className={panel} testID="card-bio">
+              <Text>{bio}</Text>
+            </Part>
+          ) : (
+            <Text key="bio" className={panel}>
+              {bio}
+            </Text>
+          ),
+        ]
+      : []),
+    ...morePrompts.map(prompt),
+  ];
+  const photoAt = (at: number) => {
+    const photo = card.photos[at];
+    if (!photo) return null;
+    const under = described.under(photo.description);
+    const edge = poster && bleed && at === 0;
+    const label = photoLabel(photo, at + 1);
+    const photoPress = press({ kind: "photo", photoId: photo.id });
+    const shown = (
+      <CardPhoto
+        photo={photo}
+        label={label}
+        onRefused={onRefused}
+        style={edge ? POSTER_BLEED : PHOTO_FRAME}
+        className={cn(
+          edge ? undefined : poster ? "overflow-hidden rounded-3xl" : "overflow-hidden rounded-xl",
+          photoPress?.picked && "border-4 border-stroke",
+        )}
+        wave={poster && at === 0}
+      />
+    );
+    return (
+      <View key={photo.id} className="gap-1.5">
+        {photoPress ? (
+          <Part press={photoPress} label={label} testID={`card-pick-photo-${photo.id}`} over>
+            {shown}
+          </Part>
+        ) : (
+          shown
+        )}
+        {photo.caption ? <Caption text={t(captionKey(photo.caption))} /> : null}
+        {under ? <PhotoDescriptionText text={under} /> : null}
+      </View>
+    );
+  };
+  // The first photo and the key facts, then each further photo with the next of
+  // the person's words under it, then what is left of either: a card with one
+  // photo or none still has its facts and all its words.
+  const stream: ReactNode[] = [photoAt(0)];
+  if (keyChips.length > 0)
+    stream.push(<Chips key="facts" chips={keyChips} poster={poster} press={press} />);
+  for (let at = 1; at < Math.max(total, words.length + 1); at += 1) {
+    stream.push(photoAt(at), words[at - 1] ?? null);
+  }
+  const rest = sections.map((section) => (
+    <View key={section.id} className="gap-2">
+      <Text variant="small" role="heading">
+        {t(sectionTitleKey(section.id))}
+      </Text>
+      <Chips chips={section.chips} poster={poster} press={press} />
+    </View>
+  ));
 
   // The name and the line under it in one column, Block or report beside both,
   // so its 44 pt target puts no gap between them (#644).
@@ -348,113 +433,8 @@ export function ProfileCardView({
       )}
     </View>
   );
-  const photos = front ? (
-    <View
-      style={poster && bleed ? POSTER_BLEED : PHOTO_FRAME}
-      className={poster && !bleed ? "overflow-hidden rounded-3xl" : undefined}
-    >
-      {card.photos.map((photo, at) =>
-        seen.has(photo.id) ? (
-          <View
-            key={photo.id}
-            style={StyleSheet.absoluteFill}
-            className={at === index ? undefined : "opacity-0"}
-            pointerEvents="none"
-            {...(at === index ? {} : BEHIND)}
-          >
-            <PhotoImage
-              id={photo.id}
-              variant="card"
-              blurhash={photo.blurhash}
-              accessibilityLabel={photoLabel(photo, at + 1)}
-              style={{ width: "100%", height: "100%" }}
-              onRefused={onRefused}
-            />
-          </View>
-        ) : null,
-      )}
-      {total > 1 && (
-        <>
-          {/* Where in the photos the card is: the label says it in words. */}
-          <View
-            className="absolute inset-x-0 top-0 flex-row gap-1 p-2"
-            pointerEvents="none"
-            {...DECORATIVE}
-          >
-            {card.photos.map((photo, at) => (
-              <View
-                key={photo.id}
-                className={cn(
-                  "h-1.5 flex-1 rounded-full border border-background",
-                  at === index && "bg-background",
-                )}
-              />
-            ))}
-          </View>
-          {(
-            [
-              [-1, "profile.card.photoPrevious", "left-0"],
-              [1, "profile.card.photoNext", "right-0"],
-            ] as const
-          ).map(([step, label, side]) => {
-            const none = !card.photos[index + step];
-            return (
-              <Pressable
-                key={label}
-                accessibilityRole="button"
-                accessibilityLabel={t(label)}
-                accessibilityState={{ disabled: none }}
-                disabled={none}
-                className={cn("absolute inset-y-0 w-1/2", side)}
-                style={MINIMUM_TARGET}
-                onPress={() => go(step)}
-              />
-            );
-          })}
-        </>
-      )}
-      {poster && <PosterWave />}
-    </View>
-  ) : null;
-  const captions =
-    front?.caption || frontWords ? (
-      <View className={cn("gap-1.5", !poster && "px-6")}>
-        {front?.caption ? <Caption text={t(captionKey(front.caption))} /> : null}
-        {frontWords ? <PhotoDescriptionText text={frontWords} /> : null}
-      </View>
-    ) : null;
-  const details = (
-    <>
-      {keyChips.length > 0 && <Chips chips={keyChips} poster={poster} />}
-      {firstPrompt ? prompt(firstPrompt) : bio ? <Text>{bio}</Text> : null}
-      {more && (
-        <Button
-          variant="outline"
-          accessibilityLabel={toggleText}
-          accessibilityState={{ expanded: whole }}
-          onPress={() => {
-            tap();
-            setOpened(whole ? null : card.accountId);
-          }}
-        >
-          <Text>{toggleText}</Text>
-          <Icon as={whole ? ChevronUp : ChevronDown} size={18} />
-        </Button>
-      )}
-      {whole && moreWords}
-      {whole &&
-        sections.map((section) => (
-          <View key={section.id} className="gap-2">
-            <Text variant="small" role="heading">
-              {t(sectionTitleKey(section.id))}
-            </Text>
-            <Chips chips={section.chips} poster={poster} />
-          </View>
-        ))}
-    </>
-  );
 
-  // Kumpa's poster (the HS design): the name, large, then the photo at the
+  // Kumpa's poster (the HS design): the name, large, then the first photo at the
   // screen's edges where the screen asks for it, and the rest, with no card
   // around them. The design draws the name under the photo; on a phone the
   // queue's floating buttons would cover it there, so it keeps the card's
@@ -463,27 +443,171 @@ export function ProfileCardView({
     return (
       <View className="gap-4">
         {title}
-        {photos}
-        {captions}
-        {content && <View className="gap-4">{details}</View>}
+        {stream}
+        {rest}
       </View>
     );
   }
   return (
     <Card>
       <CardHeader>{title}</CardHeader>
-      {photos}
-      {captions}
-      {content && <CardContent className="gap-4">{details}</CardContent>}
+      <CardContent className="gap-4">
+        {stream}
+        {rest}
+      </CardContent>
     </Card>
   );
 }
 
-const PHOTO_FRAME = { width: "100%", aspectRatio: 3 / 4 } as const;
-// Kumpa's poster in the queue: the photo to the screen's sides, out through the
+/** One prompt and its answer, the answer in the person's own words; a part a like may name. */
+function Prompt({
+  answer,
+  className,
+  press,
+}: {
+  answer: ProfileCard["prompts"][number];
+  className: string;
+  press?: PartPress;
+}) {
+  const { t } = useT();
+  const question = t(promptKey(answer.key));
+  const inner = (
+    <>
+      <Text variant="small">{question}</Text>
+      <Text>{answer.answer}</Text>
+    </>
+  );
+  if (!press) return <View className={className}>{inner}</View>;
+  return (
+    <Part
+      press={press}
+      label={t("profile.card.part.prompt", { prompt: question, answer: answer.answer })}
+      className={className}
+      testID={`card-prompt-${answer.key}`}
+    >
+      {inner}
+    </Part>
+  );
+}
+
+/**
+ * A part of the card a like may name (#463): a button heard by its own words,
+ * as selected once picked, outlined in the ink with a check and "In your
+ * like", so the pick never rests on a colour. A photo draws its own outline
+ * and takes the mark over its top corner.
+ */
+function Part({
+  press,
+  label,
+  className,
+  testID,
+  over = false,
+  children,
+}: {
+  press: PartPress;
+  label: string;
+  className?: string;
+  testID: string;
+  /** The mark over the part (a photo's corner), not above its words. */
+  over?: boolean;
+  children: ReactNode;
+}) {
+  const { t } = useT();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityHint={t("profile.card.part.hint")}
+      accessibilityState={{ selected: press.picked }}
+      onPress={press.onPress}
+      testID={testID}
+      style={MINIMUM_TARGET}
+      className={cn(className, !over && press.picked && "border-4 border-stroke")}
+    >
+      {press.picked && !over && <PickedMark />}
+      {children}
+      {press.picked && over && <PickedMark className="absolute left-3 top-3" />}
+    </Pressable>
+  );
+}
+
+/** "In your like", with a check: the words and the shape of a pick (#463). */
+function PickedMark({ className }: { className?: string }) {
+  const { t } = useT();
+  return (
+    <View
+      testID="part-picked"
+      className={cn(
+        "flex-row items-center gap-1.5 self-start rounded-full border-2 border-stroke bg-background px-3 py-1",
+        className,
+      )}
+    >
+      <Icon as={Check} size={16} className="shrink-0" />
+      <Text variant="small">{t("profile.card.part.picked")}</Text>
+    </View>
+  );
+}
+
+/**
+ * One of the card's photos: its blurhash until it comes into sight, then the
+ * photo itself, asked for then and kept (ADR-008). Heard as an image with its
+ * place on the card either way.
+ */
+function CardPhoto({
+  photo,
+  label,
+  onRefused,
+  style,
+  className,
+  wave,
+}: {
+  photo: ProfileCard["photos"][number];
+  label: string;
+  onRefused?: OnRefused;
+  style: ViewStyle;
+  className?: string;
+  wave: boolean;
+}) {
+  const { ref, onLayout, inSight } = useInSight();
+  const fill = { width: "100%", height: "100%" } as const;
+  return (
+    <View
+      ref={ref}
+      onLayout={onLayout}
+      style={style}
+      className={className}
+      testID={`card-photo-${photo.id}`}
+    >
+      {inSight ? (
+        <PhotoImage
+          id={photo.id}
+          variant="card"
+          blurhash={photo.blurhash}
+          accessibilityLabel={label}
+          style={fill}
+          onRefused={onRefused}
+        />
+      ) : (
+        <Image
+          source={null}
+          placeholder={{ blurhash: photo.blurhash }}
+          placeholderContentFit="cover"
+          style={fill}
+          accessible
+          accessibilityRole="image"
+          accessibilityLabel={label}
+        />
+      )}
+      {wave && <PosterWave />}
+    </View>
+  );
+}
+
+const PHOTO_FRAME: ViewStyle = { width: "100%", aspectRatio: 3 / 4 };
+// Kumpa's poster in the queue: the first photo to the screen's sides, out through the
 // queue's 24 pt padding, since a width of 100 % would keep it. Its top stays,
 // under the card's reason label.
-const POSTER_BLEED = { aspectRatio: 3 / 4, marginHorizontal: -24 } as const;
+const POSTER_BLEED: ViewStyle = { aspectRatio: 3 / 4, marginHorizontal: -24 };
 const POSTER_TITLE = "text-[40px] leading-[46px] font-bold";
 const POSTER_TONES = ["bg-chip-1", "bg-chip-2", "bg-chip-3"] as const;
 
@@ -531,15 +655,31 @@ function HeaderLine({ words }: { words: readonly string[] }) {
 }
 
 /** Chips that wrap onto as many lines as they need, never a sideways scroll (#644). */
-function Chips({ chips, poster }: { chips: readonly Chip[]; poster: boolean }) {
+function Chips({
+  chips,
+  poster,
+  press,
+}: {
+  chips: readonly Chip[];
+  poster: boolean;
+  press: (part: LikeAnchor | null) => PartPress | undefined;
+}) {
   return (
     <View className="flex-row flex-wrap gap-2">
       {chips.map((chip, at) => (
-        <FactChip key={chip.id} chip={chip} tone={poster ? POSTER_TONES[at % 3] : undefined} />
+        <FactChip
+          key={chip.id}
+          chip={chip}
+          tone={poster ? POSTER_TONES[at % 3] : undefined}
+          press={press(chip.part)}
+        />
       ))}
     </View>
   );
 }
+
+/** A chip's least height, which its hitSlop takes to the 44 pt target when it is a button. */
+const CHIP_HEIGHT = 32;
 
 /**
  * One answer: the option's glyph where it has one (#213), a hobby's group
@@ -547,7 +687,8 @@ function Chips({ chips, poster }: { chips: readonly Chip[]; poster: boolean }) {
  * bold, so the meaning never rests on the colour (CLAUDE.md Accessibility),
  * and the chip is heard as one element.
  */
-function FactChip({ chip, tone }: { chip: Chip; tone?: string }) {
+function FactChip({ chip, tone, press }: { chip: Chip; tone?: string; press?: PartPress }) {
+  const { t } = useT();
   const group =
     chip.field === "hobbies" && chip.option ? HOBBY_GROUP_OF.get(chip.option) : undefined;
   const inner = (
@@ -573,35 +714,58 @@ function FactChip({ chip, tone }: { chip: Chip; tone?: string }) {
         />
       )}
       <Text className="shrink">{chip.text}</Text>
+      {/* A picked chip's check, after its words: the line over the buttons says the rest. */}
+      {press?.picked && <Icon as={Check} size={16} className="shrink-0" testID="part-picked" />}
     </>
   );
+  const className = cn(
+    // A pill while its words fit a line or two. A full pill's curve would cross the words of a
+    // name on three lines at the largest text, a guild's (#677), so the corner stops here.
+    "max-w-full flex-row items-center gap-1.5 rounded-3xl border px-3 py-1",
+    // The outline stays on a shared chip: the high-contrast sets' fill is their
+    // background, and there the bold alone tells it, still a chip.
+    "border-border",
+    chip.shared && "bg-secondary",
+    // Kumpa's pastels, in turn; a shared one keeps its bold and takes the ink's outline.
+    tone && cn("py-1.5", tone, chip.shared ? "border-2 border-stroke" : "border-transparent"),
+    // Picked for a like (#463): the ink's outline at its thickest, with the check.
+    press?.picked && "border-4 border-stroke",
+  );
+  const content = chip.shared ? (
+    // On a pastel, a shared chip's words are the ink, as every chip's are.
+    <TextClassContext.Provider
+      value={cn("font-semibold", tone ? "text-foreground" : "text-secondary-foreground")}
+    >
+      {inner}
+    </TextClassContext.Provider>
+  ) : (
+    inner
+  );
+  if (press) {
+    return (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={chip.heard}
+        accessibilityHint={t("profile.card.part.hint")}
+        accessibilityState={{ selected: press.picked }}
+        onPress={press.onPress}
+        testID={`chip-${chip.id}`}
+        style={{ minHeight: CHIP_HEIGHT, minWidth: TOUCH_TARGET }}
+        hitSlop={hitSlopFor(TOUCH_TARGET, CHIP_HEIGHT)}
+        className={className}
+      >
+        {content}
+      </Pressable>
+    );
+  }
   return (
     <View
       accessible
       accessibilityLabel={chip.heard}
       testID={`chip-${chip.id}`}
-      className={cn(
-        // A pill while its words fit a line or two. A full pill's curve would cross the words of a
-        // name on three lines at the largest text, a guild's (#677), so the corner stops here.
-        "max-w-full flex-row items-center gap-1.5 rounded-3xl border px-3 py-1",
-        // The outline stays on a shared chip: the high-contrast sets' fill is their
-        // background, and there the bold alone tells it, still a chip.
-        "border-border",
-        chip.shared && "bg-secondary",
-        // Kumpa's pastels, in turn; a shared one keeps its bold and takes the ink's outline.
-        tone && cn("py-1.5", tone, chip.shared ? "border-2 border-stroke" : "border-transparent"),
-      )}
+      className={className}
     >
-      {chip.shared ? (
-        // On a pastel, a shared chip's words are the ink, as every chip's are.
-        <TextClassContext.Provider
-          value={cn("font-semibold", tone ? "text-foreground" : "text-secondary-foreground")}
-        >
-          {inner}
-        </TextClassContext.Provider>
-      ) : (
-        inner
-      )}
+      {content}
     </View>
   );
 }

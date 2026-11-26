@@ -4,6 +4,7 @@ import {
   type FrameErrorCode,
   ServerFrame,
 } from "@kuutti/schema";
+import { readAnswerSafely } from "@/lib/answer";
 import { apiBaseUrl } from "@/lib/api-url";
 import {
   accessTokenIsStale,
@@ -57,7 +58,8 @@ function parsed(data: unknown): ServerFrame | null {
   try {
     const sent: unknown = JSON.parse(String(data));
     const message = (sent as { type?: unknown; message?: unknown } | null)?.type === "message";
-    const frame = ServerFrame.safeParse(
+    const frame = readAnswerSafely(
+      ServerFrame,
       message
         ? {
             ...(sent as object),

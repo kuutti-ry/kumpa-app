@@ -202,8 +202,10 @@ describe("the return a browser kept", () => {
       expect(res.headers.get("location")).toBe("fi.kumpa://auth?error=auth_code_used");
       expect(res.headers.get("cache-control")).toBe("no-store");
       expect(res.headers.get("content-type")).toBeNull();
-      // Nothing of what was sent is repeated, in the answer or in a line.
-      expect(JSON.stringify(lines())).not.toMatch(/evil|scam|2099/);
+      // Nothing of what was sent is repeated, in the answer or in a line. The
+      // date whole: "2099" alone turns up in a random request id (1209904b-…)
+      // or a time, where "2099-01-01" cannot (a UUID's groups are four or more).
+      expect(JSON.stringify(lines())).not.toMatch(/evil|scam|2099-01-01/);
     },
   );
 

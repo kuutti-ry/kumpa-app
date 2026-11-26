@@ -1,17 +1,20 @@
-# The card is what others see (#47, ADR-019 §2), in two depths (#644): the
-# name with the age above the photos (every account is bank-verified, so the
-# card does not say so, #239), the gender and the town on one line, the key
-# facts as chips in the person's own words with no label line, the first
-# prompt, and "Show the whole card", which opens the bio, the other prompt and
-# the rest of the answers under the profile's section titles in place. Soft
-# fields (education, drinking) never show, and a finished profile has no list
-# of what is missing. Her home is a name, never digits, and how far is a
-# queue's to say, so her own card has no band (ADR-061 §3, §5). A chip is one
-# element to a screen reader, heard with its question ("Looking for: ..."), so
-# on iOS its label carries the question and the patterns allow it. Sanna's
-# history after `pnpm demo:reset` (packages/db/src/seed/histories.ts); read only.
+# The card is what others see (#47, ADR-019 §2), read down one scroll the way
+# Hinge has it (the maintainer, 26/11/2026; #644's two depths before): the name
+# with the age on top (every account is bank-verified, so the card does not say
+# so, #239), the gender and the town on one line, the first photo, the key facts
+# as chips in the person's own words with no label line, then each further photo
+# with the next of her own words under it (the first prompt, the bio, the other
+# prompt), her last photo, and the rest of the answers under the profile's
+# section titles. Nothing is tapped open or through. Soft fields (education,
+# drinking) never show, and a finished profile has no list of what is missing.
+# Her home is a name, never digits, and how far is a queue's to say, so her own
+# card has no band (ADR-061 §3, §5). A chip is one element to a screen reader,
+# heard with its question ("Looking for: ..."), so on iOS its label carries the
+# question and the patterns allow it; a photo is heard with its place, which
+# stands for it before it is in sight. Sanna's history after `pnpm demo:reset`
+# (packages/db/src/seed/histories.ts); read only.
 appId: fi.kumpa
-name: The card leads with the name, the photo and the key facts, and opens the rest in place but nothing soft
+name: The card reads down one scroll, its photos between her own words and the rest at its end, but nothing soft
 ---
 - runFlow: ../common/sign-in.yaml
 - openLink: fi.kumpa://profile/card
@@ -26,7 +29,8 @@ name: The card leads with the name, the photo and the key facts, and opens the r
 - assertVisible: "Espoo|Esbo"
 - assertNotVisible: ".*\\d{5}.*"
 - assertNotVisible: "Nearby|Lähellä|I närheten|Close|Melko lähellä|Ganska nära|Around|Samoilla seuduilla|I trakten|Far|Kauempana|Längre bort"
-# The key facts, each an answer in her own words after its icon, and no label line.
+# The key facts under the first photo, each an answer in her own words after
+# its icon, and no label line.
 - scrollUntilVisible:
     element: "(.*: )?(Something long-term|Jotain pitkäaikaista|Något långvarigt)"
     direction: DOWN
@@ -39,21 +43,31 @@ name: The card leads with the name, the photo and the key facts, and opens the r
 - assertVisible: "(.*: )?(Swedish|Ruotsi|Svenska)"
 # The unit is joined by a no-break space.
 - assertVisible: "(.*: )?171.cm"
+# Down the one scroll: a photo and her first prompt, a photo and her bio, a
+# photo and her other prompt, then her last photo. A scroll down finds each
+# only below the one before.
+- scrollUntilVisible:
+    element: "(Photo 2 of 5|Kuva 2 / 5|Foto 2 av 5).*"
+    direction: DOWN
+    centerElement: true
+    timeout: 60000
 - scrollUntilVisible:
     element: "Aamu-uinti, sitten.*"
     direction: DOWN
     centerElement: true
     timeout: 60000
-# The rest waits for the whole card, opened in place.
-- assertNotVisible: "(.*: )?Arkkitehti"
 - scrollUntilVisible:
-    element: "Show the whole card|Näytä koko kortti|Visa hela kortet"
+    element: "(Photo 3 of 5|Kuva 3 / 5|Foto 3 av 5).*"
     direction: DOWN
     centerElement: true
     timeout: 60000
-- tapOn: "Show the whole card|Näytä koko kortti|Visa hela kortet"
 - scrollUntilVisible:
     element: "Arkkitehti, joka piirtää.*"
+    direction: DOWN
+    centerElement: true
+    timeout: 60000
+- scrollUntilVisible:
+    element: "(Photo 4 of 5|Kuva 4 / 5|Foto 4 av 5).*"
     direction: DOWN
     centerElement: true
     timeout: 60000
@@ -62,6 +76,12 @@ name: The card leads with the name, the photo and the key facts, and opens the r
     direction: DOWN
     centerElement: true
     timeout: 60000
+- scrollUntilVisible:
+    element: "(Photo 5 of 5|Kuva 5 / 5|Foto 5 av 5).*"
+    direction: DOWN
+    centerElement: true
+    timeout: 60000
+# The rest of her answers at the card's end, under the profile's section titles.
 - scrollUntilVisible:
     element: "Work and education|Työ ja koulutus|Arbete och utbildning"
     direction: DOWN

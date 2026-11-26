@@ -6,6 +6,7 @@ import { a11yProblems, type HostNode, pressables } from "@/test/a11y";
 import { FAILED_TO_LOAD } from "@/test/failed";
 import { expectPinnedHeader, hasCutText } from "@/test/layout";
 import { renderWithTheme } from "@/test/render";
+import { layOut, placePhotos, scrollTo } from "@/test/sight";
 import { MAX_FONT_SCALE } from "@/theme/a11y";
 import { CardPreviewScreen } from "./CardPreviewScreen";
 
@@ -86,6 +87,7 @@ const show = () =>
   });
 
 beforeEach(async () => {
+  placePhotos();
   router.back.mockReset();
   await saveSession({
     sessionId: "6f1c1c4e-9a8e-4a0b-9c3a-0c8d1e2f3a4b",
@@ -120,39 +122,34 @@ describe("CardPreviewScreen", () => {
     expect(screen.getByText("171 cm")).toBeTruthy();
     expect(screen.getByText("A long breakfast.")).toBeTruthy();
     expect(screen.getByText("Whom you are looking for")).toBeTruthy();
-    // The owner sees the same two depths as others (#644): the rest waits for the whole card.
-    expect(screen.queryByText("Architect")).toBeNull();
-    expect(screen.queryByText("I can whistle with my mouth full.")).toBeNull();
-    await act(async () => {
-      fireEvent.press(screen.getByRole("button", { name: "Show the whole card" }));
-      await settle();
-    });
+    // The owner sees the card as others do, all of it down one scroll (the maintainer, 26/11/2026).
     expect(screen.getByText("Architect")).toBeTruthy();
     expect(screen.getByLabelText("Hobbies: Yoga, shared")).toBeTruthy();
     expect(screen.getByText("Hiking")).toBeTruthy();
     expect(screen.getByText("The photos say it. The rest over coffee.")).toBeTruthy();
     expect(screen.getByText("I can whistle with my mouth full.")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Show the whole card" })).toBeNull();
     // The identity label stands in the header, not among the fields.
     expect(screen.queryByText("Identity")).toBeNull();
-    // The card leads with the photo and one answer in the person's words; the whole card
-    // follows with the other words, then the answers under their sections (#150, #644).
+    // The photo and the key facts, then the second photo and the first prompt, the ready
+    // line and the other prompt, then the answers under their sections (#150).
     const order = textsOf(screen.toJSON());
     expect(order.indexOf("Non-binary")).toBeLessThan(order.indexOf("Genderfluid"));
-    expect(order.indexOf("A long breakfast.")).toBeLessThan(order.indexOf("Show less"));
-    expect(order.indexOf("Show less")).toBeLessThan(
-      order.indexOf("I can whistle with my mouth full."),
+    const at = (text: string) => order.indexOf(text);
+    expect(at("Something long-term")).toBeLessThan(at("A long breakfast."));
+    expect(at("A long breakfast.")).toBeLessThan(at("The photos say it. The rest over coffee."));
+    expect(at("The photos say it. The rest over coffee.")).toBeLessThan(
+      at("I can whistle with my mouth full."),
     );
-    expect(order.indexOf("I can whistle with my mouth full.")).toBeLessThan(
-      order.indexOf("Hobbies"),
-    );
+    expect(at("I can whistle with my mouth full.")).toBeLessThan(at("Hobbies"));
+    // The first photo once the card is laid out, the next only once the screen's
+    // scroll brings it into sight, in the card size as well (ADR-008).
+    expect(calls.filter((p) => p.startsWith("/photos/"))).toEqual([]);
+    await layOut();
     await waitFor(() => expect(calls).toContain(`/photos/${PHOTO_A}/card`));
-    // The next photo only once it comes to the front (#513), in the card size as well.
     expect(calls.filter((p) => p.includes(PHOTO_B))).toEqual([]);
-    await act(async () => {
-      fireEvent.press(screen.getByRole("button", { name: "Next photo" }));
-      await settle();
-    });
-    expect(calls).toContain(`/photos/${PHOTO_B}/card`);
+    await scrollTo(2);
+    await waitFor(() => expect(calls).toContain(`/photos/${PHOTO_B}/card`));
     expect(calls.filter((p) => p.endsWith("/full") || p.endsWith("/thumb"))).toEqual([]);
     const found = pressables(screen.toJSON() as HostNode);
     expect(found.flatMap((node) => a11yProblems(node))).toEqual([]);
@@ -175,10 +172,6 @@ describe("CardPreviewScreen", () => {
     serveCard({ complete: true, missing: [] });
     await show();
     await waitFor(() => expect(screen.getByText("Aino, 36")).toBeTruthy());
-    await act(async () => {
-      fireEvent.press(screen.getByRole("button", { name: "Show the whole card" }));
-      await settle();
-    });
     expect(screen.getByLabelText("Hobbies: Yoga, shared")).toBeTruthy();
     expect(screen.getByText("I can whistle with my mouth full.")).toBeTruthy();
     // No fixed-height text container anywhere on the card (CLAUDE.md Accessibility).
@@ -347,6 +340,7 @@ describe("CardPreviewScreen", () => {
   it("says so under the card when the day's budget holds the photos back", async () => {
     refusingPhotos("photo_budget_exceeded", 429);
     await show();
+    await layOut();
     await waitFor(() =>
       expect(
         screen.getByText("That is enough photos for today. They load again after midnight."),
@@ -357,6 +351,7 @@ describe("CardPreviewScreen", () => {
   it("says under the card that a photo could not be shown for any other refusal (#235)", async () => {
     refusingPhotos("not_found", 404);
     await show();
+    await layOut();
     await waitFor(() => expect(screen.getByText("The photo could not be shown.")).toBeTruthy());
     // The person was looking at their card, not uploading.
     expect(screen.queryByText(/uploaded/)).toBeNull();
@@ -374,6 +369,7 @@ describe("CardPreviewScreen", () => {
       return new Response("<html>Bad gateway</html>", { status: 502 });
     }) as unknown as typeof fetch;
     await show();
+    await layOut();
     await waitFor(() => expect(screen.getByText("The photo could not be shown.")).toBeTruthy());
   });
 });
