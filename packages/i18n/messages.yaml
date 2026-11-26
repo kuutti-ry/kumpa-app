@@ -3160,13 +3160,13 @@ legal.privacy.title:
   en: "Privacy"
   description: "Heading of the privacy policy a person accepts (#46, #208). Legal text: the English is the wording that counts."
   fi: "Tietosuoja"
-  consent_version: "2026-11-1"
+  consent_version: "2026-11-2"
 
 legal.privacy.summary:
   en: "Kuutti ry is the controller of the personal data processed in Kumpa. It stores an identifier computed from your personal identity code, the year and month of your birth, the data of your latest identification, your gender, your place of residence, whom you seek, your profile, your photos, your messages, and your sessions and devices. It does not store your personal identity code, your name or your date of birth. You can receive a copy of your data and delete your account in the app at any time. After the deletion, the data named in the retention table of the privacy policy is kept for the period stated there; it includes the identifier computed from your identity code and the messages you have sent to users whose accounts remain."
   description: "The summary of the privacy policy a person accepts by version (#46, #208). The full policy is the website's page, in English, and it is the one that binds."
   fi: "Kuutti ry on Kumpa-sovelluksessa käsiteltävien henkilötietojen rekisterinpitäjä. Se tallentaa henkilötunnuksestasi lasketun tunnisteen, syntymävuotesi ja -kuukautesi, viimeisimmän tunnistautumisesi tiedot, sukupuolesi, asuinpaikkasi, sen, kenen seuraa etsit, profiilisi, kuvasi, viestisi sekä istuntosi ja laitteesi. Se ei tallenna henkilötunnustasi, nimeäsi eikä syntymäaikaasi. Voit saada jäljennöksen tiedoistasi ja poistaa tilisi sovelluksessa milloin tahansa. Poiston jälkeen tietosuojaselosteen säilytystaulukossa mainitut tiedot säilytetään siinä ilmoitetun ajan; niihin kuuluvat henkilötunnuksestasi laskettu tunniste ja viestit, jotka olet lähettänyt käyttäjille, joiden tili on yhä olemassa."
-  consent_version: "2026-11-1"
+  consent_version: "2026-11-2"
 
 legal.special_category.title:
   en: "Sensitive answers"
