@@ -366,7 +366,11 @@ describe("listConfig", () => {
   });
 
   test("a version the seed or a migration wrote has no reason", async ({ ctx }) => {
-    await withMatchingConfig(ctx.client, { config_test_seeded: 7 });
+    // A key of this test's own at version 1, as the seed writes one. No other test writes it.
+    await ctx.client.query(
+      `INSERT INTO matching_config (version, key, value, created_by)
+       VALUES (1, 'config_test_seeded', '7'::jsonb, 'test')`,
+    );
     const items = await listConfig(ctx.client);
     const versions = items.flatMap((i) => i.versions);
     const written = versions.filter((v) => v.createdBy.startsWith("migration:"));

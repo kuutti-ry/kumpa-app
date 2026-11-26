@@ -547,14 +547,8 @@ describe("seen and decided", () => {
 });
 
 /** The day's likes, above every version a migration wrote, so it is the one read (#98). */
-async function likeBudget(db: Queryable, likes: number) {
-  await db.query(
-    `INSERT INTO matching_config (version, key, value, created_by)
-     SELECT max(version) + 1, 'like_budget_balanced', $1::jsonb, 'test'
-       FROM matching_config WHERE key = 'like_budget_balanced'`,
-    [JSON.stringify(likes)],
-  );
-}
+const likeBudget = (db: Queryable, likes: number) =>
+  withMatchingConfig(db, { like_budget_balanced: likes });
 
 /** `liker` liked `liked` yesterday; that queue of theirs. */
 async function likedYesterday(db: Queryable, liker: Person, liked: Person) {

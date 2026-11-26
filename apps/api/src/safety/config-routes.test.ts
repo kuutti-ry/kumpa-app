@@ -187,7 +187,12 @@ describe("POST /admin/config/{key}", () => {
     ctx,
     api,
   }) => {
-    await withMatchingConfig(ctx.client, { config_routes_flag: true, config_routes_word: "one" });
+    // Keys of this test's own at version 1, as the seed writes a key: the
+    // panel's change is then version 2. No other test writes them.
+    await ctx.client.query(
+      `INSERT INTO matching_config (version, key, value, created_by)
+       VALUES (1, 'config_routes_flag', 'true'::jsonb, 'test'), (1, 'config_routes_word', '"one"'::jsonb, 'test')`,
+    );
     const staff = await admin(ctx);
     for (const [key, value, version] of [
       ["config_routes_word", "another", 2],
