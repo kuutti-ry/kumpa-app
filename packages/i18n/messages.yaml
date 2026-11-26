@@ -8628,6 +8628,62 @@ stars.card.back:
   sv: "Tillbaka till Senare-listan"
   machine: { fi: true, sv: true }
 
+stars.fresh:
+  en: "Not compared yet"
+  description: "A mark under the name of a row of the Later list for somebody who came onto it after the person put it in order with Kumpa (ADR-064 §6): they stand at the top until Kumpa gives them a place. The person's own order, seen by nobody else."
+  fi: "Ei vielä verrattu"
+  sv: "Inte jämförd än"
+  machine: { fi: true, sv: true }
+
+stars.fresh.label:
+  en: "{name}, {years, number}, not compared yet"
+  description: "What a screen reader says for a row of the Later list marked as not compared yet (stars.fresh): the name and the age as on a card (profile.card.nameAge), then the mark. {name} stays in the nominative."
+  fi: "{name}, {years, number}, ei vielä verrattu"
+  sv: "{name}, {years, number}, inte jämförd än"
+  machine: { fi: true, sv: true }
+
+stars.kumpa.open:
+  en: "Kumpa?"
+  description: "The button at the top of the Later list that opens Kumpa (ADR-064 §6, the maintainer, 26/11/2026): the person puts their own Later list in order, picking one of two people at a time. Kumpa is the feature's name in every language, the question \"which of the two?\", as the app's name says it; never translated. Shown while the list shows two people or more."
+  fi: "Kumpa?"
+  sv: "Kumpa?"
+  machine: { fi: true, sv: true }
+
+stars.kumpa.label:
+  en: "Kumpa? Put your Later list in order, two at a time."
+  description: "What a screen reader says for the Kumpa button of the Later list (stars.kumpa.open; the maintainer, 26/11/2026): the name, then what it does. Kumpa is never translated."
+  fi: "Kumpa? Järjestä Myöhemmin-listasi kaksi kerrallaan."
+  sv: "Kumpa? Ordna din Senare-lista, två i taget."
+  machine: { fi: true, sv: true }
+
+stars.kumpa.title:
+  en: "Kumpa?"
+  description: "Title of Kumpa's screen, where two people of the Later list stand side by side and the person taps the one they would put first (ADR-064 §6). The question itself; it shrinks to fit one line. Never translated."
+  fi: "Kumpa?"
+  sv: "Kumpa?"
+  machine: { fi: true, sv: true }
+
+stars.kumpa.pick.hint:
+  en: "Puts them before the other one."
+  description: "What a screen reader adds after the name and age of either of the two people on Kumpa's screen (an accessibility hint): a tap puts this person before the other on the person's own Later list. No word of liking: it orders the list and nothing else."
+  fi: "Asettaa hänet toisen edelle."
+  sv: "Sätter hen före den andra."
+  machine: { fi: true, sv: true }
+
+stars.kumpa.done:
+  en: "Your Later list is in order."
+  description: "Kumpa's screen once everybody on the Later list has a place (ADR-064 §6): the screen reader is taken to it. No count of anybody."
+  fi: "Myöhemmin-listasi on järjestyksessä."
+  sv: "Din Senare-lista är i ordning."
+  machine: { fi: true, sv: true }
+
+stars.kumpa.again:
+  en: "Start again"
+  description: "Button on Kumpa's screen once the Later list is in order: forgets the order the person gave it and starts the pairs again from the beginning (ADR-064 §6)."
+  fi: "Aloita alusta"
+  sv: "Börja om"
+  machine: { fi: true, sv: true }
+
 # --- The chat (#348, ADR-031): the list of conversations, a conversation and its composer ---
 
 chat.list.title:
