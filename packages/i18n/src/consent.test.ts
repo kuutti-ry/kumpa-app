@@ -22,7 +22,7 @@ import {
  * here, or revert the text.
  */
 const GOLDEN: Record<string, { version: string; hash: string }> = {
-  privacy: { version: "2026-11-1", hash: "884bedba27b248eb" },
+  privacy: { version: "2026-11-2", hash: "884bedba27b248eb" },
   special_category: { version: "2026-11-1", hash: "2dec874099c7169d" },
   terms: { version: "2026-11-1", hash: "5d729e8dacab1f1e" },
 };
