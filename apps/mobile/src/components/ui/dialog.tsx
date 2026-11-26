@@ -14,6 +14,7 @@ import { SafeAreaInsetsContext } from "react-native-safe-area-context";
 import { FullWindowOverlay as RNFullWindowOverlay } from "react-native-screens";
 import { Icon } from "@/components/ui/icon";
 import { NativeOnlyAnimatedView } from "@/components/ui/native-only-animated-view";
+import { Text } from "@/components/ui/text";
 import { cn } from "@/lib/utils";
 import { HEADING_FONT_SCALE, MAX_FONT_SCALE, MINIMUM_TARGET } from "@/theme/a11y";
 import { pressFill } from "@/theme/looks";
@@ -203,15 +204,16 @@ function DialogFooter({ className, ...props }: ViewProps) {
 
 function DialogTitle({ className, ...props }: React.ComponentProps<typeof DialogPrimitive.Title>) {
   const hasClose = React.useContext(HasClose);
+  // pr-8 ends the title where the close control starts: past the content's
+  // padding the control takes 26.5 pt on a phone (rem 14) and 24 on the web.
+  const classes = cn(hasClose && "pr-8", className);
+  // On a phone the primitive's title is a bare heading, so it is Text's, whose
+  // words never break in the middle (#757); on the web the primitive's names
+  // the dialog.
+  if (Platform.OS !== "web") return <Text variant="title" className={classes} {...props} />;
   return (
     <DialogPrimitive.Title
-      // pr-8 ends the title where the close control starts: past the content's
-      // padding the control takes 26.5 pt on a phone (rem 14) and 24 on the web.
-      className={cn(
-        "font-sans text-foreground text-title font-normal",
-        hasClose && "pr-8",
-        className,
-      )}
+      className={cn("font-sans text-foreground text-title font-normal", classes)}
       maxFontSizeMultiplier={HEADING_FONT_SCALE.title}
       {...props}
     />
