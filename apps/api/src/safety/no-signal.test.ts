@@ -110,6 +110,8 @@ describe("blocks and reports", () => {
       "apps/api/src/matching/queue.ts",
       // Putting, clearing and opening one, its erasure and the person's own export.
       "apps/api/src/matching/stars.ts",
+      // The demo's stories, which put people on a member's own list the day before (#560).
+      "packages/db/src/seed/queue.ts",
       // The demo's reset and the synthetic population's removal.
       "packages/db/src/seed/write-population.ts",
     ]);

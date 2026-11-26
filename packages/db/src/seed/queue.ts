@@ -34,6 +34,12 @@ export type WaitingLikes = {
  */
 export type QueueDaysResult = { liked: number; already: number; missing: number };
 
+/** Whom somebody put on their Later list the day before, by key (#681), the latest named first. */
+export type LaterList = { of: string; later: readonly string[] };
+
+/** `listed`: stars written; `already`: a star that stood; `missing`: somebody of the list has no account this time. */
+export type LaterListsResult = { listed: number; already: number; missing: number };
+
 /** The Finnish calendar day of an instant, as YYYY-MM-DD (the API's `finnishDay`). */
 const finnishDay = (at: Date): string =>
   new Intl.DateTimeFormat("en-CA", {
@@ -145,6 +151,70 @@ export async function writeWaitingLikes(
         return entry.rowCount === 1;
       });
       if (written) result.liked += 1;
+      else result.already += 1;
+    }
+  }
+  return result;
+}
+
+const MINUTE_MS = 60 * 1000;
+
+/**
+ * Writes the Laters of the day before, in the person's one queue of that day as
+ * `writeWaitingLikes` writes likes: each card seen and put off at midday, a
+ * minute apart, its approved photos shown, and the star a Later leaves (ADR-064),
+ * which the list shows with a photo only where one was shown (ADR-008 §3). A
+ * star already there stays, so a second run on the same day writes nothing.
+ */
+export async function writeLaterLists(
+  db: Queryable,
+  lists: readonly LaterList[],
+  accounts: ReadonlyMap<string, string>,
+  now: Date,
+): Promise<LaterListsResult> {
+  const result: LaterListsResult = { listed: 0, already: 0, missing: 0 };
+  const yesterday = dayBefore(finnishDay(now));
+  const noon = new Date(`${yesterday}T10:00:00Z`).getTime();
+  for (const list of lists) {
+    const of = accounts.get(list.of);
+    for (const [index, key] of list.later.entries()) {
+      const candidate = accounts.get(key);
+      if (!of || !candidate) {
+        result.missing += 1;
+        continue;
+      }
+      // The list shows the latest star first: the first named was put off last.
+      const at = new Date(noon + (list.later.length - index) * MINUTE_MS);
+      const written = await transaction(db, async (tx) => {
+        const day = await tx.query<{ id: string }>(
+          `INSERT INTO queue_day (account_id, day, started_at) VALUES ($1, $2, $3)
+           ON CONFLICT (account_id, day) DO UPDATE SET account_id = EXCLUDED.account_id
+           RETURNING id`,
+          [of, yesterday, new Date(noon)],
+        );
+        await tx.query(
+          `INSERT INTO queue_entry (queue_day_id, position, candidate_id, reason, seen_at, decision, decided_at)
+           SELECT $1::uuid, coalesce(max(position), 0) + 1, $2::uuid, 'matches_filters', $3::timestamptz,
+                  'skip', $3::timestamptz
+             FROM queue_entry WHERE queue_day_id = $1::uuid
+           ON CONFLICT (candidate_id, queue_day_id) DO NOTHING`,
+          [day.rows[0]?.id, candidate, at],
+        );
+        await tx.query(
+          `INSERT INTO card_shown (account_id, photo_id, at)
+           SELECT $1, p.id, $3 FROM photo p
+            WHERE p.account_id = $2 AND p.purpose = 'profile' AND p.state = 'approved'
+           ON CONFLICT (account_id, photo_id) DO NOTHING`,
+          [of, candidate, at],
+        );
+        const star = await tx.query(
+          `INSERT INTO star (account_id, candidate_id, created_at) VALUES ($1, $2, $3)
+           ON CONFLICT (account_id, candidate_id) DO NOTHING`,
+          [of, candidate, at],
+        );
+        return star.rowCount === 1;
+      });
+      if (written) result.listed += 1;
       else result.already += 1;
     }
   }

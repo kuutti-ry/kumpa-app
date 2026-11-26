@@ -1,4 +1,5 @@
 import { resolve } from "node:path";
+import { PROFILE_FIELD_KEYS, PROMPTS_MAX, SPECIAL_CATEGORY_FIELDS } from "@kuutti/schema";
 import { describe, expect, it } from "vitest";
 import { migrate } from "../migrate.ts";
 import { createPool, type Queryable } from "../pool.ts";
@@ -7,6 +8,7 @@ import { withTemporaryDatabase } from "../test/temporary-database.ts";
 import {
   CAST,
   CAST_CONVERSATIONS,
+  CAST_LATER,
   CAST_LIKES,
   castAccounts,
   castFaces,
@@ -29,7 +31,47 @@ const VERSIONS = { terms: "t", privacy: "p", special_category: "s" };
 const keep = (postalCode: string) => postalCode;
 const NOW = new Date(Date.UTC(2026, 10, 5, 12));
 
+/**
+ * What a whole card may still leave out: the identity label follows a
+ * non-binary gender alone (#146), a school, a guild and a sign are for those
+ * who have one, the special categories need their consent (ADR-019 §4), and
+ * hiding the field is a setting, not an answer.
+ */
+const LEFT_TO_SOME: ReadonlySet<string> = new Set([
+  "identityLabel",
+  "university",
+  "guild",
+  "zodiac",
+  "hideFromField",
+  ...SPECIAL_CATEGORY_FIELDS,
+]);
+/** Enough words for the card's one scroll (#760) to read as a person, where fifty make a profile's words. */
+const LONG_BIO = 300;
+const MANY_HOBBIES = 5;
+
 describe("the cast", () => {
+  it("fill a whole card each, as Aino, Onni and Tapio do", () => {
+    // Onni signs in for App Review, and Aino and Tapio are among those he and Sanna are shown.
+    const personas = ["aino", "onni", "tapio"].map(
+      (key) => [key, PERSONA_HISTORIES.find((h) => h.key === key)?.profile] as const,
+    );
+    const profiles = [
+      ...castPeople(keep).map((person) => [person.label, person.profile] as const),
+      ...personas,
+    ];
+    for (const [label, profile] of profiles) {
+      if (!profile) throw new Error(`${label} has no profile`);
+      const fields: Record<string, unknown> = profile.fields;
+      expect(
+        PROFILE_FIELD_KEYS.filter((key) => !LEFT_TO_SOME.has(key) && fields[key] === undefined),
+        label,
+      ).toEqual([]);
+      expect(profile.prompts, label).toHaveLength(PROMPTS_MAX);
+      expect(profile.bio?.length ?? 0, label).toBeGreaterThanOrEqual(LONG_BIO);
+      expect(profile.fields.hobbies?.length ?? 0, label).toBeGreaterThanOrEqual(MANY_HOBBIES);
+    }
+  });
+
   it("are forty-eight people with keys of their own, none of them a persona's", () => {
     const keys = CAST.map((person) => person.key);
     expect(keys).toHaveLength(48);
@@ -164,6 +206,29 @@ describe("what the cast gives the members", () => {
       "sanna",
       "tapio",
     ]);
+  });
+
+  it("puts people of the cast on Sanna's Later list, each once, none who likes her or chats with her", () => {
+    // Sanna is the first person a store's reviewer is given (docs/runbooks/store-review.md).
+    expect(CAST_LATER.map((list) => list.of)).toContain("sanna");
+    for (const { of, later } of CAST_LATER) {
+      expect(members.has(of), of).toBe(true);
+      // Enough to open one and to put two side by side.
+      expect(later.length, of).toBeGreaterThanOrEqual(2);
+      expect(new Set(later).size, of).toBe(later.length);
+      const story = CAST_LIKES.find((likes) => likes.of === of);
+      const elsewhere = [
+        ...(story?.fishFrom ?? []),
+        ...(story?.likedBy ?? []),
+        ...CAST_CONVERSATIONS.filter((told) => told.between[0] === of).map(
+          (told) => told.between[1],
+        ),
+      ];
+      for (const key of later) {
+        expect(cast.has(key), key).toBe(true);
+        expect(elsewhere, key).not.toContain(key);
+      }
+    }
   });
 
   it("keeps every chat open, oldest message first, and one on each member's turn with something unread", () => {
