@@ -7,9 +7,12 @@ import {
   type GuildOption,
   guildName,
   type HomeSummary,
+  type LikeAnchor,
+  type LikedPart,
   PHOTOS_FOR_COMPLETENESS,
   type PlaceName,
   type PromptKey,
+  type SharedField,
 } from "@kuutti/schema";
 import type { useT } from "@/lib/locale";
 
@@ -40,6 +43,37 @@ export const optionKey = (field: DealBreakerField, option: string): PlainMessage
  */
 export const guildWords = (t: ReturnType<typeof useT>["t"], option: GuildOption): string =>
   guildName(option) ?? t("profile.guild.other");
+
+/** An answer both people gave, in words (#463): a guild by its own name, any other in the reader's. */
+export const sharedWords = (
+  t: ReturnType<typeof useT>["t"],
+  field: SharedField,
+  option: string,
+): string =>
+  field === "guild" ? guildWords(t, option as GuildOption) : t(optionKey(field, option));
+
+/**
+ * The part of a card a like named, in the words of where it is said (#463,
+ * ADR-077): the one being liked, on a liked-you card, or in a conversation,
+ * by either side. A photo is said without its place, which the card may have
+ * changed since.
+ */
+export function partWords(
+  t: ReturnType<typeof useT>["t"],
+  said: "queue.anchor" | "queue.likedYour" | "chat.anchor.mine" | "chat.anchor.theirs",
+  part: LikeAnchor | LikedPart,
+): string {
+  switch (part.kind) {
+    case "photo":
+      return t(`${said}.photo`);
+    case "prompt":
+      return t(`${said}.prompt`, { prompt: t(promptKey(part.prompt)) });
+    case "bio":
+      return t(`${said}.bio`);
+    case "shared":
+      return t(`${said}.shared`, { option: sharedWords(t, part.field, part.option) });
+  }
+}
 
 /**
  * An answer as a deal-breaker names it, which is about somebody else (#551):

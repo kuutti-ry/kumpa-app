@@ -36,6 +36,14 @@ export const queueReason = pgEnum("queue_reason", [
  */
 export const queueDecision = pgEnum("queue_decision", ["like", "pass", "skip"]);
 
+/**
+ * The part of a card a like names (#463, ADR-077): a photo by its id, an
+ * answered prompt by its key, the bio, or a "you too" item by its field and
+ * option. A reference, never a copy of anybody's words. A closed list, mirrored
+ * in packages/schema.
+ */
+export const likeAnchorKind = pgEnum("like_anchor_kind", ["photo", "prompt", "bio", "shared"]);
+
 /** How far a card's person lives (ADR-061 §5); never kilometres. A closed list, mirrored in packages/schema. */
 export const distanceBand = pgEnum("distance_band", ["nearby", "close", "around", "far"]);
 
@@ -98,6 +106,13 @@ export const queueEntry = pgTable(
     // The band between the two homes when the entry was written (ADR-061 §5,
     // ADR-062 §8), read by the card's line. Null on an entry from before #514.
     distance: distanceBand("distance"),
+    // The part of the card a like names (#463, ADR-077): `anchor_ref` is the
+    // photo's id, the prompt's key or the option, none for the bio, and
+    // `anchor_field` the field of a "you too" item. Checked against the card
+    // built for the place when written, and drawn from the profile at each read.
+    anchorKind: likeAnchorKind("anchor_kind"),
+    anchorRef: text("anchor_ref"),
+    anchorField: text("anchor_field"),
   },
   (table) => [
     // One card per place: the read's order, the cascade, and #98's count of the day's likes.
@@ -114,6 +129,16 @@ export const queueEntry = pgTable(
     check(
       "queue_entry_second_pass_check",
       sql`NOT ${table.secondPass} OR ${table.decision} = 'pass'`,
+    ),
+    // Only a like names a part, a fish too (ADR-039 §1).
+    check(
+      "queue_entry_anchor_check",
+      sql`${table.anchorKind} IS NULL OR ${table.decision} = 'like'`,
+    ),
+    check(
+      "queue_entry_anchor_ref_check",
+      sql`(${table.anchorKind} IS NULL OR ${table.anchorKind} = 'bio') = (${table.anchorRef} IS NULL)
+          AND (${table.anchorKind} IS NOT DISTINCT FROM 'shared') = (${table.anchorField} IS NOT NULL)`,
     ),
     check(
       "queue_entry_relaxed_check",

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ExportedAnchor, LikeAnchor, LikedPart } from "./anchor.ts";
 import { DEAL_BREAKERS_CAP, DealBreakerField } from "./deal-breakers.ts";
 import { DistanceBand } from "./distance.ts";
 import { ProfileCard } from "./profile.ts";
@@ -61,6 +62,12 @@ export const QueueEntry = z
      * say: {field}". Absent on an older API.
      */
     notAnswered: z.array(DealBreakerField).max(DEAL_BREAKERS_CAP).optional(),
+    /**
+     * On a `liked_you` or `fish` card, the part of the person's own card the
+     * waiting like named (#463, ADR-077), drawn from their profile as it stands:
+     * absent where it named none or the part has gone since, and on every other card.
+     */
+    likedYour: LikedPart.optional(),
   })
   .meta({ id: "QueueEntry" });
 export type QueueEntry = z.infer<typeof QueueEntry>;
@@ -184,8 +191,17 @@ export const QueueEntryParams = z
  * whatever main has become since (#745).
  */
 export const QueueDecisionUpdate = z
-  .object({ decision: QueueChoice, later: z.literal(true).optional() })
+  .object({
+    decision: QueueChoice,
+    later: z.literal(true).optional(),
+    /** The part of the card a like or a fish is for (#463, ADR-077); never with a pass or a skip. */
+    anchor: LikeAnchor.optional(),
+  })
   .strict()
+  .refine((update) => !update.anchor || update.decision === "like" || update.decision === "fish", {
+    message: "only a like or a fish names a part of the card",
+    path: ["anchor"],
+  })
   .meta({ id: "QueueDecisionUpdate" });
 export type QueueDecisionUpdate = z.infer<typeof QueueDecisionUpdate>;
 
@@ -284,6 +300,8 @@ export const ExportedQueueEntry = z
     /** The band the card carried (ADR-061 §5), in key and in words; null on an entry from before #514. */
     distance: DistanceBand.nullable(),
     distanceInWords: z.string().nullable(),
+    /** The part of the card the person's like named (#463, ADR-077); null with none. */
+    anchor: ExportedAnchor.nullable(),
   })
   .meta({ id: "ExportedQueueEntry" });
 export type ExportedQueueEntry = z.infer<typeof ExportedQueueEntry>;

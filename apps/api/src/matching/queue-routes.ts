@@ -81,7 +81,7 @@ const decisionRoute = createRoute({
   path: "/queue/{day}/entries/{position}/decision",
   summary: "Like, pass or skip a card",
   description:
-    "Recorded, or replacing the day's earlier decision on the card; the same decision again writes nothing. A day that has ended answers day_ended. A skip moves on, spends nothing and answers no like; the card returns another day. A like counts against the day's matching_config like_budget_balanced, a like back on a liked_you or fish card too; a pass or a skip never does. A new like or fish answers your_turn_limit with matching_config your_turn_limit conversations waiting on the caller, and not_found where either side's filters no longer let the two meet. A like of somebody whose like of the caller stands is a match: the answer names its conversation, and that like is final. A fish is a like with a mark, matching_config fish_budget of them in each fish_window_days counted from a Monday, the calendar week; on a liked_you or fish card it is a like. Past the fish's budget, a fish invitations earned the caller is used by itself, left out of the count after, and given back when the decision changes the same day. The answer's fishToSend, likesLeft and yourTurn are the queue's after this decision. A body with later: true asks the answer for later as well, where a skip left the person on the caller's Later list, null for any other decision; without it the answer has no such key, which is the answer an app built before the Later list reads.",
+    "Recorded, or replacing the day's earlier decision on the card; the same decision again writes nothing. A day that has ended answers day_ended. A skip moves on, spends nothing and answers no like; the card returns another day. A like counts against the day's matching_config like_budget_balanced, a like back on a liked_you or fish card too; a pass or a skip never does. A new like or fish answers your_turn_limit with matching_config your_turn_limit conversations waiting on the caller, and not_found where either side's filters no longer let the two meet. A like of somebody whose like of the caller stands is a match: the answer names its conversation, and that like is final. A fish is a like with a mark, matching_config fish_budget of them in each fish_window_days counted from a Monday, the calendar week; on a liked_you or fish card it is a like. Past the fish's budget, a fish invitations earned the caller is used by itself, left out of the count after, and given back when the decision changes the same day. The answer's fishToSend, likesLeft and yourTurn are the queue's after this decision. A body with later: true asks the answer for later as well, where a skip left the person on the caller's Later list, null for any other decision; without it the answer has no such key, which is the answer an app built before the Later list reads. A like or a fish may name one part of the card (anchor): a photo on it, a prompt its person answered, the bio or its ready line, or one of its shared items, checked against the card built for that place as it stands; the same part again is the same decision, another part or none a revision, and a like that made a match keeps its part. The person liked reads it on the liker's card, and a match carries both parts to the conversation. A pass or a skip names none.",
   ...bearer,
   request: {
     params: QueueEntryParams,
@@ -93,7 +93,9 @@ const decisionRoute = createRoute({
         "Recorded, with the conversation the card's like is part of, or null for a pass, a skip and a like that made no match.",
       ...json(QueueDecisionAnswer),
     },
-    400: errorContent("Validation failed."),
+    400: errorContent(
+      "Validation failed, an anchor with a pass or a skip among it; anchor_not_on_card: the part named is not on the card built for that place. Nothing was written.",
+    ),
     401: unauthenticated,
     404: noCard,
     409: errorContent(
@@ -216,12 +218,13 @@ export function queueRoutes(
 
   app.openapi(decisionRoute, async (c) => {
     const { day, position } = c.req.valid("param");
-    const { decision, later: asked } = c.req.valid("json");
+    const { decision, later: asked, anchor } = c.req.valid("json");
     const { match, later, ...budgets } = await decide(queueDeps(), matches, queue, {
       accountId: callerOf(c).accountId,
       day,
       position,
       decision,
+      anchor,
     });
     // `later` only for an app that asked (#745): the JavaScript built into the
     // store builds of 0.127.0 reads this answer strictly and knows no such key.

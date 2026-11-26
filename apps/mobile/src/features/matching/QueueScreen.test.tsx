@@ -3924,3 +3924,216 @@ describe("in the Kumpa look", () => {
     expect(sent.decisions()).toEqual([`${DAY}/1 like`, `${DAY}/2 pass`]);
   });
 });
+
+describe("a like that names a part of the card (#463, ADR-077)", () => {
+  const SUNDAY: ProfileCard["prompts"][number] = { key: "sunday", answer: "A long breakfast." };
+  const THUMB = {
+    id: PHOTO,
+    blurhash: "LEHV6nWB2yk8pyo0adR*.7kCMdnj",
+    width: 1200,
+    height: 1600,
+    caption: null,
+    description: null,
+  };
+  /** A card with a part of each kind: a photo, an answered prompt, the bio and a shared hobby. */
+  const withParts = (each: QueueEntry): QueueEntry => ({
+    ...each,
+    card: {
+      ...each.card,
+      photos: [THUMB],
+      bio: "Long walks.",
+      prompts: [SUNDAY],
+      fields: { hobbies: ["yoga"] },
+      shared: { ...each.card.shared, hobbies: ["yoga"] },
+    },
+  });
+  const queueOf = (...entries: QueueEntry[]): QueueResponse => ({ ...READ, entries });
+  const bodies = (sent: ReturnType<typeof api>) =>
+    sent.calls.filter((call) => call.path.endsWith("/decision")).map((call) => call.body);
+  /** The line floating over the buttons, or null. */
+  const line = () => screen.queryByTestId("queue-anchor")?.props.children ?? null;
+  const hintOf = (name: string) => screen.getByRole("button", { name }).props.accessibilityHint;
+  const PROMPT = "My ideal Sunday: A long breakfast.";
+
+  it("names the part picked in the like, and says it over the buttons and as Like's hint", async () => {
+    const sent = api(undefined, queueOf(withParts(entry(2, "Katja")), entry(4, "Minna")));
+    await show();
+    expect(line()).toBeNull();
+    expect(hintOf("Like")).toBeUndefined();
+
+    await press(PROMPT);
+    expect(line()).toBe("Liking their answer to: My ideal Sunday");
+    expect(hintOf("Like")).toBe("Liking their answer to: My ideal Sunday");
+    expect(hintOf("Send a flower")).toBe("Liking their answer to: My ideal Sunday");
+    expect(screen.getByRole("button", { name: "Name no part in your like" })).toBeTruthy();
+    noProblems();
+
+    await press("Like");
+    expect(bodies(sent)).toEqual([
+      { decision: "like", later: true, anchor: { kind: "prompt", prompt: "sunday" } },
+    ]);
+    // The next card starts with nothing picked.
+    expect(heading("Minna, 34")).toBeTruthy();
+    expect(line()).toBeNull();
+    expect(hintOf("Like")).toBeUndefined();
+  });
+
+  it.each([
+    ["the photo", "Photo 1 of 1", { kind: "photo", photoId: PHOTO }, "Liking their photo"],
+    ["the bio", "Long walks.", { kind: "bio" }, "Liking their bio"],
+    [
+      "a shared answer",
+      "Hobbies: Yoga, shared",
+      { kind: "shared", field: "hobbies", option: "yoga" },
+      "Liking what you share: Yoga",
+    ],
+  ] as const)("names %s in words and in the like", async (_, part, anchor, words) => {
+    const sent = api(undefined, queueOf(withParts(entry(2, "Katja"))));
+    await show();
+    await press(part);
+    expect(line()).toBe(words);
+    await press("Like");
+    expect(bodies(sent)).toEqual([{ decision: "like", later: true, anchor }]);
+  });
+
+  it("names nothing once Clear or a second tap took the pick back", async () => {
+    const sent = api(
+      undefined,
+      queueOf(withParts(entry(2, "Katja")), withParts(entry(4, "Minna", "seen_before"))),
+    );
+    await show();
+    await press("Long walks.");
+    await press("Name no part in your like");
+    expect(line()).toBeNull();
+    expect(screen.getByRole("button", { name: "Long walks." }).props.accessibilityState).toEqual({
+      selected: false,
+    });
+    await press("Like");
+
+    await press(PROMPT);
+    await press(PROMPT);
+    expect(line()).toBeNull();
+    await press("Like");
+    expect(bodies(sent)).toEqual([
+      { decision: "like", later: true },
+      { decision: "like", later: true },
+    ]);
+  });
+
+  it("names the part in a flower too, and nothing in a pass or Later", async () => {
+    const sent = api(
+      undefined,
+      queueOf(
+        withParts(entry(2, "Katja")),
+        withParts(entry(4, "Minna", "seen_before")),
+        withParts(entry(5, "Noora")),
+      ),
+    );
+    await show();
+    await press("Long walks.");
+    await press("Send a flower");
+    await press("Long walks.");
+    await press("Pass");
+    await press("Long walks.");
+    await press("Later");
+    expect(bodies(sent)).toEqual([
+      { decision: "fish", later: true, anchor: { kind: "bio" } },
+      { decision: "pass", later: true },
+      { decision: "skip", later: true },
+    ]);
+  });
+
+  it("keeps the pick on a card Undo brings back, and names it again in a changed decision", async () => {
+    const sent = api(undefined, queueOf(withParts(entry(2, "Katja")), entry(4, "Minna")));
+    await show();
+    await press("Long walks.");
+    await press("Like");
+    await press("Undo your last decision");
+    expect(heading("Katja, 32")).toBeTruthy();
+    expect(line()).toBe("Liking their bio");
+    expect(screen.getByRole("button", { name: "Long walks." }).props.accessibilityState).toEqual({
+      selected: true,
+    });
+    await press(PROMPT);
+    await press("Like");
+    expect(bodies(sent).map((body) => (body as { anchor?: unknown }).anchor)).toEqual([
+      { kind: "bio" },
+      { kind: "prompt", prompt: "sunday" },
+    ]);
+  });
+
+  it("clears a pick the API finds gone from the card, says so, and keeps the card for another like", async () => {
+    const sent = api(
+      (call) =>
+        call.path.endsWith("/decision") && (call.body as { anchor?: unknown }).anchor
+          ? refusal("anchor_not_on_card", 400)
+          : undefined,
+      queueOf(withParts(entry(2, "Katja")), entry(4, "Minna")),
+    );
+    await show();
+    await press("Long walks.");
+    await press("Like");
+    expect(
+      screen.getByText(
+        "That part of their card has changed since. Pick another, or like without one.",
+      ),
+    ).toBeTruthy();
+    expect(heading("Katja, 32")).toBeTruthy();
+    expect(line()).toBeNull();
+    expect(screen.queryByTestId("part-picked")).toBeNull();
+
+    await press("Like");
+    expect(heading("Minna, 34")).toBeTruthy();
+    expect(bodies(sent)).toEqual([
+      { decision: "like", later: true, anchor: { kind: "bio" } },
+      { decision: "like", later: true },
+    ]);
+  });
+
+  describe("on a card that answers a like", () => {
+    it.each([
+      ["liked_you", { kind: "prompt", prompt: "sunday" }, "Liked your answer to: My ideal Sunday"],
+      ["liked_you", { kind: "bio" }, "Liked your bio"],
+      [
+        "fish",
+        { kind: "shared", field: "languages", option: "fi" },
+        "Liked what you share: Finnish",
+      ],
+    ] as const)("a %s card says the part its like named: %j", async (reason, part, words) => {
+      api(undefined, queueOf({ ...entry(1, "Henna", reason), likedYour: part }));
+      await show();
+      expect(screen.getByTestId("queue-liked-your").props.accessibilityLabel).toBe(words);
+      expect(screen.getByText(words)).toBeTruthy();
+    });
+
+    it("shows a photo it named as a small copy of the reader's own, heard as the words alone", async () => {
+      const sent = api(
+        undefined,
+        queueOf({ ...entry(1, "Henna", "liked_you"), likedYour: { kind: "photo", photo: THUMB } }),
+      );
+      await show();
+      const liked = screen.getByTestId("queue-liked-your");
+      expect(liked.props.accessible).toBe(true);
+      expect(liked.props.accessibilityLabel).toBe("Liked your photo");
+      expect(within(liked).getByText("Liked your photo")).toBeTruthy();
+      await waitFor(() =>
+        expect(sent.calls.map((call) => call.path)).toContain(`/photos/${PHOTO}/thumb`),
+      );
+    });
+
+    it("says nothing where the like named nothing, or on a card that answers no like", async () => {
+      api(
+        undefined,
+        queueOf(entry(1, "Henna", "liked_you"), {
+          ...entry(2, "Katja"),
+          likedYour: { kind: "bio" },
+        }),
+      );
+      await show();
+      expect(screen.queryByTestId("queue-liked-your")).toBeNull();
+      await press("Like");
+      expect(heading("Katja, 32")).toBeTruthy();
+      expect(screen.queryByTestId("queue-liked-your")).toBeNull();
+    });
+  });
+});

@@ -3127,6 +3127,27 @@ profile.card.shared:
   sv: "{option}, gemensam"
   machine: { fi: true, sv: true }
 
+profile.card.part.picked:
+  en: "In your like"
+  description: "Under a photo, a prompt, the bio or a shared chip of a card in the queue that the reader tapped (#463), beside a check mark and inside an outline: the like or flower they send names this part. A short label."
+  fi: "Tykkäyksessäsi"
+  sv: "I din gillning"
+  machine: { fi: true, sv: true }
+
+profile.card.part.hint:
+  en: "Names this in your like"
+  description: "What a screen reader hears after a part of a card in the queue that can be picked (#463): tapping it makes the like or flower name it, tapping again clears it."
+  fi: "Nimeää tämän tykkäyksessäsi"
+  sv: "Nämner det här i din gillning"
+  machine: { fi: true, sv: true }
+
+profile.card.part.prompt:
+  en: "{prompt}: {answer}"
+  description: "What a screen reader hears for an answered prompt on a card in the queue, where the reader can tap it to name it in their like (#463): the prompt's question, then the person's own answer, as the card shows both. {prompt} is the question (profile.prompt.*), {answer} the person's own words, untranslated."
+  fi: "{prompt}: {answer}"
+  sv: "{prompt}: {answer}"
+  machine: { fi: true, sv: true }
+
 profile.card.back:
   en: "Back to your profile"
   description: "Back button of the card preview."
@@ -3494,6 +3515,13 @@ errors.match_made:
   description: "Today's queue (409, #100, ADR-038): a like that made a match was changed; a like that is part of a match is final (the maintainer, 20/10/2026). Conversations is the list's name (chat.list.title). Nothing was saved."
   fi: "Tästä tykkäyksestä tuli mätsi, joten se pysyy. Voit silti lopettaa keskustelun Keskusteluissa."
   sv: "Det här gillandet blev en match, så det står kvar. Du kan fortfarande avsluta samtalet under Samtal."
+  machine: { fi: true, sv: true }
+
+errors.anchor_not_on_card:
+  en: "That part of their card has changed since. Pick another, or like without one."
+  description: "Today's queue (400, #463): the photo, answer, bio or shared answer the reader picked for their like is no longer on the other person's card, removed or changed since the card was read. Nothing was saved and the pick is cleared."
+  fi: "Tuo kortin osa on muuttunut. Valitse toinen tai tykkää ilman."
+  sv: "Den delen av kortet har ändrats. Välj en annan eller gilla utan."
   machine: { fi: true, sv: true }
 
 errors.already_relaxed:
@@ -7565,6 +7593,34 @@ account.export.queue.decision.skip:
   sv: "Lämnade till senare"
   machine: { fi: true, sv: true }
 
+account.export.anchor.photo:
+  en: "Liked their photo"
+  description: "Inside the downloaded data file (#463), the part of the other person's card the reader's own like named: one of their photos. Never says which photo or whose."
+  fi: "Tykkäsit kuvasta"
+  sv: "Gillade en bild"
+  machine: { fi: true, sv: true }
+
+account.export.anchor.prompt:
+  en: "Liked their answer to: {prompt}"
+  description: "Inside the downloaded data file (#463), the part the reader's own like named: the other person's answer to a prompt. {prompt} is the prompt's question in the reader's language, never the answer."
+  fi: "Tykkäsit vastauksesta kysymykseen: {prompt}"
+  sv: "Gillade svaret på: {prompt}"
+  machine: { fi: true, sv: true }
+
+account.export.anchor.bio:
+  en: "Liked their bio"
+  description: "Inside the downloaded data file (#463), the part the reader's own like named: the other person's bio or its ready line, which count as one."
+  fi: "Tykkäsit esittelystä"
+  sv: "Gillade presentationen"
+  machine: { fi: true, sv: true }
+
+account.export.anchor.shared:
+  en: "Liked what you share: {option}"
+  description: "Inside the downloaded data file (#463), the part the reader's own like named: an answer both people gave, such as a hobby or a language. {option} is the answer in words, which the reader gave too."
+  fi: "Tykkäsit yhteisestä: {option}"
+  sv: "Gillade det ni delar: {option}"
+  machine: { fi: true, sv: true }
+
 account.export.star.about:
   en: "When you put each person on your Later list who is on it now. Who they are is not written here."
   description: "Inside the downloaded data file (#575, ADR-064 §9, #681), the text that opens the part listing the people on the person's Later list by date only. Plain; says why no name is there."
@@ -8313,6 +8369,76 @@ queue.undo.label:
   sv: "Ångra ditt senaste val"
   machine: { fi: true, sv: true }
 
+queue.likedYour.photo:
+  en: "Liked your photo"
+  description: "On a liked-you or flower card of the queue (#463), under the reason label: the part of the reader's own card this person's like named, one of the reader's photos, shown small beside the line. Never says when."
+  fi: "Tykkäsi kuvastasi"
+  sv: "Gillade din bild"
+  machine: { fi: true, sv: true }
+
+queue.likedYour.prompt:
+  en: "Liked your answer to: {prompt}"
+  description: "On a liked-you or flower card of the queue (#463): this person's like named the reader's answer to a prompt. {prompt} is the prompt's question in the reader's language."
+  fi: "Tykkäsi vastauksestasi kysymykseen: {prompt}"
+  sv: "Gillade ditt svar på: {prompt}"
+  machine: { fi: true, sv: true }
+
+queue.likedYour.bio:
+  en: "Liked your bio"
+  description: "On a liked-you or flower card of the queue (#463): this person's like named the reader's bio or its ready line, which count as one."
+  fi: "Tykkäsi esittelystäsi"
+  sv: "Gillade din presentation"
+  machine: { fi: true, sv: true }
+
+queue.likedYour.shared:
+  en: "Liked what you share: {option}"
+  description: "On a liked-you or flower card of the queue (#463): this person's like named an answer both gave, such as a hobby or a language. {option} is the answer in words."
+  fi: "Tykkäsi yhteisestä: {option}"
+  sv: "Gillade det ni delar: {option}"
+  machine: { fi: true, sv: true }
+
+queue.anchor.photo:
+  en: "Liking their photo"
+  description: "Floating above Like and the flower while the reader has picked one of the card's photos (#463): the like or flower they send names that photo. Tap the photo again, or Clear, to name nothing."
+  fi: "Tykkäät kuvasta"
+  sv: "Du gillar bilden"
+  machine: { fi: true, sv: true }
+
+queue.anchor.prompt:
+  en: "Liking their answer to: {prompt}"
+  description: "Floating above Like and the flower while the reader has picked one of the card's answered prompts (#463). {prompt} is the prompt's question."
+  fi: "Tykkäät vastauksesta kysymykseen: {prompt}"
+  sv: "Du gillar svaret på: {prompt}"
+  machine: { fi: true, sv: true }
+
+queue.anchor.bio:
+  en: "Liking their bio"
+  description: "Floating above Like and the flower while the reader has picked the card's bio or its ready line (#463)."
+  fi: "Tykkäät esittelystä"
+  sv: "Du gillar presentationen"
+  machine: { fi: true, sv: true }
+
+queue.anchor.shared:
+  en: "Liking what you share: {option}"
+  description: "Floating above Like and the flower while the reader has picked an answer both gave (#463), such as a hobby. {option} is the answer in words."
+  fi: "Tykkäät yhteisestä: {option}"
+  sv: "Du gillar det ni delar: {option}"
+  machine: { fi: true, sv: true }
+
+queue.anchor.clear:
+  en: "Clear"
+  description: "The button beside the floating line of a picked part (#463): the like names nothing again. One short word; its screen-reader name is queue.anchor.clearLabel."
+  fi: "Poista"
+  sv: "Rensa"
+  machine: { fi: true, sv: true }
+
+queue.anchor.clearLabel:
+  en: "Name no part in your like"
+  description: "What a screen reader hears for Clear beside the picked part (#463): the like or flower names nothing again."
+  fi: "Älä nimeä mitään tykkäyksessäsi"
+  sv: "Nämn ingen del i din gillning"
+  machine: { fi: true, sv: true }
+
 queue.revisit.like:
   en: "You liked this person. You can change that until midnight."
   description: "Above a card the reader brought back with Undo, when its decision is a like (ADR-034 §5): the like stands until another button is pressed."
@@ -8509,6 +8635,62 @@ chat.list.title:
   description: "Title of the list of conversations (#348)."
   fi: "Keskustelut"
   sv: "Samtal"
+  machine: { fi: true, sv: true }
+
+chat.anchor.mine.photo:
+  en: "You liked their photo"
+  description: "Above the first message of a conversation (#463): the part of the other person's card the reader's like named when the two matched, with that photo small beside it. Not a message."
+  fi: "Tykkäsit kuvasta"
+  sv: "Du gillade bilden"
+  machine: { fi: true, sv: true }
+
+chat.anchor.mine.prompt:
+  en: "You liked their answer to: {prompt}"
+  description: "Above the first message of a conversation (#463): the reader's like named the other person's answer to a prompt. {prompt} is the prompt's question."
+  fi: "Tykkäsit vastauksesta kysymykseen: {prompt}"
+  sv: "Du gillade svaret på: {prompt}"
+  machine: { fi: true, sv: true }
+
+chat.anchor.mine.bio:
+  en: "You liked their bio"
+  description: "Above the first message of a conversation (#463): the reader's like named the other person's bio."
+  fi: "Tykkäsit esittelystä"
+  sv: "Du gillade presentationen"
+  machine: { fi: true, sv: true }
+
+chat.anchor.mine.shared:
+  en: "You liked what you share: {option}"
+  description: "Above the first message of a conversation (#463): the reader's like named an answer both gave. {option} is the answer in words."
+  fi: "Tykkäsit yhteisestä: {option}"
+  sv: "Du gillade det ni delar: {option}"
+  machine: { fi: true, sv: true }
+
+chat.anchor.theirs.photo:
+  en: "They liked your photo"
+  description: "Above the first message of a conversation (#463): the part of the reader's own card the other person's like named, with that photo of the reader's small beside it. Not a message."
+  fi: "Hän tykkäsi kuvastasi"
+  sv: "Hen gillade din bild"
+  machine: { fi: true, sv: true }
+
+chat.anchor.theirs.prompt:
+  en: "They liked your answer to: {prompt}"
+  description: "Above the first message of a conversation (#463): the other person's like named the reader's answer to a prompt. {prompt} is the prompt's question."
+  fi: "Hän tykkäsi vastauksestasi kysymykseen: {prompt}"
+  sv: "Hen gillade ditt svar på: {prompt}"
+  machine: { fi: true, sv: true }
+
+chat.anchor.theirs.bio:
+  en: "They liked your bio"
+  description: "Above the first message of a conversation (#463): the other person's like named the reader's bio."
+  fi: "Hän tykkäsi esittelystäsi"
+  sv: "Hen gillade din presentation"
+  machine: { fi: true, sv: true }
+
+chat.anchor.theirs.shared:
+  en: "They liked what you share: {option}"
+  description: "Above the first message of a conversation (#463): the other person's like named an answer both gave. {option} is the answer in words."
+  fi: "Hän tykkäsi yhteisestä: {option}"
+  sv: "Hen gillade det ni delar: {option}"
   machine: { fi: true, sv: true }
 
 chat.back:

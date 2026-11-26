@@ -1,5 +1,5 @@
 import type { PlainMessageKey } from "@kuutti/i18n";
-import type { QueueChoice, QueueReason } from "@kuutti/schema";
+import type { LikeAnchor, LikedPart, QueueChoice, QueueReason } from "@kuutti/schema";
 import { useFocusEffect, useRouter } from "expo-router";
 import ArrowRight from "lucide-react-native/icons/arrow-right";
 import Star from "lucide-react-native/icons/star";
@@ -15,8 +15,8 @@ import { ScreenHeader } from "@/components/ScreenHeader";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
-import { CachedPhoto, OwnPhoto, photoRefusalKey } from "@/features/media";
-import { fieldLabelKey, ProfileCardView, SEEK_PATH } from "@/features/profile";
+import { CachedPhoto, OwnPhoto, PhotoImage, photoRefusalKey } from "@/features/media";
+import { fieldLabelKey, ProfileCardView, partWords, SEEK_PATH } from "@/features/profile";
 import { useDecisionButtons } from "@/lib/decision-buttons";
 import { useT } from "@/lib/locale";
 import { cn } from "@/lib/utils";
@@ -55,6 +55,12 @@ const REVISIT: Readonly<Record<QueueChoice, PlainMessageKey>> = {
 
 /** A card that answers somebody's like takes a like back, never a fish (ADR-039 §2). */
 const ANSWERS_A_LIKE: ReadonlySet<QueueReason> = new Set(["liked_you", "fish"]);
+
+/** A card's place in the day's queue: where a pick of its part is kept (#463). */
+const placeOf = ({ day, entry }: QueueCard) => `${day}/${entry.position}`;
+
+/** The decisions that may name a part of the card (#463, ADR-077): a pass or Later names none. */
+const NAMES_A_PART: ReadonlySet<QueueChoice> = new Set(["like", "fish"]);
 
 /**
  * From this OS font scale, Undo in the header is its icon alone (#467, the
@@ -114,6 +120,15 @@ function useFloat(): { drawn: ViewStyle | undefined; plain: ViewStyle } {
  * Given `star`, the id of one on the Later list, the screen is that one card,
  * and what comes after it is the way back to the list.
  *
+ * A like or a flower may name one part of the card (#463, ADR-077, the
+ * maintainer's of 26/11/2026): a tap on a photo, an answered prompt, the bio
+ * or a shared answer picks it, a second tap takes it back, and a line floating
+ * over the buttons says what the like names, with Clear; Like and the flower
+ * say it too, as their hint. The pick stays with the card's place, so a card
+ * Undo brings back has it still; one the API finds gone from the card is
+ * cleared, with a line that says so. A card that answers somebody's like says
+ * the part that like named, a photo with a small copy of the reader's own.
+ *
  * As a card, the end or a match takes the place of what had the focus, the
  * screen reader is taken to its first line, and from a card of the Later list
  * that is gone, to the way back (#581); a notice is spoken where it appears,
@@ -161,10 +176,20 @@ export function QueueScreen({ star }: { star?: string }) {
   // The card the last like or fish went to: the one a match is with, for the
   // try's hello, which shows its person beside the reader.
   const [liked, setLiked] = useState<QueueCard | null>(null);
+  // The part each card's like will name, by its place in the day's queue (#463).
+  const [picks, setPicks] = useState<Readonly<Record<string, LikeAnchor>>>({});
+  const pick = (place: string, anchor: LikeAnchor | null) =>
+    setPicks(({ [place]: _, ...others }) => (anchor ? { ...others, [place]: anchor } : others));
+  const picked = current ? (picks[placeOf(current)] ?? null) : null;
   const choose = (card: QueueCard, decision: QueueChoice) => {
     tap();
     if (decision === "like" || decision === "fish") setLiked(card);
-    void queue.choose(card, decision);
+    const place = placeOf(card);
+    const anchor = NAMES_A_PART.has(decision) ? (picks[place] ?? null) : null;
+    void queue.choose(card, decision, anchor).then((refused) => {
+      // The part has left the card since it was read: the pick goes with it.
+      if (refused === "anchor_not_on_card") pick(place, null);
+    });
   };
   // Every look but today's, Kumpa's among them: a match is a hello. Read here,
   // long before a match, so the setting is known when the hello mounts.
@@ -336,6 +361,9 @@ export function QueueScreen({ star }: { star?: string }) {
                       : t(REASON[current.entry.reason as Exclude<QueueReason, "relaxed">])}
                   </Text>
                 </View>
+                {ANSWERS_A_LIKE.has(current.entry.reason) && current.entry.likedYour && (
+                  <LikedYour part={current.entry.likedYour} />
+                )}
                 {(current.entry.notAnswered ?? []).map((field) => (
                   <Text key={field} variant="muted">
                     {t("queue.notAnswered", { field: t(fieldLabelKey(field)) })}
@@ -380,6 +408,7 @@ export function QueueScreen({ star }: { star?: string }) {
                       code: code ?? "",
                     })
                   }
+                  picking={{ anchor: picked, onPick: (anchor) => pick(placeOf(current), anchor) }}
                 />
                 {refused?.day === current.day && refused.position === current.entry.position && (
                   <Text variant="muted" accessibilityLiveRegion="polite">
@@ -440,6 +469,8 @@ export function QueueScreen({ star }: { star?: string }) {
                 poster={poster}
                 undo={undo}
                 float={float}
+                anchor={picked}
+                onClear={() => pick(placeOf(current), null)}
                 onChoose={choose}
               />
             ) : (
@@ -484,6 +515,37 @@ function Afloat({
 }
 
 /**
+ * The part of the reader's card that this person's like named (#463, ADR-077),
+ * under the card's reason: in words, and a photo with a small copy of the
+ * reader's own, heard as one line, the words alone.
+ */
+function LikedYour({ part }: { part: LikedPart }) {
+  const { t } = useT();
+  const words = partWords(t, "queue.likedYour", part);
+  return (
+    <View
+      accessible
+      accessibilityLabel={words}
+      testID="queue-liked-your"
+      className="flex-row items-center gap-3"
+    >
+      {part.kind === "photo" && (
+        <PhotoImage
+          id={part.photo.id}
+          variant="thumb"
+          blurhash={part.photo.blurhash}
+          accessibilityLabel={words}
+          style={LIKED_THUMB}
+        />
+      )}
+      <Text className="shrink">{words}</Text>
+    </View>
+  );
+}
+
+const LIKED_THUMB = { width: 48, height: 48, borderRadius: 8 } as const;
+
+/**
  * Like, Pass, Later and the flower over the bottom of the card (#82, #681): in
  * a row for the right hand (Pass, Like) or mirrored for the left, the flower,
  * Later and the likes left in a smaller row above on the hand's side; one-handed,
@@ -498,7 +560,9 @@ function Afloat({
  * on a line of its own while there is room beside the flower. How many of the
  * day's likes are left is plain text beside those two, above them where they do
  * not fit on one row, the same at ten as at one: no colour, no motion, and
- * nothing announces it after a decision (#524).
+ * nothing announces it after a decision (#524). The part a like will name
+ * (#463) is a line of its own above them all, with Clear, and Like and the
+ * flower say it as their hint.
  */
 function DecisionBar({
   card,
@@ -511,6 +575,8 @@ function DecisionBar({
   poster,
   undo,
   float,
+  anchor,
+  onClear,
   onChoose,
 }: {
   card: QueueCard;
@@ -529,10 +595,27 @@ function DecisionBar({
   undo: ReactNode;
   /** How the pieces stand off the card (`useFloat`). */
   float: { drawn: ViewStyle | undefined; plain: ViewStyle };
+  /** The part of the card a like or the flower will name (#463), or none. */
+  anchor: LikeAnchor | null;
+  onClear: () => void;
   onChoose: (card: QueueCard, decision: QueueChoice) => void;
 }) {
   const { t } = useT();
   const { entry } = card;
+  const naming = anchor ? partWords(t, "queue.anchor", anchor) : undefined;
+  const named = naming && (
+    <Afloat
+      className="flex-row items-center gap-2 self-stretch rounded-lg pl-3"
+      style={float.plain}
+    >
+      <Text testID="queue-anchor" className="flex-1">
+        {naming}
+      </Text>
+      <Button variant="ghost" accessibilityLabel={t("queue.anchor.clearLabel")} onPress={onClear}>
+        {t("queue.anchor.clear")}
+      </Button>
+    </Afloat>
+  );
   const likes = (
     <Afloat
       className={cn("rounded-lg px-3 py-1", oneHanded && (left ? "self-start" : "self-end"))}
@@ -553,6 +636,7 @@ function DecisionBar({
         className="rounded-lg"
         disabled={busy}
         accessibilityLabel={t("queue.fish")}
+        accessibilityHint={naming}
         accessibilityState={{ selected: entry.decision === "fish" }}
         onPress={() => onChoose(card, "fish")}
       >
@@ -598,6 +682,7 @@ function DecisionBar({
         className="rounded-full"
         disabled={busy}
         accessibilityLabel={t("queue.like")}
+        accessibilityHint={naming}
         accessibilityState={{ selected: entry.decision === "like" }}
         onPress={() => onChoose(card, "like")}
       >
@@ -621,6 +706,7 @@ function DecisionBar({
       label={t("queue.like")}
       icon={icons.like}
       filled
+      hint={naming}
       selected={entry.decision === "like"}
       disabled={busy}
       onPress={() => onChoose(card, "like")}
@@ -636,6 +722,7 @@ function DecisionBar({
   ];
   return (
     <View pointerEvents="box-none" className="gap-3">
+      {named}
       {oneHanded ? (
         <View
           testID="queue-one-handed"
@@ -710,6 +797,7 @@ function RoundChoice({
   label,
   icon,
   filled = false,
+  hint,
   selected,
   disabled,
   onPress,
@@ -717,6 +805,8 @@ function RoundChoice({
   label: string;
   icon: DecisionIcons["like"];
   filled?: boolean;
+  /** Like's: the part of the card the like will name (#463). */
+  hint?: string;
   selected: boolean;
   disabled: boolean;
   onPress: () => void;
@@ -727,6 +817,7 @@ function RoundChoice({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={label}
+      accessibilityHint={hint}
       accessibilityState={{ selected, disabled }}
       disabled={disabled}
       onPress={onPress}

@@ -1,10 +1,11 @@
-import { DISTANCE_BANDS, type ProfileCard } from "@kuutti/schema";
+import { DISTANCE_BANDS, type LikeAnchor, type ProfileCard } from "@kuutti/schema";
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react-native";
 import { Image } from "expo-image";
 import { useLocales } from "expo-localization";
 import * as SecureStore from "expo-secure-store";
+import { useState } from "react";
 import { saveSession } from "@/lib/session";
-import { a11yProblems, type HostNode, pressables } from "@/test/a11y";
+import { a11yProblems, type HostNode, noProblems, pressables } from "@/test/a11y";
 import { renderWithTheme } from "@/test/render";
 import { InScroll, layOut, placePhotos, scrollTo } from "@/test/sight";
 import { ProfileCardView } from "./ProfileCardView";
@@ -904,5 +905,146 @@ describe("ProfileCardView", () => {
         }
       },
     );
+  });
+
+  describe("a part picked for a like (#463, ADR-077)", () => {
+    const sunday: ProfileCard["prompts"][number] = { key: "sunday", answer: "A long breakfast." };
+    const full: ProfileCard = {
+      ...bare,
+      photos: [photoAt(1), photoAt(2)],
+      bio: "Long walks.",
+      prompts: [sunday],
+      fields: { smoking: "never", hobbies: ["yoga", "chess"], languages: ["fi"] },
+      shared: { ...bare.shared, hobbies: ["yoga"] },
+    };
+    const PARTS = [
+      "Photo 1 of 2",
+      "Photo 2 of 2",
+      "My ideal Sunday: A long breakfast.",
+      "Long walks.",
+      "Hobbies: Yoga, shared",
+    ];
+    const picks: (LikeAnchor | null)[] = [];
+    /** The queue's side of it: the pick held, every pick handed over. */
+    function Picking({ card = full }: { card?: ProfileCard }) {
+      const [anchor, setAnchor] = useState<LikeAnchor | null>(null);
+      return (
+        <ProfileCardView
+          card={card}
+          picking={{
+            anchor,
+            onPick: (next) => {
+              picks.push(next);
+              setAnchor(next);
+            },
+          }}
+        />
+      );
+    }
+    const tap = async (name: string) => {
+      await act(async () => {
+        fireEvent.press(screen.getByRole("button", { name }));
+      });
+    };
+    const parts = () => screen.queryAllByRole("button");
+    const picked = () =>
+      parts()
+        .filter((part) => part.props.accessibilityState?.selected === true)
+        .map((part) => part.props.accessibilityLabel);
+
+    beforeEach(() => {
+      picks.length = 0;
+    });
+
+    it("makes each photo, the answered prompt, the bio and each shared answer a button, and nothing else", async () => {
+      await renderWithTheme(<Picking />);
+      expect(parts().map((part) => part.props.accessibilityLabel)).toEqual(PARTS);
+      for (const part of parts()) {
+        expect(part.props.accessibilityHint).toBe("Names this in your like");
+        expect(part.props.accessibilityState).toEqual({ selected: false });
+      }
+      // An answer only one of the two gave, and one the card asks nothing of, are no parts.
+      expect(screen.getByLabelText("Chess")).toBeTruthy();
+      expect(screen.getByLabelText("Smoking: Never")).toBeTruthy();
+      expect(screen.queryByText("In your like")).toBeNull();
+      noProblems();
+    });
+
+    it("picks a part with a tap, marked with a check and its words, heard as selected, and takes it back with a second tap", async () => {
+      await renderWithTheme(<Picking />);
+      await tap("My ideal Sunday: A long breakfast.");
+      expect(picks).toEqual([{ kind: "prompt", prompt: "sunday" }]);
+      expect(picked()).toEqual(["My ideal Sunday: A long breakfast."]);
+      const mark = within(screen.getByTestId("card-prompt-sunday")).getByTestId("part-picked");
+      expect(within(mark).getByText("In your like")).toBeTruthy();
+
+      await tap("My ideal Sunday: A long breakfast.");
+      expect(picks).toEqual([{ kind: "prompt", prompt: "sunday" }, null]);
+      expect(picked()).toEqual([]);
+      expect(screen.queryByTestId("part-picked")).toBeNull();
+    });
+
+    it.each([
+      ["Photo 2 of 2", { kind: "photo", photoId: photoAt(2).id }, "card-pick-photo-"],
+      ["Long walks.", { kind: "bio" }, "card-bio"],
+      [
+        "Hobbies: Yoga, shared",
+        { kind: "shared", field: "hobbies", option: "yoga" },
+        "chip-hobbies.yoga",
+      ],
+    ] as const)(
+      "names %s as the API takes it, one part at a time",
+      async (name, anchor, testID) => {
+        await renderWithTheme(<Picking />);
+        await tap("Photo 1 of 2");
+        await tap(name);
+        expect(picks.at(-1)).toEqual(anchor);
+        // The newer pick is the one: the like names a single part.
+        expect(picked()).toEqual([name]);
+        expect(screen.getAllByTestId("part-picked", { includeHiddenElements: true })).toHaveLength(
+          1,
+        );
+        const part = screen.getByRole("button", { name });
+        expect(String(part.props.testID)).toContain(testID);
+        expect(
+          within(part).getByTestId("part-picked", { includeHiddenElements: true }),
+        ).toBeTruthy();
+        noProblems();
+      },
+    );
+
+    it("keeps a picked photo's words over its corner and a picked chip's check after its words", async () => {
+      await renderWithTheme(<Picking />);
+      await tap("Photo 1 of 2");
+      const photo = screen.getByRole("button", { name: "Photo 1 of 2" });
+      expect(within(photo).getByText("In your like")).toBeTruthy();
+      await tap("Hobbies: Yoga, shared");
+      const chip = screen.getByRole("button", { name: "Hobbies: Yoga, shared" });
+      // The chip says it with the check alone: the line over the buttons has the words.
+      expect(within(chip).queryByText("In your like")).toBeNull();
+      expect(texts(chip)).toEqual(["Yoga"]);
+      // The check is drawn, and hidden: the chip is heard as selected.
+      expect(within(chip).getByTestId("part-picked", { includeHiddenElements: true })).toBeTruthy();
+    });
+
+    it("names a ready line as the bio", async () => {
+      await renderWithTheme(<Picking card={{ ...full, bio: null, bioPreset: "photos_speak" }} />);
+      await tap("The photos say it. The rest over coffee.");
+      expect(picks).toEqual([{ kind: "bio" }]);
+    });
+
+    it("has no bio to pick on a card without one", async () => {
+      await renderWithTheme(<Picking card={{ ...full, bio: null }} />);
+      expect(parts().map((part) => part.props.accessibilityLabel)).toEqual(
+        PARTS.filter((part) => part !== "Long walks."),
+      );
+    });
+
+    it("leaves every part as it is read without a pick to make: no button, no hint", async () => {
+      await renderWithTheme(<ProfileCardView card={full} />);
+      expect(parts()).toEqual([]);
+      expect(screen.getByText("Long walks.")).toBeTruthy();
+      expect(screen.getByLabelText("Hobbies: Yoga, shared")).toBeTruthy();
+    });
   });
 });

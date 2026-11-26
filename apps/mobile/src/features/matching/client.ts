@@ -1,6 +1,7 @@
 import {
   type ApiComponents,
   type DealBreakerField,
+  type LikeAnchor,
   type QueueChoice,
   QueueDecisionAnswer,
   type QueueEntry,
@@ -38,19 +39,22 @@ export async function reportSeen(day: string, position: number): Promise<void> {
 }
 
 /**
- * A like, a pass, a fish or a skip, replacing the day's earlier one; the answer
- * names a match's conversation (#100), and says whether a fish can still go
- * today (#475), the likes left (#524) and the conversations waiting (ADR-062 §5).
+ * A like, a pass, a fish or a skip, replacing the day's earlier one; a like or
+ * a fish may name the part of the card it is for (#463), and one naming none
+ * names none. The answer names a match's conversation (#100), and says whether
+ * a fish can still go today (#475), the likes left (#524) and the conversations
+ * waiting (ADR-062 §5).
  */
 export async function decide(
   day: string,
   position: number,
   decision: QueueChoice,
+  anchor: LikeAnchor | null = null,
 ): Promise<QueueDecisionAnswer> {
   const { data, error, response } = await api.PUT("/queue/{day}/entries/{position}/decision", {
     params: { path: { day, position } },
     // The answer says where a Later left the person only when asked (#745).
-    body: { decision, later: true },
+    body: { decision, later: true, ...(anchor && { anchor }) },
   });
   if (!data) throw failed(response, error, "decision");
   return QueueDecisionAnswer.parse(data);

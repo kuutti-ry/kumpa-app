@@ -1,6 +1,7 @@
 import { formatDate, type PlainMessageKey } from "@kuutti/i18n";
 import type {
   DealBreakerField,
+  LikeAnchor,
   QueueChoice,
   QueueEntry,
   QueueResponse,
@@ -48,6 +49,7 @@ export type QueueNotice =
       | "errors.already_relaxed"
       | "errors.relaxations_changed"
       | "errors.card_budget_exceeded"
+      | "errors.anchor_not_on_card"
       | "queue.later.first"
       | "queue.later.full"
       | "load.failed.press"
@@ -301,7 +303,11 @@ export function useQueue(star?: string) {
         : more;
 
   const choose = useCallback(
-    async ({ day, entry }: QueueCard, decision: QueueChoice) => {
+    async (
+      { day, entry }: QueueCard,
+      decision: QueueChoice,
+      anchor: LikeAnchor | null = null,
+    ): Promise<"anchor_not_on_card" | null> => {
       const { position } = entry;
       // A like or a pass takes the person off the Later list (ADR-064 §3), and Later
       // puts them on it (#681), with no id the phone needs: the card has left the queue.
@@ -316,9 +322,9 @@ export function useQueue(star?: string) {
       setBusy(true);
       setNotice(null);
       try {
-        const answer = await decide(day, position, decision);
+        const answer = await decide(day, position, decision, anchor);
         const queue = onDay(day);
-        if (!queue) return;
+        if (!queue) return null;
         const { fishToSend, likesLeft, yourTurn } = answer;
         decided({ ...queue, fishToSend, likesLeft, yourTurn }, decision);
         setRevisit(null);
@@ -331,7 +337,7 @@ export function useQueue(star?: string) {
       } catch (error) {
         // Nothing to say of another day's card: the new queue was read already.
         const queue = onDay(day);
-        if (!queue) return;
+        if (!queue) return null;
         const code = codeOf(error);
         if (code === "day_ended") {
           read("errors.day_ended");
@@ -362,16 +368,22 @@ export function useQueue(star?: string) {
             .then((list) => list.yourTurn.waiting)
             .catch(() => null);
           const held = onDay(day);
-          if (!held) return;
+          if (!held) return null;
           const waiting = now ?? held.yourTurn;
           showQueue({ ...held, yourTurn: waiting });
           setNotice({ waiting });
+        } else if (code === "anchor_not_on_card") {
+          // Nothing was saved: the part picked has left the card since it was read
+          // (#463, ADR-077). The card stays, and the screen clears the pick.
+          setNotice("errors.anchor_not_on_card");
+          return code;
         } else {
           setNotice("load.failed.press");
         }
       } finally {
         setBusy(false);
       }
+      return null;
     },
     [rewrite, onDay, read, drop, showQueue],
   );

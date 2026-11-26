@@ -996,6 +996,19 @@ describe("a card opened from the list", () => {
     expect(QueueDecisionAnswer.parse(await answer.json()).match).not.toBeNull();
   });
 
+  test("a card opened from the list says the part a waiting like named (#463)", async ({ ctx }) => {
+    const { app, who } = await scene(ctx, 2);
+    const [a, b] = [person(who, 0), person(who, 1)];
+    const id = await starredYesterday(ctx.client, a, b);
+    const entryId = await likedYesterday(ctx.client, b, a);
+    await ctx.client.query("UPDATE queue_entry SET anchor_kind = 'bio' WHERE id = $1", [entryId]);
+
+    const { entries } = await opened(app, a, id);
+
+    expect(entries?.[0]?.reason).toBe("liked_you");
+    expect(entries?.[0]?.likedYour).toEqual({ kind: "bio" });
+  });
+
   test("Later on a card opened from the list keeps its place on the list", async ({ ctx }) => {
     const { app, who } = await scene(ctx, 3);
     const [a, b, c] = [person(who, 0), person(who, 1), person(who, 2)];
