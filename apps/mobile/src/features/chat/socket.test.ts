@@ -199,6 +199,17 @@ describe("the chat's socket", () => {
     expect(ws.sent).toHaveLength(2);
   });
 
+  it("hands on a frame with a key this build does not know, without that key (#745)", async () => {
+    stop = connect(handlers);
+    const ws = ready();
+    ws.receive({ type: "presence", conversationId: ID, online: true, since: minutes(-1) });
+    ws.receive({ ...MESSAGE, message: { ...MESSAGE.message, editedAt: null } });
+    expect(handlers.onFrame.mock.calls).toEqual([
+      [{ type: "presence", conversationId: ID, online: true }],
+      [MESSAGE],
+    ]);
+  });
+
   it("reconnects after 1 s, doubling to 30 s, and from 1 s again after a ready", async () => {
     stop = connect(handlers);
     for (const wait of [1000, 2000, 4000, 8000, 16_000, 30_000, 30_000]) {

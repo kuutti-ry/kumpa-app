@@ -398,6 +398,26 @@ describe("the queue", () => {
     expect(sent.seen()).toEqual([1, 2]);
   });
 
+  it("goes on to the next card when a decision answer carries a key this build does not know (#745)", async () => {
+    const sent = api((call) =>
+      call.path.endsWith("/decision")
+        ? json({
+            match: null,
+            later: null,
+            fishToSend: true,
+            likesLeft: 9,
+            yourTurn: 0,
+            sooner: true,
+          })
+        : undefined,
+    );
+    await show();
+    await press("Like");
+    expect(screen.queryByText("That did not go through. Try again.")).toBeNull();
+    expect(heading("Katja, 32")).toBeTruthy();
+    expect(sent.decisions()).toEqual([`${DAY}/1 like`]);
+  });
+
   it("goes on with the queue from a match without opening the conversation", async () => {
     api((call) =>
       call.path.endsWith("/decision")

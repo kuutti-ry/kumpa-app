@@ -5,6 +5,7 @@ import { useRouter } from "expo-router";
 import { useEffect, useRef } from "react";
 import { AppState, Platform } from "react-native";
 import { useLock, useSession } from "@/features/identity";
+import { readAnswerSafely } from "@/lib/answer";
 import { useT } from "@/lib/locale";
 import { registerOnReturn, registerPush } from "./phone";
 
@@ -88,7 +89,7 @@ function OnThePhone() {
     Notifications.clearLastNotificationResponse();
     if (status !== "signed-in") return;
     if (response.actionIdentifier !== Notifications.DEFAULT_ACTION_IDENTIFIER) return;
-    const data = PushData.safeParse(response.notification.request.content.data);
+    const data = readAnswerSafely(PushData, response.notification.request.content.data);
     if (!data.success) return;
     // An announcement is read in the home screen's notices (#573, ADR-068 §4);
     // a message or a match in the conversations.

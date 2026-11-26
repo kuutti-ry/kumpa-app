@@ -1,4 +1,5 @@
 import { InvitationCreated, Invitations } from "@kuutti/schema";
+import { readAnswer } from "@/lib/answer";
 import { api, failed } from "@/lib/api";
 
 // The invitations as the app calls them (#107, ADR-044), through the typed
@@ -9,14 +10,14 @@ import { api, failed } from "@/lib/api";
 export async function fetchInvitations(): Promise<Invitations> {
   const { data, error, response } = await api.GET("/invitations");
   if (!data) throw failed(response, error, "invitations");
-  return Invitations.parse(data);
+  return readAnswer(Invitations, data);
 }
 
 /** A new invitation; its code is in this answer and nowhere else, ever. */
 export async function makeInvitation(): Promise<InvitationCreated> {
   const { data, error, response } = await api.POST("/invitations");
   if (!data) throw failed(response, error, "invitation");
-  return InvitationCreated.parse(data);
+  return readAnswer(InvitationCreated, data);
 }
 
 /** Withdraws an open invitation of the caller's; its code works no more. */

@@ -11,6 +11,7 @@ import {
   StoredContacts,
 } from "@kuutti/schema";
 import { type PickedPhoto, uploadPicture, uploadRefusal } from "@/features/media";
+import { readAnswer } from "@/lib/answer";
 import { api, failed } from "@/lib/api";
 import { messageWithKnownDescription } from "./known";
 
@@ -19,7 +20,7 @@ import { messageWithKnownDescription } from "./known";
 // the media slice's upload, the one transport that reports progress (#350).
 
 const readMessage = (data: unknown): ChatMessage =>
-  ChatMessage.parse(messageWithKnownDescription(data));
+  readAnswer(ChatMessage, messageWithKnownDescription(data));
 
 /** The list; without thumbs for a count alone (the home screen), so nothing is signed or spent. */
 export async function fetchConversations(thumbs = true): Promise<ConversationList> {
@@ -27,7 +28,7 @@ export async function fetchConversations(thumbs = true): Promise<ConversationLis
     params: { query: { thumbs: thumbs ? "true" : "false" } },
   });
   if (!data) throw failed(response, error, "conversations");
-  return ConversationList.parse(data);
+  return readAnswer(ConversationList, data);
 }
 
 export async function fetchConversation(id: string): Promise<ConversationDetail> {
@@ -35,7 +36,7 @@ export async function fetchConversation(id: string): Promise<ConversationDetail>
     params: { path: { id } },
   });
   if (!data) throw failed(response, error, "conversation");
-  return ConversationDetail.parse(data);
+  return readAnswer(ConversationDetail, data);
 }
 
 /** A page: back from `before` newest first, onward from `after` oldest first, or the newest. */
@@ -48,7 +49,8 @@ export async function fetchMessages(
   });
   if (!data) throw failed(response, error, "messages");
   const { messages } = data as { messages?: unknown };
-  return MessagePage.parse(
+  return readAnswer(
+    MessagePage,
     Array.isArray(messages)
       ? { ...data, messages: messages.map(messageWithKnownDescription) }
       : data,
@@ -111,7 +113,7 @@ export async function markRead(id: string, upTo: number): Promise<void> {
 export async function fetchContacts(): Promise<StoredContact[]> {
   const { data, error, response } = await api.GET("/contacts");
   if (!data) throw failed(response, error, "contacts");
-  return StoredContacts.parse(data).contacts;
+  return readAnswer(StoredContacts, data).contacts;
 }
 
 /** Keeps a piece; the answer is its one stored form (a number in E.164, a username without its @). */
@@ -121,7 +123,7 @@ export async function saveContact(kind: ContactKind, value: string): Promise<Sto
     body: { value },
   });
   if (!data) throw failed(response, error, "contact save");
-  return StoredContact.parse(data);
+  return readAnswer(StoredContact, data);
 }
 
 /** Removes a piece, and with it every share of it; alike when none was kept. */
@@ -142,7 +144,7 @@ export async function fetchSharedContacts(id: string): Promise<ConversationConta
     params: { path: { id } },
   });
   if (!data) throw failed(response, error, "conversation contacts");
-  return ConversationContacts.parse(data);
+  return readAnswer(ConversationContacts, data);
 }
 
 /** Shares a stored piece in the conversation; the answer is the person's fresh view of it. */
@@ -151,7 +153,7 @@ export async function shareContact(id: string, kind: ContactKind): Promise<Conve
     params: { path: { id, kind } },
   });
   if (!data) throw failed(response, error, "contact share");
-  return ConversationDetail.parse(data);
+  return readAnswer(ConversationDetail, data);
 }
 
 /** Stops sharing a piece there; the answer is the person's fresh view of the conversation. */
@@ -160,5 +162,5 @@ export async function stopSharing(id: string, kind: ContactKind): Promise<Conver
     params: { path: { id, kind } },
   });
   if (!data) throw failed(response, error, "contact unshare");
-  return ConversationDetail.parse(data);
+  return readAnswer(ConversationDetail, data);
 }

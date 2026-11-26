@@ -4,6 +4,7 @@ import {
   type NotificationKind,
   type PushTokenRequest,
 } from "@kuutti/schema";
+import { readAnswer } from "@/lib/answer";
 import { api, failed } from "@/lib/api";
 
 // The notification choices, the notices and this phone's push token as the
@@ -14,7 +15,7 @@ import { api, failed } from "@/lib/api";
 export async function fetchChoices(): Promise<NotificationChoices> {
   const { data, error, response } = await api.GET("/account/notifications");
   if (!data) throw failed(response, error, "notifications");
-  return NotificationChoices.parse(data);
+  return readAnswer(NotificationChoices, data);
 }
 
 /** Switches one kind; answered with every kind as it now stands. */
@@ -27,14 +28,14 @@ export async function saveChoice(
     body: { enabled },
   });
   if (!data) throw failed(response, error, "notification");
-  return NotificationChoices.parse(data);
+  return readAnswer(NotificationChoices, data);
 }
 
 /** The newest notices, read and unread. */
 export async function fetchNotices(): Promise<Notices> {
   const { data, error, response } = await api.GET("/notices");
   if (!data) throw failed(response, error, "notices");
-  return Notices.parse(data);
+  return readAnswer(Notices, data);
 }
 
 export async function markNoticeRead(id: string): Promise<void> {
