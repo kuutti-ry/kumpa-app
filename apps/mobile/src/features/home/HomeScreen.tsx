@@ -14,6 +14,7 @@ import { useOnboardingGate, useSession } from "@/features/identity";
 import { QueueButton, StarsButton } from "@/features/matching";
 import { Notices, PushOffer } from "@/features/notifications";
 import { GateCard, PondCard } from "@/features/pond";
+import { MissingFromProfile } from "@/features/profile";
 import { isProduction } from "@/lib/environment";
 import { useT } from "@/lib/locale";
 import { useHapticTap } from "@/theme/haptics";
@@ -100,7 +101,9 @@ export function HomeScreen() {
             {/* Whether matching is open for the person (#500); once it is, the way to the
                 queue (#379), the way to the Later list while it shows somebody
                 (#575), and the one offer of notifications, since now there is something to
-                tell (#102, ADR-055 §9). */}
+                tell (#102, ADR-055 §9). While the profile lacks something, what it
+                lacks and the way to the profile, in the card; otherwise that way
+                follows the card (#745). */}
             <GateCard
               whenOpen={
                 <>
@@ -109,17 +112,20 @@ export function HomeScreen() {
                   <PushOffer />
                 </>
               }
+              whenIncomplete={<MissingFromProfile />}
+              toProfile={(inCard) => (
+                <Button
+                  variant={inCard ? "default" : "outline"}
+                  accessibilityLabel={t("profile.home.open")}
+                  onPress={() => {
+                    tap();
+                    router.push("/profile");
+                  }}
+                >
+                  <Text>{t("profile.home.open")}</Text>
+                </Button>
+              )}
             />
-            <Button
-              variant="outline"
-              accessibilityLabel={t("profile.home.open")}
-              onPress={() => {
-                tap();
-                router.push("/profile");
-              }}
-            >
-              <Text>{t("profile.home.open")}</Text>
-            </Button>
             {/* The conversations a match opens, with what is unread (#348). */}
             <ChatsButton />
             {/* How many people are on Kuutti (#54): last, under the things to do (#581). */}

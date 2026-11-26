@@ -9,6 +9,7 @@ export { GenderChips, IdentityLabelChips } from "./gender/GenderChips";
 export { GenderScreen } from "./gender/GenderScreen";
 export { fieldLabelKey, optionKey } from "./keys";
 export { LaterFieldScreen } from "./later/LaterFieldScreen";
+export { MissingFromProfile } from "./MissingFromProfile";
 export { PlaceChoice, PlacePicker } from "./PlaceEditor";
 export { PlaceScreen } from "./PlaceScreen";
 export { ProfileCardView } from "./ProfileCardView";

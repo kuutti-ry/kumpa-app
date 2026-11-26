@@ -22,6 +22,7 @@ packages/schema/src/gate.ts
 apps/api/src/profile/completeness.ts
 apps/api/src/pond/repo.ts
 apps/mobile/src/features/matching/useStars.ts
+apps/mobile/src/features/profile/MissingFromProfile.tsx
 -->
 
 What home tells a person between a finished profile and the first people: whether matching is open for them, how many people have completed their profiles, and whom those people seek; and how an admin opens or closes matching for everybody at once. Everyone with a finished profile goes through it, up to their first "See people", and comes back to it whenever home opens.
@@ -31,7 +32,7 @@ What home tells a person between a finished profile and the first people: whethe
 ```mermaid
 flowchart TB
   accTitle: People on Kumpa, part 1: what home shows
-  accDescr: Home shows the matching card under the notices and People on Kumpa last. The matching card says one of three things: the profile still lacks something, it is finished and matching has not opened, or matching is open, with See people. People on Kumpa says how many people have completed their profiles, or nothing below the threshold, and whom they seek as one bar when every band is large enough.
+  accDescr: Home shows the matching card under the notices and People on Kumpa last. The matching card says one of three things: the profile still lacks something, with what it lacks and Your profile, it is finished and matching has not opened, or matching is open, with See people. People on Kumpa says how many people have completed their profiles, or nothing below the threshold, and whom they seek as one bar when every band is large enough.
   subgraph person["The person"]
     s5(["Finishes the profile: see Profile"])
     s10(["Chooses See people: see the queue"])
@@ -39,7 +40,7 @@ flowchart TB
   subgraph app["The app"]
     s1(["Home, with nothing open in onboarding"])
     s2["The matching card asks whether matching is open for the person, whenever home or the app comes to the front"]
-    s4["Matching opens for finished profiles. Yours still lacks something."]
+    s4["Matching opens for finished profiles. Yours still lacks something., over what the profile lacks, with Your profile"]
     s7["Your profile is finished. Matching has not opened yet."]
     s9["Matching is open for you., with See people, Later list while it shows somebody, and once the offer of notifications"]
     s11["People on Kumpa: reads the counter with the person's session, when home opens"]
@@ -60,7 +61,7 @@ flowchart TB
   s1 --> s2
   s2 --> s3
   s3 -->|"no"| s4
-  s4 --> s5
+  s4 -->|"Your profile"| s5
   s3 -->|"yes"| s6
   s6 -->|"no"| s7
   s7 --> s8
@@ -77,10 +78,10 @@ flowchart TB
 
 ### Steps
 
-1. The person has finished onboarding (see [Onboarding](onboarding.md)), or opens the app with nothing open there. Home shows "Kumpa", any notices first, then what there is to do: the matching card, "Your profile" and "Conversations"; and last the card "People on Kumpa", so that numbers nobody acts on come after the one thing to do.
+1. The person has finished onboarding (see [Onboarding](onboarding.md)), or opens the app with nothing open there. Home shows "Kumpa", any notices first, then what there is to do: the matching card, "Your profile", which stands on the matching card itself while the profile lacks something (step 4), and "Conversations"; and last the card "People on Kumpa", so that numbers nobody acts on come after the one thing to do.
 2. The matching card asks the API whether matching is open for the person whenever home comes to the front and whenever the app comes back to the foreground, so a person whose photos were approved meanwhile, or for whom an admin opened matching with the app in a pocket, sees the new answer. What it knew stays on screen until the answer is there; with nothing yet it says "Loading…", and a read that fails says why, with Try again. Each of its sentences says Matching, so the card has no heading of its own.
 3. Is the person complete? Only an account in good standing, active, with every answer of onboarding (the gender, whom they seek with the sensitive-answers consent of the current wording, the age window, the intent, and a home the list of places knows), the terms and the privacy summary in their current wording, and a finished profile, whose photos must be approved. It is read whenever asked and kept nowhere, so nothing about it waits for a count. A shadow-banned account reads like an active one, so the ban shows to nobody. No: 4. Yes: 6.
-4. "Matching opens for finished profiles. Yours still lacks something." Most often the photos still wait for the check or for a moderator. No number is said, and nothing on the card can be tapped to move ahead.
+4. "Matching opens for finished profiles. Yours still lacks something." Under it the card says what the profile lacks, a line each in the words of "Your profile" ([Profile](profile.md)), read from the profile only while the card says this; most often "At least 2 approved photos", while the photos still wait for the check or for a moderator. Then "Your profile", the way there, as the card's one thing to do. The gate's answer has no number: the photos line's is the profile's minimum. When the profile cannot be read, or names nothing missing, the sentence stands alone over the button.
 5. The person finishes the profile: see [Profile](profile.md) and [Photos](photos.md). The card asks again when home next comes to the front, and says the new answer at once: nothing waits for the night. The same holds after whatever makes a person incomplete again, a photo refused or taken down, a consent withdrawn or a new wording of one: home sends them back to onboarding while a step there is open, and matching is open for them again the moment they are complete.
 6. Has an admin opened matching? There is one switch, for the whole country (part 2). No: 7. Yes: 9.
 7. "Your profile is finished. Matching has not opened yet." Nothing a person does opens it, and no count, share or night does.
@@ -183,10 +184,10 @@ flowchart TB
 
 ## Where it lives
 
-- Screens: [index.tsx](../../apps/mobile/app/index.tsx) (home), [HomeScreen.tsx](../../apps/mobile/src/features/home/HomeScreen.tsx) (what home shows, in its order); in the pond feature [GateCard.tsx](../../apps/mobile/src/features/pond/GateCard.tsx) and [useGate.ts](../../apps/mobile/src/features/pond/useGate.ts) (the matching card), [PondCard.tsx](../../apps/mobile/src/features/pond/PondCard.tsx), [usePondCounter.ts](../../apps/mobile/src/features/pond/usePondCounter.ts) and [SeeksBar.tsx](../../apps/mobile/src/features/pond/SeeksBar.tsx) (People on Kumpa), [client.ts](../../apps/mobile/src/features/pond/client.ts); the ways on from the open card, [QueueButton.tsx](../../apps/mobile/src/features/matching/QueueButton.tsx), [StarsButton.tsx](../../apps/mobile/src/features/matching/StarsButton.tsx) and [PushOffer.tsx](../../apps/mobile/src/features/notifications/PushOffer.tsx); the panel's [MatchingSwitch.tsx](../../apps/admin/src/features/pond/MatchingSwitch.tsx), with its place in the menu, admins only, in [app.tsx](../../apps/admin/src/app.tsx)
+- Screens: [index.tsx](../../apps/mobile/app/index.tsx) (home), [HomeScreen.tsx](../../apps/mobile/src/features/home/HomeScreen.tsx) (what home shows, in its order); in the pond feature [GateCard.tsx](../../apps/mobile/src/features/pond/GateCard.tsx) and [useGate.ts](../../apps/mobile/src/features/pond/useGate.ts) (the matching card), [PondCard.tsx](../../apps/mobile/src/features/pond/PondCard.tsx), [usePondCounter.ts](../../apps/mobile/src/features/pond/usePondCounter.ts) and [SeeksBar.tsx](../../apps/mobile/src/features/pond/SeeksBar.tsx) (People on Kumpa), [client.ts](../../apps/mobile/src/features/pond/client.ts); the ways on from the open card, [QueueButton.tsx](../../apps/mobile/src/features/matching/QueueButton.tsx), [StarsButton.tsx](../../apps/mobile/src/features/matching/StarsButton.tsx) and [PushOffer.tsx](../../apps/mobile/src/features/notifications/PushOffer.tsx); what the unfinished card lists, from the profile, [MissingFromProfile.tsx](../../apps/mobile/src/features/profile/MissingFromProfile.tsx); the panel's [MatchingSwitch.tsx](../../apps/admin/src/features/pond/MatchingSwitch.tsx), with its place in the menu, admins only, in [app.tsx](../../apps/admin/src/app.tsx)
 - API: `GET /gate` and `GET /ponds/counter` in the pond slice's [routes.ts](../../apps/api/src/pond/routes.ts), with [counter.ts](../../apps/api/src/pond/counter.ts) (what may be said, and the session's own shares); who is complete in [pool.ts](../../apps/api/src/jobs/pool.ts), handed to the route in [app.ts](../../apps/api/src/app.ts); `GET /admin/matching` and `POST /admin/matching` in [admin-routes.ts](../../apps/api/src/pond/admin-routes.ts), the turn itself in [repo.ts](../../apps/api/src/pond/repo.ts); the night's count [pond-counter.ts](../../apps/api/src/jobs/pond-counter.ts), run by [nightly.ts](../../apps/api/src/jobs/nightly.ts) in the order [boot.ts](../../apps/api/src/boot.ts) gives; when the number and the bands may be said and move in [packages/schema/src/pond-counter.ts](../../packages/schema/src/pond-counter.ts), the card's three answers in [packages/schema/src/gate.ts](../../packages/schema/src/gate.ts); the pond slice's [README](../../apps/api/src/pond/README.md)
 - Spec: [opening.feature](../../features/pond/opening.feature), [counter.feature](../../features/pond/counter.feature)
-- Maestro: [home-and-tech.yaml](../../apps/mobile/e2e/flows/home-and-tech.yaml), [queue.yaml](../../apps/mobile/e2e/flows/queue.yaml) (its start: from the open matching card to the queue), [onboarding.yaml](../../apps/mobile/e2e/flows/onboarding.yaml) (its end: home while the photos wait); the panel's Playwright flow [roles.spec.ts](../../apps/admin/e2e/roles.spec.ts) (who may open Matching)
+- Maestro: [home-and-tech.yaml](../../apps/mobile/e2e/flows/home-and-tech.yaml), [queue.yaml](../../apps/mobile/e2e/flows/queue.yaml) (its start: from the open matching card to the queue), [onboarding.yaml](../../apps/mobile/e2e/flows/onboarding.yaml) (its end: home while the photos wait), [photos-gate-and-hidden-field.yaml](../../apps/mobile/e2e/flows/photos-gate-and-hidden-field.yaml) (its start: the unfinished card, what it lacks and Your profile); the panel's Playwright flow [roles.spec.ts](../../apps/admin/e2e/roles.spec.ts) (who may open Matching)
 - ADRs: [ADR-060](../adr/060-no-waiting-at-the-pond.md) §1 to §4 (the switch, an admin's act, who is complete, the three answers) and §8 (the counter stays); [ADR-061](../adr/061-one-home-no-ponds.md) §8 (one switch for the whole country, and no row for the pond); [ADR-013](../adr/013-waitlist-counter.md) §2 (who counts), §3 to §5 (one number, what may be said, the threshold's floor), §6 and §7 (when it moves, no history), §11 (the card), §12 to §14 (the bar), §18 to §20 (behind the session, no place named, the consent names the bar); [ADR-055](../adr/055-push.md) §9 (the offer once matching is open); [ADR-062](../adr/062-one-queue.md) §14 (See people); [ADR-064](../adr/064-a-star.md) §6 (Starred); [ADR-009](../adr/009-profile-and-card.md) §4 (a finished profile)
 - Rules: the register's [Pond](../decisions.md#pond), [Profile](../decisions.md#profile) and [Notifications](../decisions.md#notifications) rows
 
@@ -216,3 +217,4 @@ flowchart TB
 - 2026-11-16 (#700, PR #701): home's title and its card name the app Kumpa: People on Kumpa, and below k "Kumpa is just getting started."
 - 2026-11-18 (#681): "Starred" is "Later list", the list Later puts people on.
 - 2026-11-19 (#681): a finished profile needs no words, so somebody with a name, the approved photos, whom they seek and the ages is complete without a bio or an answered question, and is counted.
+- 2026-11-26 (#745): while the profile lacks something, the matching card says what, a line each in the profile's words, and "Your profile" moves onto it, as its one thing to do.
