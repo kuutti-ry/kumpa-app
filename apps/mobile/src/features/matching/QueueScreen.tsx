@@ -601,6 +601,7 @@ function DecisionBar({
       key="pass"
       label={t("queue.pass")}
       icon={icons.pass}
+      outer
       selected={entry.decision === "pass"}
       disabled={busy}
       onPress={() => onChoose(card, "pass")}
@@ -618,6 +619,7 @@ function DecisionBar({
       key="later"
       label={t("queue.skip")}
       icon={Star}
+      outer
       selected={entry.decision === "skip"}
       disabled={busy}
       onPress={() => onChoose(card, "skip")}
@@ -694,11 +696,26 @@ const ROUND_PRESSED: ViewStyle = {
  * word is inside the press, so a tap on it decides as a tap on the disc does,
  * and a screen reader meets one button. Busy, the disc is drawn as every
  * disabled control is, a dashed outline with no fill, never faded.
+ *
+ * The word is not held to its disc's width (#753): held there, it broke in the
+ * middle, "Myöhem / min" at the default size and "Late / r" at the largest. At
+ * an end of the row it may take the row's gap (`gap-5`) on each side of its
+ * disc, centred under it still; Like's, always in the middle, keeps to its
+ * disc, so two words never meet. Each word is a line of its own, so "Hoppa
+ * över" breaks only between its words, and a word still wider than its room
+ * shrinks to fit rather than break (#467). Like ScreenHeader's title, it has
+ * no fixed line height: iOS seats a shrunk font at the foot of the line height
+ * set for the font before it shrank (the size's tracking is given back, which
+ * a size with its own line height leaves out). The web preview cannot shrink
+ * text, but it has no larger sizes either, and at its one size every word fits
+ * its room down to 320 pt. The room lets touches through to what lies under
+ * it; the word decides, past the disc's edge too.
  */
 function RoundChoice({
   label,
   icon,
   filled = false,
+  outer = false,
   selected,
   disabled,
   onPress,
@@ -706,6 +723,8 @@ function RoundChoice({
   label: string;
   icon: DecisionIcons["like"];
   filled?: boolean;
+  /** At an end of the row, where the word may take the gaps beside its disc. */
+  outer?: boolean;
   selected: boolean;
   disabled: boolean;
   onPress: () => void;
@@ -746,14 +765,27 @@ function RoundChoice({
           }
         />
       </View>
-      <Afloat className="rounded-full px-2" style={undefined}>
-        <Text
-          variant="small"
-          className={cn("text-center font-sans", disabled && "text-muted-foreground")}
+      <View pointerEvents="box-none" className={cn("items-center self-stretch", outer && "-mx-5")}>
+        <Afloat
+          className="flex-row flex-wrap justify-center gap-x-1 rounded-full px-2"
+          style={undefined}
         >
-          {label}
-        </Text>
-      </Afloat>
+          {label.split(" ").map((word) => (
+            <Text
+              key={word}
+              variant="small"
+              className={cn(
+                "text-center font-sans text-label/[normal] tracking-[0.15px]",
+                disabled && "text-muted-foreground",
+              )}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+            >
+              {word}
+            </Text>
+          ))}
+        </Afloat>
+      </View>
     </Pressable>
   );
 }

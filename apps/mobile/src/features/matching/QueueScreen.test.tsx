@@ -3896,4 +3896,57 @@ describe("in the Kumpa look", () => {
     expect(heading("Minna, 34")).toBeTruthy();
     expect(sent.decisions()).toEqual([`${DAY}/1 like`, `${DAY}/2 pass`]);
   });
+
+  /** A round button, its words, and the margin and touches of the room they stand in. */
+  const roundButton = (name: string) => {
+    const button = screen.getByRole("button", { name });
+    const words = within(button).getAllByText(/\S/, { includeHiddenElements: true });
+    let room = {};
+    for (let node = words[0]?.parent; node && node !== button; node = node.parent) {
+      const reach = /(?:^|\s)(-mx-\S+)/.exec(String(node.props.className ?? ""))?.[1];
+      if (reach) room = { reach, pointerEvents: node.props.pointerEvents };
+    }
+    return { button, words, room };
+  };
+
+  // No word under a round button breaks in the middle, at any text size (#753,
+  // #467). A test cannot measure text, so it holds what frees the words: each
+  // disc keeps its width and its target, the words at the row's ends may take
+  // the row's gap on each side of their discs while Like's keeps to its own, so
+  // two words never meet, and each word is a line of its own, which shrinks
+  // only when it alone is wider than its room.
+  it.each([
+    ["en-US", "Pass", "Like", "Later"],
+    ["fi-FI", "Ohita", "Tykkää", "Myöhemmin"],
+    ["sv-FI", "Hoppa över", "Gilla", "Senare"],
+  ] as const)(
+    "gives each round button's word room past its disc in %s, broken only between words",
+    async (languageTag, pass, like, later) => {
+      (useLocales as jest.Mock).mockReturnValue([{ languageTag }]);
+      api();
+      await show();
+      const row = roundButton(like).button.parent;
+      expect(row?.props.className).toMatch(/\bflex-row\b/);
+      expect(row?.props.className).not.toMatch(/\bflex-wrap\b/);
+      const gap = /(?:^|\s)gap-(\S+)/.exec(String(row?.props.className))?.[1];
+      for (const [name, reach] of [
+        [pass, `-mx-${gap}`],
+        [like, undefined],
+        [later, `-mx-${gap}`],
+      ] as const) {
+        const { button, words, room } = roundButton(name);
+        expect(button.props.className).toMatch(/\bmax-w-\[92px\]/);
+        expect(StyleSheet.flatten(button.props.style)).toMatchObject({
+          minHeight: TOUCH_TARGET,
+          minWidth: TOUCH_TARGET,
+        });
+        expect(words.map((word) => word.props.children)).toEqual(name.split(" "));
+        for (const word of words) {
+          expect(word.props).toMatchObject({ numberOfLines: 1, adjustsFontSizeToFit: true });
+        }
+        expect(room).toEqual(reach ? { reach, pointerEvents: "box-none" } : {});
+      }
+      noProblems();
+    },
+  );
 });
