@@ -6,7 +6,7 @@ A reviewer is given two people, both at the test bank's Nordea, with a user ID a
 
 | User ID | Who | Where they land |
 |---|---|---|
-| `DEMOUSER4` | Sanna, a member with a history | in the app: a finished profile, people to decide about, likes waiting, conversations to open (`docs/demo/population.md`) |
+| `DEMOUSER4` | Sanna, a member with a history | in the app: a finished profile, people to decide about, likes waiting, four people on her Later list, conversations to open (`docs/demo/population.md`) |
 | `DEMOUSER1` | Onni, a member with a history | in the app, as Sanna does (#560) |
 
 Whichever test user of the bed a reviewer types instead, they land in the app too: every one that works is a member with a profile and, but for Helmi of the Mobiilivarmenne emulator, who has no photos yet, pictures, people to go through, likes and conversations (#560, the maintainer, 21/11/2026; `docs/vendors/telia.md` 1.4, `docs/demo/population.md`). Nobody who signs in through the bed lands in the sign-up steps, is refused as banned, or finds a deleted account; those states are shown on the mock bank alone. Until the night's reset after that change merged, `DEMOUSER1` was Onni in the sign-up steps, and both stores' texts as saved on 2026-11-18 still say so (What the forms say).
@@ -28,7 +28,7 @@ The maintainer, on the day of the submission, or a member of the team he names. 
    curl -s https://api.staging.kumpa.fi/.well-known/assetlinks.json
    ```
    The first names `2NC5W5B372.fi.kumpa`, the second `fi.kumpa` with its fingerprints (`docs/runbooks/devices.md`, Verified links).
-3. **The night's reset ran.** `gh run list --workflow demo-reset.yml --limit 3`: the last one green. A red one names the personas it spared.
+3. **The night's reset ran.** `gh run list --workflow demo-reset.yml --limit 3`: the last one green. A red one names the personas it spared. The reset leaves the cast as it was written: once a change of `packages/db/src/seed/cast.ts` reaches staging, the population is written again before the reset (`docs/demo/runbook.md`, staging's step 2), or the cards the reviewers see keep the cast's old words.
 4. **Both people get in, on the store's own build**: TestFlight's for Apple, the closed test's from Play for Google, never a development or preview build, which is signed with other keys. With the form's text in hand and nothing else: `DEMOUSER4` lands in the app as Sanna, `DEMOUSER1` in the app as Onni, each with People to see and a conversation to open. Do it after the reset and before the submission, and sign in as nobody else's reviewer account afterwards (While a review runs).
 5. **An iPhone proves the app.** With the team id set, the API verifies an attestation that comes and refuses the sign-in when it fails (ADR-069). After step 4 on an iPhone:
    ```sh

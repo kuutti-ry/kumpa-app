@@ -3,6 +3,7 @@ import { MATCHING_CONFIG_V1, openMatching } from "@kuutti/db";
 import {
   CAST,
   CAST_CONVERSATIONS,
+  CAST_LATER,
   CAST_LIKES,
   type CastPerson,
   DEMO_PERSONAS,
@@ -17,6 +18,7 @@ import { it } from "vitest";
 import { CURRENT_CONSENT_VERSIONS, hmacKeyFromHex } from "../../src/identity/index.ts";
 import { subjectsAmong } from "../../src/jobs/pool.ts";
 import { fillQueue } from "../../src/jobs/queue-builder.ts";
+import { starredPeople } from "../../src/jobs/stars.ts";
 import { finnishDay } from "../../src/lib/finnish-day.ts";
 import { inEachOthersPool, type PoolPerson } from "../../src/matching/index.ts";
 import { keptPlace, pointOf } from "../../src/pond/index.ts";
@@ -152,7 +154,17 @@ describe("the cast", () => {
       expect(person.profile?.bio?.length ?? 0, person.label).toBeGreaterThanOrEqual(
         BIO_MIN_FOR_COMPLETENESS,
       );
-      expect(contactDetailsIn(person.profile?.bio ?? ""), person.label).toBeNull();
+      // The texts the profile's route holds to the plain-text rule: the cast is
+      // written past the route, so the rule is asked here.
+      const texts = [
+        person.profile?.displayName,
+        person.profile?.bio,
+        person.profile?.fields.occupationTitle,
+        ...(person.profile?.prompts ?? []).map((prompt) => prompt.answer),
+      ];
+      for (const text of texts) {
+        expect(contactDetailsIn(text ?? ""), `${person.label}: ${text}`).toBeNull();
+      }
     }
   });
 
@@ -212,13 +224,14 @@ describe("the cast", () => {
     }
   });
 
-  it("hold every fish, like and chat to the filters, both ways, on every day of the demo", () => {
+  it("hold every fish, like, chat and Later to the filters, both ways, on every day of the demo", () => {
     const byKey = new Map(CAST.map((person) => [person.key, person]));
     const pairs = [
       ...CAST_LIKES.flatMap(({ of, fishFrom, likedBy }) =>
         [...fishFrom, ...likedBy].map((key) => [of, key] as const),
       ),
       ...CAST_CONVERSATIONS.map((told) => told.between),
+      ...CAST_LATER.flatMap(({ of, later }) => later.map((key) => [of, key] as const)),
     ];
     expect(pairs.length).toBeGreaterThan(0);
     for (const at of MONTHS) {
@@ -282,15 +295,16 @@ describe("the cast", () => {
 
 describe("what the cast gives the members", () => {
   // Seven members' fish and likes, and their chats: the three of the flows, and the four to
-  // explore (#560). Sanna's part is three likes and two chats.
+  // explore (#560). Sanna's part is three likes, two chats and four on her Later list (#681).
   const LIKES = 19;
   const CHATS = 12;
+  const LATER = 4;
 
   test("nothing, where no cast has been written", async ({ ctx }) => {
     expect(await giveCastStories(ctx.client, [], new Date())).toEqual({ cast: 0 });
   });
 
-  test("a fish first, then the likes, every card one the member seeks and no chat partner among them; told again, it stays", async ({
+  test("a fish first, then the likes, every card one the member seeks and nobody of her chats or her Later list among them, who are on the list she opens; told again, it stays", async ({
     ctx,
   }) => {
     const { logger } = await captureLogger();
@@ -317,6 +331,7 @@ describe("what the cast gives the members", () => {
       cast: CAST.length,
       leftovers: 0,
       likes: { liked: LIKES, already: 0, missing: 0 },
+      later: { listed: LATER, already: 0, missing: 0 },
       conversations: { written: CHATS, already: 0, missing: 0 },
     });
 
@@ -340,17 +355,26 @@ describe("what the cast gives the members", () => {
     expect(new Set(keys.slice(1, 3))).toEqual(new Set(["risto", "karim"]));
     expect(rows.slice(1, 3).map((row) => row.reason)).toEqual(["liked_you", "liked_you"]);
     expect(rows.slice(3).every((row) => row.reason === "matches_filters")).toBe(true);
-    // The twenty-two men, less the two she is talking to.
-    expect(rows).toHaveLength(20);
+    // The twenty-two men, less the two she is talking to and the four she put off for later.
+    expect(rows).toHaveLength(22 - 2 - LATER);
     expect(new Set(rows.map((row) => row.gender))).toEqual(new Set(["man"]));
     expect(keys).not.toContain("juha");
     expect(keys).not.toContain("mika");
+    const later = CAST_LATER.find((list) => list.of === "sanna")?.later ?? [];
+    for (const key of later) expect(keys).not.toContain(key);
+
+    // Her Later list as the app reads it: the latest first, each with the photo she was shown.
+    const list = await starredPeople(deps, sanna);
+    const names = new Map(CAST.map((person) => [person.key, person.name]));
+    expect(list.map((person) => person.name)).toEqual(later.map((key) => names.get(key)));
+    for (const person of list) expect(person.photo, person.name).not.toBeNull();
 
     // Staging's job runs again without a reset: nothing new.
     expect(await giveCastStories(ctx.client, results, now())).toEqual({
       cast: CAST.length,
       leftovers: 0,
       likes: { liked: 0, already: LIKES, missing: 0 },
+      later: { listed: 0, already: LATER, missing: 0 },
       conversations: { written: 0, already: CHATS, missing: 0 },
     });
   });
@@ -384,12 +408,13 @@ describe("what the cast gives the members", () => {
     await writer.deleteAccount(sanna);
     expect(await conversations()).toEqual({ n: CHATS, erased: 2, messages: 36 });
 
-    // Her account is gone, so her likes and chats are missing this time; the others' stand.
+    // Her account is gone, so her likes, her list and her chats are missing this time; the others' stand.
     const others = results.filter((r) => r.key !== "sanna");
     expect(await giveCastStories(ctx.client, others, now())).toEqual({
       cast: CAST.length,
       leftovers: 2,
       likes: { liked: 0, already: LIKES - 3, missing: 3 },
+      later: { listed: 0, already: 0, missing: LATER },
       conversations: { written: 0, already: CHATS - 2, missing: 2 },
     });
     expect(await conversations()).toEqual({ n: CHATS - 2, erased: 0, messages: 30 });

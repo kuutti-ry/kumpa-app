@@ -57,7 +57,8 @@ export const PERSONA_HISTORIES: readonly PersonaHistory[] = [
     },
     profile: {
       displayName: "Sanna",
-      bio: "Arkkitehti, joka piirtää työkseen taloja ja vapaa-ajalla lintuja. Viikonloppuisin minut löytää Nuuksiosta termospullon kanssa. Etsin jotakuta, joka jaksaa kävellä perille asti.",
+      // Room left for what profile-contact-details.yaml types into it.
+      bio: "Arkkitehti, joka piirtää työkseen taloja ja vapaa-ajalla lintuja. Viikonloppuisin minut löytää Nuuksiosta termospullon kanssa, kiikari kaulassa ja reppu täynnä eväitä. Talvella uin avannossa, keväällä lasken kurkia Viikin pelloilla ja syksyllä haen kantarellit tutuista paikoista. Etsin jotakuta, joka jaksaa kävellä perille asti.",
       bioPreset: null,
       fields: {
         languages: ["fi", "en", "sv"],
@@ -102,7 +103,7 @@ export const PERSONA_HISTORIES: readonly PersonaHistory[] = [
     },
     profile: {
       displayName: "Aino",
-      bio: "Luokanopettaja, joka viettää kesäillat mökin portailla ja syksyt meren rannalla tuulessa. Leivon korvapuusteja useammin kuin myönnän. Etsin jotakuta, jonka kanssa nauraa ääneen.",
+      bio: "Luokanopettaja, joka viettää kesäillat mökin portailla ja syksyt meren rannalla tuulessa. Leivon korvapuusteja useammin kuin myönnän, ja opettajainhuoneessa minua pidetään siksi hyvänä ihmisenä. Luen dekkareita bussissa ja kuuntelen metsäkävelyillä, mitä linnut kertovat. Kolmasluokkalaiset ovat opettaneet minulle kärsivällisyyttä ja sen, että hyvä vitsi kestää toistoa. Etsin jotakuta, jonka kanssa nauraa ääneen.",
       bioPreset: null,
       fields: {
         languages: ["fi", "en", "sv"],
@@ -111,18 +112,28 @@ export const PERSONA_HISTORIES: readonly PersonaHistory[] = [
         hasKids: "no",
         wantsKids: "want",
         smoking: "never",
+        nicotine: ["none"],
         drinking: "socially",
+        drugsAttitude: "not_my_thing",
         education: "maisteri",
         field: ["education"],
         occupation: ["education"],
         occupationTitle: "Luokanopettaja",
-        hobbies: ["baking", "cottage", "reading", "forest_walks"],
+        university: ["helsinki"],
+        hobbies: ["baking", "cottage", "reading", "forest_walks", "coffee"],
         exercise: "weekly",
+        pets: ["none"],
         height: 166,
+        zodiac: "virgo",
       },
       prompts: [
         { key: "sunday", answer: "Pitkä kävely meren rannassa ja sen päälle pullakahvit." },
         { key: "hidden_talent", answer: "Muistan jokaisen oppilaani lempieläimen." },
+        {
+          key: "ask_me",
+          answer:
+            "Mitä kolmasluokkalaiset ajattelevat aikuisista. Vastaus on aina yllättävän rehellinen.",
+        },
       ],
     },
     photos: 5,
@@ -139,22 +150,27 @@ export const PERSONA_HISTORIES: readonly PersonaHistory[] = [
     },
     profile: {
       displayName: "Onni",
-      bio: "Sound engineer who plays disc golf badly and the guitar slightly better. Summers by a lake, winters in a rehearsal room. Looking for somebody who says yes to a swim after the sauna.",
+      bio: "Sound engineer who plays disc golf badly and the guitar slightly better. Summers by a lake, winters in a rehearsal room. At work I mix bands in small clubs and record the odd audiobook, so I have heard every way a person can clear their throat. At home I collect old cassette players and fix them for friends. Calm, a bit nerdy about sound and always up for a concert. Looking for somebody who says yes to a swim after the sauna.",
       bioPreset: null,
       fields: {
         languages: ["fi", "en"],
         intent: "open_to_either",
+        monogamy: "monogamous",
         hasKids: "no",
         wantsKids: "not_sure",
         smoking: "never",
+        nicotine: ["none"],
         drinking: "socially",
+        drugsAttitude: "not_my_thing",
         education: "amk",
         field: ["tech", "arts"],
         occupation: ["media"],
         occupationTitle: "Sound engineer",
-        hobbies: ["making_music", "swimming", "sauna", "concerts"],
+        hobbies: ["making_music", "swimming", "sauna", "concerts", "electronics"],
         exercise: "weekly",
+        pets: ["none"],
         height: 181,
+        zodiac: "leo",
       },
       prompts: [
         {
@@ -162,6 +178,11 @@ export const PERSONA_HISTORIES: readonly PersonaHistory[] = [
           answer: "Disc golf, and the loser buys the ice cream. I usually buy.",
         },
         { key: "teach_me", answer: "Teach me to cook something that is not pasta." },
+        {
+          key: "proud_of",
+          answer:
+            "A recording of a frozen lake cracking at night. It is the best sound I own, and I will play it to anyone who asks.",
+        },
       ],
     },
     // Four of the eight: the onboarding's flow uploads others of the roll as Otto.
@@ -249,7 +270,7 @@ export const PERSONA_HISTORIES: readonly PersonaHistory[] = [
     },
     profile: {
       displayName: "Tapio",
-      bio: "Koneistaja Tampereelta. Kesät kuluvat mökillä ja talvet pilkillä, ja halkopino on aina suorassa. Sauna lämpiää, kun sanot milloin.",
+      bio: "Koneistaja Tampereelta. Kesät kuluvat mökillä ja talvet pilkillä, ja halkopino on aina suorassa. Työssä mitataan millin tuhannesosia, joten vapaalla en kanna kelloa. Lapset ovat jo omillaan, ja viikonloppuisin korjaan mökkiä tai koen naapurin kanssa verkkoja Näsijärvellä. Keitän hyvän kalakeiton ja kahvit pannulla. Sauna lämpiää, kun sanot milloin.",
       bioPreset: null,
       fields: {
         languages: ["fi"],
@@ -258,12 +279,16 @@ export const PERSONA_HISTORIES: readonly PersonaHistory[] = [
         hasKids: "yes_not_with_me",
         wantsKids: "dont_want",
         smoking: "never",
+        nicotine: ["none"],
         drinking: "socially",
+        drugsAttitude: "not_my_thing",
         education: "toinen_aste",
         field: ["trades"],
         occupation: ["trades_construction"],
         occupationTitle: "Koneistaja",
-        hobbies: ["fishing", "cottage", "sauna", "diy"],
+        hobbies: ["fishing", "cottage", "sauna", "diy", "cooking"],
+        exercise: "weekly",
+        pets: ["none"],
         height: 178,
       },
       prompts: [
@@ -271,6 +296,11 @@ export const PERSONA_HISTORIES: readonly PersonaHistory[] = [
         {
           key: "proud_of",
           answer: "Rakensin mökin saunan itse. Ovi narisee vähän, mutta lämpö pysyy.",
+        },
+        {
+          key: "first_date",
+          answer:
+            "Kahvit ja munkit Pyynikin näkötornilla, sitten kävely harjulla. Jos juttu luistaa, lähdetään pilkille.",
         },
       ],
     },
