@@ -215,11 +215,14 @@ describe("GateCard", () => {
     expect(screen.queryByText(FAILED_TO_LOAD)).toBeNull();
   });
 
-  it("refuses an answer that carries a number", async () => {
+  // A key this build does not know is left out (#745), so a number beside the state never
+  // reaches the card: the gate says no number (ADR-060 §4).
+  it("shows no number when an answer carries one (#745)", async () => {
     answering([() => json({ state: "closed", needed: 10 })]);
     const screen = await renderWithTheme(<GateCard />);
     await settle();
-    expect(screen.getByText(FAILED_TO_LOAD)).toBeTruthy();
+    expect(screen.getByText("Your profile is finished. Matching has not opened yet.")).toBeTruthy();
+    expect(screen.queryByText(/10/)).toBeNull();
   });
 
   it("has a label and a role on everything that can be pressed", async () => {

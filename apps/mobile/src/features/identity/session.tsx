@@ -1,5 +1,6 @@
 import { AuthExchangeResponse } from "@kuutti/schema";
 import * as React from "react";
+import { readAnswer } from "@/lib/answer";
 import { ApiError, api } from "@/lib/api";
 import { attest } from "@/lib/app-attest";
 import {
@@ -126,7 +127,7 @@ export function SessionProvider({
     if (!data) {
       throw new ApiError(`sign-in answered ${response.status}`, response.status, error?.error.code);
     }
-    const { outcome, ...tokens } = AuthExchangeResponse.parse(data);
+    const { outcome, ...tokens } = readAnswer(AuthExchangeResponse, data);
     if (!isCurrentSession(owner) || signInAttempt.current !== attempt) {
       throw new ApiError("sign-in was superseded", 401, "session_revoked");
     }

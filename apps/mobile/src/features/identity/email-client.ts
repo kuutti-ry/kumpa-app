@@ -1,4 +1,5 @@
 import { AccountEmailResponse } from "@kuutti/schema";
+import { readAnswer } from "@/lib/answer";
 import { api, failed } from "@/lib/api";
 
 // The optional e-mail's routes as the app calls them (#148, #385), through
@@ -12,14 +13,14 @@ const NO_EMAIL: AccountEmailResponse = { email: null, confirmed: false, codeExpi
 export async function fetchEmail(): Promise<AccountEmailResponse> {
   const { data, error, response } = await api.GET("/account/email");
   if (!data) throw failed(response, error, "email");
-  return AccountEmailResponse.parse(data);
+  return readAnswer(AccountEmailResponse, data);
 }
 
 /** A different address comes back unconfirmed; the save itself sends nothing (ADR-043 §2). */
 export async function saveEmail(email: string): Promise<AccountEmailResponse> {
   const { data, error, response } = await api.PUT("/account/email", { body: { email } });
   if (!data) throw failed(response, error, "email save");
-  return AccountEmailResponse.parse(data);
+  return readAnswer(AccountEmailResponse, data);
 }
 
 export async function clearEmail(): Promise<AccountEmailResponse> {
@@ -32,11 +33,11 @@ export async function clearEmail(): Promise<AccountEmailResponse> {
 export async function sendEmailCode(): Promise<AccountEmailResponse> {
   const { data, error, response } = await api.POST("/account/email/code");
   if (!data) throw failed(response, error, "email code");
-  return AccountEmailResponse.parse(data);
+  return readAnswer(AccountEmailResponse, data);
 }
 
 export async function confirmEmailCode(code: string): Promise<AccountEmailResponse> {
   const { data, error, response } = await api.POST("/account/email/confirm", { body: { code } });
   if (!data) throw failed(response, error, "email confirmation");
-  return AccountEmailResponse.parse(data);
+  return readAnswer(AccountEmailResponse, data);
 }

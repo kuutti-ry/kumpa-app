@@ -1,4 +1,5 @@
 import { type FoundReason, FoundThemStatus } from "@kuutti/schema";
+import { readAnswer } from "@/lib/answer";
 import { api, failed } from "@/lib/api";
 
 // "Löysin hänet" as the app calls it (#83, ADR-040), through the typed client;
@@ -8,7 +9,7 @@ import { api, failed } from "@/lib/api";
 export async function readFoundThem(): Promise<boolean> {
   const { data, error, response } = await api.GET("/account/found-them");
   if (!response.ok || !data) throw failed(response, error, "found-them read");
-  return FoundThemStatus.parse(data).answered;
+  return readAnswer(FoundThemStatus, data).answered;
 }
 
 /** The answer; a second one is refused as found_them_answered, which the screen reads as done. */

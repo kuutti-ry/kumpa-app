@@ -5,6 +5,7 @@ import {
   OnboardingStatus,
   type WithdrawableConsentKind,
 } from "@kuutti/schema";
+import { readAnswer } from "@/lib/answer";
 import { api, failed } from "@/lib/api";
 
 // The onboarding routes as the app calls them (#46), through the typed
@@ -23,7 +24,7 @@ export function bundledVersion(kind: ConsentKind): string {
 export async function fetchOnboarding(): Promise<OnboardingStatus> {
   const { data, error, response } = await api.GET("/onboarding");
   if (!data) throw failed(response, error, "onboarding");
-  return OnboardingStatus.parse(data);
+  return readAnswer(OnboardingStatus, data);
 }
 
 /**
@@ -36,7 +37,7 @@ export const consentLocale = realLocale;
 export async function fetchConsents(): Promise<ConsentsResponse> {
   const { data, error, response } = await api.GET("/consents");
   if (!data) throw failed(response, error, "consents");
-  return ConsentsResponse.parse(data);
+  return readAnswer(ConsentsResponse, data);
 }
 
 /** The special-category consent, which takes the seek answer with it (ADR-019 §4). */
@@ -45,7 +46,7 @@ export async function withdrawConsent(kind: WithdrawableConsentKind): Promise<Co
     params: { path: { kind } },
   });
   if (!data) throw failed(response, error, "consent withdrawal");
-  return ConsentsResponse.parse(data);
+  return readAnswer(ConsentsResponse, data);
 }
 
 export async function giveConsent(
@@ -57,5 +58,5 @@ export async function giveConsent(
     body: { kind, version, locale },
   });
   if (!data) throw failed(response, error, "consent");
-  return ConsentsResponse.parse(data);
+  return readAnswer(ConsentsResponse, data);
 }
