@@ -176,6 +176,7 @@ describe("the counterpart and the conversation", () => {
         { at, kind: "text", length: 12 },
         { at, kind: "photo", length: 0 },
       ],
+      liked: null,
     };
     expect(ExportedConversation.safeParse(exported).success).toBe(true);
     // A sent photo is an entry, as a profile photo's is, not a bare path.

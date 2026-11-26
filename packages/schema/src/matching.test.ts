@@ -354,6 +354,7 @@ describe("relaxing a deal-breaker for the day (#99, ADR-042)", () => {
       secondPass: false,
       distance: "nearby",
       distanceInWords: "Nearby",
+      anchor: null,
     };
     expect(ExportedQueueEntry.parse(entry).relaxedField).toBe("smoking");
     // Null on an entry from before the band; never a number, nor a word of no band.
@@ -385,6 +386,7 @@ describe("relaxing a deal-breaker for the day (#99, ADR-042)", () => {
       secondPass: false,
       distance: null,
       distanceInWords: null,
+      anchor: null,
     };
     expect(ExportedQueueEntry.parse(entry).decision).toBe("skip");
     const second = { ...entry, decision: "pass", decisionInWords: "Pass", secondPass: true };
@@ -393,5 +395,44 @@ describe("relaxing a deal-breaker for the day (#99, ADR-042)", () => {
       "invalid_type",
     ]);
     expect(codes(ExportedQueueEntry, { ...entry, secondPass: 1 })).toEqual(["invalid_type"]);
+  });
+
+  it("says in the export the part the person's like named, or null, and never the other's photo (#463)", () => {
+    const photo = { kind: "photo", prompt: null, shared: null, inWords: "Liked their photo" };
+    const entry = {
+      position: 1,
+      reason: "matches_filters",
+      reasonInWords: "Fits what you seek",
+      relaxedField: null,
+      relaxedFieldInWords: null,
+      seenAt: null,
+      decision: "like",
+      decisionInWords: "Liked",
+      decidedAt: "2026-10-19T09:00:00.000Z",
+      secondPass: false,
+      distance: null,
+      distanceInWords: null,
+      anchor: photo,
+    };
+    expect(ExportedQueueEntry.parse(entry).anchor).toEqual(photo);
+    const shared = {
+      kind: "shared",
+      prompt: null,
+      shared: { field: "hobbies", option: "Climbing" },
+      inWords: "Liked what you share: Climbing",
+    };
+    expect(ExportedQueueEntry.parse({ ...entry, anchor: shared }).anchor).toEqual(shared);
+    expect(ExportedQueueEntry.parse({ ...entry, anchor: null }).anchor).toBeNull();
+    expect(codes(ExportedQueueEntry, { ...entry, anchor: undefined })).toEqual(["invalid_type"]);
+    // A photo is only "a photo": its id, the other person's, has no place here.
+    expect(
+      codes(ExportedQueueEntry, {
+        ...entry,
+        anchor: { ...photo, photoId: "6f1c1c4e-9a8e-4a0b-9c3a-0c8d1e2f3a4b" },
+      }),
+    ).toEqual(["unrecognized_keys"]);
+    expect(codes(ExportedQueueEntry, { ...entry, anchor: { ...photo, kind: "message" } })).toEqual([
+      "invalid_value",
+    ]);
   });
 });

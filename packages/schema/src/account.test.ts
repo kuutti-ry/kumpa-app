@@ -251,6 +251,13 @@ function anExport(): Record<string, unknown> {
         mine: [{ at, kind: "text", body: "Hei", photo: null }],
         shares: [{ kind: "instagram", sharedAt: at, endedAt: at, endedHow: "stopped" }],
         theirs: [{ at, kind: "text", length: 12 }],
+        // The part of the counterpart's card the person's own like named (#463).
+        liked: {
+          kind: "prompt",
+          prompt: "sunday",
+          shared: null,
+          inWords: "Liked their answer to: A perfect Sunday",
+        },
       },
     ],
     // The contacts the person keeps to share (#103).
@@ -293,6 +300,7 @@ function anExport(): Record<string, unknown> {
               secondPass: false,
               distance: "close",
               distanceInWords: "Close",
+              anchor: null,
             },
           ],
         },
@@ -316,6 +324,13 @@ describe("the account export", () => {
     expect(parsed.photos[0]?.file).toBe(`photos/${uuid(100)}.webp`);
     expect(parsed.exportedBy).toBe("0.16.0-37a837c");
     expect(parsed.exports).toEqual([{ at }]);
+    expect(parsed.conversations[0]?.liked).toEqual({
+      kind: "prompt",
+      prompt: "sunday",
+      shared: null,
+      inWords: "Liked their answer to: A perfect Sunday",
+    });
+    expect(parsed.queue.items[0]?.entries[0]?.anchor).toBeNull();
     expect(parsed.dealBreakers[0]?.paused).toBe(false);
     expect(parsed.sanctions[0]).toMatchObject({ kind: "suspend", lookedAtAgain: true });
     // The reports filed and the blocks set (#84), never whom.
