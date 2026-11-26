@@ -3,10 +3,10 @@ import { act, fireEvent, screen, waitFor, within } from "@testing-library/react-
 import { Image } from "expo-image";
 import { useLocales } from "expo-localization";
 import * as SecureStore from "expo-secure-store";
-import { AccessibilityInfo } from "react-native";
 import { saveSession } from "@/lib/session";
 import { a11yProblems, type HostNode, pressables } from "@/test/a11y";
-import { renderWithTheme, underProviders } from "@/test/render";
+import { renderWithTheme } from "@/test/render";
+import { InScroll, layOut, placePhotos, scrollTo } from "@/test/sight";
 import { ProfileCardView } from "./ProfileCardView";
 
 // A card as others see it (#47, #150): what it shows when the person has
@@ -30,12 +30,6 @@ const photoAt = (
   description,
 });
 const settle = () => act(() => new Promise<void>((resolve) => setTimeout(resolve, 10)));
-/** A tap on the photo's right half: the next one comes to the front (#513). */
-const next = () =>
-  act(async () => {
-    fireEvent.press(screen.getByRole("button", { name: "Next photo" }));
-    await new Promise<void>((resolve) => setTimeout(resolve, 10));
-  });
 const store = (SecureStore as unknown as { __store: Map<string, string> }).__store;
 
 const bare: ProfileCard = {
@@ -62,7 +56,22 @@ const texts = (node: unknown): string[] => {
   return [];
 };
 
+/** The texts and the photos, as "[photo n]" by the card's order of them, in reading order. */
+const reading = (card: ProfileCard) => {
+  const walk = (node: unknown): string[] => {
+    if (typeof node === "string") return [node];
+    if (Array.isArray(node)) return node.flatMap(walk);
+    if (!node || typeof node !== "object") return [];
+    const id = (node as { props?: { testID?: unknown } }).props?.testID;
+    const at = card.photos.findIndex((photo) => id === `card-photo-${photo.id}`);
+    if (at >= 0) return [`[photo ${at + 1}]`];
+    return "children" in node ? walk((node as { children: unknown }).children) : [];
+  };
+  return walk(screen.toJSON());
+};
+
 beforeEach(async () => {
+  placePhotos();
   store.delete("kuutti.preference.photoDescriptions");
   await saveSession({
     sessionId: "6f1c1c4e-9a8e-4a0b-9c3a-0c8d1e2f3a4b",
@@ -242,6 +251,7 @@ describe("ProfileCardView", () => {
         onRefused={refused}
       />,
     );
+    await layOut();
     await settle();
     expect(screen.getByLabelText("Photo 1 of 1")).toBeTruthy();
     expect(refused).toHaveBeenCalledWith("photo_budget_exceeded");
@@ -257,23 +267,16 @@ describe("ProfileCardView", () => {
       />,
     );
     await settle();
-    // The photo in front, its line under it: visible, hidden from the accessibility
-    // tree, since the label carries it; the next one's comes with it.
-    const lines = ["A summer day", null, "With a four-legged friend"];
-    const labels = [
+    // Each photo with its line under it: visible, hidden from the accessibility
+    // tree, since the label carries it, whether or not the photo has come yet.
+    expect(screen.getAllByRole("image").map((image) => image.props.accessibilityLabel)).toEqual([
       "Photo 1 of 3. A summer day",
       "Photo 2 of 3",
       "Photo 3 of 3. With a four-legged friend",
-    ];
-    for (const [at, label] of labels.entries()) {
-      if (at > 0) await next();
-      expect(screen.getByLabelText(label)).toBeTruthy();
-      for (const line of lines) {
-        if (line === null) continue;
-        const under = screen.queryByText(line, { includeHiddenElements: true });
-        expect(under !== null).toBe(line === lines[at]);
-        expect(screen.queryByText(line)).toBeNull();
-      }
+    ]);
+    for (const line of ["A summer day", "With a four-legged friend"]) {
+      expect(screen.getAllByText(line, { includeHiddenElements: true })).toHaveLength(1);
+      expect(screen.queryByText(line)).toBeNull();
     }
   });
 
@@ -306,9 +309,7 @@ describe("ProfileCardView", () => {
     await settle();
     // The caption first, then the machine's words, named as such; a photo without a description says nothing more.
     expect(screen.getByLabelText(`Photo 1 of 3. A summer day. ${lakesideWords}`)).toBeTruthy();
-    await next();
     expect(screen.getByLabelText(`Photo 2 of 3. ${saunaWords}`)).toBeTruthy();
-    await next();
     expect(screen.getByLabelText("Photo 3 of 3")).toBeTruthy();
     expect(screen.queryByText(lakesideWords, { includeHiddenElements: true })).toBeNull();
 
@@ -327,10 +328,11 @@ describe("ProfileCardView", () => {
     ).toBeTruthy();
     expect(screen.getByText(lakesideNoFace, { includeHiddenElements: true })).toBeTruthy();
     expect(screen.queryByText(lakesideNoFace)).toBeNull();
-    await next();
     expect(screen.getByLabelText(`Photo 2 of 3. ${saunaNoFace}`)).toBeTruthy();
-    // Under the photo in front only.
-    expect(screen.queryByText(lakesideNoFace, { includeHiddenElements: true })).toBeNull();
+    // Each under its own photo, in the card's order, and none under a photo without one.
+    expect(
+      texts(screen.toJSON()).filter((line) => line.startsWith("Automatic description")),
+    ).toEqual([lakesideNoFace, saunaNoFace]);
     expect(screen.getByText(saunaNoFace, { includeHiddenElements: true })).toBeTruthy();
     expect(screen.queryByText(saunaNoFace)).toBeNull();
   });
@@ -405,12 +407,17 @@ describe("ProfileCardView", () => {
       facialHair: false,
     };
     const card = { ...bare, photos: [photoAt(1), photoAt(2, "summer_day", sauna)] };
-    await renderWithTheme(<ProfileCardView card={card} onGone={jest.fn()} />);
+    await renderWithTheme(
+      <InScroll>
+        <ProfileCardView card={card} onGone={jest.fn()} />
+      </InScroll>,
+    );
+    await layOut();
     await settle();
     const signed = () => asked.filter((path) => path.startsWith("/photos/"));
-    // The main photo's card variant, and the other's once it came to the front.
+    // The main photo's card variant, and the other's once it came into sight.
     expect(signed()).toEqual([`/photos/${photoAt(1).id}/card`]);
-    await next();
+    await scrollTo(2);
     expect(signed()).toEqual([`/photos/${photoAt(1).id}/card`, `/photos/${photoAt(2).id}/card`]);
     const press = (name: string, role: "button" | "radio" = "button") =>
       act(async () => {
@@ -445,90 +452,51 @@ describe("ProfileCardView", () => {
     cache.mockRestore();
   });
 
-  it("shows one photo at a time, the next and the previous by a tap on either half, asks for each once when it first comes to the front, and says which came (#513)", async () => {
+  it("shows every photo down one scroll, each heard with its place, and asks for each once, only when it first comes into sight (ADR-008)", async () => {
     const asked: string[] = [];
     globalThis.fetch = jest.fn(async (input: Request | string) => {
       asked.push(new URL(input instanceof Request ? input.url : input).pathname);
       return json({ error: { code: "not_found", message: "x", requestId: "r" } }, 404);
     }) as unknown as typeof fetch;
-    const said = jest.spyOn(AccessibilityInfo, "announceForAccessibility");
-    said.mockClear();
     const card = { ...bare, photos: [photoAt(1), photoAt(2, "summer_day"), photoAt(3)] };
-    await renderWithTheme(<ProfileCardView card={card} onGone={jest.fn()} />);
+    await renderWithTheme(
+      <InScroll>
+        <ProfileCardView card={card} onGone={jest.fn()} />
+      </InScroll>,
+    );
     await settle();
-    const button = (name: string) => screen.getByRole("button", { name });
-    const dimmed = (name: string) => button(name).props.accessibilityState?.disabled === true;
-    // One photo heard at a time; nothing beyond it asked for (prefetch counts as exposure).
+    // Nothing before the card is laid out on the screen.
+    expect(asked).toEqual([]);
+    await layOut();
+    await settle();
+    // Every photo is on the card and heard, the ones further down as their blurhash.
     expect(screen.getAllByRole("image").map((image) => image.props.accessibilityLabel)).toEqual([
       "Photo 1 of 3",
-    ]);
-    expect(asked).toEqual([`/photos/${photoAt(1).id}/card`]);
-    expect([dimmed("Previous photo"), dimmed("Next photo")]).toEqual([true, false]);
-    await fireEvent.press(button("Previous photo"));
-    expect(said).not.toHaveBeenCalled();
-
-    await next();
-    expect(screen.getAllByRole("image").map((image) => image.props.accessibilityLabel)).toEqual([
       "Photo 2 of 3. A summer day",
+      "Photo 3 of 3",
     ]);
-    expect(said).toHaveBeenLastCalledWith("Photo 2 of 3. A summer day");
-    expect([dimmed("Previous photo"), dimmed("Next photo")]).toEqual([false, false]);
-    await act(async () => {
-      fireEvent.press(button("Previous photo"));
-      await new Promise<void>((resolve) => setTimeout(resolve, 10));
-    });
-    expect(said).toHaveBeenLastCalledWith("Photo 1 of 3");
-    await next();
-    await next();
-    expect(said).toHaveBeenLastCalledWith("Photo 3 of 3");
-    expect([dimmed("Previous photo"), dimmed("Next photo")]).toEqual([false, true]);
-    await fireEvent.press(button("Next photo"));
-    expect(screen.getByLabelText("Photo 3 of 3")).toBeTruthy();
-    // Each signed once, in the card size, however often it came back to the front.
+    // Nothing beyond what is in sight asked for (prefetch counts as exposure).
+    expect(asked).toEqual([`/photos/${photoAt(1).id}/card`]);
+    await scrollTo(2);
+    expect(asked).toEqual([1, 2].map((n) => `/photos/${photoAt(n).id}/card`));
+    await scrollTo(3);
+    await scrollTo(1);
+    await scrollTo(3);
+    // Each signed once, in the card size, however often it came back into sight.
     expect(asked).toEqual([1, 2, 3].map((n) => `/photos/${photoAt(n).id}/card`));
+    // Nothing to tap through: no Previous, no Next, no Show the whole card.
+    expect(screen.getAllByRole("button").map((button) => button.props.accessibilityLabel)).toEqual([
+      "Block or report",
+    ]);
     expect(pressables(screen.toJSON() as HostNode).flatMap((node) => a11yProblems(node))).toEqual(
       [],
     );
-    said.mockRestore();
   });
 
-  it("has no Previous or Next on a card with one photo (#513)", async () => {
-    await renderWithTheme(<ProfileCardView card={{ ...bare, photos: [photoAt(1)] }} />);
-    await settle();
-    expect(screen.getByLabelText("Photo 1 of 1")).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Previous photo" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Next photo" })).toBeNull();
-  });
-
-  it("starts the next person's card at their main photo (#513)", async () => {
-    const first = { ...bare, photos: [photoAt(1), photoAt(2)] };
-    await renderWithTheme(<ProfileCardView card={first} />);
-    await settle();
-    await next();
-    expect(screen.getByLabelText("Photo 2 of 2")).toBeTruthy();
-    const second = {
-      ...bare,
-      accountId: "7a1c1c4e-9a8e-4a0b-9c3a-0c8d1e2f3a4b",
-      photos: [photoAt(3), photoAt(4)],
-    };
-    await screen.rerender(underProviders(<ProfileCardView card={second} />));
-    await settle();
-    expect(screen.getAllByRole("image").map((image) => image.props.accessibilityLabel)).toEqual([
-      "Photo 1 of 2",
-    ]);
-    expect(
-      screen.getByRole("button", { name: "Previous photo" }).props.accessibilityState,
-    ).toMatchObject({ disabled: true });
-  });
-
-  describe("a short card and the whole card (#644)", () => {
+  describe("one scroll, the way Hinge has it (the maintainer, 26/11/2026)", () => {
     /** What each chip says to a screen reader, in reading order. */
     const heardChips = () =>
       screen.queryAllByTestId(/^chip-/).map((chip) => chip.props.accessibilityLabel as string);
-    const toggle = (name: string) =>
-      act(async () => {
-        fireEvent.press(screen.getByRole("button", { name }));
-      });
     const sunday: ProfileCard["prompts"][number] = { key: "sunday", answer: "A long breakfast." };
     const prompts: ProfileCard["prompts"] = [
       sunday,
@@ -576,6 +544,8 @@ describe("ProfileCardView", () => {
         "Languages: Finnish",
         "English",
         "Height: 171 cm",
+        // Exercise is no key fact: it comes with the rest of the answers, under its section.
+        "Exercise: Weekly",
       ]);
       // The eye reads the answer after its icon, and no label line: a cigarette before "Never".
       expect(screen.getByText("Never")).toBeTruthy();
@@ -585,33 +555,28 @@ describe("ProfileCardView", () => {
           includeHiddenElements: true,
         }),
       ).toBeTruthy();
-      // Exercise is no key fact: it waits for the whole card.
-      expect(screen.queryByText("Weekly")).toBeNull();
       expect(
-        screen.getByRole("button", { name: "Show the whole card" }).props.accessibilityState,
-      ).toMatchObject({ expanded: false });
+        within(screen.getByTestId("chip-exercise.weekly")).getByTestId("field-icon-exercise", {
+          includeHiddenElements: true,
+        }),
+      ).toBeTruthy();
+      expect(screen.getByRole("heading", { name: "Lifestyle" })).toBeTruthy();
     });
 
-    it("leads with the first prompt and opens the rest in place under the same top, then closes it again", async () => {
-      await renderWithTheme(<ProfileCardView card={full} />);
-      expect(texts(screen.toJSON())).toEqual([
+    it("reads down one scroll: the first photo, the key facts, then photos and the person's own words in turn, and the rest of the answers at the end", async () => {
+      const card = { ...full, photos: [photoAt(1), photoAt(2), photoAt(3), photoAt(4)] };
+      await renderWithTheme(<ProfileCardView card={card} />);
+      expect(reading(card)).toEqual([
         "Aino, 36",
+        "[photo 1]",
         "Something long-term",
         "Never",
+        "[photo 2]",
         "My ideal Sunday",
         "A long breakfast.",
-        "Show the whole card",
-      ]);
-
-      await toggle("Show the whole card");
-      expect(texts(screen.toJSON())).toEqual([
-        "Aino, 36",
-        "Something long-term",
-        "Never",
-        "My ideal Sunday",
-        "A long breakfast.",
-        "Show less",
+        "[photo 3]",
         "Long walks.",
+        "[photo 4]",
         "My hidden talent",
         "I can whistle with my mouth full.",
         "Work and education",
@@ -661,20 +626,54 @@ describe("ProfileCardView", () => {
           { includeHiddenElements: true },
         ),
       ).toBeTruthy();
-      expect(
-        screen.getByRole("button", { name: "Show less" }).props.accessibilityState,
-      ).toMatchObject({ expanded: true });
+      // Nothing folded away, nothing to tap open.
+      expect(screen.queryByRole("button")).toBeNull();
       expect(pressables(screen.toJSON() as HostNode).flatMap((node) => a11yProblems(node))).toEqual(
         [],
       );
-
-      await toggle("Show less");
-      expect(screen.queryByText("Long walks.")).toBeNull();
-      expect(screen.queryByText("Lifestyle")).toBeNull();
-      expect(screen.getByRole("button", { name: "Show the whole card" })).toBeTruthy();
     });
 
-    it("gives the short card the bio when there is no prompt, or the ready line when there is no bio, with nothing left to open", async () => {
+    it("puts the person's words after the key facts on a card with one photo or none, the first prompt, the bio and the other prompts", async () => {
+      const one = { ...full, photos: [photoAt(1)] };
+      await renderWithTheme(<ProfileCardView card={one} />);
+      expect(reading(one).slice(0, 10)).toEqual([
+        "Aino, 36",
+        "[photo 1]",
+        "Something long-term",
+        "Never",
+        "My ideal Sunday",
+        "A long breakfast.",
+        "Long walks.",
+        "My hidden talent",
+        "I can whistle with my mouth full.",
+        "Work and education",
+      ]);
+      await renderWithTheme(<ProfileCardView card={{ ...bare, bio: "Long walks.", prompts }} />);
+      expect(texts(screen.toJSON())).toEqual([
+        "Aino, 36",
+        "My ideal Sunday",
+        "A long breakfast.",
+        "Long walks.",
+        "My hidden talent",
+        "I can whistle with my mouth full.",
+      ]);
+    });
+
+    it("goes on with the photos when the words run out", async () => {
+      const card = { ...bare, prompts: [sunday], photos: [1, 2, 3, 4].map((n) => photoAt(n)) };
+      await renderWithTheme(<ProfileCardView card={card} />);
+      expect(reading(card)).toEqual([
+        "Aino, 36",
+        "[photo 1]",
+        "[photo 2]",
+        "My ideal Sunday",
+        "A long breakfast.",
+        "[photo 3]",
+        "[photo 4]",
+      ]);
+    });
+
+    it("gives the bio when there is no prompt, or the ready line when there is no bio", async () => {
       await renderWithTheme(<ProfileCardView card={{ ...bare, bio: "Long walks." }} />);
       expect(texts(screen.toJSON())).toEqual(["Aino, 36", "Long walks."]);
       await renderWithTheme(<ProfileCardView card={{ ...bare, bioPreset: "photos_speak" }} />);
@@ -682,49 +681,18 @@ describe("ProfileCardView", () => {
         "Aino, 36",
         "The photos say it. The rest over coffee.",
       ]);
-      expect(screen.queryByRole("button", { name: "Show the whole card" })).toBeNull();
     });
 
-    it("keeps the ready line for the whole card when a prompt leads", async () => {
+    it("puts the ready line after the first prompt", async () => {
       await renderWithTheme(
         <ProfileCardView card={{ ...bare, bioPreset: "photos_speak", prompts: [sunday] }} />,
       );
-      expect(screen.queryByText("The photos say it. The rest over coffee.")).toBeNull();
-      await toggle("Show the whole card");
       expect(texts(screen.toJSON())).toEqual([
         "Aino, 36",
         "My ideal Sunday",
         "A long breakfast.",
-        "Show less",
         "The photos say it. The rest over coffee.",
       ]);
-    });
-
-    it("has no Show the whole card while the short card holds everything", async () => {
-      await renderWithTheme(
-        <ProfileCardView
-          card={{ ...bare, fields: { intent: "casual", height: 171 }, prompts: [sunday] }}
-        />,
-      );
-      expect(screen.getByText("A long breakfast.")).toBeTruthy();
-      expect(screen.queryByRole("button", { name: "Show the whole card" })).toBeNull();
-    });
-
-    it("opens a whole card that holds only another prompt", async () => {
-      await renderWithTheme(<ProfileCardView card={{ ...bare, prompts }} />);
-      expect(screen.queryByText("I can whistle with my mouth full.")).toBeNull();
-      await toggle("Show the whole card");
-      expect(screen.getByText("I can whistle with my mouth full.")).toBeTruthy();
-    });
-
-    it("starts the next person's card short", async () => {
-      await renderWithTheme(<ProfileCardView card={full} />);
-      await toggle("Show the whole card");
-      expect(screen.getByText("Long walks.")).toBeTruthy();
-      const next = { ...full, accountId: "7a1c1c4e-9a8e-4a0b-9c3a-0c8d1e2f3a4b" };
-      await screen.rerender(underProviders(<ProfileCardView card={next} />));
-      expect(screen.queryByText("Long walks.")).toBeNull();
-      expect(screen.getByRole("button", { name: "Show the whole card" })).toBeTruthy();
     });
 
     describe("the school and the guild (#677)", () => {
@@ -738,16 +706,8 @@ describe("ProfileCardView", () => {
         },
       };
 
-      it("keeps them off the short card: they are no key facts", async () => {
+      it("shows them with the rest of the answers, after the job title and not among the key facts, a chip a school and a chip a guild by its own name, and another guild once however many schools have it", async () => {
         await renderWithTheme(<ProfileCardView card={studied} />);
-        expect(heardChips()).toEqual(["Looking for: Something long-term"]);
-        expect(screen.queryByText("Aalto University")).toBeNull();
-        expect(screen.queryByText("Fyysikkokilta (FK)")).toBeNull();
-      });
-
-      it("shows them on the whole card after the job title, a chip a school and a chip a guild by its own name, and another guild once however many schools have it", async () => {
-        await renderWithTheme(<ProfileCardView card={studied} />);
-        await toggle("Show the whole card");
         expect(heardChips()).toEqual([
           "Looking for: Something long-term",
           "Job title: Architect",
@@ -777,7 +737,6 @@ describe("ProfileCardView", () => {
             }}
           />,
         );
-        await toggle("Show the whole card");
         expect(heardChips().slice(2)).toEqual([
           "University: Aalto University",
           "Hanken School of Economics, shared",
@@ -791,12 +750,10 @@ describe("ProfileCardView", () => {
         await renderWithTheme(
           <ProfileCardView card={{ ...bare, fields: { guild: ["helsinki_tko_aly"] } }} />,
         );
-        await toggle("Show the whole card");
         expect(heardChips()).toEqual(["Guild or student association: TKO-äly ry"]);
         await renderWithTheme(
           <ProfileCardView card={{ ...bare, fields: { university: ["metropolia"] } }} />,
         );
-        await toggle("Show the whole card");
         expect(heardChips()).toEqual(["University: Metropolia University of Applied Sciences"]);
       });
 
@@ -830,9 +787,6 @@ describe("ProfileCardView", () => {
                 }}
               />,
             );
-            await act(async () => {
-              fireEvent.press(screen.getByRole("button", { expanded: false }));
-            });
             expect(heardChips()).toEqual(heard);
           } finally {
             (useLocales as jest.Mock).mockReturnValue([{ languageTag: "en-US" }]);
@@ -854,7 +808,6 @@ describe("ProfileCardView", () => {
           }}
         />,
       );
-      await toggle("Show the whole card");
       // Science and Science and research read apart, so each keeps its chip and its question.
       expect(heardChips()).toEqual([
         "Field and work: Arts and culture",
@@ -881,9 +834,6 @@ describe("ProfileCardView", () => {
             card={{ ...bare, fields: { field: ["arts"], occupation: ["arts_culture"] } }}
           />,
         );
-        await act(async () => {
-          fireEvent.press(screen.getByRole("button"));
-        });
         expect(heardChips()).toEqual([heard]);
       } finally {
         (useLocales as jest.Mock).mockReturnValue([{ languageTag: "en-US" }]);
@@ -900,7 +850,6 @@ describe("ProfileCardView", () => {
           }}
         />,
       );
-      await toggle("Show the whole card");
       expect(heardChips()).toEqual([
         "Languages: Finnish, shared",
         "English",
@@ -924,33 +873,32 @@ describe("ProfileCardView", () => {
     });
 
     it.each([
-      ["en-US", "Show the whole card", "Show less", "Smoking: Never", "Languages: Finnish, shared"],
+      ["en-US", "Photo 1 of 1", "Smoking: Never", "Languages: Finnish, shared", "My ideal Sunday"],
       [
         "fi-FI",
-        "Näytä koko kortti",
-        "Näytä vähemmän",
+        "Kuva 1 / 1",
         "Tupakointi: En koskaan",
         "Kielet: Suomi, yhteinen",
+        "Täydellinen sunnuntaini",
       ],
-      ["sv-FI", "Visa hela kortet", "Visa mindre", "Rökning: Aldrig", "Språk: Finska, gemensam"],
+      ["sv-FI", "Foto 1 av 1", "Rökning: Aldrig", "Språk: Finska, gemensam", "Min perfekta söndag"],
     ])(
-      "says the button, a question and a shared answer for a %s reader",
-      async (tag, open, close, fact, shared) => {
+      "says a photo's place, a question, a shared answer and a prompt for a %s reader",
+      async (tag, photo, fact, shared, prompt) => {
         (useLocales as jest.Mock).mockReturnValue([{ languageTag: tag }]);
         try {
-          await renderWithTheme(
-            <ProfileCardView
-              card={{
-                ...bare,
-                fields: { smoking: "never", languages: ["fi"] },
-                shared: { ...bare.shared, languages: ["fi"] },
-                prompts,
-              }}
-            />,
-          );
+          const card = {
+            ...bare,
+            fields: { smoking: "never" as const, languages: ["fi" as const] },
+            shared: { ...bare.shared, languages: ["fi"] },
+            prompts: [sunday],
+            photos: [photoAt(1)],
+          };
+          await renderWithTheme(<ProfileCardView card={card} />);
+          expect(screen.getByRole("image").props.accessibilityLabel).toBe(photo);
           expect(heardChips()).toEqual([fact, shared]);
-          await toggle(open);
-          expect(screen.getByRole("button", { name: close })).toBeTruthy();
+          // The prompt's question in the reader's language, the answer in the person's words.
+          expect(reading(card).slice(-2)).toEqual([prompt, "A long breakfast."]);
         } finally {
           (useLocales as jest.Mock).mockReturnValue([{ languageTag: "en-US" }]);
         }

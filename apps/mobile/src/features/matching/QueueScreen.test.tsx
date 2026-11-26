@@ -8,6 +8,7 @@ import { a11yProblems, type HostNode, noProblems, pressables } from "@/test/a11y
 import { FAILED_TO_LOAD } from "@/test/failed";
 import { textsInOrder as said } from "@/test/layout";
 import { renderWithTheme, underProviders } from "@/test/render";
+import { layOut, placePhotos, scrollTo } from "@/test/sight";
 import { TOUCH_TARGET } from "@/theme/a11y";
 import { QueueScreen } from "./QueueScreen";
 
@@ -181,6 +182,7 @@ const ancestorsOf = (words: string) => {
 };
 
 beforeEach(async () => {
+  placePhotos();
   store.clear();
   router.push.mockReset();
   router.back.mockReset();
@@ -1063,6 +1065,7 @@ describe("the queue", () => {
       yourTurn: 0,
     });
     await show();
+    await layOut();
     await waitFor(() => expect(screen.getByText(words)).toBeTruthy());
     // The words are the card's: the next one starts without them.
     await press("Like");
@@ -1102,10 +1105,34 @@ describe("the queue", () => {
       return undefined;
     });
     await show();
+    await layOut();
     await waitFor(() => expect(screen.getByText("The photo could not be shown.")).toBeTruthy());
     await press("Like");
     expect(heading("Riikka, 31")).toBeTruthy();
     expect(screen.queryByText("The photo could not be shown.")).toBeNull();
+  });
+
+  it("asks for a card's photo further down only once the card's scroll brings it into sight (ADR-008)", async () => {
+    const photo = (n: number) => ({
+      id: `0b1c1c4e-9a8e-4a0b-9c3a-0c8d1e2f3a0${n}` as ProfileCard["photos"][number]["id"],
+      blurhash: "LEHV6nWB2yk8pyo0adR*.7kCMdnj",
+      width: 1200,
+      height: 1600,
+      caption: null,
+      description: null,
+    });
+    const withPhotos = entry(1, "Henna", "liked_you");
+    withPhotos.card.photos = [photo(1), photo(2)];
+    const { calls } = api(undefined, { ...READ, entries: [withPhotos, entry(2, "Katja")] });
+    const asked = () => calls.filter((call) => call.path.startsWith("/photos/")).map((c) => c.path);
+    await show();
+    expect(asked()).toEqual([]);
+    await layOut();
+    await settle();
+    expect(asked()).toEqual([`/photos/${photo(1).id}/card`]);
+    await scrollTo(2);
+    await settle();
+    expect(asked()).toEqual([1, 2].map((n) => `/photos/${photo(n).id}/card`));
   });
 });
 

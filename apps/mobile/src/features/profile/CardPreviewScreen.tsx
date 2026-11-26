@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Backdrop } from "@/components/backdrop";
+import { SightProvider, useSightScroll } from "@/components/InSight";
 import { LoadFailed } from "@/components/LoadFailed";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { Text } from "@/components/ui/text";
@@ -30,6 +31,8 @@ export function CardPreviewScreen() {
   const [refusal, setRefusal] = useState<string | null>(null);
   // Bumped by "Try again": the read runs again.
   const [attempt, setAttempt] = useState(0);
+  // The card's photos further down are asked for as they scroll into sight (ADR-008).
+  const scroll = useSightScroll();
   useEffect(() => {
     let live = true;
     setState({ status: "loading" });
@@ -46,35 +49,43 @@ export function CardPreviewScreen() {
     <SafeAreaView className="flex-1 bg-background">
       <Backdrop />
       <ScreenHeader title={t("profile.card.title")} backLabel={t("profile.card.back")} />
-      <ScrollView contentContainerClassName="flex-grow gap-4 p-6">
-        {state.status === "loading" && (
-          <Text accessibilityLiveRegion="polite">{t("load.loading")}</Text>
-        )}
-        {state.status === "error" && (
-          <LoadFailed error={state.error} onRetry={() => setAttempt((n) => n + 1)} />
-        )}
-        {preview && !preview.completeness.complete && (
-          <View className="gap-1">
-            <Text variant="small">{t("profile.completeness.title")}</Text>
-            {preview.completeness.missing.map((item) => (
-              <Text key={item} variant="muted">
-                {completenessText(t, item)}
-              </Text>
-            ))}
-          </View>
-        )}
-        {preview?.card && preview.completeness.complete && <Text>{t("profile.card.explain")}</Text>}
-        {preview?.card && (
-          <ProfileCardView
-            card={preview.card}
-            onRefused={(code) => setRefusal(code ?? "unknown")}
-          />
-        )}
-        {refusal !== null && (
-          <Text variant="muted" accessibilityLiveRegion="polite">
-            {t(photoRefusalKey(refusal))}
-          </Text>
-        )}
+      <ScrollView
+        contentContainerClassName="flex-grow gap-4 p-6"
+        onScroll={scroll.onScroll}
+        scrollEventThrottle={scroll.scrollEventThrottle}
+      >
+        <SightProvider value={scroll.sight}>
+          {state.status === "loading" && (
+            <Text accessibilityLiveRegion="polite">{t("load.loading")}</Text>
+          )}
+          {state.status === "error" && (
+            <LoadFailed error={state.error} onRetry={() => setAttempt((n) => n + 1)} />
+          )}
+          {preview && !preview.completeness.complete && (
+            <View className="gap-1">
+              <Text variant="small">{t("profile.completeness.title")}</Text>
+              {preview.completeness.missing.map((item) => (
+                <Text key={item} variant="muted">
+                  {completenessText(t, item)}
+                </Text>
+              ))}
+            </View>
+          )}
+          {preview?.card && preview.completeness.complete && (
+            <Text>{t("profile.card.explain")}</Text>
+          )}
+          {preview?.card && (
+            <ProfileCardView
+              card={preview.card}
+              onRefused={(code) => setRefusal(code ?? "unknown")}
+            />
+          )}
+          {refusal !== null && (
+            <Text variant="muted" accessibilityLiveRegion="polite">
+              {t(photoRefusalKey(refusal))}
+            </Text>
+          )}
+        </SightProvider>
       </ScrollView>
     </SafeAreaView>
   );
