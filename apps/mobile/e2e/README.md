@@ -28,7 +28,7 @@ Then `pnpm e2e -- --device emulator-5554`. A dev client takes its bundle only fr
 
 ## The flows and their cast
 
-Each flow has a persona to itself where it changes something that another flow reads, so no flow needs another to run before it. They run in the order of `config.yaml`'s `executionOrder`, each persona's flows together, which CI cuts into its four stretches; a new flow goes into that list by its `name:`, or `pnpm e2e` refuses to run, since Maestro would quietly cut the order short at a name it cannot find. Those marked *once* change their persona for good and need a `pnpm demo:reset` before they run again; the others leave their persona as they found it.
+Each flow has a persona to itself where it changes something that another flow reads, so no flow needs another to run before it. They run in the order of `config.yaml`'s `executionOrder`, each persona's flows together, which CI cuts into its four stretches; a new flow goes into that list by its `name:`, and a renamed one under its new name, or `pnpm e2e` refuses to run, since Maestro would quietly cut the order short at a name it cannot find. CI's lint job refuses it too, on every pull request, through `node scripts/e2e.ts --self-test` (#761). Those marked *once* change their persona for good and need a `pnpm demo:reset` before they run again; the others leave their persona as they found it.
 
 | flow | persona | what it holds |
 |---|---|---|
