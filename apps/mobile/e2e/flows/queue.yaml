@@ -1,7 +1,8 @@
 # The queue (#379, #502, ADR-034, ADR-062): Iida opens it from the gate card
-# on home, meets Henna first, who liked her yesterday, and likes her back: it
-# is a match, said as a hello in Kumpa's look (#738), which leads to the
-# conversation and back to the queue. The next
+# on home, meets Henna first, who liked her yesterday, and likes her back
+# naming Henna's bio (#463, ADR-077): it is a match, said as a hello in
+# Kumpa's look (#738), which leads to the conversation, where the bio her like
+# named stands above the first message, and back to the queue. The next
 # card she leaves for later, which puts it on her Later list and says so the
 # first time (#681), brings back with Undo, passes, takes back again and likes;
 # the one after she reports and blocks from the card's header with a reason and
@@ -46,7 +47,25 @@ name: The queue shows one card at a time, liking back makes a match, Later and U
 - assertVisible: "Helsinki|Helsingfors"
 - assertNotVisible: ".*\\d{5}.*"
 - assertNotVisible: ".*\\d+ ?km.*"
+# The like names a part of her card (#463, ADR-077 §10): her bio, further
+# down the one scroll, is a button whose name is its words (the stories'
+# Finnish, in every language), and a tap picks it. On iOS a labelled button
+# shows Maestro its name alone, not the "In your like" drawn inside it, so the
+# pick is read as the button's selected state, and as the line above the
+# decision buttons that says what the like will name.
+- scrollUntilVisible:
+    element: "Meribiologi.*"
+    direction: DOWN
+    centerElement: true
+    timeout: 60000
 - waitForAnimationToEnd
+- tapOn: "Meribiologi.*"
+- extendedWaitUntil:
+    visible: "Liking their bio|Tykkäät esittelystä|Du gillar presentationen"
+    timeout: 15000
+- assertVisible:
+    text: "Meribiologi.*"
+    selected: true
 - tapOn: "Like|Tykkää|Gilla"
 # The match is a hello in Kumpa's look, which every phone starts in (#738):
 # the greeting over the two faces, the one sentence on what happened, and Say
@@ -59,11 +78,15 @@ name: The queue shows one card at a time, liking back makes a match, Later and U
 # The queue keeps the match on its screen until it has the focus again, so
 # the next card comes only after Back.
 - tapOn: "Say hello|Sano moi|Säg hej"
-# The conversation the match opened, with nothing in it yet but the composer.
+# The conversation the match opened, with nothing in it yet but the composer
+# and, above where the first message will stand, the part Iida's like named.
+# Henna's like of yesterday named none, so there is no line for hers.
 - extendedWaitUntil:
     visible: "(Message|Viesti|Meddelande)( .*)?"
     timeout: 15000
 - assertVisible: "Henna, \\d+"
+- assertVisible: "You liked their bio|Tykkäsit esittelystä|Du gillade presentationen"
+- assertNotVisible: "They liked your .*|Hän tykkäsi .*|Hen gillade .*"
 - tapOn: "Back|Takaisin|Tillbaka"
 # Back in the queue: the next card, a stranger's, and Henna's name leaves
 # with the conversation's header (README: something going is waited for).
