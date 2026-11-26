@@ -8658,7 +8658,7 @@ stars.kumpa.label:
 
 stars.kumpa.title:
   en: "Kumpa?"
-  description: "Title of Kumpa's screen, where two people of the Later list stand side by side and the person taps the one they would put first (ADR-064 §6). The question itself; it shrinks to fit one line. Never translated."
+  description: "Title of Kumpa's screen, where two people of the Later list stand one under the other, side by side on a wide window, and the person taps the one they would put first (ADR-064 §6). The question itself; it shrinks to fit one line. Never translated."
   fi: "Kumpa?"
   sv: "Kumpa?"
   machine: { fi: true, sv: true }

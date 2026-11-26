@@ -360,7 +360,7 @@ flowchart TB
 ```mermaid
 flowchart TB
   accTitle: Kumpa? puts the Later list in the person's own order
-  accDescr: From the Later list's header, Kumpa? shows two people of the list side by side, each with the main photo the person was shown, and a tap on one puts them before the other, until everybody has a place. The order stays on the phone and the API is never told of a tap. Leaving keeps what was tapped. The list then shows the person's order, whoever came since at the top and marked Not compared yet, and a sign-out forgets it.
+  accDescr: From the Later list's header, Kumpa? shows two people of the list, one under the other on a phone held upright and side by side on a wider window, which of them comes first drawn for each pair, each with the main photo the person was shown, and a tap on one puts them before the other, until everybody has a place. The order stays on the phone and the API is never told of a tap. Leaving keeps what was tapped. The list then shows the person's order, whoever came since at the top and marked Not compared yet, and a sign-out forgets it.
   subgraph person["The person"]
     s74["Chooses Kumpa? in the Later list's header"]
     s78{"Taps one of the two, or leaves?"}
@@ -368,7 +368,7 @@ flowchart TB
   end
   subgraph app["The app"]
     s75{"Anybody on the list without a place in the order?"}
-    s76["Shows two side by side, each with the main photo they were shown, a name and an age: one with a place, one without"]
+    s76["Shows two, one under the other or side by side on a wide window, which first drawn for each pair, each with the main photo they were shown, a name and an age: one with a place, one without"]
     s79["Puts the one tapped before the other, halving the places left, and keeps the order on the phone"]
     s80(["Says: Your Later list is in order., with Back to Later list and Start again"])
     s82["Forgets the order"]
@@ -397,7 +397,7 @@ flowchart TB
 
 74. On the Later list, while it shows two people or more, the person chooses "Kumpa?" in its header. A screen reader hears "Kumpa? Put your Later list in order, two at a time."
 75. Does anybody on the list still lack a place in the order this phone keeps? With no order yet, the first of the list takes the first place without a tap. Anybody who has left the list leaves the order, and whoever was being placed starts again among those left. Yes: 76. No: 80.
-76. The app shows two people side by side, one with a place in the order and the one being placed, each with the main photo the person was shown, as large as a card shows it, their name and their age. Each is a button a screen reader hears by the name and the age, with "Puts them before the other one.", and after a tap it is taken to the next pair. Nothing counts how far the person is.
+76. The app shows two people, one under the other on a phone held upright and side by side on a window wider than it is high: one with a place in the order and the one being placed, which of them comes first drawn again for each pair, each with the main photo the person was shown, in a card's shape, their name and their age. Each is a button a screen reader hears by the name and the age, with "Puts them before the other one.", and after a tap it is taken to the next pair. Nothing counts how far the person is.
 77. The API gives the two photos at the card's size, as it gives them for a card opened from the list, and nothing ahead of the two on the screen. It is never told of a tap.
 78. The person taps the one they would rather come back to first: 79. Or leaves by the back arrow, "Back to Later list": 83. What was tapped stays, and Kumpa? goes on where it stopped.
 79. The app puts the one tapped before the other and halves the places left for the one being placed; once one place is left, they take it. The order is kept on this phone alone, never sent and never logged. Then: 75.
@@ -451,4 +451,4 @@ flowchart TB
 - 2026-11-20 (#411): the Kumpa look is the one a phone starts in: each card a poster, Pass, Like and Later round buttons with their words, and a match says "Well, hello!" with "Say hello".
 - 2026-11-26 (#752): a card is one scroll, its photos between the person's own words and the rest of its answers at its end; nothing is tapped through or opened, and a photo is asked for once it comes into sight.
 - 2026-11-26 (#463): a like or a flower may name one part of the card, a photo, an answer, the bio or a shared item, marked by a tap; the person liked reads it under the card's reason, a photo with a small copy of it, and a match brings both likes' parts into the conversation.
-- 2026-11-26 (#764): Kumpa? puts the Later list in the person's own order, two at a time, a tap putting one before the other; the order stays on the phone, whoever came since is marked Not compared yet, and a sign-out forgets it.
+- 2026-11-26 (#764): Kumpa? puts the Later list in the person's own order, two at a time, one under the other on a phone held upright and side by side on a wide window, the first of each pair drawn at random, a tap putting one before the other; the order stays on the phone, whoever came since is marked Not compared yet, and a sign-out forgets it.

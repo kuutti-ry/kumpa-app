@@ -1,7 +1,8 @@
 import type { StarredPerson } from "@kuutti/schema";
+import { getRandomValues } from "expo-crypto";
 import { useRouter } from "expo-router";
 import { type Ref, useEffect, useRef, useState } from "react";
-import { Pressable, ScrollView, View } from "react-native";
+import { Pressable, ScrollView, useWindowDimensions, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Backdrop } from "@/components/backdrop";
 import { LoadFailed } from "@/components/LoadFailed";
@@ -26,15 +27,32 @@ import {
 } from "./later-order";
 import { useStars } from "./useStars";
 
-/** The card's own shape, three wide and four high (`card`, 800 x 1067). */
-const PHOTO = { width: "100%", aspectRatio: 3 / 4 } as const;
+/**
+ * The share of the window's height a photo takes: two, one under the other
+ * with their names, fit a phone held upright, and one beside the other a window
+ * wider than it is high.
+ */
+const PHOTO_SHARE = { stacked: 0.3, across: 0.55 } as const;
+
+/**
+ * Whether a pair is shown turned round, heads or tails from the system's
+ * generator (`.claude/rules/mobile.md`), so that the one being placed has no
+ * place of their own on the screen.
+ */
+const turnedRound = (): boolean =>
+  getRandomValues(new Uint8Array(1)).some((byte) => byte % 2 === 1);
 
 function Pick({
   person,
+  photoHeight,
+  across,
   onPick,
   ref,
 }: {
   person: StarredPerson;
+  photoHeight: number;
+  /** Side by side, each of the two takes half the row. */
+  across: boolean;
   onPick: () => void;
   ref?: Ref<View>;
 }) {
@@ -42,18 +60,21 @@ function Pick({
   const traits = useLookTraits();
   const { name, age, photo } = person;
   const who = t("profile.card.nameAge", { name, years: age });
+  // The card's own shape, three wide and four high (`card`, 800 x 1067), and
+  // never wider than its half or the screen.
+  const frame = { height: photoHeight, aspectRatio: 3 / 4, maxWidth: "100%" } as const;
   return (
     <Pressable
       ref={ref}
       accessibilityRole="button"
       accessibilityLabel={who}
       accessibilityHint={t("stars.kumpa.pick.hint")}
-      className={cn("flex-1 gap-2 rounded-xl p-1", pressFill(traits))}
+      className={cn("items-center gap-2 rounded-xl p-1", across && "flex-1", pressFill(traits))}
       style={MINIMUM_TARGET}
       onPress={onPick}
     >
       {photo ? (
-        <View className="overflow-hidden rounded-lg" style={PHOTO}>
+        <View className="overflow-hidden rounded-lg" style={frame}>
           <PhotoImage
             id={photo.id}
             variant="card"
@@ -65,18 +86,20 @@ function Pick({
       ) : (
         // The edge keeps the shape in the high-contrast sets, whose --muted is the
         // background itself (#467).
-        <View className="rounded-lg border border-border bg-muted" style={PHOTO} {...DECORATIVE} />
+        <View className="rounded-lg border border-border bg-muted" style={frame} {...DECORATIVE} />
       )}
-      <Text className="font-semibold">{who}</Text>
+      <Text className="text-center font-semibold">{who}</Text>
     </Pressable>
   );
 }
 
 /**
- * Kumpa (the maintainer, 26/11/2026; ADR-064 §6): two people of the Later list
- * side by side, the main photo each was shown at the card's size, and a tap on
- * one puts them before the other, until everybody has a place (`later-order`).
- * The order is the person's own and stays on this phone; nothing here is sent
+ * Kumpa (the maintainer, 26/11/2026; ADR-064 §6): two people of the Later list,
+ * one under the other on a phone held upright and side by side on a window
+ * wider than it is high, each with the main photo they were shown in the card's
+ * shape, and a tap on one puts them before the other, until everybody has a
+ * place (`later-order`). Which of the two comes first is drawn again for each
+ * pair. The order is the person's own and stays on this phone; nothing here is sent
  * but the photos' addresses asked for, as a card opened from the list asks for
  * them. Nothing is asked ahead of the two on the screen, and nothing counts how
  * far the person is. A screen reader is taken to the next pair after a pick, and
@@ -88,6 +111,10 @@ export function KumpaScreen() {
   const tap = useHapticTap();
   const { view, retry } = useStars();
   const [saved, setSaved] = useState<LaterOrder | null>(null);
+  const [turned, setTurned] = useState(turnedRound);
+  const { width, height } = useWindowDimensions();
+  const across = width > height;
+  const photoHeight = height * (across ? PHOTO_SHARE.across : PHOTO_SHARE.stacked);
   const first = useRef<View>(null);
   const picked = useRef(false);
 
@@ -112,7 +139,7 @@ export function KumpaScreen() {
         );
   const pair = ready ? pairOf(state) : null;
   const byId = new Map(items.map((person) => [person.id, person]));
-  const shown = pair?.flatMap((id) => {
+  const shown = (pair && turned ? [pair[1], pair[0]] : pair)?.flatMap((id) => {
     const person = byId.get(id);
     return person ? [person] : [];
   });
@@ -127,6 +154,7 @@ export function KumpaScreen() {
     picked.current = true;
     const next = choose(state, id);
     setSaved(next);
+    setTurned(turnedRound());
     void saveLaterOrder(next);
   };
 
@@ -141,11 +169,13 @@ export function KumpaScreen() {
         {view.status === "failed" && <LoadFailed error={view.error} onRetry={retry} />}
         {ready && items.length === 0 && <Text ref={focusOnMount}>{t("stars.none")}</Text>}
         {ready && shown && shown.length === 2 && (
-          <View className="flex-row gap-3">
+          <View testID="kumpa-pair" className={cn("gap-3", across ? "flex-row" : "flex-col")}>
             {shown.map((person, index) => (
               <Pick
                 key={person.id}
                 person={person}
+                photoHeight={photoHeight}
+                across={across}
                 ref={index === 0 ? first : undefined}
                 onPick={() => pick(person.id)}
               />
@@ -173,6 +203,7 @@ export function KumpaScreen() {
                 tap();
                 picked.current = true;
                 setSaved(NO_ORDER);
+                setTurned(turnedRound());
                 void saveLaterOrder(NO_ORDER);
               }}
             >

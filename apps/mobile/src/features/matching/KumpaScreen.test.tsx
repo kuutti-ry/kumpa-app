@@ -1,8 +1,9 @@
 import type { StarredPerson } from "@kuutti/schema";
 import { act, fireEvent, screen } from "@testing-library/react-native";
+import { getRandomValues } from "expo-crypto";
 import { useLocales } from "expo-localization";
 import * as SecureStore from "expo-secure-store";
-import { AccessibilityInfo } from "react-native";
+import { AccessibilityInfo, Dimensions, StyleSheet } from "react-native";
 import { clearSession, saveSession } from "@/lib/session";
 import { noProblems } from "@/test/a11y";
 import { FAILED_TO_LOAD } from "@/test/failed";
@@ -11,12 +12,13 @@ import { renderWithTheme } from "@/test/render";
 import { KumpaScreen } from "./KumpaScreen";
 
 // Kumpa on the phone (ADR-064 §6, the maintainer, 26/11/2026): two people of the
-// Later list side by side, each with the main photo they were shown at the card's
-// size, a tap that puts that one first and the order kept on the phone, the next
-// pair, the line once the list is in order with the way back and Start again, the
-// order taken up where it stopped, and what it says while it loads, fails or has
-// nobody. The order's own rules are later-order.test.ts's; the list it gives is
-// StarredScreen.test.tsx's.
+// Later list, one under the other on a window higher than it is wide and side by
+// side on one wider, which of the two comes first drawn for each pair, each with
+// the main photo they were shown in the card's shape, a tap that puts that one
+// first and the order kept on the phone, the next pair, the line once the list is
+// in order with the way back and Start again, the order taken up where it
+// stopped, and what it says while it loads, fails or has nobody. The order's own
+// rules are later-order.test.ts's; the list it gives is StarredScreen.test.tsx's.
 
 const { __router: router } = jest.requireMock("expo-router") as {
   __router: { push: jest.Mock; back: jest.Mock; replace: jest.Mock };
@@ -24,6 +26,14 @@ const { __router: router } = jest.requireMock("expo-router") as {
 
 const store = (SecureStore as unknown as { __store: Map<string, string> }).__store;
 const KEY = "kuutti.preference.laterOrder";
+
+/** The system's generator gives this side every time: 0 shows a pair as the order has it, 1 turned round. */
+const random = jest.mocked(getRandomValues);
+const toss = (side: 0 | 1) =>
+  random.mockImplementation((array) => {
+    new Uint8Array(array.buffer).fill(side);
+    return array;
+  });
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
@@ -98,8 +108,17 @@ const takenTo = () => {
   ];
   return node.props.accessibilityLabel ?? node.props.children;
 };
+/** The frame a person's photo is drawn in. */
+const frameOf = (name: string) => {
+  let node = screen.getByRole("image", { name }).parent;
+  while (node && StyleSheet.flatten(node.props.style)?.aspectRatio === undefined) {
+    node = node.parent;
+  }
+  return StyleSheet.flatten(node?.props.style);
+};
 
 beforeEach(async () => {
+  toss(0);
   store.clear();
   router.push.mockReset();
   router.back.mockReset();
@@ -115,8 +134,10 @@ beforeEach(async () => {
   });
 });
 
+afterEach(() => jest.restoreAllMocks());
+
 describe("Kumpa", () => {
-  it("shows two people of the list side by side, each named with their age, a tap's hint and nothing else", async () => {
+  it("shows two people of the list, each named with their age, a tap's hint and nothing else", async () => {
     api(list(HENNA, KATJA, MINNA));
     await show();
 
@@ -139,6 +160,57 @@ describe("Kumpa", () => {
     expect(photos(calls)).toEqual([`/photos/${HENNA.photo?.id}/card`]);
     expect(screen.getByRole("image", { name: "Photo: Henna" })).toBeTruthy();
     expect(screen.queryByRole("image", { name: "Photo: Katja" })).toBeNull();
+  });
+
+  // jest's window is 750 x 1334; these set their own.
+  it.each([
+    ["higher than it is wide", 390, 844, "flex-col", false, 0.3],
+    ["as high as it is wide", 600, 600, "flex-col", false, 0.3],
+    ["a point wider than it is high", 601, 600, "flex-row", true, 0.55],
+    ["wider than it is high", 1000, 550, "flex-row", true, 0.55],
+  ])(
+    "lays the two out for a window %s",
+    async (_shape, width, height, direction, halves, share) => {
+      jest.spyOn(Dimensions, "get").mockReturnValue({ width, height, scale: 3, fontScale: 1 });
+      api(list(HENNA, KATJA, MINNA));
+      await show();
+
+      expect(screen.getByTestId("kumpa-pair").props.className.split(" ")).toContain(direction);
+      for (const name of ["Henna, 31", "Katja, 44"]) {
+        const words = screen.getByRole("button", { name }).props.className.split(" ");
+        expect(words.includes("flex-1")).toBe(halves);
+      }
+      expect(frameOf("Photo: Henna")).toEqual({
+        height: expect.closeTo(share * height),
+        aspectRatio: 3 / 4,
+        maxWidth: "100%",
+      });
+      noProblems();
+    },
+  );
+
+  it("draws which of the two comes first for each pair, and a pick puts the one picked first wherever they stand", async () => {
+    toss(1);
+    api(list(HENNA, KATJA, MINNA));
+    await show();
+    expect(said()).toEqual(["Kumpa?", "Katja, 44", "Henna, 31"]);
+
+    toss(0);
+    await press("Henna, 31");
+
+    expect(held()).toEqual({ order: [HENNA.id, KATJA.id], placing: null });
+    expect(said()).toEqual(["Kumpa?", "Katja, 44", "Minna, 28"]);
+    expect(takenTo()).toBe("Katja, 44");
+
+    toss(1);
+    await press("Minna, 28");
+
+    expect(held()).toEqual({
+      order: [HENNA.id, KATJA.id],
+      placing: { id: MINNA.id, lo: 0, hi: 1 },
+    });
+    expect(said()).toEqual(["Kumpa?", "Minna, 28", "Henna, 31"]);
+    expect(takenTo()).toBe("Minna, 28");
   });
 
   it("puts the one picked first, keeps the order on the phone, and shows the next pair", async () => {
@@ -185,17 +257,18 @@ describe("Kumpa", () => {
     expect(router.back).toHaveBeenCalledTimes(1);
   });
 
-  it("starts again from the beginning, the order forgotten", async () => {
+  it("starts again from the beginning, the order forgotten and the first pair drawn again", async () => {
     store.set(KEY, JSON.stringify({ order: [KATJA.id, HENNA.id], placing: null }));
     api(list(HENNA, KATJA));
     await show();
     expect(screen.getByText("Your Later list is in order.")).toBeTruthy();
 
+    toss(1);
     await press("Start again");
 
     expect(store.has(KEY)).toBe(false);
-    expect(said()).toEqual(["Kumpa?", "Henna, 31", "Katja, 44"]);
-    expect(takenTo()).toBe("Henna, 31");
+    expect(said()).toEqual(["Kumpa?", "Katja, 44", "Henna, 31"]);
+    expect(takenTo()).toBe("Katja, 44");
   });
 
   it("goes on where it stopped, from the order the phone keeps", async () => {
