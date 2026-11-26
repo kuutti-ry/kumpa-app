@@ -100,6 +100,24 @@ describe("a decision", () => {
     }
   });
 
+  it("names a part of the card only with a like or a fish (#463, ADR-077)", () => {
+    const anchor = { kind: "bio" } as const;
+    for (const decision of ["like", "fish"] as const) {
+      expect(QueueDecisionUpdate.parse({ decision, anchor })).toEqual({ decision, anchor });
+    }
+    for (const decision of ["pass", "skip"] as const) {
+      const issues = QueueDecisionUpdate.safeParse({ decision, anchor }).error?.issues;
+      expect(
+        issues?.map((issue) => [issue.code, issue.path.join(".")]),
+        decision,
+      ).toEqual([["custom", "anchor"]]);
+    }
+    // A part that is no part of a card is refused as such, whatever the decision.
+    expect(codes(QueueDecisionUpdate, { decision: "like", anchor: { kind: "message" } })).toEqual([
+      "invalid_union",
+    ]);
+  });
+
   // The ask is the one word: an app that does not want the key sends none.
   it.each([
     ["false", false],
