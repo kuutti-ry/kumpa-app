@@ -8,9 +8,10 @@ import { useHardShadow } from "@/theme/shadow";
 
 // The loud pieces of the designers' try (outside production, the tech screen's
 // neubrutalism), after Sini's screens of 15/11/2026: a headline in a tilted
-// slab, sparks, blobs, starbursts and a face that winks. Our own
-// drawings, each layer in one token colour, so they follow every set of
-// tokens.css; all of it decorative, hidden from screen readers by Icon.
+// slab, sparks, blobs, starbursts and a face that winks. The pill styles'
+// moments draw the sparks too, Kumpa's, which every phone starts in, among
+// them. Our own drawings, each layer in one token colour, so they follow every
+// set of tokens.css; all of it decorative, hidden from screen readers by Icon.
 
 /** Takes a subtree out of what a screen reader walks: the words beside it say it all. */
 export const UNSPOKEN = Platform.select({

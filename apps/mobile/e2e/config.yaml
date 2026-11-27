@@ -14,14 +14,14 @@ executionOrder:
     - The bank login refuses the banned, the recently deleted and those under 18, and lets in 18 and 99
     - At 99 the age window starts at 94 to 99 and neither end can leave the bounds
     - A label chosen after non-binary shows on the card after the gender
-    # Onni, new.
-    - A registered person is taken through onboarding one question per screen, and resumes at the intent after the app is closed
+    # Otto, new.
+    - A newcomer answers four questions before the bank, keeps them over a restart, and is taken through the rest one question per screen
     # Kerttu, and kids-labels on from her to Sanna.
     - A person who accepted an older wording of the terms is asked for the current one, and nothing else is asked again
     - Once there are kids, the future-kids answers read want more, no more, not sure anymore
     # Sanna: her profile and photos, the later fields, the deal-breakers, home,
     # Settings, the app's lock, the sign-in links, and logging out everywhere last.
-    - The card leads with the name, the photo and the key facts, and opens the rest in place but nothing soft
+    - The card reads down one scroll, its photos between her own words and the rest at its end, but nothing soft
     - A section saves on going back, the card shows what it saved, and a hidden answer leaves it
     - A phone number in the bio is refused on leaving with the reason, and the stored bio stays
     - A photo opens full size and back, and removing one asks first
@@ -49,7 +49,7 @@ executionOrder:
     - A sign-in link not asked for is refused without touching the session, and a refusal has words only for a fact of its own
     - Links to the card, photos and conversations cannot restore data after logout
     - Log out everywhere ends this device's session, and reopening the app does not bring it back
-    # Helmi, who takes a break and comes back.
+    # Aune, who takes a break and comes back.
     - Taking a break signs the person out everywhere, and the next bank login brings them back
     # Noa.
     - A deal-breaker is offered only on what the person answered, and a row that says to share first opens the question
@@ -67,13 +67,13 @@ executionOrder:
     - What you seek lists whom, the ages, why and the deal-breakers, and each change is kept by going back
     # Laura and Emmi, the report's pair (#351): a block is final, so once per reset.
     - A report from a conversation takes it from the reporter's list, and the other finds it ended and can still report it
-    # Iida, the star's (#575), which decides nothing and leaves her queue as it found it.
-    - A star on a card brings the person to a Starred list only they see, and taking it off leaves everything as it was
     # Iida, the queue's (#379): a match and a report are final, so once per reset.
     - The queue shows one card at a time, liking back makes a match, Later and Undo leave a decision open, and a report takes a card away
+    # Iida, the Later list's (#575, #681): from the person the queue's flow left for later.
+    - Later puts the person on a Later list only they see, the list opens the card, and a flower from there takes them off
     # Riikka, a card of that queue, whose filters the short pool's flow changes and puts
     # back (#99, #581): after it, so that one stopping half-way takes no card from it.
     - With few people left, the queue's end offers the deal-breakers to relax for today in two groups, and reading them relaxes nothing
-    # Aino, who tells Kuutti she found someone, then whose account goes: last.
+    # Sofia, who tells Kuutti she found someone, then whose account goes: last.
     - I found someone tells Kuutti the reason once, thanks the person, and asks no more
     - Deleting the account asks first, signs the person out, and the next login is refused until the cooldown ends

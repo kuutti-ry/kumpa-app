@@ -5,11 +5,11 @@
 # (MODERATION=queue), so what the flow reads is the setting: on, off, and
 # kept when the row is opened again. Sanna; the flow leaves every switch
 # as it found it, and the row closed.
-appId: fi.kuutti.app
+appId: fi.kumpa
 name: The photo descriptions setting shows them under the photos and chooses what they tell
 ---
 - runFlow: ../common/sign-in.yaml
-- openLink: kuutti://settings
+- openLink: fi.kumpa://settings
 - extendedWaitUntil:
     visible: "Settings|Asetukset|Inställningar"
     timeout: 15000

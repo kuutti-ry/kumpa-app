@@ -3,11 +3,11 @@
 # card, hidden it stays an answer and leaves the card (#515), and taking it back
 # the same way takes it off. Sanna has no exercise answer; the flow leaves her
 # without one, and shows it again before that, so a second run starts the same.
-appId: fi.kuutti.app
+appId: fi.kumpa
 name: A section saves on going back, the card shows what it saved, and a hidden answer leaves it
 ---
 - runFlow: ../common/sign-in.yaml
-- openLink: kuutti://profile
+- openLink: fi.kumpa://profile
 - extendedWaitUntil:
     visible: "(The basics|Perustiedot|Grunderna)(, .*)?"
     timeout: 15000
@@ -59,17 +59,11 @@ name: A section saves on going back, the card shows what it saved, and a hidden 
 - extendedWaitUntil:
     visible: "(The basics|Perustiedot|Grunderna)(, .*)?"
     timeout: 15000
-# Exercise is on the whole card under Lifestyle (#644), a chip heard with its question.
-- openLink: kuutti://profile/card
+# Exercise is at the card's end under Lifestyle, a chip heard with its question.
+- openLink: fi.kumpa://profile/card
 - extendedWaitUntil:
     visible: "Your card|Korttisi|Ditt kort"
     timeout: 15000
-- scrollUntilVisible:
-    element: "Show the whole card|Näytä koko kortti|Visa hela kortet"
-    direction: DOWN
-    centerElement: true
-    timeout: 60000
-- tapOn: "Show the whole card|Näytä koko kortti|Visa hela kortet"
 - scrollUntilVisible:
     element: "Lifestyle|Elämäntavat|Livsstil"
     direction: DOWN
@@ -83,7 +77,7 @@ name: A section saves on going back, the card shows what it saved, and a hidden 
 
 # Hidden: the section keeps the answer and says what hiding did, saved by going
 # back like any answer, and the card has no Exercise any more.
-- openLink: kuutti://profile
+- openLink: fi.kumpa://profile
 - extendedWaitUntil:
     visible: "(The basics|Perustiedot|Grunderna)(, .*)?"
     timeout: 15000
@@ -107,17 +101,11 @@ name: A section saves on going back, the card shows what it saved, and a hidden 
 - extendedWaitUntil:
     visible: "(The basics|Perustiedot|Grunderna)(, .*)?"
     timeout: 15000
-- openLink: kuutti://profile/card
+- openLink: fi.kumpa://profile/card
 - extendedWaitUntil:
     visible: "Your card|Korttisi|Ditt kort"
     timeout: 15000
-- scrollUntilVisible:
-    element: "Show the whole card|Näytä koko kortti|Visa hela kortet"
-    direction: DOWN
-    centerElement: true
-    timeout: 60000
-- tapOn: "Show the whole card|Näytä koko kortti|Visa hela kortet"
-# Her hobbies end the whole card: Lifestyle is gone with its one answer.
+# Her hobbies end the card: Lifestyle is gone with its one answer.
 - scrollUntilVisible:
     element: "(.*: )?(Swimming|Uinti|Simning)"
     direction: DOWN
@@ -127,7 +115,7 @@ name: A section saves on going back, the card shows what it saved, and a hidden 
 - assertNotVisible: "(.*: )?(Weekly|Viikoittain|Varje vecka)"
 
 # Shown again from the same place, and back on the card.
-- openLink: kuutti://profile
+- openLink: fi.kumpa://profile
 - extendedWaitUntil:
     visible: "(The basics|Perustiedot|Grunderna)(, .*)?"
     timeout: 15000
@@ -147,16 +135,10 @@ name: A section saves on going back, the card shows what it saved, and a hidden 
 - extendedWaitUntil:
     visible: "(The basics|Perustiedot|Grunderna)(, .*)?"
     timeout: 15000
-- openLink: kuutti://profile/card
+- openLink: fi.kumpa://profile/card
 - extendedWaitUntil:
     visible: "Your card|Korttisi|Ditt kort"
     timeout: 15000
-- scrollUntilVisible:
-    element: "Show the whole card|Näytä koko kortti|Visa hela kortet"
-    direction: DOWN
-    centerElement: true
-    timeout: 60000
-- tapOn: "Show the whole card|Näytä koko kortti|Visa hela kortet"
 - scrollUntilVisible:
     element: "(Exercise|Liikunta|Motion): (Weekly|Viikoittain|Varje vecka)"
     direction: DOWN
@@ -165,7 +147,7 @@ name: A section saves on going back, the card shows what it saved, and a hidden 
 
 # Taken back the same way, from the list: tapped again, which clears it, and
 # going back.
-- openLink: kuutti://profile
+- openLink: fi.kumpa://profile
 - extendedWaitUntil:
     visible: "(The basics|Perustiedot|Grunderna)(, .*)?"
     timeout: 15000

@@ -16,6 +16,7 @@ import {
   type ProfileUpdate,
   photoWithKnownDescription,
 } from "@kuutti/schema";
+import { readAnswer } from "@/lib/answer";
 import { api, failed } from "@/lib/api";
 
 // The profile routes as the app calls them (#47), through the typed client;
@@ -38,7 +39,7 @@ function inLine<T>(send: () => Promise<T>): Promise<T> {
 async function readProfile(): Promise<ProfileResponse> {
   const { data, error, response } = await api.GET("/profile");
   if (!data) throw failed(response, error, "profile");
-  return ProfileResponse.parse(data);
+  return readAnswer(ProfileResponse, data);
 }
 
 export async function fetchProfile(): Promise<ProfileResponse> {
@@ -64,7 +65,7 @@ export function saveProfile(
       body: build(profile) as unknown as ApiComponents["schemas"]["ProfileUpdate"],
     });
     if (!data) throw failed(response, error, "profile save");
-    return ProfileResponse.parse(data);
+    return readAnswer(ProfileResponse, data);
   });
 }
 
@@ -76,7 +77,7 @@ export async function fetchCardPreview(): Promise<CardPreviewResponse> {
   const card = data.card
     ? { ...data.card, photos: data.card.photos.map(photoWithKnownDescription) }
     : data.card;
-  return CardPreviewResponse.parse({ ...data, card });
+  return readAnswer(CardPreviewResponse, { ...data, card });
 }
 
 /**
@@ -90,7 +91,7 @@ export function saveHome(update: HomeUpdate): Promise<HomeSummary> {
       body: update as unknown as ApiComponents["schemas"]["HomeUpdate"],
     });
     if (!data) throw failed(response, error, "home");
-    return HomeSummary.parse(data);
+    return readAnswer(HomeSummary, data);
   });
 }
 
@@ -104,7 +105,7 @@ export async function fetchOwnGender(): Promise<OwnGender> {
   await lastSave;
   const { data, error, response } = await api.GET("/onboarding");
   if (!data) throw failed(response, error, "onboarding");
-  const { gender, nextChange } = OnboardingStatus.parse(data);
+  const { gender, nextChange } = readAnswer(OnboardingStatus, data);
   return { gender, nextChange: nextChange.gender };
 }
 
@@ -122,7 +123,7 @@ export async function fetchPreferences(): Promise<PreferencesResponse> {
   await lastSave;
   const { data, error, response } = await api.GET("/preferences");
   if (!data) throw failed(response, error, "preferences");
-  return PreferencesResponse.parse(data);
+  return readAnswer(PreferencesResponse, data);
 }
 
 export function savePreferences(update: PreferencesUpdate): Promise<PreferencesResponse> {
@@ -132,7 +133,7 @@ export function savePreferences(update: PreferencesUpdate): Promise<PreferencesR
       body: update as unknown as ApiComponents["schemas"]["PreferencesUpdate"],
     });
     if (!data) throw failed(response, error, "preferences");
-    return PreferencesResponse.parse(data);
+    return readAnswer(PreferencesResponse, data);
   });
 }
 
@@ -141,7 +142,7 @@ export function savePreferences(update: PreferencesUpdate): Promise<PreferencesR
 async function readDealBreakers(): Promise<DealBreakersResponse> {
   const { data, error, response } = await api.GET("/preferences/deal-breakers");
   if (!data) throw failed(response, error, "deal-breakers");
-  return DealBreakersResponse.parse(data);
+  return readAnswer(DealBreakersResponse, data);
 }
 
 export async function fetchDealBreakers(): Promise<DealBreakersResponse> {
@@ -177,6 +178,6 @@ export function saveDealBreaker(
       body: update as unknown as ApiComponents["schemas"]["DealBreakersUpdate"],
     });
     if (!data) throw failed(response, error, "deal-breakers save");
-    return DealBreakersResponse.parse(data);
+    return readAnswer(DealBreakersResponse, data);
   });
 }

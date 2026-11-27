@@ -11,7 +11,7 @@ import { InvitationStep } from "./InvitationStep";
 // Continue; either way the step is done, in the phone's language.
 
 const ONE_EACH = { inviterFish: 1, friendFish: 1 };
-const EARNS = "The code earns you a fish and your friend a fish once your profile is complete.";
+const EARNS = "The code earns you a flower and your friend a flower once your profile is complete.";
 /** Every text on the screen, in order. */
 const drawn = () => screen.queryAllByText(/./).map((node) => node.props.children);
 const token = (seed: string) => (seed + "x".repeat(43)).slice(0, 43);
@@ -65,30 +65,30 @@ describe("InvitationStep", () => {
     [
       "en",
       { inviterFish: 3, friendFish: 2 },
-      "The code earns you 2 fish and your friend 3 fish once your profile is complete.",
+      "The code earns you 2 flowers and your friend 3 flowers once your profile is complete.",
     ],
     [
       "en",
       { inviterFish: 0, friendFish: 1 },
-      "The code earns you a fish once your profile is complete.",
+      "The code earns you a flower once your profile is complete.",
     ],
     [
       "en",
       { inviterFish: 0, friendFish: 2 },
-      "The code earns you 2 fish once your profile is complete.",
+      "The code earns you 2 flowers once your profile is complete.",
     ],
     [
       "fi",
       { inviterFish: 1, friendFish: 1 },
-      "Koodista saat kalan ja ystäväsi saa kalan, kun profiilisi on valmis.",
+      "Koodista saat kukan ja ystäväsi saa kukan, kun profiilisi on valmis.",
     ],
-    ["fi", { inviterFish: 0, friendFish: 2 }, "Koodista saat 2 kalaa, kun profiilisi on valmis."],
+    ["fi", { inviterFish: 0, friendFish: 2 }, "Koodista saat 2 kukkaa, kun profiilisi on valmis."],
     [
       "sv",
       { inviterFish: 1, friendFish: 1 },
-      "Koden ger dig en fisk och din vän en fisk när din profil är klar.",
+      "Koden ger dig en blomma och din vän en blomma när din profil är klar.",
     ],
-    ["sv", { inviterFish: 0, friendFish: 2 }, "Koden ger dig 2 fiskar när din profil är klar."],
+    ["sv", { inviterFish: 0, friendFish: 2 }, "Koden ger dig 2 blommor när din profil är klar."],
   ])("says in %s what the reward %j earns the person", async (locale, reward, words) => {
     (useLocales as jest.Mock).mockReturnValue([{ languageTag: locale }]);
     await renderWithTheme(<InvitationStep reward={reward} onDone={jest.fn()} />);

@@ -849,8 +849,40 @@
       "notices": []
     },
     {
+      "name": "expo-clipboard",
+      "version": "57.0.2",
+      "license": "MIT",
+      "provider": "650 Industries, Inc.",
+      "licences": [
+        {
+          "file": "LICENSE",
+          "copyright": [
+            "Copyright (c) 2015-present 650 Industries, Inc. (aka Expo)"
+          ],
+          "text": "bccaa8b6c09f"
+        }
+      ],
+      "notices": []
+    },
+    {
       "name": "expo-constants",
       "version": "57.0.22",
+      "license": "MIT",
+      "provider": "650 Industries, Inc.",
+      "licences": [
+        {
+          "file": "LICENSE",
+          "copyright": [
+            "Copyright (c) 2015-present 650 Industries, Inc. (aka Expo)"
+          ],
+          "text": "bccaa8b6c09f"
+        }
+      ],
+      "notices": []
+    },
+    {
+      "name": "expo-crypto",
+      "version": "57.0.4",
       "license": "MIT",
       "provider": "650 Industries, Inc.",
       "licences": [

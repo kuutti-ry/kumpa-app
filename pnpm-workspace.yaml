@@ -108,9 +108,20 @@ overrides:
   # Remove this when the plugins are an optional peer.
   "@sentry/node>@sentry/bundler-plugins": "-"
 
-# pnpm audit: one advisory set aside, with its reason: it ships in the app and is
-# patched in place, which the audit cannot see. Every other high or critical
+# pnpm audit: two advisories set aside, each with its reason. The first has no
+# fixed release, and no copy of it is in the API's image, the panel's bundle or
+# the app's; the second ships in the app and is patched in place, which the
+# audit cannot see. Each says when to remove it. Every other high or critical
 # advisory still fails the job.
+#
+# GHSA-fc5q-39xc-vjpf (picomatch <= 4.0.7, its newest release): a pattern of a
+# single repeated extglob branch, such as +(*), backtracks exponentially on a
+# short string. It has failed the audit gate since 2026-11-17, and no release
+# fixes it. picomatch 2 and 4 are asked for by Metro, Expo's CLI, jest, Vite,
+# Vitest and knip, and by the glob helpers under them (micromatch, anymatch,
+# readdirp, tinyglobby, fdir): build and test tools that match the patterns of
+# our own configuration, never a pattern somebody sends us. Remove this when a
+# fixed release exists, with an override onto it for each major still asked for.
 #
 # GHSA-qr28-fpjm-wq7f (decode-uri-component <= 0.5.0): a string of many distinct
 # percent-encoded runs takes quadratic time to decode. 0.2.2 ships in the app's
@@ -126,6 +137,7 @@ overrides:
 # 0.5.1 or later.
 auditConfig:
   ignoreGhsas:
+    - GHSA-fc5q-39xc-vjpf
     - GHSA-qr28-fpjm-wq7f
 
 # Fixes taken from a newer release onto the version Expo's SDK pins, each with

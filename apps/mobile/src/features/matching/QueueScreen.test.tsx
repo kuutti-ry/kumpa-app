@@ -8,6 +8,7 @@ import { a11yProblems, type HostNode, noProblems, pressables } from "@/test/a11y
 import { FAILED_TO_LOAD } from "@/test/failed";
 import { textsInOrder as said } from "@/test/layout";
 import { renderWithTheme, underProviders } from "@/test/render";
+import { layOut, placePhotos, scrollTo } from "@/test/sight";
 import { TOUCH_TARGET } from "@/theme/a11y";
 import { QueueScreen } from "./QueueScreen";
 
@@ -27,7 +28,7 @@ const {
   __focus: focusQueue,
   __blur: blurQueue,
 } = jest.requireMock("expo-router") as {
-  __router: { push: jest.Mock; back: jest.Mock };
+  __router: { push: jest.Mock; back: jest.Mock; replace: jest.Mock };
   __focus: () => void;
   __blur: () => void;
 };
@@ -112,7 +113,7 @@ function api(answer: Answer = () => undefined, read: QueueResponse = READ) {
     }
     if (call.path.endsWith("/seen")) return noContent();
     if (call.path.endsWith("/decision"))
-      return json({ match: null, fishToSend: true, likesLeft: 10, yourTurn: 0 });
+      return json({ match: null, later: null, fishToSend: true, likesLeft: 10, yourTurn: 0 });
     if (call.path === "/blocks") return noContent();
     return refusal("not_found", 404);
   }) as unknown as typeof fetch;
@@ -181,9 +182,11 @@ const ancestorsOf = (words: string) => {
 };
 
 beforeEach(async () => {
+  placePhotos();
   store.clear();
   router.push.mockReset();
   router.back.mockReset();
+  router.replace.mockReset();
   (useLocales as jest.Mock).mockReturnValue([{ languageTag: "en-US" }]);
   (AccessibilityInfo.announceForAccessibility as jest.Mock).mockClear();
   (AccessibilityInfo.sendAccessibilityEvent as jest.Mock).mockClear();
@@ -354,6 +357,7 @@ describe("the queue", () => {
       call.path === `/queue/${DAY}/entries/1/decision`
         ? json({
             match: { conversationId: CONVERSATION },
+            later: null,
             fishToSend: true,
             likesLeft: 10,
             yourTurn: 0,
@@ -396,11 +400,32 @@ describe("the queue", () => {
     expect(sent.seen()).toEqual([1, 2]);
   });
 
+  it("goes on to the next card when a decision answer carries a key this build does not know (#745)", async () => {
+    const sent = api((call) =>
+      call.path.endsWith("/decision")
+        ? json({
+            match: null,
+            later: null,
+            fishToSend: true,
+            likesLeft: 9,
+            yourTurn: 0,
+            sooner: true,
+          })
+        : undefined,
+    );
+    await show();
+    await press("Like");
+    expect(screen.queryByText("That did not go through. Try again.")).toBeNull();
+    expect(heading("Katja, 32")).toBeTruthy();
+    expect(sent.decisions()).toEqual([`${DAY}/1 like`]);
+  });
+
   it("goes on with the queue from a match without opening the conversation", async () => {
     api((call) =>
       call.path.endsWith("/decision")
         ? json({
             match: { conversationId: CONVERSATION },
+            later: null,
             fishToSend: true,
             likesLeft: 10,
             yourTurn: 0,
@@ -480,17 +505,17 @@ describe("the queue", () => {
     const buttons = screen
       .getAllByRole("button")
       .map((button) => button.props.accessibilityLabel)
-      .filter((label) => ["Send a fish", "Pass", "Like"].includes(label));
-    expect(buttons).toEqual(["Send a fish", "Pass", "Like"]);
+      .filter((label) => ["Send a flower", "Pass", "Like"].includes(label));
+    expect(buttons).toEqual(["Send a flower", "Pass", "Like"]);
     noProblems();
-    await press("Send a fish");
+    await press("Send a flower");
     expect(heading("Minna, 34")).toBeTruthy();
     await press("Undo your last decision");
     expect(
-      screen.getByText("You sent this person a fish. You can change that until midnight."),
+      screen.getByText("You sent this person a flower. You can change that until midnight."),
     ).toBeTruthy();
     expect(
-      screen.getByRole("button", { name: "Send a fish" }).props.accessibilityState,
+      screen.getByRole("button", { name: "Send a flower" }).props.accessibilityState,
     ).toMatchObject({ selected: true });
     expect(sent.decisions()).toEqual([`${DAY}/2 fish`]);
   });
@@ -499,9 +524,9 @@ describe("the queue", () => {
     ["liked the reader", 10, "liked_you", "Liked you"],
     ["liked the reader", 1, "liked_you", "Liked you"],
     ["liked the reader", 0, "liked_you", "Liked you"],
-    ["sent the reader a fish", 10, "fish", "Sent you a fish"],
-    ["sent the reader a fish", 1, "fish", "Sent you a fish"],
-    ["sent the reader a fish", 0, "fish", "Sent you a fish"],
+    ["sent the reader a fish", 10, "fish", "Sent you a flower"],
+    ["sent the reader a fish", 1, "fish", "Sent you a flower"],
+    ["sent the reader a fish", 0, "fish", "Sent you a flower"],
   ] as const)(
     "offers no fish on a card that %s, which a like answers, at %i likes left (ADR-039 §2)",
     async (_what, likesLeft, reason, label) => {
@@ -515,7 +540,7 @@ describe("the queue", () => {
       await show();
       expect(screen.getByText(label)).toBeTruthy();
       expect(screen.getByRole("button", { name: "Like" })).toBeTruthy();
-      expect(screen.queryByRole("button", { name: "Send a fish" })).toBeNull();
+      expect(screen.queryByRole("button", { name: "Send a flower" })).toBeNull();
     },
   );
 
@@ -531,9 +556,9 @@ describe("the queue", () => {
     const buttons = screen
       .getAllByRole("button")
       .map((button) => button.props.accessibilityLabel)
-      .filter((label) => ["Send a fish", "Pass", "Like"].includes(label));
+      .filter((label) => ["Send a flower", "Pass", "Like"].includes(label));
     expect(buttons).toEqual(["Pass", "Like"]);
-    expect(screen.queryByText(/fish/i)).toBeNull();
+    expect(screen.queryByText(/flower/i)).toBeNull();
     noProblems();
   });
 
@@ -543,7 +568,13 @@ describe("the queue", () => {
       (call) => {
         if (!call.path.endsWith("/decision")) return undefined;
         fishSent = (call.body as { decision: string }).decision === "fish";
-        return json({ match: null, fishToSend: !fishSent, likesLeft: 10, yourTurn: 0 });
+        return json({
+          match: null,
+          later: null,
+          fishToSend: !fishSent,
+          likesLeft: 10,
+          yourTurn: 0,
+        });
       },
       {
         day: DAY,
@@ -554,19 +585,19 @@ describe("the queue", () => {
       },
     );
     await show();
-    await press("Send a fish");
+    await press("Send a flower");
     expect(heading("Minna, 34")).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Send a fish" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Send a flower" })).toBeNull();
     noProblems();
     // The card that holds the fish reads it back, selected, and it can be changed.
     await press("Undo your last decision");
     expect(heading("Katja, 32")).toBeTruthy();
     expect(
-      screen.getByRole("button", { name: "Send a fish" }).props.accessibilityState,
+      screen.getByRole("button", { name: "Send a flower" }).props.accessibilityState,
     ).toMatchObject({ selected: true });
     await press("Like");
     expect(heading("Minna, 34")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Send a fish" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Send a flower" })).toBeTruthy();
     expect(sent.decisions()).toEqual([`${DAY}/2 fish`, `${DAY}/2 like`]);
   });
 
@@ -579,17 +610,17 @@ describe("the queue", () => {
       { day: DAY, entries: [entry(2, "Katja")], fishToSend: true, likesLeft: 10, yourTurn: 0 },
     );
     await show();
-    await press("Send a fish");
-    expect(screen.getByText("You cannot send a fish just now.")).toBeTruthy();
+    await press("Send a flower");
+    expect(screen.getByText("You cannot send a flower just now.")).toBeTruthy();
     expect(heading("Katja, 32")).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Send a fish" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Send a flower" })).toBeNull();
     await press("Like");
     expect(screen.getByText("That's everybody for now.")).toBeTruthy();
   });
 
   it.each([
-    ["fi-FI", "Lähetä kala", "Et voi lähettää kalaa juuri nyt."],
-    ["sv-FI", "Skicka en fisk", "Du kan inte skicka en fisk just nu."],
+    ["fi-FI", "Lähetä kukka", "Et voi lähettää kukkaa juuri nyt."],
+    ["sv-FI", "Skicka en blomma", "Du kan inte skicka en blomma just nu."],
   ])(
     "says a fish that cannot go in %s, in the fewest words (#581)",
     async (languageTag, fish, words) => {
@@ -753,12 +784,16 @@ describe("the queue", () => {
   });
 
   it.each([
-    ["a like recorded", () => json({ match: null, fishToSend: true, likesLeft: 10, yourTurn: 0 })],
+    [
+      "a like recorded",
+      () => json({ match: null, later: null, fishToSend: true, likesLeft: 10, yourTurn: 0 }),
+    ],
     [
       "a like that made a match",
       () =>
         json({
           match: { conversationId: CONVERSATION },
+          later: null,
           fishToSend: true,
           likesLeft: 10,
           yourTurn: 0,
@@ -918,7 +953,9 @@ describe("the queue", () => {
       call.path.endsWith("/decision")
         ? new Promise<Response>((resolve) => {
             release = () =>
-              resolve(json({ match: null, fishToSend: true, likesLeft: 10, yourTurn: 0 }));
+              resolve(
+                json({ match: null, later: null, fishToSend: true, likesLeft: 10, yourTurn: 0 }),
+              );
           })
         : undefined,
     );
@@ -948,7 +985,9 @@ describe("the queue", () => {
       call.path.endsWith("/decision")
         ? new Promise<Response>((resolve) => {
             release = () =>
-              resolve(json({ match: null, fishToSend: true, likesLeft: 10, yourTurn: 0 }));
+              resolve(
+                json({ match: null, later: null, fishToSend: true, likesLeft: 10, yourTurn: 0 }),
+              );
           })
         : undefined,
     );
@@ -1046,6 +1085,7 @@ describe("the queue", () => {
       yourTurn: 0,
     });
     await show();
+    await layOut();
     await waitFor(() => expect(screen.getByText(words)).toBeTruthy());
     // The words are the card's: the next one starts without them.
     await press("Like");
@@ -1085,10 +1125,34 @@ describe("the queue", () => {
       return undefined;
     });
     await show();
+    await layOut();
     await waitFor(() => expect(screen.getByText("The photo could not be shown.")).toBeTruthy());
     await press("Like");
     expect(heading("Riikka, 31")).toBeTruthy();
     expect(screen.queryByText("The photo could not be shown.")).toBeNull();
+  });
+
+  it("asks for a card's photo further down only once the card's scroll brings it into sight (ADR-008)", async () => {
+    const photo = (n: number) => ({
+      id: `0b1c1c4e-9a8e-4a0b-9c3a-0c8d1e2f3a0${n}` as ProfileCard["photos"][number]["id"],
+      blurhash: "LEHV6nWB2yk8pyo0adR*.7kCMdnj",
+      width: 1200,
+      height: 1600,
+      caption: null,
+      description: null,
+    });
+    const withPhotos = entry(1, "Henna", "liked_you");
+    withPhotos.card.photos = [photo(1), photo(2)];
+    const { calls } = api(undefined, { ...READ, entries: [withPhotos, entry(2, "Katja")] });
+    const asked = () => calls.filter((call) => call.path.startsWith("/photos/")).map((c) => c.path);
+    await show();
+    expect(asked()).toEqual([]);
+    await layOut();
+    await settle();
+    expect(asked()).toEqual([`/photos/${photo(1).id}/card`]);
+    await scrollTo(2);
+    await settle();
+    expect(asked()).toEqual([1, 2].map((n) => `/photos/${photo(n).id}/card`));
   });
 });
 
@@ -1221,6 +1285,7 @@ describe("a queue left open past midnight", () => {
       if (call.path === `/queue/${DAY}/entries/1/decision`) {
         return json({
           match: { conversationId: CONVERSATION },
+          later: null,
           fishToSend: true,
           likesLeft: 10,
           yourTurn: 0,
@@ -1293,11 +1358,11 @@ describe("reading on past the last card (ADR-062 §1)", () => {
     const next = { ...page(entry(2, "Katja")), fishToSend: false, likesLeft: 3 };
     api(reading(page(entry(1, "Henna")), next));
     await show();
-    expect(screen.getByRole("button", { name: "Send a fish" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Send a flower" })).toBeTruthy();
     await press("Pass");
     expect(heading("Katja, 32")).toBeTruthy();
     expect(screen.getByText("3 likes left today")).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Send a fish" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Send a flower" })).toBeNull();
   });
 
   it("keeps Undo's last card through the read, and a change of it goes on to the next card", async () => {
@@ -1508,7 +1573,7 @@ describe("reading on past the last card (ADR-062 §1)", () => {
       const reads = reading(page(entry(1, "Henna", "liked_you")), page(entry(2, "Katja")));
       const sent = api((call) =>
         call.path.endsWith("/decision")
-          ? json({ match: { conversationId: CONVERSATION }, ...BUDGETS })
+          ? json({ match: { conversationId: CONVERSATION }, later: null, ...BUDGETS })
           : reads(call),
       );
       await show();
@@ -1731,7 +1796,7 @@ describe("the your-turn limit (ADR-062 §5)", () => {
 
   it.each([
     ["like", "Like"],
-    ["fish", "Send a fish"],
+    ["fish", "Send a flower"],
   ] as const)(
     "refuses a %s in words with the number, and the card stays for Pass and Later",
     async (kind, button) => {
@@ -1743,7 +1808,7 @@ describe("the your-turn limit (ADR-062 §5)", () => {
       expect(heading("Katja, 32")).toBeTruthy();
       // Nothing was spent, and nothing about the card has changed.
       expect(screen.getByText("10 likes left today")).toBeTruthy();
-      expect(screen.getByRole("button", { name: "Send a fish" })).toBeTruthy();
+      expect(screen.getByRole("button", { name: "Send a flower" })).toBeTruthy();
       expect(screen.queryByRole("button", { name: "Undo your last decision" })).toBeNull();
       noProblems();
       await press("Later");
@@ -1816,7 +1881,7 @@ describe("the your-turn limit (ADR-062 §5)", () => {
         call.path.endsWith("/decision") &&
         (call.body as { decision: string }).decision === "pass"
       )
-        return json({ ...BUDGETS, match: null, yourTurn: 9 });
+        return json({ ...BUDGETS, match: null, later: null, yourTurn: 9 });
       return limited(call) ?? asked(call);
     }, read(8));
     await show();
@@ -1911,7 +1976,7 @@ describe("where the decision buttons sit (#82)", () => {
     likesLeft: 10,
     yourTurn: 0,
   };
-  const CONTROLS = ["Undo your last decision", "Send a fish", "Later", "Pass", "Like"];
+  const CONTROLS = ["Undo your last decision", "Send a flower", "Later", "Pass", "Like"];
   /** The queue's own controls, in the order a screen reader meets them. */
   const controls = () =>
     screen
@@ -1944,14 +2009,20 @@ describe("where the decision buttons sit (#82)", () => {
 
   it("places Pass at the left and Like at the right for the right hand, the default, with the fish and Later above at the right", async () => {
     await placed(null);
-    expect(controls()).toEqual(["Send a fish", "Later", "Pass", "Like"]);
+    expect(controls()).toEqual(["Send a flower", "Later", "Pass", "Like"]);
     expect(column()).toBeNull();
     expect(onTheHandsSide()).toMatch(/\bjustify-end\b/);
     expect(onTheHandsSide()).not.toMatch(/\bflex-row-reverse\b/);
     expect(inRow("Later")).toBe(true);
     await press("Pass");
     // Undo stays in the header, above the card, as before.
-    expect(controls()).toEqual(["Undo your last decision", "Send a fish", "Later", "Pass", "Like"]);
+    expect(controls()).toEqual([
+      "Undo your last decision",
+      "Send a flower",
+      "Later",
+      "Pass",
+      "Like",
+    ]);
     expect(inColumn("Undo your last decision")).toBe(false);
     noProblems();
   });
@@ -1995,7 +2066,7 @@ describe("where the decision buttons sit (#82)", () => {
 
   it("mirrors them for the left hand: Like at the left, Pass at the right, the fish and Later on the left", async () => {
     await placed({ hand: "left" });
-    expect(controls()).toEqual(["Send a fish", "Later", "Like", "Pass"]);
+    expect(controls()).toEqual(["Send a flower", "Later", "Like", "Pass"]);
     expect(onTheHandsSide()).toMatch(/\bjustify-end\b/);
     expect(onTheHandsSide()).toMatch(/\bflex-row-reverse\b/);
     expect(inRow("Later")).toBe(true);
@@ -2015,11 +2086,11 @@ describe("where the decision buttons sit (#82)", () => {
     async (hand, side) => {
       await placed({ hand, oneHanded: true });
       expect(column()?.props.className).toMatch(side);
-      expect(controls()).toEqual(["Send a fish", "Later", "Pass", "Like"]);
+      expect(controls()).toEqual(["Send a flower", "Later", "Pass", "Like"]);
       await press("Pass");
       expect(controls()).toEqual([
         "Undo your last decision",
-        "Send a fish",
+        "Send a flower",
         "Later",
         "Pass",
         "Like",
@@ -2089,10 +2160,12 @@ describe("where the decision buttons sit (#82)", () => {
       await placed(choice);
       const line = screen.getByText("10 likes left today");
       expect(line.props.className).toMatch(side);
-      expect(line.parent?.props.testID).toBe("queue-likes-row");
+      expect(within(screen.getByTestId("queue-likes-row")).getByText("10 likes left today")).toBe(
+        line,
+      );
       expect(column()).toBeNull();
       const tree = JSON.stringify(screen.toJSON());
-      expect(tree.indexOf("10 likes left today")).toBeLessThan(tree.indexOf("Send a fish"));
+      expect(tree.indexOf("10 likes left today")).toBeLessThan(tree.indexOf("Send a flower"));
     },
   );
 
@@ -2147,22 +2220,22 @@ describe("where the decision buttons sit (#82)", () => {
       [
         "the right hand",
         { hand: "right", oneHanded: false },
-        ["Send a fish", "Later", "Pass", "Like"],
+        ["Send a flower", "Later", "Pass", "Like"],
       ],
       [
         "the left hand",
         { hand: "left", oneHanded: false },
-        ["Send a fish", "Later", "Like", "Pass"],
+        ["Send a flower", "Later", "Like", "Pass"],
       ],
       [
         "the right hand, one-handed",
         { hand: "right", oneHanded: true },
-        ["Send a fish", "Later", "Pass", "Like"],
+        ["Send a flower", "Later", "Pass", "Like"],
       ],
       [
         "the left hand, one-handed",
         { hand: "left", oneHanded: true },
-        ["Send a fish", "Later", "Pass", "Like"],
+        ["Send a flower", "Later", "Pass", "Like"],
       ],
     ] as const)(
       "keeps each button's shape, word, place and spoken name for %s",
@@ -2214,11 +2287,11 @@ describe("where the decision buttons sit (#82)", () => {
     async (style) => {
       await placed(null);
       await press("Pass");
-      const own = [outlines("Send a fish"), outlines("Undo your last decision")];
+      const own = [outlines("Send a flower"), outlines("Undo your last decision")];
       expect(own.flat()).not.toEqual([]);
       await placed({ style });
       await press("Pass");
-      expect([outlines("Send a fish"), outlines("Undo your last decision")]).toEqual(own);
+      expect([outlines("Send a flower"), outlines("Undo your last decision")]).toEqual(own);
     },
   );
 
@@ -2238,7 +2311,13 @@ describe("the likes left (#524, ADR-036 §6)", () => {
     const each = left[Symbol.iterator]();
     return (call: Call) =>
       call.path.endsWith("/decision")
-        ? json({ match: null, fishToSend: true, likesLeft: each.next().value, yourTurn: 0 })
+        ? json({
+            match: null,
+            later: null,
+            fishToSend: true,
+            likesLeft: each.next().value,
+            yourTurn: 0,
+          })
         : undefined;
   };
 
@@ -2364,7 +2443,7 @@ describe("the likes left (#524, ADR-036 §6)", () => {
 
 describe("the fish and the day's likes (#503, the maintainer's of 01/11/2026)", () => {
   const STRANGERS = { day: DAY, entries: [entry(2, "Katja"), entry(4, "Minna")], yourTurn: 0 };
-  const ALL = ["Send a fish", "Later", "Pass", "Like"];
+  const ALL = ["Send a flower", "Later", "Pass", "Like"];
   const NO_FISH = ["Later", "Pass", "Like"];
   /** What the decision bar offers, in the order a screen reader meets it. */
   const bar = () =>
@@ -2379,7 +2458,7 @@ describe("the fish and the day's likes (#503, the maintainer's of 01/11/2026)", 
     (likesLeft: number, fishToSend = true) =>
     (call: Call) =>
       call.path.endsWith("/decision")
-        ? json({ match: null, fishToSend, likesLeft, yourTurn: 0 })
+        ? json({ match: null, later: null, fishToSend, likesLeft, yourTurn: 0 })
         : undefined;
   const isA = (call: Call, ...decisions: string[]) =>
     call.path.endsWith("/decision") &&
@@ -2417,9 +2496,9 @@ describe("the fish and the day's likes (#503, the maintainer's of 01/11/2026)", 
     expect(screen.getByText(NONE_LEFT)).toBeTruthy();
     expect(bar()).toEqual(ALL);
     expect(selected("Like")).toBe(true);
-    expect(selected("Send a fish")).toBe(false);
+    expect(selected("Send a flower")).toBe(false);
     noProblems();
-    await press("Send a fish");
+    await press("Send a flower");
     expect(heading("Minna, 34")).toBeTruthy();
     expect(sent.decisions()).toEqual([`${DAY}/2 like`, `${DAY}/2 fish`]);
   });
@@ -2432,13 +2511,13 @@ describe("the fish and the day's likes (#503, the maintainer's of 01/11/2026)", 
     async (_what, fishToSend) => {
       const sent = api(leaving(0, fishToSend), { ...STRANGERS, fishToSend: true, likesLeft: 1 });
       await show();
-      await press("Send a fish");
+      await press("Send a flower");
       expect(heading("Minna, 34")).toBeTruthy();
       expect(bar()).toEqual(NO_FISH);
       await press("Undo your last decision");
       expect(heading("Katja, 32")).toBeTruthy();
       expect(bar()).toEqual(ALL);
-      expect(selected("Send a fish")).toBe(true);
+      expect(selected("Send a flower")).toBe(true);
       expect(selected("Like")).toBe(false);
       expect(selected("Pass")).toBe(false);
       noProblems();
@@ -2517,7 +2596,7 @@ describe("the fish and the day's likes (#503, the maintainer's of 01/11/2026)", 
     },
   );
 
-  it.each(["Like", "Send a fish"])(
+  it.each(["Like", "Send a flower"])(
     "takes the fish away when %s finds the day's likes spent on another phone",
     async (name) => {
       api((call) => (isA(call, "like", "fish") ? usedUp() : undefined), {
@@ -3085,12 +3164,10 @@ describe("undoing a relaxation from a card (#99, ADR-042 §6)", () => {
   });
 });
 
-describe("a star on a card (#575, ADR-064)", () => {
+describe("Later and the Later list (#681, the maintainer's of 18/11/2026)", () => {
   const KEY = "kuutti.preference.decisionButtons";
-  const STAR_ID = "7a1c1c4e-9a8e-4a0b-9c3a-0c8d1e2f3a01";
-  const CARD_STAR = `/queue/${DAY}/entries/2/star`;
-  const CLEAR = `/stars/${STAR_ID}`;
-  const FIRST = "Only you can see your stars.";
+  const FIRST = "Saved to your Later list. Only you can see it.";
+  const FULL = "Your Later list is full, so this person will come back another day.";
   const STRANGERS: QueueResponse = {
     day: DAY,
     entries: [entry(2, "Katja"), entry(4, "Minna")],
@@ -3098,216 +3175,243 @@ describe("a star on a card (#575, ADR-064)", () => {
     likesLeft: 10,
     yourTurn: 0,
   };
-  const toggle = () => screen.getByRole("button", { name: "Star: Katja" });
-  const isOn = () => toggle().props.accessibilityState?.selected === true;
-  /** What the star's icon is filled with: react-native-svg's { type: 2 } is the text's colour, and null nothing. */
-  const fill = () => {
-    const nodes = (node: HostNode | string): HostNode[] =>
-      typeof node === "string" ? [] : [node, ...(node.children ?? []).flatMap(nodes)];
-    const button = nodes(screen.toJSON() as HostNode).find(
-      (node) => node.props.accessibilityLabel === "Star: Katja",
-    );
-    return (button ? nodes(button) : []).find((node) => node.type === "RNSVGGroup")?.props.fill;
-  };
-  const put =
-    (first = false): Answer =>
+  /** Later answered as the API answers it, with where it put the person. */
+  const later =
+    (said: "first" | "listed" | "full" | "not_listed"): Answer =>
     (call) =>
-      call.path === CARD_STAR && call.method === "PUT" ? json({ id: STAR_ID, first }) : undefined;
-  const thenClear =
-    (first?: boolean): Answer =>
-    (call) =>
-      call.path === CLEAR && call.method === "DELETE" ? noContent() : put(first)(call);
+      call.path.endsWith("/decision") && (call.body as { decision: string }).decision === "skip"
+        ? json({ match: null, later: said, fishToSend: true, likesLeft: 10, yourTurn: 0 })
+        : undefined;
 
-  it("fills on a tap and clears on a second, in words and in its icon, and the card stays", async () => {
-    const { calls } = api(thenClear(), STRANGERS);
-    await show();
-    expect(within(toggle()).getByText("Star")).toBeTruthy();
-    expect(isOn()).toBe(false);
-    expect(fill()).toBeNull();
-
-    await press("Star: Katja");
-
-    expect(isOn()).toBe(true);
-    expect(within(toggle()).getByText("Starred")).toBeTruthy();
-    expect(fill()).toEqual({ type: 2 });
-    expect(heading("Katja, 32")).toBeTruthy();
-
-    await press("Star: Katja");
-
-    expect(isOn()).toBe(false);
-    expect(within(toggle()).getByText("Star")).toBeTruthy();
-    expect(heading("Katja, 32")).toBeTruthy();
-    expect(calls.filter((c) => c.path.endsWith("/decision"))).toEqual([]);
-    expect(calls.filter((c) => c.path === "/queue/today")).toHaveLength(1);
-  });
-
-  it("says that only the person sees it when it is the first", async () => {
-    api(put(true), STRANGERS);
+  it("says once, after the first Later, where it put the person and that only they see it", async () => {
+    api(later("first"), STRANGERS);
     await show();
 
-    await press("Star: Katja");
+    await press("Later");
 
+    expect(heading("Minna, 34")).toBeTruthy();
     expect(screen.getByText(FIRST).props.accessibilityLiveRegion).toBe("polite");
     expect(announced()).toContain(FIRST);
-  });
-
-  it.each([
-    ["fi-FI", "Tähti: Katja", "Vain sinä näet tähtesi."],
-    ["sv-FI", "Stjärna: Katja", "Bara du ser dina stjärnor."],
-  ])("says who sees a first star in %s, and only that (#581)", async (languageTag, star, words) => {
-    (useLocales as jest.Mock).mockReturnValue([{ languageTag }]);
-    api(put(true), STRANGERS);
-    await show();
-    await press(star);
-    expect(screen.getByText(words)).toBeTruthy();
-  });
-
-  it("says nothing of that on a later star", async () => {
-    api(put(false), STRANGERS);
-    await show();
-
-    await press("Star: Katja");
-
+    await press("Pass");
     expect(screen.queryByText(FIRST)).toBeNull();
   });
 
-  it("says in words when the list is full, and the card keeps no star", async () => {
-    api((call) => (call.path === CARD_STAR ? refusal("stars_full", 409) : undefined), STRANGERS);
+  it.each([
+    ["fi-FI", "Myöhemmin", "Tallennettu Myöhemmin-listallesi. Vain sinä näet sen."],
+    ["sv-FI", "Senare", "Sparad i din Senare-lista. Bara du ser den."],
+  ])("says who sees the list in %s, and only that (#581)", async (languageTag, button, words) => {
+    (useLocales as jest.Mock).mockReturnValue([{ languageTag }]);
+    api(later("first"), STRANGERS);
     await show();
-
-    await press("Star: Katja");
-
-    expect(
-      screen.getByText("You have as many stars as you can have. Take one off to add another."),
-    ).toBeTruthy();
-    expect(isOn()).toBe(false);
-    expect(heading("Katja, 32")).toBeTruthy();
+    await press(button);
+    expect(liveLines()).toEqual([words]);
   });
 
-  it("says it was not saved when it fails, and the card stays as it was", async () => {
-    api((call) => (call.path === CARD_STAR ? refusal("internal", 500) : undefined), STRANGERS);
+  it.each([["listed"], ["not_listed"]] as const)(
+    "says nothing after a Later the API answers %s, and moves on",
+    async (said) => {
+      api(later(said), STRANGERS);
+      await show();
+
+      await press("Later");
+
+      expect(heading("Minna, 34")).toBeTruthy();
+      expect(liveLines()).toEqual([]);
+    },
+  );
+
+  it("asks every decision's answer for where a Later left the person (#745)", async () => {
+    const { calls } = api(undefined, STRANGERS);
     await show();
 
-    await press("Star: Katja");
+    await press("Like");
+    await press("Later");
 
-    expect(screen.getByText("That did not go through. Try again.")).toBeTruthy();
-    expect(isOn()).toBe(false);
+    // The API names `later` only to an app that asks: a store build's own
+    // JavaScript, from before the list, reads the answer without it.
+    expect(calls.filter((c) => c.path.endsWith("/decision")).map((c) => c.body)).toEqual([
+      { decision: "like", later: true },
+      { decision: "skip", later: true },
+    ]);
   });
 
-  it("reads the new day when the day has ended", async () => {
-    const { reads } = api(
-      (call) => (call.path === CARD_STAR ? refusal("day_ended", 409) : undefined),
+  it("takes an answer with no word on Later, says nothing, and moves on", async () => {
+    const sent = api(
+      (call) =>
+        call.path.endsWith("/decision")
+          ? json({ match: null, fishToSend: true, likesLeft: 10, yourTurn: 0 })
+          : undefined,
       STRANGERS,
     );
     await show();
 
-    await press("Star: Katja");
+    await press("Later");
 
-    expect(reads()).toBe(2);
-    expect(screen.getByText("That day ended at midnight, so this was not saved.")).toBeTruthy();
-  });
-
-  it("takes a card gone off the screen, in words", async () => {
-    api((call) => (call.path === CARD_STAR ? refusal("not_found", 404) : undefined), STRANGERS);
-    await show();
-
-    await press("Star: Katja");
-
-    expect(screen.getByText("That card is no longer available.")).toBeTruthy();
     expect(heading("Minna, 34")).toBeTruthy();
+    expect(liveLines()).toEqual([]);
+    expect(sent.decisions()).toEqual([`${DAY}/2 skip`]);
   });
 
-  it("reads a star gone meanwhile as off, and the card stays", async () => {
-    const held: QueueResponse = {
-      ...STRANGERS,
-      entries: [{ ...entry(2, "Katja"), star: STAR_ID }, entry(4, "Minna")],
-    };
-    api((call) => (call.path === CLEAR ? refusal("not_found", 404) : undefined), held);
+  it("says the list is full after a Later at its most, and moves on all the same", async () => {
+    const sent = api(later("full"), STRANGERS);
     await show();
-    expect(isOn()).toBe(true);
 
-    await press("Star: Katja");
+    await press("Later");
 
-    expect(isOn()).toBe(false);
-    expect(heading("Katja, 32")).toBeTruthy();
-    expect(screen.queryByText("That card is no longer available.")).toBeNull();
-  });
-
-  it("reads back a star the API says stands on the card", async () => {
-    api(undefined, {
-      ...STRANGERS,
-      entries: [{ ...entry(2, "Katja"), star: STAR_ID }],
-    });
-    await show();
-    expect(isOn()).toBe(true);
-    expect(within(toggle()).getByText("Starred")).toBeTruthy();
+    expect(heading("Minna, 34")).toBeTruthy();
+    expect(screen.getByText(FULL).props.accessibilityLiveRegion).toBe("polite");
+    expect(sent.decisions()).toEqual([`${DAY}/2 skip`]);
   });
 
   it.each([
-    ["Like", "Like"],
-    ["Pass", "Pass"],
-    ["Send a fish", "Send a fish"],
-  ])("is gone from a card %s was chosen on, once Undo brings it back", async (_name, button) => {
-    api(put(), STRANGERS);
-    await show();
-    await press("Star: Katja");
-
-    await press(button);
-    await press("Undo your last decision");
-
-    expect(heading("Katja, 32")).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Star: Katja" })).toBeNull();
-  });
-
-  it("does not come back when a like is taken back: the like took it off", async () => {
-    api(put(), STRANGERS);
-    await show();
-    await press("Star: Katja");
-
-    await press("Like");
-    await press("Undo your last decision");
-    await press("Later");
-    await press("Undo your last decision");
-
-    expect(isOn()).toBe(false);
-  });
-
-  it("stays on a card Later was chosen on, and can be cleared there", async () => {
-    api(thenClear(), STRANGERS);
-    await show();
-    await press("Star: Katja");
-
-    await press("Later");
-    expect(heading("Minna, 34")).toBeTruthy();
-    await press("Undo your last decision");
-
-    expect(isOn()).toBe(true);
-    await press("Star: Katja");
-    expect(isOn()).toBe(false);
-  });
-
-  it("is a named control of the card's own, with its target, and no problem to a screen reader", async () => {
-    api(undefined, STRANGERS);
-    await show();
-    const row = screen.getByText("Matches your filters").parent?.parent;
-    expect(row && within(row).getByRole("button", { name: "Star: Katja" })).toBeTruthy();
-    expect(screen.queryByTestId("queue-one-handed")).toBeNull();
-    noProblems();
-  });
-
-  it("comes down to the thumb's column with Undo, one-handed, and leaves the card", async () => {
-    store.set(KEY, JSON.stringify({ hand: "right", oneHanded: true }));
+    ["the right hand", {}],
+    ["the left hand", { hand: "left" }],
+    ["one hand", { oneHanded: true }],
+  ])("draws no star on a card, for %s: Later is the way to the list", async (_, choice) => {
+    store.set(KEY, JSON.stringify(choice));
     api(undefined, STRANGERS);
     await show();
     await settle();
-    const column = screen.getByTestId("queue-one-handed");
-    expect(within(column).getByRole("button", { name: "Star: Katja" })).toBeTruthy();
-    expect(screen.getAllByRole("button", { name: "Star: Katja" })).toHaveLength(1);
+    expect(screen.queryByRole("button", { name: /star/i })).toBeNull();
+    expect(screen.getByRole("button", { name: "Later" })).toBeTruthy();
     noProblems();
+  });
+
+  it("takes no star off when Undo brings back a card Later put on the list", async () => {
+    const { calls } = api(later("listed"), STRANGERS);
+    await show();
+    await press("Later");
+    await press("Undo your last decision");
+
+    expect(heading("Katja, 32")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Later" }).props.accessibilityState?.selected).toBe(
+      true,
+    );
+    expect(calls.filter((c) => c.path.startsWith("/stars"))).toEqual([]);
   });
 });
 
-describe("a card opened from the Starred list (#575, ADR-064 §2)", () => {
+describe("the buttons floating over the card (#681, the maintainer's of 18/11/2026)", () => {
+  const KEY = "kuutti.preference.decisionButtons";
+  const STRANGERS: QueueResponse = {
+    day: DAY,
+    entries: [entry(2, "Katja"), entry(4, "Minna")],
+    fishToSend: true,
+    likesLeft: 10,
+    yourTurn: 0,
+  };
+  const laidOut = async (height: number) => {
+    await act(async () => {
+      fireEvent(screen.getByTestId("queue-float"), "layout", {
+        nativeEvent: { layout: { x: 0, y: 0, width: 375, height } },
+      });
+    });
+  };
+
+  it.each([
+    ["the right hand", {}],
+    ["the left hand", { hand: "left" }],
+    ["one hand", { oneHanded: true }],
+  ])(
+    "floats over the card for %s, passing touches between the buttons, and the card's end scrolls clear of them",
+    async (_, choice) => {
+      store.set(KEY, JSON.stringify(choice));
+      api(undefined, STRANGERS);
+      await show();
+      await settle();
+      const bar = screen.getByTestId("queue-float");
+      expect(bar.props.className).toMatch(/\babsolute\b/);
+      expect(bar.props.className).toMatch(/\bbottom-0\b/);
+      expect(bar.props.className).not.toMatch(/\b(border-t|bg-background)\b/);
+      expect(bar.props.pointerEvents).toBe("box-none");
+
+      await laidOut(148);
+
+      expect(StyleSheet.flatten(screen.getByTestId("queue-float-room").props.style)).toEqual({
+        height: 148,
+      });
+      noProblems();
+    },
+  );
+
+  it("stands each piece on its own fill, in its own shape", async () => {
+    api(undefined, STRANGERS);
+    await show();
+    for (const [name, shape] of [
+      ["Like", /\brounded-full\b/],
+      ["Pass", /\brounded-md\b/],
+      ["Later", /\brounded-full\b/],
+      ["Send a flower", /\brounded-lg\b/],
+    ] as const) {
+      const piece = screen.getByRole("button", { name }).parent;
+      expect(piece?.props.className).toMatch(/\bbg-background\b/);
+      expect(piece?.props.className).toMatch(shape);
+    }
+  });
+
+  it("leaves no room under the queue's end, where nothing floats", async () => {
+    api(undefined, { ...STRANGERS, entries: [] });
+    await show();
+    expect(screen.getByText("That's everybody for now.")).toBeTruthy();
+    expect(screen.queryByTestId("queue-float")).toBeNull();
+    expect(screen.queryByTestId("queue-float-room")).toBeNull();
+  });
+
+  it("keeps Undo floating at the thumb, one-handed, after the queue's last decision", async () => {
+    store.set(KEY, JSON.stringify({ oneHanded: true }));
+    api(undefined, { ...STRANGERS, entries: [entry(2, "Katja")] });
+    await show();
+    await settle();
+    await press("Pass");
+    expect(screen.getByText("That's everybody for now.")).toBeTruthy();
+    const bar = screen.getByTestId("queue-float");
+    expect(
+      within(bar).getByRole("button", { name: "Undo your last decision" }).parent?.props.className,
+    ).toMatch(/\bbg-background\b/);
+    expect(screen.getByTestId("queue-one-handed").props.pointerEvents).toBe("box-none");
+  });
+});
+
+describe("the queue's end and the Later list (#681)", () => {
+  const PERSON = {
+    id: "7a1c1c4e-9a8e-4a0b-9c3a-0c8d1e2f3a01",
+    name: "Katja",
+    age: 32,
+    photo: null,
+  };
+  const END: QueueResponse = {
+    day: DAY,
+    entries: [],
+    fishToSend: true,
+    likesLeft: 10,
+    yourTurn: 0,
+  };
+
+  it("offers the Later list where the queue ends while it shows somebody, in the queue's place", async () => {
+    api((call) => (call.path === "/stars" ? json({ items: [PERSON] }) : undefined), END);
+    await show();
+
+    expect(screen.getByText("That's everybody for now.")).toBeTruthy();
+    await press("Later list");
+
+    expect(router.replace).toHaveBeenCalledWith("/stars");
+    expect(router.push).not.toHaveBeenCalledWith("/stars");
+    noProblems();
+  });
+
+  it.each([
+    ["shows nobody", () => json({ items: [] })],
+    ["cannot be read", () => refusal("internal", 500)],
+  ])("offers no way to the list where the queue ends when the list %s", async (_, answer) => {
+    api((call) => (call.path === "/stars" ? answer() : undefined), END);
+    await show();
+
+    expect(screen.getByText("That's everybody for now.")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Later list" })).toBeNull();
+  });
+});
+
+describe("a card opened from the Later list (#575, ADR-064 §2, #681)", () => {
   const STAR_ID = "7a1c1c4e-9a8e-4a0b-9c3a-0c8d1e2f3a01";
   const OPEN = `/stars/${STAR_ID}/open`;
   const OPENED: QueueResponse = {
@@ -3325,18 +3429,16 @@ describe("a card opened from the Starred list (#575, ADR-064 §2)", () => {
     await renderWithTheme(<QueueScreen star={STAR_ID} />);
     await settle();
   };
-  const BACK = "Back to Starred";
+  const BACK = "Back to Later list";
 
-  it("shows that one card with the star on it, reports it seen, and reads no queue", async () => {
+  it("shows that one card under the list's name, reports it seen, and reads no queue", async () => {
     const { seen, reads } = api(opening());
     await showStar();
 
     expect(heading("Katja, 39")).toBeTruthy();
     expect(screen.getByText("Seen before")).toBeTruthy();
-    expect(
-      screen.getByRole("button", { name: "Star: Katja" }).props.accessibilityState?.selected,
-    ).toBe(true);
-    expect(screen.getByRole("heading", { name: "Starred" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Later" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /star/i })).toBeNull();
     expect(screen.getByRole("button", { name: BACK })).toBeTruthy();
     expect(seen()).toEqual([9]);
     expect(reads()).toBe(0);
@@ -3364,7 +3466,7 @@ describe("a card opened from the Starred list (#575, ADR-064 §2)", () => {
 
     expect(decisions()).toEqual([`${DAY}/9 pass`]);
     // The title and the way back, with Undo's icon in the header: no line, and no word of the queue's end.
-    expect(said()).toEqual(["Starred", BACK]);
+    expect(said()).toEqual(["Later", BACK]);
     expect(screen.getByRole("button", { name: "Undo your last decision" })).toBeTruthy();
     expect(takenTo()).toEqual({ event: "focus", role: "button", words: [BACK] });
     noProblems();
@@ -3411,7 +3513,7 @@ describe("a card opened from the Starred list (#575, ADR-064 §2)", () => {
     await press("Done");
 
     await waitFor(() => expect(screen.getAllByRole("button", { name: BACK })).toHaveLength(2));
-    expect(said()).toEqual(["Starred", BACK]);
+    expect(said()).toEqual(["Later", BACK]);
     expect(takenTo()).toEqual({ event: "focus", role: "button", words: [BACK] });
     expect(decisions()).toEqual([]);
     expect(reads()).toBe(0);
@@ -3423,6 +3525,7 @@ describe("a card opened from the Starred list (#575, ADR-064 §2)", () => {
       call.path.endsWith("/decision")
         ? json({
             match: { conversationId: CONVERSATION },
+            later: null,
             fishToSend: true,
             likesLeft: 10,
             yourTurn: 0,
@@ -3491,6 +3594,7 @@ describe("a match as a hello, in the designers' try", () => {
     call.path === `/queue/${DAY}/entries/${position}/decision`
       ? json({
           match: { conversationId: CONVERSATION },
+          later: null,
           fishToSend: true,
           likesLeft: 10,
           yourTurn: 0,
@@ -3537,7 +3641,7 @@ describe("a match as a hello, in the designers' try", () => {
     api(matchOn(2));
     await show();
     await press("Pass");
-    await press("Send a fish");
+    await press("Send a flower");
     expect(heading("Well, hello!")).toBeTruthy();
     expect(screen.getByRole("image", { name: "You and Katja" })).toBeTruthy();
   });
@@ -3806,6 +3910,303 @@ describe("a match as a hello, in the designers' try", () => {
 
       await press("Say hello");
       expect(router.push).toHaveBeenCalledWith(`/chats/${CONVERSATION}`);
+    });
+  });
+});
+
+// Kumpa, the look a phone starts in since the HS design (20/11/2026): the card
+// is a poster and Pass, Like and Later are round buttons with their words under
+// them, in today's order and with today's outcomes.
+describe("in the Kumpa look", () => {
+  beforeEach(() => store.set("kuutti.preference.look", "kumpa"));
+
+  it("shows the poster card with its reason and decides each with a round button", async () => {
+    const sent = api();
+    await show();
+    expect(heading("Henna, 31")).toBeTruthy();
+    expect(screen.getByText("Liked you")).toBeTruthy();
+    const decisions = screen
+      .getAllByRole("button")
+      .map((button) => button.props.accessibilityLabel)
+      .filter((label) => label === "Like" || label === "Pass" || label === "Later");
+    expect(decisions).toEqual(["Pass", "Like", "Later"]);
+    // Each round button's word is inside its press: one target, one name.
+    for (const name of ["Pass", "Like", "Later"]) {
+      const button = screen.getByRole("button", { name });
+      expect(within(button).getByText(name, { includeHiddenElements: true })).toBeTruthy();
+    }
+    noProblems();
+
+    await press("Like");
+    expect(heading("Katja, 32")).toBeTruthy();
+    await press("Pass");
+    expect(heading("Minna, 34")).toBeTruthy();
+    expect(sent.decisions()).toEqual([`${DAY}/1 like`, `${DAY}/2 pass`]);
+  });
+
+  /** A round button, its words, and the margin and touches of the room they stand in. */
+  const roundButton = (name: string) => {
+    const button = screen.getByRole("button", { name });
+    const words = within(button).getAllByText(/\S/, { includeHiddenElements: true });
+    let room = {};
+    for (let node = words[0]?.parent; node && node !== button; node = node.parent) {
+      const reach = /(?:^|\s)(-mx-\S+)/.exec(String(node.props.className ?? ""))?.[1];
+      if (reach) room = { reach, pointerEvents: node.props.pointerEvents };
+    }
+    return { button, words, room };
+  };
+
+  // No word under a round button breaks in the middle, at any text size (#753,
+  // #467). A test cannot measure text, so it holds what frees the words: each
+  // disc keeps its width and its target, the words at the row's ends may take
+  // the row's gap on each side of their discs while Like's keeps to its own, so
+  // two words never meet, and each word is a line of its own, which shrinks
+  // only when it alone is wider than its room.
+  it.each([
+    ["en-US", "Pass", "Like", "Later"],
+    ["fi-FI", "Ohita", "Tykkää", "Myöhemmin"],
+    ["sv-FI", "Hoppa över", "Gilla", "Senare"],
+  ] as const)(
+    "gives each round button's word room past its disc in %s, broken only between words",
+    async (languageTag, pass, like, later) => {
+      (useLocales as jest.Mock).mockReturnValue([{ languageTag }]);
+      api();
+      await show();
+      const row = roundButton(like).button.parent;
+      expect(row?.props.className).toMatch(/\bflex-row\b/);
+      expect(row?.props.className).not.toMatch(/\bflex-wrap\b/);
+      const gap = /(?:^|\s)gap-(\S+)/.exec(String(row?.props.className))?.[1];
+      for (const [name, reach] of [
+        [pass, `-mx-${gap}`],
+        [like, undefined],
+        [later, `-mx-${gap}`],
+      ] as const) {
+        const { button, words, room } = roundButton(name);
+        expect(button.props.className).toMatch(/\bmax-w-\[92px\]/);
+        expect(StyleSheet.flatten(button.props.style)).toMatchObject({
+          minHeight: TOUCH_TARGET,
+          minWidth: TOUCH_TARGET,
+        });
+        expect(words.map((word) => word.props.children)).toEqual(name.split(" "));
+        for (const word of words) {
+          expect(word.props).toMatchObject({ numberOfLines: 1, adjustsFontSizeToFit: true });
+        }
+        expect(room).toEqual(reach ? { reach, pointerEvents: "box-none" } : {});
+      }
+      noProblems();
+    },
+  );
+});
+
+describe("a like that names a part of the card (#463, ADR-077)", () => {
+  const SUNDAY: ProfileCard["prompts"][number] = { key: "sunday", answer: "A long breakfast." };
+  const THUMB = {
+    id: PHOTO,
+    blurhash: "LEHV6nWB2yk8pyo0adR*.7kCMdnj",
+    width: 1200,
+    height: 1600,
+    caption: null,
+    description: null,
+  };
+  /** A card with a part of each kind: a photo, an answered prompt, the bio and a shared hobby. */
+  const withParts = (each: QueueEntry): QueueEntry => ({
+    ...each,
+    card: {
+      ...each.card,
+      photos: [THUMB],
+      bio: "Long walks.",
+      prompts: [SUNDAY],
+      fields: { hobbies: ["yoga"] },
+      shared: { ...each.card.shared, hobbies: ["yoga"] },
+    },
+  });
+  const queueOf = (...entries: QueueEntry[]): QueueResponse => ({ ...READ, entries });
+  const bodies = (sent: ReturnType<typeof api>) =>
+    sent.calls.filter((call) => call.path.endsWith("/decision")).map((call) => call.body);
+  /** The line floating over the buttons, or null. */
+  const line = () => screen.queryByTestId("queue-anchor")?.props.children ?? null;
+  const hintOf = (name: string) => screen.getByRole("button", { name }).props.accessibilityHint;
+  const PROMPT = "My ideal Sunday: A long breakfast.";
+
+  it("names the part picked in the like, and says it over the buttons and as Like's hint", async () => {
+    const sent = api(undefined, queueOf(withParts(entry(2, "Katja")), entry(4, "Minna")));
+    await show();
+    expect(line()).toBeNull();
+    expect(hintOf("Like")).toBeUndefined();
+
+    await press(PROMPT);
+    expect(line()).toBe("Liking their answer to: My ideal Sunday");
+    expect(hintOf("Like")).toBe("Liking their answer to: My ideal Sunday");
+    expect(hintOf("Send a flower")).toBe("Liking their answer to: My ideal Sunday");
+    expect(screen.getByRole("button", { name: "Name no part in your like" })).toBeTruthy();
+    noProblems();
+
+    await press("Like");
+    expect(bodies(sent)).toEqual([
+      { decision: "like", later: true, anchor: { kind: "prompt", prompt: "sunday" } },
+    ]);
+    // The next card starts with nothing picked.
+    expect(heading("Minna, 34")).toBeTruthy();
+    expect(line()).toBeNull();
+    expect(hintOf("Like")).toBeUndefined();
+  });
+
+  it.each([
+    ["the photo", "Photo 1 of 1", { kind: "photo", photoId: PHOTO }, "Liking their photo"],
+    ["the bio", "Long walks.", { kind: "bio" }, "Liking their bio"],
+    [
+      "a shared answer",
+      "Hobbies: Yoga, shared",
+      { kind: "shared", field: "hobbies", option: "yoga" },
+      "Liking what you share: Yoga",
+    ],
+  ] as const)("names %s in words and in the like", async (_, part, anchor, words) => {
+    const sent = api(undefined, queueOf(withParts(entry(2, "Katja"))));
+    await show();
+    await press(part);
+    expect(line()).toBe(words);
+    await press("Like");
+    expect(bodies(sent)).toEqual([{ decision: "like", later: true, anchor }]);
+  });
+
+  it("names nothing once Clear or a second tap took the pick back", async () => {
+    const sent = api(
+      undefined,
+      queueOf(withParts(entry(2, "Katja")), withParts(entry(4, "Minna", "seen_before"))),
+    );
+    await show();
+    await press("Long walks.");
+    await press("Name no part in your like");
+    expect(line()).toBeNull();
+    expect(screen.getByRole("button", { name: "Long walks." }).props.accessibilityState).toEqual({
+      selected: false,
+    });
+    await press("Like");
+
+    await press(PROMPT);
+    await press(PROMPT);
+    expect(line()).toBeNull();
+    await press("Like");
+    expect(bodies(sent)).toEqual([
+      { decision: "like", later: true },
+      { decision: "like", later: true },
+    ]);
+  });
+
+  it("names the part in a flower too, and nothing in a pass or Later", async () => {
+    const sent = api(
+      undefined,
+      queueOf(
+        withParts(entry(2, "Katja")),
+        withParts(entry(4, "Minna", "seen_before")),
+        withParts(entry(5, "Noora")),
+      ),
+    );
+    await show();
+    await press("Long walks.");
+    await press("Send a flower");
+    await press("Long walks.");
+    await press("Pass");
+    await press("Long walks.");
+    await press("Later");
+    expect(bodies(sent)).toEqual([
+      { decision: "fish", later: true, anchor: { kind: "bio" } },
+      { decision: "pass", later: true },
+      { decision: "skip", later: true },
+    ]);
+  });
+
+  it("keeps the pick on a card Undo brings back, and names it again in a changed decision", async () => {
+    const sent = api(undefined, queueOf(withParts(entry(2, "Katja")), entry(4, "Minna")));
+    await show();
+    await press("Long walks.");
+    await press("Like");
+    await press("Undo your last decision");
+    expect(heading("Katja, 32")).toBeTruthy();
+    expect(line()).toBe("Liking their bio");
+    expect(screen.getByRole("button", { name: "Long walks." }).props.accessibilityState).toEqual({
+      selected: true,
+    });
+    await press(PROMPT);
+    await press("Like");
+    expect(bodies(sent).map((body) => (body as { anchor?: unknown }).anchor)).toEqual([
+      { kind: "bio" },
+      { kind: "prompt", prompt: "sunday" },
+    ]);
+  });
+
+  it("clears a pick the API finds gone from the card, says so, and keeps the card for another like", async () => {
+    const sent = api(
+      (call) =>
+        call.path.endsWith("/decision") && (call.body as { anchor?: unknown }).anchor
+          ? refusal("anchor_not_on_card", 400)
+          : undefined,
+      queueOf(withParts(entry(2, "Katja")), entry(4, "Minna")),
+    );
+    await show();
+    await press("Long walks.");
+    await press("Like");
+    expect(
+      screen.getByText(
+        "That part of their card has changed since. Pick another, or like without one.",
+      ),
+    ).toBeTruthy();
+    expect(heading("Katja, 32")).toBeTruthy();
+    expect(line()).toBeNull();
+    expect(screen.queryByTestId("part-picked")).toBeNull();
+
+    await press("Like");
+    expect(heading("Minna, 34")).toBeTruthy();
+    expect(bodies(sent)).toEqual([
+      { decision: "like", later: true, anchor: { kind: "bio" } },
+      { decision: "like", later: true },
+    ]);
+  });
+
+  describe("on a card that answers a like", () => {
+    it.each([
+      ["liked_you", { kind: "prompt", prompt: "sunday" }, "Liked your answer to: My ideal Sunday"],
+      ["liked_you", { kind: "bio" }, "Liked your bio"],
+      [
+        "fish",
+        { kind: "shared", field: "languages", option: "fi" },
+        "Liked what you share: Finnish",
+      ],
+    ] as const)("a %s card says the part its like named: %j", async (reason, part, words) => {
+      api(undefined, queueOf({ ...entry(1, "Henna", reason), likedYour: part }));
+      await show();
+      expect(screen.getByTestId("queue-liked-your").props.accessibilityLabel).toBe(words);
+      expect(screen.getByText(words)).toBeTruthy();
+    });
+
+    it("shows a photo it named as a small copy of the reader's own, heard as the words alone", async () => {
+      const sent = api(
+        undefined,
+        queueOf({ ...entry(1, "Henna", "liked_you"), likedYour: { kind: "photo", photo: THUMB } }),
+      );
+      await show();
+      const liked = screen.getByTestId("queue-liked-your");
+      expect(liked.props.accessible).toBe(true);
+      expect(liked.props.accessibilityLabel).toBe("Liked your photo");
+      expect(within(liked).getByText("Liked your photo")).toBeTruthy();
+      await waitFor(() =>
+        expect(sent.calls.map((call) => call.path)).toContain(`/photos/${PHOTO}/thumb`),
+      );
+    });
+
+    it("says nothing where the like named nothing, or on a card that answers no like", async () => {
+      api(
+        undefined,
+        queueOf(entry(1, "Henna", "liked_you"), {
+          ...entry(2, "Katja"),
+          likedYour: { kind: "bio" },
+        }),
+      );
+      await show();
+      expect(screen.queryByTestId("queue-liked-your")).toBeNull();
+      await press("Like");
+      expect(heading("Katja, 32")).toBeTruthy();
+      expect(screen.queryByTestId("queue-liked-your")).toBeNull();
     });
   });
 });

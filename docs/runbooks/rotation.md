@@ -36,12 +36,12 @@ There is no rotation calendar. Rotate when a value may have been seen by someone
 | `/kuutti/<env>/origin-secret`, and the key `origin-secret` of the store `kuutti-<env>-origin-proof` | SSM SecureString; a CloudFront key value store; the offline medium | the API at boot; the distribution's CloudFront Function on every request | maintainer | 17 |
 | session and admin-session tokens, sign-in codes | hashes in the database | the API | nothing to rotate | 8 |
 | `DOKPLOY_TOKEN`, the Dokploy admin login | GitHub environments; Dokploy | `deploy.yml` | the Dokploy admin and a repository admin | 9 |
-| `EXPO_TOKEN` | GitHub environments `staging`, `prod`; `preview-cleanup` until the maintainer deletes it (ADR-070, Open, 5) | `deploy.yml`, `eas-build.yml` | an Expo owner or Admin and a repository admin | 10 |
+| `EXPO_TOKEN` | GitHub environments `staging`, `prod` | `deploy.yml`, `eas-build.yml` | an Expo owner or Admin and a repository admin | 10 |
 | `SENTRY_AUTH_TOKEN`; the two DSNs | GitHub environments `staging`, `prod`; EAS environments `preview`, `production`; SSM `sentry-dsn` (String) | `deploy.yml`, EAS builds; the API and the app | the Sentry owner and a repository admin | 11 |
 | GitHub variables, AWS access from CI | repository and environment variables; OIDC roles | the workflows | an owner | 12 |
 | `FONTS_TOKEN`, read-only on `kuutti-ry/kumpa-app-fonts` alone | EAS environments `preview`, `production`, visibility secret. Never GitHub. The website's Amplify app holds a token of its own, rotated in `kumpa-app-site` (its decision 18) | EAS builds, `eas-build-pre-install` (`scripts/fonts.ts`, ADR-052) | the maintainer | 13 |
-| the Google Play service account's JSON key; Play's upload key, EAS's keystore of `fi.kuutti.app` | EAS's credentials of `fi.kuutti.app`, no other copy. Never GitHub | EAS Submit and EAS builds, for any holder of `EXPO_TOKEN`; the `staging` profile's `--auto-submit` (ADR-057) | the maintainer (Google Cloud, expo.dev, Play Console) | 14 |
-| the App Store Connect API key of the association's Apple team; its APNs key | EAS's credentials of the team and of `fi.kuutti.app`, no other copy. Never GitHub | EAS Submit, for any holder of `EXPO_TOKEN`, through the `staging` profile's `--auto-submit` (ADR-063); Expo's push service (ADR-055) | the maintainer, as the team's Account Holder (App Store Connect, the developer site, expo.dev) | 15 |
+| the Google Play service account's JSON key; Play's upload key, EAS's keystore of `fi.kumpa` | EAS's credentials of `fi.kumpa`, no other copy. Never GitHub | EAS Submit and EAS builds, for any holder of `EXPO_TOKEN`; the `staging` profile's `--auto-submit` (ADR-057) | the maintainer (Google Cloud, expo.dev, Play Console) | 14 |
+| the App Store Connect API key of the association's Apple team; its APNs key | EAS's credentials of the team and of `fi.kumpa`, no other copy. Never GitHub | EAS Submit, for any holder of `EXPO_TOKEN`, through the `staging` profile's `--auto-submit` (ADR-063); Expo's push service (ADR-055) | the maintainer, as the team's Account Holder (App Store Connect, the developer site, expo.dev) | 15 |
 
 ## 1. Database application password
 
@@ -103,7 +103,7 @@ The `--query` of the first line prints the version numbers and dates only, never
 
 ## 2. Database preview password: gone
 
-The previews went on 2026-11-16 (ADR-070), and with them the role `kuutti_preview` and `/kuutti/staging/db-preview-password`, which the maintainer drops and deletes (ADR-070, Open, 3). The number stays, so that the other sections keep theirs.
+The previews went on 2026-11-16 (ADR-070), and with them `/kuutti/staging/db-preview-password` and the role `kuutti_preview`, deleted and dropped on 2026-11-18 (ADR-070, Open, 3). The number stays, so that the other sections keep theirs.
 
 ## 3. Database master password
 
@@ -219,7 +219,7 @@ gh secret set DOKPLOY_TOKEN --env staging            # the admin's key
 
 Then delete the old key on the same Dokploy page.
 
-Until the maintainer deletes it (ADR-070, Open, 4), the member `ci-preview` has a key of its own, limited to the `previews` project, in the environment `preview-cleanup`. After a leak, delete that key too, on the member's Settings, Profile page; nothing on `main` uses it.
+The previews' member `ci-preview` had a key of its own, limited to the `previews` project. Its copy in GitHub went with the environment `preview-cleanup`, and the member was removed from staging's Dokploy on 2026-11-18, its key with it (ADR-070, Open, 4): the owner is the only member, and no second key is left to delete after a leak.
 
 **Check.** The next deploy's step "Point the Dokploy application at the image and deploy" passes.
 
@@ -229,7 +229,7 @@ The Dokploy admin password and its two-factor authentication are changed in the 
 
 ## 10. Expo robot token
 
-`EXPO_TOKEN` is the authority to publish updates to every channel, `production` included, because updates are not code-signed (ADR-004). It exists in the environments `staging` and `prod`, and in `preview-cleanup` until the maintainer deletes it (ADR-070, Open, 5), never at repository level (security checklist). Revoking the old token at Expo ends those copies too.
+`EXPO_TOKEN` is the authority to publish updates to every channel, `production` included, because updates are not code-signed (ADR-004). It exists in the environments `staging` and `prod`, never at repository level (security checklist). Revoking the old token at Expo ends those copies too. The environments `preview` and `preview-cleanup` are deleted, which revoked nothing. The token made with `preview-cleanup` was revoked at Expo on 2026-11-18, and the robot has one token left, the one `staging` and `prod` hold. What `preview` held can no longer be read: if it was this token, every branch could read it until 2026-11-16, and only the rotation below ends such a copy (ADR-070, Open, 5).
 
 **Steps.** On expo.dev, as the organisation's owner or Admin, create a new access token for the robot user (Developer role; `apps/mobile/README.md`, Setting up EAS). Then:
 
@@ -285,10 +285,10 @@ Personal Sentry tokens made for settings work are revoked when the work is done 
 
 ## 14. Google Play: the service account key and the upload key
 
-**The service account key** lets EAS upload a bundle to Google Play and release it on the app's testing tracks, never to production (ADR-057 §3). It lives in one place, EAS's credentials of `fi.kuutti.app` (Service credentials, the Google service account key for EAS Submit), and no copy is kept, on a laptop or in GitHub.
+**The service account key** lets EAS upload a bundle to Google Play and release it on the app's testing tracks, never to production (ADR-057 §3). It lives in one place, EAS's credentials of `fi.kumpa` (Service credentials, the Google service account key for EAS Submit), and no copy is kept, on a laptop or in GitHub.
 
 1. Lift the organisation's ban on keys for the project as in `docs/vendors/google-play.md`, step 4 (`gcloud org-policies set-policy`, both constraints), and make a new key outside the checkout: `gcloud iam service-accounts keys create ~/eas-submit.json --iam-account=eas-submit@<project>.iam.gserviceaccount.com`.
-2. On expo.dev, the project's Credentials, Android, `fi.kuutti.app`: upload the new key in place of the old, or with `eas credentials -p android`, Google Service Account. Then `rm ~/eas-submit.json`.
+2. On expo.dev, the project's Credentials, Android, `fi.kumpa`: upload the new key in place of the old, or with `eas credentials -p android`, Google Service Account. Then `rm ~/eas-submit.json`.
 3. Delete the old key (`gcloud iam service-accounts keys list --iam-account=…` gives its id, then `gcloud iam service-accounts keys delete <id> --iam-account=…`) and put the policy back (`gcloud org-policies delete <constraint> --project=<project>`, both).
 
 **Check.** The next `staging` build's submission ends finished on expo.dev, and its release is on the internal testing track.
@@ -297,11 +297,11 @@ Personal Sentry tokens made for settings work are revoked when the work is done 
 
 **If it leaked:** delete the key in Google Cloud first. On a track it releases only bundles with the upload key's signature, but it can release those on any testing track and halt them on a closed or open one, and it can upload a bundle signed with any key to internal app sharing, which reaches the e-mail list of `docs/vendors/google-play.md`, step 3, and shows in no track's history. Read the tracks' release history in Play Console, and treat what internal app sharing handed out since the leak as unknown.
 
-**The upload key** is EAS's keystore of `fi.kuutti.app`, which also signs the development and preview APKs; EAS holds it and nobody rotates it on a schedule. When it is lost or out: make a new keystore for the app on EAS (`eas credentials -p android`), and in Play Console, Manage Play app signing, request an upload key reset with the new key's certificate as a PEM file (`keytool -export -rfc` on the keystore, which `eas credentials` can download), then delete the downloaded keystore and its passwords from the disk. No bundle can be uploaded until Google has made the change. Then register the new key under Android developer verification (`docs/vendors/google-play.md`, step 7) and put its fingerprint in place of the old one in `/kuutti/<env>/android-cert-fingerprints` (`devices.md`, Verified links). A phone with an expo.dev APK signed with the old key cannot update to one signed with the new: it uninstalls first.
+**The upload key** is EAS's keystore of `fi.kumpa`, which also signs the development and preview APKs; EAS holds it and nobody rotates it on a schedule. When it is lost or out: make a new keystore for the app on EAS (`eas credentials -p android`), and in Play Console, Manage Play app signing, request an upload key reset with the new key's certificate as a PEM file (`keytool -export -rfc` on the keystore, which `eas credentials` can download), then delete the downloaded keystore and its passwords from the disk. No bundle can be uploaded until Google has made the change. Then register the new key under Android developer verification (`docs/vendors/google-play.md`, step 7) and put its fingerprint in place of the old one in `/kuutti/<env>/android-cert-fingerprints` (`devices.md`, Verified links). A phone with an expo.dev APK signed with the old key cannot update to one signed with the new: it uninstalls first.
 
 ## 15. Apple: the App Store Connect API key and the APNs key
 
-**The App Store Connect API key** lets EAS upload a build of `fi.kuutti.app` to App Store Connect, from where it reaches TestFlight's internal group (ADR-063 §3). It is a team key of the association's Apple team, with the App Manager role by ADR-063 §3 (the one in use reads Admin on EAS, ADR-063, Open 6). A team key reaches every app of the team, and its role cannot be changed afterwards. It lives in one place, EAS's credentials of the team, assigned to the app's submissions, and no copy is kept, on a laptop or in GitHub. Apple offers its private half once, when it is made.
+**The App Store Connect API key** lets EAS upload a build of `fi.kumpa` to App Store Connect, from where it reaches TestFlight's internal group (ADR-063 §3). It is a team key of the association's Apple team, with the App Manager role by ADR-063 §3 (the one in use reads Admin on EAS, ADR-063, Open 6). A team key reaches every app of the team, and its role cannot be changed afterwards. It lives in one place, EAS's credentials of the team, assigned to the app's submissions, and no copy is kept, on a laptop or in GitHub. Apple offers its private half once, when it is made.
 
 1. Let EAS make the new one, as the Account Holder: in `apps/mobile`, `eas credentials -p ios`, the profile `staging`, App Store Connect: Manage your API Key, a new key, the role App Manager, assigned to the app's submissions. Or make it in App Store Connect (Users and Access, Integrations, Team Keys; the Account Holder or an Admin), with the role App Manager, download the `.p8` outside the checkout, upload it the same way with its key id and issuer id, and delete the file.
 2. Revoke the old key in App Store Connect (the same page). A revoked key cannot be brought back, and stays listed for 30 days.
@@ -314,7 +314,7 @@ Personal Sentry tokens made for settings work are revoked when the work is done 
 
 **The maintainer's own App Store Connect key**, for the `asc` command-line tool, is in the maintainer's Keychain and not at EAS. Nothing depends on it but that tool: make a new one in App Store Connect (Users and Access, Integrations) if it is still wanted, and revoke the old one. Its role has not been read (ADR-063, Open 7).
 
-**The APNs key** lets Expo's push service wake iPhones for `fi.kuutti.app` (ADR-055). It lives in EAS's credentials of the app, with no copy. Make a new one at developer.apple.com (Certificates, Identifiers & Profiles, Keys, Apple Push Notifications service), or let `eas credentials -p ios`, Push Notifications, make it; upload it there, then revoke the old one at Apple. A push between the revocation and the upload fails, and its receipt says so (`docs/vendors/expo.md`). Apple caps how many keys a team holds, so an unused one is revoked rather than kept. **If it leaked:** with a phone's device token it can send that phone a notification that reads as Kuutti's, so upload the new key and revoke the old one at once.
+**The APNs key** lets Expo's push service wake iPhones for `fi.kumpa` (ADR-055). It lives in EAS's credentials of the app, with no copy. Make a new one at developer.apple.com (Certificates, Identifiers & Profiles, Keys, Apple Push Notifications service), or let `eas credentials -p ios`, Push Notifications, make it; upload it there, then revoke the old one at Apple. A push between the revocation and the upload fails, and its receipt says so (`docs/vendors/expo.md`). Apple caps how many keys a team holds, so an unused one is revoked rather than kept. **If it leaked:** with a phone's device token it can send that phone a notification that reads as Kuutti's, so upload the new key and revoke the old one at once.
 
 The distribution certificate and the provisioning profiles are section 16's.
 

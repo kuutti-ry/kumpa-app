@@ -47,6 +47,12 @@ function topRow(): HostNode[] {
 
 const counter: PondCounterResponse = { k: 10, day: "2026-10-05", finished: 150, seeks: null };
 const gate: GateResponse = { state: "closed" };
+/** GET /profile for somebody whose photos wait for review: all the profile lacks. */
+const lackingPhotos = {
+  profile: null,
+  completeness: { complete: false, missing: ["photos"] },
+  home: null,
+};
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 const token = (seed: string) => (seed + "x".repeat(43)).slice(0, 43);
@@ -159,6 +165,58 @@ describe("HomeScreen", () => {
     );
   });
 
+  it("says on the matching card what the profile lacks, with the way to the profile there, while it is unfinished (#745)", async () => {
+    (globalThis.fetch as jest.Mock).mockImplementation(async (input: Request | string) => {
+      const url = new URL(input instanceof Request ? input.url : input);
+      if (url.pathname === "/ponds/counter") return json(counter);
+      if (url.pathname === "/gate") return json({ state: "incomplete" });
+      if (url.pathname === "/profile") return json(lackingPhotos);
+      return json({ error: { code: "not_found" } }, 404);
+    });
+    await renderWithTheme(<HomeScreen />);
+    const lacks = await screen.findByText("At least 2 approved photos");
+    // The matching card: the least that holds what is missing and the way to the profile.
+    let card = lacks;
+    while (within(card).queryByRole("button", { name: "Your profile" }) === null && card.parent) {
+      card = card.parent;
+    }
+    expect(
+      within(card).getByText("Matching opens for finished profiles. Yours still lacks something."),
+    ).toBeTruthy();
+    expect(within(card).queryByText("Conversations")).toBeNull();
+    expect(within(card).queryByText("People on Kumpa")).toBeNull();
+    // One way to the profile, not one in the card and another after it.
+    expect(screen.getAllByRole("button", { name: "Your profile" })).toHaveLength(1);
+    await userEvent.setup().press(within(card).getByRole("button", { name: "Your profile" }));
+    expect(router.push).toHaveBeenCalledWith("/profile");
+    expect(pressables(screen.toJSON() as HostNode).flatMap((node) => a11yProblems(node))).toEqual(
+      [],
+    );
+  });
+
+  it.each([
+    ["closed", "Your profile is finished. Matching has not opened yet.", 0],
+    ["open", "Matching is open for you.", 0],
+    ["incomplete", "At least 2 approved photos", 1],
+  ] as const)(
+    "reads the profile only while the gate says it is unfinished: %s (#745)",
+    async (state, words, reads) => {
+      const asked: string[] = [];
+      (globalThis.fetch as jest.Mock).mockImplementation(async (input: Request | string) => {
+        const url = new URL(input instanceof Request ? input.url : input);
+        asked.push(url.pathname);
+        if (url.pathname === "/ponds/counter") return json(counter);
+        if (url.pathname === "/gate") return json({ state });
+        if (url.pathname === "/profile") return json(lackingPhotos);
+        return json({ error: { code: "not_found" } }, 404);
+      });
+      await renderWithTheme(<HomeScreen />);
+      await screen.findByText(words);
+      await screen.findByText("People on Kumpa");
+      expect(asked.filter((path) => path === "/profile")).toHaveLength(reads);
+    },
+  );
+
   it("offers the people the person starred beside the way to the queue, once matching is open and while there are any (#575)", async () => {
     const answering = (items: unknown[]) => async (input: Request | string) => {
       const url = new URL(input instanceof Request ? input.url : input);
@@ -170,7 +228,7 @@ describe("HomeScreen", () => {
     (globalThis.fetch as jest.Mock).mockImplementation(answering([]));
     await renderWithTheme(<HomeScreen />);
     await screen.findByRole("button", { name: "See people" });
-    expect(screen.queryByRole("button", { name: "Starred" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Later list" })).toBeNull();
 
     (globalThis.fetch as jest.Mock).mockImplementation(
       answering([
@@ -178,7 +236,7 @@ describe("HomeScreen", () => {
       ]),
     );
     await renderWithTheme(<HomeScreen />);
-    await userEvent.setup().press(await screen.findByRole("button", { name: "Starred" }));
+    await userEvent.setup().press(await screen.findByRole("button", { name: "Later list" }));
     expect(router.push).toHaveBeenCalledWith("/stars");
   });
 
@@ -235,19 +293,20 @@ describe("HomeScreen", () => {
         if (url.pathname === "/gate") return json({ state });
         if (url.pathname === "/stars") return json({ items: [star] });
         if (url.pathname === "/notices") return json({ notices });
+        if (url.pathname === "/profile") return json(lackingPhotos);
         return json({ error: { code: "not_found" } }, 404);
       });
 
     it("has what there is to do first and how many are on Kuutti last, once matching is open", async () => {
       answering("open");
       await renderWithTheme(<HomeScreen />);
-      await screen.findByRole("button", { name: "Starred" });
+      await screen.findByRole("button", { name: "Later list" });
       await screen.findByText(COUNTER);
       // Each way on before the counter, the offer of notifications inside the gate card.
       const order = [
         "Matching is open for you.",
         "See people",
-        "Starred",
+        "Later list",
         "Shall Kumpa tell you?",
         "Your profile",
         "Conversations",
@@ -257,17 +316,25 @@ describe("HomeScreen", () => {
     });
 
     it.each([
-      ["closed", "Your profile is finished. Matching has not opened yet."],
-      ["incomplete", "Matching opens for finished profiles. Yours still lacks something."],
-    ] as const)("keeps the order with matching %s", async (state, sentence) => {
+      [
+        "closed",
+        ["Your profile is finished. Matching has not opened yet.", "Your profile", "Conversations"],
+      ],
+      [
+        "incomplete",
+        [
+          "Matching opens for finished profiles. Yours still lacks something.",
+          "At least 2 approved photos",
+          "Your profile",
+          "Conversations",
+        ],
+      ],
+    ] as const)("keeps the order with matching %s", async (state, words) => {
       answering(state);
       await renderWithTheme(<HomeScreen />);
-      await screen.findByText(sentence);
-      await screen.findByText(COUNTER);
-      const shown = said().filter((word) =>
-        [sentence, "Your profile", "Conversations", COUNTER].includes(word),
-      );
-      expect(shown).toEqual([sentence, "Your profile", "Conversations", COUNTER]);
+      const order = [...words, COUNTER];
+      for (const word of order) await screen.findByText(word);
+      expect(said().filter((word) => order.includes(word))).toEqual(order);
     });
 
     it("keeps an unread notice above everything, as what must reach the person first", async () => {
@@ -296,24 +363,29 @@ describe("HomeRoute", () => {
   const AGREED = "kuutti.preference.agreedVersions";
   afterEach(() => store.delete(AGREED));
 
-  it("is the sign-in screen for a signed-out person: one button and the bank", async () => {
+  it("is the first screen for a signed-out person: what Kumpa is, one way in, and one for an account (#681)", async () => {
+    await renderWithTheme(<HomeRoute />);
+    expect(
+      await screen.findByRole("heading", { name: "A more confident start to dating" }),
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Get started" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "I already have an account" })).toBeTruthy();
+    // No legal text and no bank on the first screen.
+    expect(screen.queryByRole("button", { name: "Sign in with your bank" })).toBeNull();
+    expect(screen.queryByText(/Terms of Use/)).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Kumpa" })).toBeNull();
+  });
+
+  it("takes somebody with an account on a phone that recorded the terms straight to the bank", async () => {
     // A phone that recorded the wordings it carries after an earlier bank login (#418).
     store.set(
       AGREED,
       JSON.stringify({ terms: CONSENT_VERSIONS.terms, privacy: CONSENT_VERSIONS.privacy }),
     );
     await renderWithTheme(<HomeRoute />);
-    expect(await screen.findByRole("heading", { name: "Sign in" })).toBeTruthy();
+    fireEvent.press(await screen.findByRole("button", { name: "I already have an account" }));
     expect(await screen.findByRole("button", { name: "Sign in with your bank" })).toBeTruthy();
-    expect(screen.queryByRole("heading", { name: "Kumpa" })).toBeNull();
-  });
-
-  it("is the screens before the bank for a signed-out person on a phone that never answered them", async () => {
-    await renderWithTheme(<HomeRoute />);
-    expect(await screen.findByRole("heading", { name: "How we do things here" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "I'm in, and I accept both" })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Sign in with your bank" })).toBeNull();
-    expect(screen.queryByRole("heading", { name: "Kumpa" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Accept terms of use" })).toBeNull();
   });
 
   it("is the home screen for a signed-in person", async () => {

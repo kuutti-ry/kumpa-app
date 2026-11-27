@@ -3,6 +3,17 @@
 // people; the queue and its days (#96, #502), the stars (#575) and their
 // rules are the rest.
 
+// The anchored like (#463, ADR-077): a part of a card, kept as a reference; the
+// chat keeps a match's and draws them as the queue does, the profile reads the parts.
+export {
+  type AnchorRow,
+  anchorColumns,
+  anchorOf,
+  type CardParts,
+  exportedAnchor,
+  type PartsOf,
+  partOn,
+} from "./anchor.ts";
 // The queue's builder reads every person's deal-breakers as the person's own read does (#87).
 export {
   type DealBreakerRow,
@@ -47,6 +58,7 @@ export {
 } from "./queue-order.ts";
 export { queueRoutes } from "./queue-routes.ts";
 export { preferencesRoutes } from "./routes.ts";
-// The stars (#575, ADR-064): the routes, and the halves erasure and the export call.
+// The stars (#575, ADR-064), the Later list since #681: the routes, Later's step
+// app.ts hands the queue, and the halves erasure and the export call.
 export { starRoutes } from "./star-routes.ts";
-export { eraseStarsOf, exportStars } from "./stars.ts";
+export { eraseStarsOf, exportStars, putOnLaterList } from "./stars.ts";

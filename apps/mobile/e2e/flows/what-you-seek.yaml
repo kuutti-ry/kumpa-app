@@ -9,14 +9,14 @@
 # what they ask of a person (#581). Ritva seeks men aged 60 to 72 for something
 # long-term, and she is this flow's alone; it ends as it began. A run that stops
 # half-way leaves a change: `pnpm demo:reset` puts her back.
-appId: fi.kuutti.app
+appId: fi.kumpa
 name: What you seek lists whom, the ages, why and the deal-breakers, and each change is kept by going back
 ---
 - runFlow:
     file: ../common/sign-in.yaml
     env:
       PERSONA: Ritva Lahtinen
-- openLink: kuutti://profile
+- openLink: fi.kumpa://profile
 - extendedWaitUntil:
     visible: "(The basics|Perustiedot|Grunderna)(, .*)?"
     timeout: 15000

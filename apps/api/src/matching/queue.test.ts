@@ -270,9 +270,14 @@ describe("reading the queue", () => {
   });
 
   /** A read with the queue's two sides stubbed: what a read does with what they answer. */
-  async function reading(ctx: TestContext, queue: Queue, cardOf: CardOf, accountId: string) {
+  async function reading(
+    ctx: TestContext,
+    queue: Pick<Queue, "fill" | "fits">,
+    cardOf: CardOf,
+    accountId: string,
+  ) {
     const deps = await depsOn(ctx.client);
-    return readQueue(deps, MATCHES, queue, accountId, cardOf);
+    return readQueue(deps, MATCHES, { ...queue, parts: FITS.parts }, accountId, cardOf);
   }
 
   const everybodyFits: Queue["fits"] = async (_db, _accountId, ids) => new Set(ids);
@@ -286,7 +291,7 @@ describe("reading the queue", () => {
     if (!a) throw new Error("cast not written");
     await queueDayFor(ctx.client, a, []);
     let fills = 0;
-    const queue: Queue = {
+    const queue: Pick<Queue, "fill" | "fits"> = {
       fill: async () => {
         fills += 1;
         return true;
@@ -406,6 +411,7 @@ describe("seen and decided", () => {
     ["another decision", `/queue/${TODAY}/entries/1/decision`, { decision: "superlike" }],
     ["an extra key", `/queue/${TODAY}/entries/1/decision`, { decision: "like", note: "x" }],
     ["no decision", `/queue/${TODAY}/entries/1/decision`, {}],
+    ["the ask without a decision", `/queue/${TODAY}/entries/1/decision`, { later: true }],
   ] as const)("%s is refused with 400", async ([, path, body], { ctx, app }) => {
     const [a] = await cast(ctx, 1);
     if (!a) throw new Error("cast not written");
@@ -541,14 +547,8 @@ describe("seen and decided", () => {
 });
 
 /** The day's likes, above every version a migration wrote, so it is the one read (#98). */
-async function likeBudget(db: Queryable, likes: number) {
-  await db.query(
-    `INSERT INTO matching_config (version, key, value, created_by)
-     SELECT max(version) + 1, 'like_budget_balanced', $1::jsonb, 'test'
-       FROM matching_config WHERE key = 'like_budget_balanced'`,
-    [JSON.stringify(likes)],
-  );
-}
+const likeBudget = (db: Queryable, likes: number) =>
+  withMatchingConfig(db, { like_budget_balanced: likes });
 
 /** `liker` liked `liked` yesterday; that queue of theirs. */
 async function likedYesterday(db: Queryable, liker: Person, liked: Person) {
@@ -915,6 +915,7 @@ describe("erasure and the export", () => {
             secondPass: false,
             distance: "nearby",
             distanceInWords: "Nearby",
+            anchor: null,
           },
         ],
       },
@@ -1238,11 +1239,13 @@ describe("the filters on a decision (ADR-062 §8)", () => {
   /** A queue that says who was asked, and that the card fits or does not. */
   function asking(fit: boolean) {
     const asked: { db: Queryable; ids: readonly string[] }[] = [];
-    const queue: Pick<Queue, "fits"> = {
+    const queue: Pick<Queue, "fits" | "later" | "parts"> = {
       fits: async (db, _accountId, ids) => {
         asked.push({ db, ids });
         return new Set(fit ? ids : []);
       },
+      later: FITS.later,
+      parts: FITS.parts,
     };
     return { asked, queue };
   }

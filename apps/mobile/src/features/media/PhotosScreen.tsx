@@ -16,7 +16,7 @@ import { Backdrop } from "@/components/backdrop";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { sayAloud } from "@/components/Notice";
 import { ScreenHeader } from "@/components/ScreenHeader";
-import { StepProgress, StepTitle } from "@/components/step-heading";
+import { StepTitle } from "@/components/step-heading";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
@@ -69,7 +69,11 @@ const ERROR_TEXT: ReadonlyMap<string, PlainMessageKey> = new Map([
 ]);
 
 function noticeText(notice: PhotosNotice, t: ReturnType<typeof useT>["t"]): string {
-  if (notice.kind === "refused_local") return t("photos.refused.local");
+  if (notice.kind === "refused_local") {
+    return notice.refused === undefined
+      ? t("photos.refused.local")
+      : t("photos.refused.localSome", { refused: notice.refused });
+  }
   if (notice.kind === "permission") return t("photos.error.permission");
   if (notice.kind === "caption_failed") return t("load.failed.press");
   return t(ERROR_TEXT.get(notice.code ?? "") ?? "load.failed.press");
@@ -103,22 +107,24 @@ const ONE_COLUMN_FONT_SCALE = 1.3;
  * Opened from the profile, it has the arrow back at the top that other screens
  * have, and Done at the end (#616): the route has no back gesture, which the
  * grid's drag would start. It is onboarding's photos step too (#146, #581):
- * under that step's number, heading and line, with no arrow and the step's
+ * under that step's heading and line, with no arrow and the step's
  * Continue in place of Done, the step's only end.
  */
 export function PhotosScreen({
   step,
 }: {
   /**
-   * Onboarding's step, when this is it: where it stands, whether the status its
-   * Continue asked for is still being read, and that Continue, the way on once
-   * two photos count as the API counts them.
+   * Onboarding's step, when this is it: whether the status its Continue asked
+   * for is still being read, and that Continue, the way on once two photos
+   * count as the API counts them. After the bank no step is numbered (#681).
    */
-  step?: { position: number; total: number; reading: boolean; onContinue: () => void };
+  step?: { reading: boolean; onContinue: () => void };
 }) {
   const { t } = useT();
-  // The Organic Pop try (outside production): rounder tiles, the main photo's
-  // word as a lime tag and Add a photo as a soft button, as Sini's photo step.
+  // The pill styles (Kumpa, the look every phone starts in, and the tech
+  // screen's Organic Pop, Glass and Bold Contrast): rounder tiles, the main
+  // photo's word as a tag of the accent colour and Add a photo as a soft
+  // button, as Sini's photo step.
   const pop = useLookTraits().pill;
   const router = useRouter();
   const tap = useHapticTap();
@@ -167,10 +173,16 @@ export function PhotosScreen({
     if (action === "makeMain") void photos.makeMain(photo.id);
   };
 
-  const busyText =
-    photos.busy.kind === "uploading"
-      ? t("photos.uploading", { percent: photos.busy.percent })
-      : null;
+  const uploading = photos.busy.kind === "uploading" ? photos.busy : null;
+  const busyText = !uploading
+    ? null
+    : uploading.index !== undefined && uploading.count !== undefined
+      ? t("photos.uploading.many", {
+          index: uploading.index,
+          photos: uploading.count,
+          percent: uploading.percent,
+        })
+      : t("photos.uploading", { percent: uploading.percent });
 
   return (
     <SafeAreaView className="flex-1 bg-background">
@@ -182,7 +194,6 @@ export function PhotosScreen({
       >
         {step && (
           <>
-            <StepProgress step={step.position} total={step.total} />
             <StepTitle>{t("onboarding.photos.title")}</StepTitle>
             <Text>{t("onboarding.photos.explain")}</Text>
           </>
@@ -207,7 +218,12 @@ export function PhotosScreen({
 
         {/* By the photos it is about (#287): one advisory tip, the main photo's first. */}
         {list && (
-          <PhotoTip tips={list.tips} fishSpecies={list.fishSpecies} mainId={mainId ?? null} />
+          <PhotoTip
+            tips={list.tips}
+            fishSpecies={list.fishSpecies}
+            mainId={mainId ?? null}
+            photoIds={list.photos.map((photo) => photo.id)}
+          />
         )}
 
         <View className="flex-row flex-wrap gap-3">

@@ -1,52 +1,55 @@
 # features/matching/stars.feature
-Feature: A star: somebody marked for later, without a like or a pass
-  A person who is unsure about somebody, or has run out of likes for the day, can
-  put a star on that person's card and come back to them later (#575, ADR-064;
-  the maintainer, 03/11/2026). A star is one mark with no degrees. It is no
-  decision: it spends nothing, moves no card, and only the person who put it ever
-  knows of it, so it feeds neither anybody's order nor the inbox stop. A
-  starred person is offered again only through the person's Starred list,
-  except that somebody whose like waits keeps coming as a liked-you card. The list
-  asks the filters, the account's state and the inbox stop on every read, leaves
-  out whoever does not pass, never says why, and takes them back if they pass again.
-  Opening one writes their card into today's log, so that a like, a fish or a pass
-  from the list spends what it spends anywhere else. A like or a pass takes the
-  star off; so does the person, and either person's erasure.
+Feature: The Later list: somebody saved to come back to, without a like or a pass
+  A person who is unsure about somebody, or has run out of likes for the day,
+  chooses Later on that person's card and comes back to them from the Later list
+  (#575, ADR-064; since #681, the maintainer, 18/11/2026, Later puts the person on
+  the list, which until then a star on the card did). Each person on the list is
+  a star, one row with no degrees. Later spends nothing, and only the person who
+  chose it ever knows of it, so it feeds neither anybody's order nor the inbox
+  stop. Somebody on the list is offered again only through it, except that
+  somebody whose like waits keeps coming as a liked-you card. At the most the list
+  may hold, Later still moves on and the card comes back another day, as a skip
+  does. The list asks the filters, the account's state and the inbox stop on every
+  read, leaves out whoever does not pass, never says why, and takes them back if
+  they pass again. Opening one writes their card into today's log, so that a like,
+  a fish or a pass from the list spends what it spends anywhere else. A like or a
+  pass takes the person off the list; so does the person, and either person's
+  erasure.
 
-  Scenario: A star spends nothing and leaves the card undecided
+  Scenario: Later spends nothing and puts the person on the list
     Given "A" has "B" and "C" in today's queue and no likes left
-    When "A" stars "B"'s card and reads the queue
-    Then the star stands, "B"'s card is undecided, no like was spent and "C" comes next
+    When "A" chooses Later on "B"'s card and reads the queue
+    Then "B" is on the list, no like was spent and "C" comes next
 
-  Scenario: Nobody is told of a star
+  Scenario: Nobody is told of a Later
     Given "A" and "B" fit each other
-    When "A" stars "B"'s card
+    When "A" chooses Later on "B"'s card
     Then "B"'s queue reads the same as before
 
-  Scenario: A star counts for nothing in the inbox stop
+  Scenario: A Later counts for nothing in the inbox stop
     Given "B" has one fewer likes waiting than the inbox stop, and "A" has "B" in today's queue
-    When "A" stars "B"'s card
+    When "A" chooses Later on "B"'s card
     Then "B" is still in "C"'s queue
 
-  Scenario: A star again answers the same star
-    Given "A" starred "B"'s card
-    When "A" stars it again
-    Then the answer names the same star, and there is one
+  Scenario: Later again keeps the one place on the list
+    Given "A" chose Later on "B"'s card
+    When "A" chooses Later on it again
+    Then the answer says "B" is listed, and there is one star, the same
 
-  Scenario: The first star says it is the only one
+  Scenario: Later again after the star was cleared puts the person back on the list
+    Given "A" chose Later on "B"'s card, and cleared "B" from the list
+    When "A" chooses Later on the card again
+    Then "B" is on the list, the only one
+
+  Scenario: The first Later says the list holds only that person
     Given "A" has "B" and "C" in today's queue
-    When "A" stars both, one after the other
-    Then the first answer says it is the first, and the second does not
+    When "A" chooses Later on both, one after the other
+    Then the first answer says first, and the second says listed
 
   Scenario: A starred person is not offered again as a card
     Given "A" starred "B" yesterday and left the card undecided
     When "A" reads the queue today until it ends
     Then "B" does not come, and "A" still has the star
-
-  Scenario: A card starred today leaves the queue at the next read
-    Given "A" starred "B"'s card today and left it undecided
-    When "A" reads the queue again
-    Then "B" does not come
 
   Scenario: Clearing a star puts them back in the queue
     Given "A" starred "B" yesterday and left the card undecided
@@ -58,10 +61,10 @@ Feature: A star: somebody marked for later, without a like or a pass
     When "A" reads the queue today
     Then "B" comes as a liked-you card, with the star on it
 
-  Scenario Outline: A like or a pass takes the star off, and a skip does not
-    Given "A" starred "B"'s card
+  Scenario Outline: A like or a pass takes the person off the list, and Later keeps them on
+    Given "A" chose Later on "B"'s card
     When "A" chooses <choice> on the card
-    Then the star is <after>
+    Then "B" is <after> the list, and only Later's answer says where
 
     Examples:
       | choice | after |
@@ -71,49 +74,49 @@ Feature: A star: somebody marked for later, without a like or a pass
       | skip   | on    |
 
   Scenario: A like refused leaves the star on
-    Given "A" starred "B"'s card and has no likes left
+    Given "A" chose Later on "B"'s card and has no likes left
     When "A" likes the card and is refused
     Then the star is on
 
-  Scenario: A card holding a like or a pass takes no star
+  Scenario: Later on a card liked or passed today puts the person on the list
     Given "A" liked "B"'s card and passed "C"'s
-    When "A" stars either card
-    Then the answer is not_found and nothing is written
+    When "A" chooses Later on both
+    Then both are on the list, and the like's place in the day's likes is back
 
-  Scenario: A card of a day that has ended takes no star
+  Scenario: Later on a card of a day that has ended puts nobody on the list
     Given "A" holds "B"'s card from yesterday
-    When "A" stars it
+    When "A" chooses Later on it
     Then the answer is day_ended
 
-  Scenario: Another person's card is out of reach
+  Scenario: Later on another person's card puts nobody on the list
     Given "A" has "B" at the first place of today's queue, and "C" has no queue
-    When "C" stars that place
+    When "C" chooses Later on that place
     Then the answer is not_found and "C" has no star
 
-  Scenario: A card that can no longer be shown takes no star
+  Scenario: Later on a card that can no longer be shown puts nobody on the list
     Given "A" has "B" in today's queue, and "A" blocked "B" since
-    When "A" stars the card
+    When "A" chooses Later on the card
     Then the answer is not_found and nothing is written
 
-  Scenario: A card never served takes no star
+  Scenario: Later on a card never served puts nobody on the list
     Given "B" is in "A"'s log today, and "A" was never handed the card
-    When "A" stars that place
-    Then the answer is not_found and nothing is written
+    When "A" chooses Later on that place
+    Then the skip stands, the answer says not_listed, and nothing is on the list
 
-  Scenario: At the most stars a person may hold, one more is refused
-    Given matching_config stars_max is two, and "A" starred "B" and "C"
-    When "A" stars "D"'s card
-    Then the answer is stars_full and nothing is written
+  Scenario: At the most the list may hold, Later says it is full and the card comes back another day
+    Given matching_config stars_max is two, and "A" put "B" and "C" on the list
+    When "A" chooses Later on "D"'s card, and reads the queue the next day
+    Then the answer says full, nothing is on the list, and "D" comes, seen before
 
   Scenario: The cap of zero is off, and the contract's ceiling stands
-    Given matching_config stars_max is zero, and "A" holds as many stars as the contract's ceiling
-    When "A" stars one more card
-    Then the answer is stars_full and nothing is written
+    Given matching_config stars_max is zero, and "A" holds one fewer stars than the contract's ceiling
+    When "A" chooses Later on two cards
+    Then the first goes on the list and the second answers full
 
   Scenario: Somebody left out of the list does not count towards the cap
-    Given matching_config stars_max is two, and "A" starred "B" and "C", and "C" no longer fits
-    When "A" stars "D"'s card
-    Then the star stands
+    Given matching_config stars_max is two, and "A" put "B" and "C" on the list, and "C" no longer fits
+    When "A" chooses Later on "D"'s card
+    Then "D" is on the list
 
   Scenario: The list holds the people starred, the latest first, with their name, age and a photo shown
     Given "A" starred "B" and then "C"
@@ -191,6 +194,11 @@ Feature: A star: somebody marked for later, without a like or a pass
     When "A" opens the star and likes the card
     Then the card says liked you, and the like makes a match
 
+  Scenario: Later on a card opened from the list keeps its place on the list
+    Given "A" put "B" on the list yesterday and "C" today, and opened "B"'s card from the list
+    When "A" chooses Later on "B"'s card
+    Then the answer says "B" is listed, and the list holds "C" and then "B", with the star it had
+
   Scenario Outline: A shadow-banned person's star on somebody whose like waits waits for the lift
     Given "B"'s like waits on "A", "A" starred "B" <when>, and "A" was shadow-banned
     When "A" reads the list and opens the star, and then the ban is lifted
@@ -233,7 +241,7 @@ Feature: A star: somebody marked for later, without a like or a pass
 
   Scenario: Every route of the stars asks for a session
     Given nobody is signed in
-    When the list is read, a card starred, a star opened and a star cleared
+    When the list is read, a star opened and a star cleared
     Then each answers unauthenticated
 
   Scenario Outline: Erasure of either person takes the star

@@ -30,9 +30,10 @@ export {
   identity,
   identityStanding,
 } from "./identity.ts";
-// Today's queue and its entries (#96, ADR-034), and the stars (#575, ADR-064).
+// Today's queue and its entries (#96, ADR-034), a like's part of the card (#463, ADR-077), and the stars (#575, ADR-064).
 export {
   distanceBand,
+  likeAnchorKind,
   queueDay,
   queueDecision,
   queueEntry,
@@ -61,6 +62,7 @@ export {
   notificationPreference,
   pushPlatform,
   pushToken,
+  unsubscribeToken,
 } from "./notifications.ts";
 export { pondCounter } from "./pond-counter.ts";
 export {

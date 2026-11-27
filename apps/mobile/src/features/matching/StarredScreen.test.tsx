@@ -10,14 +10,17 @@ import { renderWithTheme } from "@/test/render";
 import { StarredScreen } from "./StarredScreen";
 import { StarsButton } from "./StarsButton";
 
-// The Starred list on the phone (#575, ADR-064 §6): the people as the API gives them
-// and in its order, a row that opens the card and a star that takes the star off,
-// what it says while it loads, fails or holds nobody, and the home screen's line,
-// there only while the list shows somebody. A card opened from it is
-// QueueScreen.test.tsx's.
+// The Later list on the phone (#575, ADR-064 §6, #681): the people as the API gives
+// them and in its order, or in the person's own once Kumpa has given it one, with
+// whoever came since at the top and marked; Kumpa's button in the header while two
+// people or more are there; a row that opens the card and a button that takes the
+// person off the list, what it says while it loads, fails or holds nobody, and the
+// way into it from home, there only while the list shows somebody. A card opened
+// from it, and the way into it where the queue ends, are QueueScreen.test.tsx's;
+// Kumpa itself is KumpaScreen.test.tsx's.
 
 const { __router: router, __focus: focus } = jest.requireMock("expo-router") as {
-  __router: { push: jest.Mock; back: jest.Mock };
+  __router: { push: jest.Mock; back: jest.Mock; replace: jest.Mock };
   __focus: () => void;
 };
 
@@ -41,6 +44,13 @@ const KATJA: StarredPerson = {
   age: 44,
   photo: null,
 };
+const MINNA: StarredPerson = {
+  id: "7a1c1c4e-9a8e-4a0b-9c3a-0c8d1e2f3a03",
+  name: "Minna",
+  age: 28,
+  photo: null,
+};
+const ORDER = "kuutti.preference.laterOrder";
 
 type Call = { method: string; path: string };
 
@@ -84,6 +94,7 @@ const press = async (name: string) => {
 beforeEach(async () => {
   router.push.mockReset();
   router.back.mockReset();
+  router.replace.mockReset();
   (useLocales as jest.Mock).mockReturnValue([{ languageTag: "en-US" }]);
   await clearSession();
   await saveSession({
@@ -95,13 +106,13 @@ beforeEach(async () => {
   });
 });
 
-describe("the Starred list", () => {
+describe("the Later list", () => {
   it("shows the people in the API's order, each named with their age, with no line above them (#581)", async () => {
     api(list(HENNA, KATJA));
     await show();
 
-    expect(screen.getByRole("heading", { name: "Starred" })).toBeTruthy();
-    expect(said()).toEqual(["Starred", "Henna, 31", "Katja, 44"]);
+    expect(screen.getByRole("heading", { name: "Later" })).toBeTruthy();
+    expect(said()).toEqual(["Later", "Kumpa?", "Henna, 31", "Katja, 44"]);
     expect(
       screen
         .getAllByRole("button")
@@ -137,43 +148,43 @@ describe("the Starred list", () => {
     expect(router.push).toHaveBeenCalledWith(`/stars/${HENNA.id}`);
   });
 
-  it("takes a star off from its row, and the row goes", async () => {
+  it("takes the person off the list from their row, and the row goes", async () => {
     const calls = api((call) =>
       call.method === "DELETE" ? new Response(null, { status: 204 }) : list(HENNA, KATJA)(call),
     );
     await show();
 
-    await press("Take the star off: Henna");
+    await press("Take off the list: Henna");
 
     expect(calls).toContainEqual({ method: "DELETE", path: `/stars/${HENNA.id}` });
     expect(screen.queryByRole("button", { name: "Henna, 31" })).toBeNull();
     expect(screen.getByRole("button", { name: "Katja, 44" })).toBeTruthy();
   });
 
-  it("takes the row off when another phone took the star off first", async () => {
+  it("takes the row off when another phone took the person off first", async () => {
     api((call) => (call.method === "DELETE" ? refusal("not_found", 404) : list(HENNA)(call)));
     await show();
 
-    await press("Take the star off: Henna");
+    await press("Take off the list: Henna");
 
     expect(screen.queryByRole("button", { name: "Henna, 31" })).toBeNull();
     expect(screen.queryByText("That did not go through. Try again.")).toBeNull();
   });
 
-  it("says a star that was not taken off, and keeps the row", async () => {
+  it("says a person who was not taken off, and keeps the row", async () => {
     api((call) => (call.method === "DELETE" ? refusal("internal", 500) : list(HENNA)(call)));
     await show();
 
-    await press("Take the star off: Henna");
+    await press("Take off the list: Henna");
 
     expect(screen.getByText("That did not go through. Try again.")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Henna, 31" })).toBeTruthy();
   });
 
   it.each([
-    ["en-US", "Starred", "Nobody here right now."],
-    ["fi-FI", "Tähdellä merkityt", "Täällä ei ole nyt ketään."],
-    ["sv-FI", "Stjärnmärkta", "Ingen här just nu."],
+    ["en-US", "Later", "Nobody here right now."],
+    ["fi-FI", "Myöhemmin", "Täällä ei ole nyt ketään."],
+    ["sv-FI", "Senare", "Ingen här just nu."],
   ])(
     "says so with nobody on the list, and never that anybody went or how anybody comes: %s",
     async (languageTag, title, words) => {
@@ -256,6 +267,101 @@ describe("the Starred list", () => {
   });
 });
 
+describe("Kumpa on the list (ADR-064 §6)", () => {
+  afterEach(() => store.delete(ORDER));
+  const kumpa = () =>
+    screen.queryByRole("button", { name: "Kumpa? Put your Later list in order, two at a time." });
+
+  it("is offered in the header while the list shows two people or more, by its word, and opens Kumpa", async () => {
+    api(list(HENNA, KATJA));
+    await show();
+
+    expect(within(kumpa() as never).getByText("Kumpa?")).toBeTruthy();
+    await press("Kumpa? Put your Later list in order, two at a time.");
+    expect(router.push).toHaveBeenCalledWith("/stars/kumpa");
+    noProblems();
+  });
+
+  it("is not offered with one person on the list, or none, or while it does not know", async () => {
+    api(list(HENNA));
+    await show();
+    expect(kumpa()).toBeNull();
+
+    api(list());
+    await show();
+    expect(kumpa()).toBeNull();
+
+    api((call) => (call.path === "/stars" ? refusal("internal", 500) : undefined));
+    await show();
+    expect(kumpa()).toBeNull();
+  });
+
+  it("shows the person's own order once Kumpa has given one, whoever came since at the top and marked", async () => {
+    store.set(ORDER, JSON.stringify({ order: [KATJA.id, HENNA.id], placing: null }));
+    api(list(MINNA, HENNA, KATJA));
+    await show();
+
+    expect(said()).toEqual([
+      "Later",
+      "Kumpa?",
+      "Minna, 28",
+      "Not compared yet",
+      "Katja, 44",
+      "Henna, 31",
+    ]);
+    expect(screen.getByRole("button", { name: "Minna, 28, not compared yet" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Katja, 44" })).toBeTruthy();
+    noProblems();
+  });
+
+  it("reads the order again when the list comes back in sight from Kumpa", async () => {
+    api(list(HENNA, KATJA));
+    await show();
+    expect(said()).toEqual(["Later", "Kumpa?", "Henna, 31", "Katja, 44"]);
+    store.set(ORDER, JSON.stringify({ order: [KATJA.id, HENNA.id], placing: null }));
+
+    await act(async () => {
+      focus();
+    });
+    await settle();
+
+    expect(said()).toEqual(["Later", "Kumpa?", "Katja, 44", "Henna, 31"]);
+  });
+
+  it("keeps the API's order for an order the phone holds that names nobody on the list", async () => {
+    store.set(ORDER, JSON.stringify({ order: ["somebody else's star"], placing: null }));
+    api(list(HENNA, KATJA));
+    await show();
+    expect(said()).toEqual(["Later", "Kumpa?", "Henna, 31", "Katja, 44"]);
+  });
+
+  it.each([
+    [
+      "fi-FI",
+      "Myöhemmin",
+      "Ei vielä verrattu",
+      "Minna, 28, ei vielä verrattu",
+      "Kumpa? Järjestä Myöhemmin-listasi kaksi kerrallaan.",
+    ],
+    [
+      "sv-FI",
+      "Senare",
+      "Inte jämförd än",
+      "Minna, 28, inte jämförd än",
+      "Kumpa? Ordna din Senare-lista, två i taget.",
+    ],
+  ])("marks and offers it in %s", async (languageTag, title, mark, label, offer) => {
+    (useLocales as jest.Mock).mockReturnValue([{ languageTag }]);
+    store.set(ORDER, JSON.stringify({ order: [KATJA.id, HENNA.id], placing: null }));
+    api(list(MINNA, HENNA, KATJA));
+    await show();
+
+    expect(said().slice(0, 4)).toEqual([title, "Kumpa?", "Minna, 28", mark]);
+    expect(screen.getByRole("button", { name: label })).toBeTruthy();
+    expect(screen.getByRole("button", { name: offer })).toBeTruthy();
+  });
+});
+
 // Pressed, a row keeps its words' colour on a ground they are paired with:
 // today's --accent, or the ink's tint in a try style, whose --accent is loud.
 describe("a row pressed (#408)", () => {
@@ -276,7 +382,7 @@ describe("a row pressed (#408)", () => {
 });
 
 describe("the home screen's way to the list", () => {
-  const button = () => screen.queryByRole("button", { name: "Starred" });
+  const button = () => screen.queryByRole("button", { name: "Later list" });
   const showButton = async () => {
     await renderWithTheme(<StarsButton />);
     await settle();
@@ -286,10 +392,11 @@ describe("the home screen's way to the list", () => {
     api(list(HENNA, KATJA));
     await showButton();
 
-    expect(within(button() as never).getByText("Starred")).toBeTruthy();
+    expect(within(button() as never).getByText("Later list")).toBeTruthy();
     expect(screen.queryByText(/\d/)).toBeNull();
-    await press("Starred");
+    await press("Later list");
     expect(router.push).toHaveBeenCalledWith("/stars");
+    expect(router.replace).not.toHaveBeenCalled();
     noProblems();
   });
 

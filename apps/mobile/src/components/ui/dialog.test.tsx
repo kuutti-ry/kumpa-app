@@ -155,6 +155,36 @@ describe("A dialog's title beside the close control (#530)", () => {
   });
 });
 
+// A dialog's title is a heading like any other, whose words never break in the
+// middle (#757): drawn as its words once the phone breaks a line inside one.
+describe("A dialog's title's words (#757)", () => {
+  const title = "Ihmiset Kumpa-sovelluksessa";
+  const broken = {
+    nativeEvent: { lines: [{ text: "Ihmiset Kumpa-so" }, { text: "velluksessa" }] },
+  };
+
+  it("is drawn as its words on a phone, read whole, its room beside the close kept", async () => {
+    await renderWithTheme(
+      <Dialog open>
+        <DialogContent closeLabel="Close">
+          <DialogHeader>
+            <DialogTitle>{title}</DialogTitle>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>,
+    );
+    await fireEvent(screen.getByText(title), "textLayout", broken);
+    const heading = screen.getByRole("heading", { name: title });
+    expect(heading.props["aria-level"]).toBe("4");
+    expect(String(heading.props.className).split(" ")).toContain("pr-8");
+    for (const word of ["Ihmiset ", "Kumpa-", "sovelluksessa"]) {
+      const text = screen.getByText(word);
+      expect(text.props.adjustsFontSizeToFit).toBe(true);
+      expect(text.props.maxFontSizeMultiplier).toBe(HEADING_FONT_SCALE.title);
+    }
+  });
+});
+
 describe("Dialog on the web preview", () => {
   // Platform.select picks the web branch at render time; jest-expo's preset is iOS.
   // Jest resolves the primitive's native overlay, which closes on any press by
@@ -214,6 +244,27 @@ describe("Dialog on the web preview", () => {
     const dismiss = jest.spyOn(Keyboard, "dismiss");
     await showOverlay();
     expect(dismiss).not.toHaveBeenCalled();
+  });
+
+  it("titles the dialog with the primitive's heading, one text whatever its lines", async () => {
+    // The browser breaks after a hyphen by itself, and the primitive's title
+    // names the dialog (Radix, which jest does not resolve): its heading, with
+    // no level of Text's.
+    const title = "Ihmiset Kumpa-sovelluksessa";
+    await render(
+      <Dialog open>
+        <DialogOverlay closeOnPress={false}>
+          <DialogTitle>{title}</DialogTitle>
+        </DialogOverlay>
+      </Dialog>,
+    );
+    const heading = screen.getByRole("heading", { name: title });
+    expect(heading.props["aria-level"]).toBeUndefined();
+    expect(heading.props.onTextLayout).toBeUndefined();
+    expect(heading.props.maxFontSizeMultiplier).toBe(HEADING_FONT_SCALE.title);
+    expect(String(heading.props.className).split(" ")).toEqual(
+      expect.arrayContaining(["font-sans", "text-title"]),
+    );
   });
 });
 

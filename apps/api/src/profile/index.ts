@@ -4,9 +4,10 @@
 // matching slice by app.ts.
 
 // The card's age and fields, which a person's page in the panel shows as the card does (#306).
-export { ageInYears, buildCard, fieldsOnCard } from "./card.ts";
+// The parts of a card a like may name (#463, ADR-077), read with nothing recorded.
+export { ageInYears, buildCard, cardParts, fieldsOnCard } from "./card.ts";
 export { completeness } from "./completeness.ts";
-export { answeredFieldsOf, answeredPromptsOf, clearIdentityLabel } from "./repo.ts";
+export { answeredFieldsOf, clearIdentityLabel } from "./repo.ts";
 export { profileRoutes } from "./routes.ts";
 export {
   eraseProfileOfAccount,

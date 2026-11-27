@@ -6,6 +6,7 @@ import type {
   MessageKind,
   PhotoDescription,
 } from "@kuutti/schema";
+import type { AnchorRow } from "../matching/index.ts";
 
 // The chat's statements (#348, ADR-031). Raw parameterised SQL, as in the
 // other slices: Deps.db is the Queryable seam the tests hand a rolled-back
@@ -621,6 +622,57 @@ export async function holdWithheldMarksOf(db: Queryable, accountId: string): Pro
 }
 
 /** Cuts the person's link to their conversations (TD-7): the rows stay for the counterpart. The conversations it was cut from. */
+const anchorFrom = (r: Row): AnchorRow => ({
+  anchor_kind: (r.anchor_kind as AnchorRow["anchor_kind"]) ?? null,
+  anchor_ref: (r.anchor_ref as string | null) ?? null,
+  anchor_field: (r.anchor_field as string | null) ?? null,
+});
+
+/**
+ * The parts the two likes of the match named (#463, ADR-077): the caller's own
+ * row's and the counterpart's, read through the caller's row (rule 6).
+ */
+export async function findAnchors(
+  db: Queryable,
+  accountId: string,
+  conversationId: string,
+): Promise<{ mine: AnchorRow; theirs: AnchorRow } | null> {
+  const { rows } = await db.query<Row>(
+    `SELECT me.anchor_kind, me.anchor_ref, me.anchor_field,
+            them.anchor_kind AS their_kind, them.anchor_ref AS their_ref,
+            them.anchor_field AS their_field
+     ${FROM_CALLER}
+     WHERE me.account_id = $1 AND me.conversation_id = $2`,
+    [accountId, conversationId],
+  );
+  const r = rows[0];
+  if (!r) return null;
+  return {
+    mine: anchorFrom(r),
+    theirs: anchorFrom({
+      anchor_kind: r.their_kind,
+      anchor_ref: r.their_ref,
+      anchor_field: r.their_field,
+    }),
+  };
+}
+
+/**
+ * At an erasure (#463): the parts of both likes go from every conversation the
+ * person is in, theirs and the counterpart's, since each points into one of the
+ * two cards and an erased person's conversation shows none.
+ */
+export async function clearAnchorsOf(db: Queryable, accountId: string): Promise<void> {
+  await db.query(
+    `UPDATE conversation_participant p
+        SET anchor_kind = NULL, anchor_ref = NULL, anchor_field = NULL
+      WHERE p.anchor_kind IS NOT NULL
+        AND p.conversation_id IN (
+          SELECT conversation_id FROM conversation_participant WHERE account_id = $1)`,
+    [accountId],
+  );
+}
+
 export async function unlinkParticipant(db: Queryable, accountId: string): Promise<string[]> {
   const { rows } = await db.query<{ conversation_id: string }>(
     "UPDATE conversation_participant SET account_id = NULL WHERE account_id = $1 RETURNING conversation_id",
@@ -704,6 +756,8 @@ export type ExportedRow = {
   closedHow: ConversationCloseKind | null;
   counterpartLinked: boolean;
   blocked: boolean;
+  /** The part of the counterpart's card the person's own like named (#463), on their own row. */
+  anchor: AnchorRow;
   /** The person's own shares of a contact there (#103), oldest first: the record, never a value. */
   shares: Array<{
     kind: ContactKind;
@@ -735,7 +789,7 @@ export async function exportConversationsOf(
   const { rows } = await db.query<Row>(
     `SELECT c.id, c.opened_at, c.archived_at, c.closed_at, c.closed_how,
             them.account_id IS NOT NULL AS counterpart_linked,
-            ${BLOCKED},
+            ${BLOCKED}, me.anchor_kind, me.anchor_ref, me.anchor_field,
             coalesce((
               SELECT json_agg(json_build_object(
                        'mine', m.side = me.side,
@@ -767,6 +821,7 @@ export async function exportConversationsOf(
     closedHow: (r.closed_how as ConversationCloseKind | null) ?? null,
     counterpartLinked: r.counterpart_linked === true,
     blocked: r.blocked === true,
+    anchor: anchorFrom(r),
     shares: (
       r.shares as Array<{
         kind: ContactKind;

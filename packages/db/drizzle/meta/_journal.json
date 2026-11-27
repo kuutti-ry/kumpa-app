@@ -99,6 +99,34 @@
       "when": 1794921828065,
       "tag": "0013_queue_names",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1795025137954,
+      "tag": "0014_audit_log_prune",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1795030299933,
+      "tag": "0015_unsubscribe_token",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1795069331089,
+      "tag": "0016_later_list_thirty",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1795681456413,
+      "tag": "0017_anchored_like",
+      "breakpoints": true
     }
   ]
 }

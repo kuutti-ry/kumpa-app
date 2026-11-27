@@ -2882,13 +2882,6 @@ profile.prompt.ask_me:
   sv: "Fråga mig om"
   machine: { fi: true, sv: true }
 
-profile.prompts.label:
-  en: "Questions"
-  description: "Heading of the prompts in onboarding's step for words of your own; the profile's prompts section has the section's title instead (#239)."
-  fi: "Kysymykset"
-  sv: "Frågor"
-  machine: { fi: true, sv: true }
-
 profile.progress.short:
   en: "{answered, number}/{total, number}"
   description: "How much of a part of the profile is answered, as a count (#239): on a row of the profile list, over the questions and, of how many may stand, beside the deal-breakers' heading (#581). A screen reader hears profile.progress.answered or profile.dealBreakers.count instead."
@@ -2966,13 +2959,6 @@ profile.completeness.photos:
   sv: "Minst {min, number} godkända foton"
   machine: { fi: true, sv: true }
 
-profile.completeness.bio_or_prompts:
-  en: "A bio of {min, number} characters, a ready line, or two answered questions"
-  description: "Checklist line for the bio-or-questions rule; {min} is the bio length. A ready line counts too (#239). With the bio's hint gone this is where the length is said in The basics (#581)."
-  fi: "Vähintään {min, number} merkin esittely, valmis rivi tai kaksi vastattua kysymystä"
-  sv: "En presentation på {min, number} tecken, en färdig rad eller två besvarade frågor"
-  machine: { fi: true, sv: true }
-
 profile.completeness.seeks:
   en: "Whom you are looking for"
   description: "Missing item that onboarding (#46) sets: nobody without it reaches the profile, so it names no way to fix it (#581)."
@@ -2992,13 +2978,6 @@ profile.needed.hint:
   description: "What a star after a field or a row of the profile means (#616): the footnote under the starred rows, and what a screen reader hears on each starred one in place of the star. The same words as the completeness checklist's heading. Nothing is refused for it: an unfinished card is only not shown."
   fi: "Tarvitaan, ennen kuin korttisi voidaan näyttää"
   sv: "Behövs innan ditt kort kan visas"
-  machine: { fi: true, sv: true }
-
-profile.needed.bioOrPrompts:
-  en: "Your card needs one of these: a bio of {min, number} characters, a ready line, or two answered questions."
-  description: "Under the bio in The basics and under the questions (#616): the either-or of completeness, which a star cannot say, so neither is starred. {min} is the bio length."
-  fi: "Korttisi tarvitsee yhden näistä: vähintään {min, number} merkin esittelyn, valmiin rivin tai kaksi vastattua kysymystä."
-  sv: "Ditt kort behöver ett av dessa: en presentation på {min, number} tecken, en färdig rad eller två besvarade frågor."
   machine: { fi: true, sv: true }
 
 profile.tip.title:
@@ -3127,34 +3106,6 @@ profile.card.photoLabelCaption:
   sv: "Foto {position, number} av {total, number}. {caption}"
   machine: { fi: true, sv: true }
 
-profile.card.photoPrevious:
-  en: "Previous photo"
-  description: "The left half of a card's photo (#513), a button: a tap shows the card's previous photo in its place; dimmed on the first."
-  fi: "Edellinen kuva"
-  sv: "Föregående foto"
-  machine: { fi: true, sv: true }
-
-profile.card.photoNext:
-  en: "Next photo"
-  description: "The right half of a card's photo (#513), a button: a tap shows the card's next photo in its place; dimmed on the last."
-  fi: "Seuraava kuva"
-  sv: "Nästa foto"
-  machine: { fi: true, sv: true }
-
-profile.card.showWhole:
-  en: "Show the whole card"
-  description: "Button under the short card (#644): opens the rest of the same card in place, below it: the bio, the other prompts and the remaining answers. Names no person, since a name would have to inflect."
-  fi: "Näytä koko kortti"
-  sv: "Visa hela kortet"
-  machine: { fi: true, sv: true }
-
-profile.card.showLess:
-  en: "Show less"
-  description: "The same button once the whole card is open (#644): closes it back to the short card."
-  fi: "Näytä vähemmän"
-  sv: "Visa mindre"
-  machine: { fi: true, sv: true }
-
 profile.card.fact:
   en: "{question}: {answer}"
   description: "What a screen reader hears for the first chip of an answer on a card (#644): the field's label, then the person's own answer, since the icon before the answer is decorative. {question} is a field's label (profile.field.*), {answer} the answer as the card shows it, both in nominative."
@@ -3174,6 +3125,27 @@ profile.card.shared:
   description: "What a screen reader hears for a chip on a card whose answer the viewer gave as well (#644, #150): a hobby or a language both answered. The eye sees the chip filled and in bold; never a count or a score. Replaces the words 'you too', which read like 'me too'."
   fi: "{option}, yhteinen"
   sv: "{option}, gemensam"
+  machine: { fi: true, sv: true }
+
+profile.card.part.picked:
+  en: "In your like"
+  description: "Under a photo, a prompt, the bio or a shared chip of a card in the queue that the reader tapped (#463), beside a check mark and inside an outline: the like or flower they send names this part. A short label."
+  fi: "Tykkäyksessäsi"
+  sv: "I din gillning"
+  machine: { fi: true, sv: true }
+
+profile.card.part.hint:
+  en: "Names this in your like"
+  description: "What a screen reader hears after a part of a card in the queue that can be picked (#463): tapping it makes the like or flower name it, tapping again clears it."
+  fi: "Nimeää tämän tykkäyksessäsi"
+  sv: "Nämner det här i din gillning"
+  machine: { fi: true, sv: true }
+
+profile.card.part.prompt:
+  en: "{prompt}: {answer}"
+  description: "What a screen reader hears for an answered prompt on a card in the queue, where the reader can tap it to name it in their like (#463): the prompt's question, then the person's own answer, as the card shows both. {prompt} is the question (profile.prompt.*), {answer} the person's own words, untranslated."
+  fi: "{prompt}: {answer}"
+  sv: "{prompt}: {answer}"
   machine: { fi: true, sv: true }
 
 profile.card.back:
@@ -3209,13 +3181,13 @@ legal.privacy.title:
   en: "Privacy"
   description: "Heading of the privacy policy a person accepts (#46, #208). Legal text: the English is the wording that counts."
   fi: "Tietosuoja"
-  consent_version: "2026-11-1"
+  consent_version: "2026-11-2"
 
 legal.privacy.summary:
   en: "Kuutti ry is the controller of the personal data processed in Kumpa. It stores an identifier computed from your personal identity code, the year and month of your birth, the data of your latest identification, your gender, your place of residence, whom you seek, your profile, your photos, your messages, and your sessions and devices. It does not store your personal identity code, your name or your date of birth. You can receive a copy of your data and delete your account in the app at any time. After the deletion, the data named in the retention table of the privacy policy is kept for the period stated there; it includes the identifier computed from your identity code and the messages you have sent to users whose accounts remain."
   description: "The summary of the privacy policy a person accepts by version (#46, #208). The full policy is the website's page, in English, and it is the one that binds."
   fi: "Kuutti ry on Kumpa-sovelluksessa käsiteltävien henkilötietojen rekisterinpitäjä. Se tallentaa henkilötunnuksestasi lasketun tunnisteen, syntymävuotesi ja -kuukautesi, viimeisimmän tunnistautumisesi tiedot, sukupuolesi, asuinpaikkasi, sen, kenen seuraa etsit, profiilisi, kuvasi, viestisi sekä istuntosi ja laitteesi. Se ei tallenna henkilötunnustasi, nimeäsi eikä syntymäaikaasi. Voit saada jäljennöksen tiedoistasi ja poistaa tilisi sovelluksessa milloin tahansa. Poiston jälkeen tietosuojaselosteen säilytystaulukossa mainitut tiedot säilytetään siinä ilmoitetun ajan; niihin kuuluvat henkilötunnuksestasi laskettu tunniste ja viestit, jotka olet lähettänyt käyttäjille, joiden tili on yhä olemassa."
-  consent_version: "2026-11-1"
+  consent_version: "2026-11-2"
 
 legal.special_category.title:
   en: "Sensitive answers"
@@ -3545,6 +3517,13 @@ errors.match_made:
   sv: "Det här gillandet blev en match, så det står kvar. Du kan fortfarande avsluta samtalet under Samtal."
   machine: { fi: true, sv: true }
 
+errors.anchor_not_on_card:
+  en: "That part of their card has changed since. Pick another, or like without one."
+  description: "Today's queue (400, #463): the photo, answer, bio or shared answer the reader picked for their like is no longer on the other person's card, removed or changed since the card was read. Nothing was saved and the pick is cleared."
+  fi: "Tuo kortin osa on muuttunut. Valitse toinen tai tykkää ilman."
+  sv: "Den delen av kortet har ändrats. Välj en annan eller gilla utan."
+  machine: { fi: true, sv: true }
+
 errors.already_relaxed:
   en: "You relaxed that one for today already."
   description: "Today's queue (409, #99, ADR-042 §5): the same deal-breaker relaxed twice the same day, from two devices or a tap that crossed another. Nothing was saved."
@@ -3560,10 +3539,10 @@ errors.relaxations_changed:
   machine: { fi: true, sv: true }
 
 errors.fish_budget_exceeded:
-  en: "You cannot send a fish just now."
-  description: "Today's queue (429 with Retry-After, #378, ADR-039): the person has sent matching_config fish_budget fish within the period of fish_window_days counted from a Monday, the calendar week (#475), and no earned fish waits; Retry-After says when the next can go. The queue screen says it when another phone sent the week's fish meanwhile, and takes the fish button away; it never names the day of the next, which is Monday. Nothing was saved. Never a number or a period: both are tunables."
-  fi: "Et voi lähettää kalaa juuri nyt."
-  sv: "Du kan inte skicka en fisk just nu."
+  en: "You cannot send a flower just now."
+  description: "Today's queue (429 with Retry-After, #378, ADR-039): the person has sent matching_config fish_budget flowers within the period of fish_window_days counted from a Monday, the calendar week (#475), and no earned flower waits; Retry-After says when the next can go. The queue screen says it when another phone sent the week's flowers meanwhile, and takes the flower button away; it never names the day of the next, which is Monday. Nothing was saved. Never a number or a period: both are tunables."
+  fi: "Et voi lähettää kukkaa juuri nyt."
+  sv: "Du kan inte skicka en blomma just nu."
   machine: { fi: true, sv: true }
 
 errors.like_budget_exceeded:
@@ -3587,11 +3566,11 @@ errors.invitations_full:
   sv: "Du har redan så många väntande inbjudningar som du kan ha. Dra tillbaka en, eller vänta tills en vän använder den."
   machine: { fi: true, sv: true }
 
-errors.stars_full:
-  en: "You have as many stars as you can have. Take one off to add another."
-  description: "A card (409, #575, ADR-064 §5): the person's list shows matching_config stars_max people. Never a number: the limit is a tunable. Nothing was saved."
-  fi: "Sinulla on jo niin monta tähteä kuin voi olla. Poista jokin niistä, niin voit lisätä uuden."
-  sv: "Du har redan så många stjärnor som du kan ha. Ta bort en för att lägga till en ny."
+queue.later.full:
+  en: "Your Later list is full, so this person will come back another day."
+  description: "Above the next card when Later found the person's Later list at its most (#681, ADR-064 §5, the maintainer, 18/11/2026): the card moved on all the same and comes back another day, as any card left for later does. Never a number: the most is a tunable (matching_config stars_max). Nothing about taking somebody off the list."
+  fi: "Myöhemmin-listasi on täynnä, joten tämä henkilö tulee vastaan toisena päivänä."
+  sv: "Din Senare-lista är full, så den här personen kommer tillbaka en annan dag."
   machine: { fi: true, sv: true }
 
 errors.invitation_not_for_you:
@@ -3753,13 +3732,6 @@ errors.media_unavailable:
   description: Photo routes (503) when the API has no object storage configured (a developer's machine without the S3 stand-in, an environment before the media module is applied).
   fi: Kuvat eivät ole juuri nyt käytettävissä.
   sv: Foton är inte tillgängliga just nu.
-  machine: { fi: true, sv: true }
-
-signIn.title:
-  en: Sign in
-  description: Sign-in screen heading.
-  fi: Kirjaudu sisään
-  sv: Logga in
   machine: { fi: true, sv: true }
 
 signIn.button:
@@ -4106,10 +4078,10 @@ settings.lock.label:
   machine: { fi: true, sv: true }
 
 native.ios.NSFaceIDUsageDescription:
-  en: "Kuutti uses Face ID to unlock the app when you have turned the lock on."
-  description: "iOS asks this before Kuutti first uses Face ID (#418): the purpose string in Info.plist, written per language by app.config.ts from native.json. No double quotes or backslashes."
-  fi: "Kuutti käyttää Face ID:tä sovelluksen avaamiseen, kun olet ottanut lukituksen käyttöön."
-  sv: "Kuutti använder Face ID för att låsa upp appen när du har slagit på låset."
+  en: "Kumpa uses Face ID to unlock the app when you have turned the lock on."
+  description: "iOS asks this before Kumpa first uses Face ID (#418): the purpose string in Info.plist, written per language by app.config.ts from native.json. No double quotes or backslashes."
+  fi: "Kumpa käyttää Face ID:tä sovelluksen avaamiseen, kun olet ottanut lukituksen käyttöön."
+  sv: "Kumpa använder Face ID för att låsa upp appen när du har slagit på låset."
   machine: { fi: true, sv: true }
 
 signIn.error.auth_cooldown:
@@ -4152,6 +4124,160 @@ signIn.unavailable:
   description: Sign-in screen of the web target, which only a developer runs on their own computer (pnpm env:up), shown instead of the button, since the bank sends the browser back to the app's scheme and a web page has none. "The mock bank" is the local stand-in for the bank login (services/mock-idp).
   fi: "Verkkoversiossa ei ole pankkitunnistusta. Kokeile muutosta puhelimella tai simulaattorissa testipankin avulla."
   sv: "Webbversionen har ingen bankinloggning. Prova ändringen på en telefon eller i en simulator med testbanken."
+  machine: { fi: true, sv: true }
+
+signIn.start.title:
+  en: "A more confident start to dating"
+  description: "The first screen of the app for somebody signed out (#681, ADR-010 §22): what Kumpa is, before anything is asked. The first reader's draft, a person's."
+  fi: "Varmempi alku deittailuun"
+  sv: "En mer självsäker start på dejtandet"
+  machine: { fi: true, sv: true }
+
+signIn.start.verified:
+  en: "Kumpa is a dating community of people whose real-world identities have been verified."
+  description: "First line of the first screen (#681, ADR-010 §22). The draft's, without \"safe\", a promise Kumpa cannot keep: that everybody's identity is verified is what is true. Kumpa stands in the nominative (glossary)."
+  fi: "Kumpa on deittailuyhteisö, jonka jäsenten henkilöllisyys on todennettu."
+  sv: "Kumpa är en dejtinggemenskap av människor vars identitet har verifierats."
+  machine: { fi: true, sv: true }
+
+signIn.start.bankId:
+  en: "Verify your identity with a Finnish bank ID."
+  description: "Second line of the first screen (#681, ADR-010 §22), the first reader's: what Kumpa will ask, said before the first question."
+  fi: "Todenna henkilöllisyytesi suomalaisilla pankkitunnuksilla."
+  sv: "Verifiera din identitet med finskt bank-ID."
+  machine: { fi: true, sv: true }
+
+signIn.start.free:
+  en: "Free dating for adults in Finland. Run by a registered association."
+  description: "Third line of the first screen (#681, ADR-010 §22), the first reader's: adults only, said before the first question, since somebody under 18 would answer for nothing."
+  fi: "Maksutonta deittailua täysi-ikäisille Suomessa. Ylläpitäjänä rekisteröity yhdistys."
+  sv: "Gratis dejting för vuxna i Finland. Drivs av en registrerad förening."
+  machine: { fi: true, sv: true }
+
+signIn.start.phoneOnly:
+  en: "Your answers stay on this phone until you make an account."
+  description: "Last line of the first screen (#681, ADR-010 §22): nothing is sent before the terms are accepted and the bank login saves the answers. The agent's, for the maintainer to review."
+  fi: "Vastauksesi pysyvät tässä puhelimessa, kunnes luot tilin."
+  sv: "Dina svar stannar på den här telefonen tills du skapar ett konto."
+  machine: { fi: true, sv: true }
+
+signIn.start.begin:
+  en: "Get started"
+  description: "The first screen's one button (#681, ADR-010 §22): on to the first question."
+  fi: "Aloita"
+  sv: "Kom igång"
+  machine: { fi: true, sv: true }
+
+signIn.start.resume:
+  en: "Continue where you left off"
+  description: "The first screen's button in place of Get started while answers given earlier wait on the phone, within the hour they are kept (#681, ADR-010 §22). The agent's."
+  fi: "Jatka siitä, mihin jäit"
+  sv: "Fortsätt där du slutade"
+  machine: { fi: true, sv: true }
+
+signIn.start.over:
+  en: "Start over"
+  description: "Under Continue where you left off (#681, ADR-010 §22): removes the answers waiting on the phone, for the next person on a shared phone too. The agent's."
+  fi: "Aloita alusta"
+  sv: "Börja om"
+  machine: { fi: true, sv: true }
+
+signIn.start.haveAccount:
+  en: "I already have an account"
+  description: "The first screen's quieter button (#681, ADR-010 §22): to the bank, past the questions, through the terms where this phone has not recorded them."
+  fi: "Minulla on jo tili"
+  sv: "Jag har redan ett konto"
+  machine: { fi: true, sv: true }
+
+signIn.agree.title:
+  en: "Accept terms of use"
+  description: "Heading of the screen with the terms before the bank (#681, ADR-010 §22), and of onboarding's step that asks them again after it. The first reader's."
+  fi: "Hyväksy käyttöehdot"
+  sv: "Godkänn användarvillkoren"
+  machine: { fi: true, sv: true }
+
+signIn.agree.save:
+  en: "To keep your answers, make an account: accept the terms and identify with your bank."
+  description: "First line of the terms screen after the questions (#681, ADR-010 §22): why the login comes now. Not shown to somebody who already has an account. The agent's."
+  fi: "Tallentaaksesi vastauksesi luo tili: hyväksy ehdot ja tunnistaudu pankkitunnuksilla."
+  sv: "För att spara dina svar, skapa ett konto: godkänn villkoren och identifiera dig med din bank."
+  machine: { fi: true, sv: true }
+
+signIn.agree.rules:
+  en: "Be respectful. Use photos of yourself. Don't copy or collect other members' photos or profiles."
+  description: "The terms in one line (#681, ADR-010 §22), the first reader's: each sentence is one the terms carry (no harassment, photos that show you, no copying or passing on another user's photos or profile)."
+  fi: "Käyttäydy kunnioittavasti. Käytä kuvia itsestäsi. Älä kopioi tai kerää muiden jäsenten kuvia tai profiileja."
+  sv: "Var respektfull. Använd bilder på dig själv. Kopiera eller samla inte andra medlemmars bilder eller profiler."
+  machine: { fi: true, sv: true }
+
+signIn.agree.removal:
+  en: "We may remove accounts that break these rules."
+  description: "Under the rules (#681, ADR-010 §22), the first reader's: the terms let Kuutti ry close an account permanently."
+  fi: "Voimme poistaa tilit, jotka rikkovat näitä sääntöjä."
+  sv: "Vi kan ta bort konton som bryter mot de här reglerna."
+  machine: { fi: true, sv: true }
+
+signIn.agree.accept:
+  en: "By tapping Agree and continue, you accept our Terms of Use and our Privacy Notice."
+  description: "Over the two links and the button (#681, ADR-010 §22), the first reader's: what the press accepts, the linked texts at the versions this app carries. It names the button, so its words are the button's in each language (signIn.agree.button)."
+  fi: "Napauttamalla Hyväksy ja jatka hyväksyt käyttöehtomme ja tietosuojaselosteemme."
+  sv: "Genom att trycka på Godkänn och fortsätt godkänner du våra användarvillkor och vårt dataskyddsmeddelande."
+  machine: { fi: true, sv: true }
+
+signIn.agree.button:
+  en: "Agree and continue"
+  description: "The terms screen's button (#681, ADR-010 §22): holds the two acceptances for the bank login, which records them, and on onboarding's step records them at once."
+  fi: "Hyväksy ja jatka"
+  sv: "Godkänn och fortsätt"
+  machine: { fi: true, sv: true }
+
+signIn.agree.useLink:
+  en: "Read the Terms of Use"
+  description: "A link on the terms screen (#681, ADR-010 §22): opens the full terms on the website, at the version this app carries. The links stand where the summaries were."
+  fi: "Lue käyttöehdot"
+  sv: "Läs användarvillkoren"
+  machine: { fi: true, sv: true }
+
+signIn.agree.noticeLink:
+  en: "Read the Privacy Notice"
+  description: "A link on the terms screen (#681, ADR-010 §22): opens the full privacy notice on the website, at the version this app carries."
+  fi: "Lue tietosuojaseloste"
+  sv: "Läs dataskyddsmeddelandet"
+  machine: { fi: true, sv: true }
+
+signIn.identify.title:
+  en: "Identification"
+  description: "Heading of the screen with the bank button (#681, ADR-010 §22), for a newcomer and for somebody with an account. The first reader's."
+  fi: "Tunnistautuminen"
+  sv: "Identifiering"
+  machine: { fi: true, sv: true }
+
+signIn.identify.why:
+  en: "Use your Finnish bank ID to confirm your identity and age."
+  description: "First line of the identification screen (#681, ADR-010 §22), the first reader's."
+  fi: "Vahvista henkilöllisyytesi ja ikäsi suomalaisilla pankkitunnuksilla."
+  sv: "Bekräfta din identitet och ålder med finskt bank-ID."
+  machine: { fi: true, sv: true }
+
+signIn.identify.notPayment:
+  en: "This is an identity check, not a payment."
+  description: "Second line of the identification screen (#681, ADR-010 §22), the first reader's: the bank's pages look like a payment's."
+  fi: "Tämä on henkilöllisyyden tarkistus, ei maksu."
+  sv: "Det här är en identitetskontroll, inte en betalning."
+  machine: { fi: true, sv: true }
+
+signIn.identify.kept:
+  en: "Kumpa does not keep your name or your identity code from the bank. Others see the name you choose."
+  description: "Third line of the identification screen (#681, ADR-010 §22): in place of the draft's \"seen only by us\", the true and stronger sentence (CLAUDE.md rules 1 and 3: no identity code and no name from the bank are kept, only a keyed fingerprint and the year and month of birth)."
+  fi: "Kumpa ei tallenna pankilta saatua nimeäsi eikä henkilötunnustasi. Muut näkevät valitsemasi nimen."
+  sv: "Kumpa sparar inte ditt namn eller din personbeteckning från banken. Andra ser namnet du väljer."
+  machine: { fi: true, sv: true }
+
+signIn.stage.back:
+  en: "Back"
+  description: "The arrow at the top of the screens before the bank (#681, ADR-010 §22): to the screen before, the first screen at the end."
+  fi: "Takaisin"
+  sv: "Tillbaka"
   machine: { fi: true, sv: true }
 
 settings.session.label:
@@ -4382,13 +4508,6 @@ onboarding.age.oldest:
   sv: "Äldsta"
   machine: { fi: true, sv: true }
 
-onboarding.consents.explain:
-  en: "Read both. You accept exactly this version of each text; if one changes, we ask you again."
-  description: "Consents step lead text (versioned consent)."
-  fi: "Lue molemmat. Hyväksyt juuri tämän version kummastakin tekstistä; jos jompikumpi muuttuu, kysymme uudelleen."
-  sv: "Läs båda. Du godkänner exakt den här versionen av varje text; om en ändras frågar vi igen."
-  machine: { fi: true, sv: true }
-
 onboarding.consents.binding:
   en: "The English text is the one that counts; this is a translation."
   description: "Shown with the legal texts where a person reads them in a translation (#208, ADR-010 §9): on a Finnish phone, since the legal texts are written in English and Finnish and the English binds. A Swedish phone reads the English itself and is not shown this."
@@ -4408,34 +4527,6 @@ onboarding.consents.outdatedApp:
   description: "Shown on the consents step when the API's current consent_version differs from the version of the text bundled in the app (#46, ADR-010 §4): the person may only accept the exact wording they read."
   fi: "Tästä tekstistä on uudempi versio kuin sovellukseen sisältyvä. Päivitä sovellus jatkaaksesi."
   sv: "Den här texten har en nyare version än den som är inbyggd i appen. Uppdatera appen för att fortsätta."
-  machine: { fi: true, sv: true }
-
-onboarding.welcome.title:
-  en: "How we do things here"
-  description: "The screen's one heading, over the norms with the two consents (#581): first on the screen before the bank login (#418, ADR-010 §15), and again on the welcome step after it when a wording changed or the rows did not land (#146)."
-  fi: "Näin täällä toimitaan"
-  sv: "Så här gör vi här"
-  machine: { fi: true, sv: true }
-
-onboarding.welcome.norm1:
-  en: "Everybody here has shown a bank ID. Be the person you are."
-  description: "First norm of the welcome screen (#146)."
-  fi: "Jokainen täällä on tunnistautunut pankkitunnuksilla. Ole se, joka olet."
-  sv: "Alla här har visat bank-ID. Var den du är."
-  machine: { fi: true, sv: true }
-
-onboarding.welcome.norm2:
-  en: "No contact details before a match."
-  description: "Second and last norm, on the screen before the bank login and on the welcome step (#146, #581): the one norm a person can break and be refused for."
-  fi: "Ei yhteystietoja ennen matchia."
-  sv: "Inga kontaktuppgifter före en match."
-  machine: { fi: true, sv: true }
-
-onboarding.welcome.accept:
-  en: "I'm in, and I accept both"
-  description: "The one button under the norms and the two consents: before the bank login it leads on, and the consents are recorded right after the sign-in (#418, ADR-010 §15); on the welcome step after the bank login it records them (#146, ADR-010 §9)."
-  fi: "Olen mukana ja hyväksyn molemmat"
-  sv: "Jag är med och godkänner båda"
   machine: { fi: true, sv: true }
 
 onboarding.name.title:
@@ -4543,25 +4634,32 @@ onboarding.photos.explain:
   sv: "Profiler med en ansiktsbild blir sedda."
   machine: { fi: true, sv: true }
 
-onboarding.prompts.title:
-  en: "A few words"
-  description: "Heading of the prompts step (#146)."
-  fi: "Muutama sana"
-  sv: "Några ord"
+onboarding.offer.title:
+  en: "Finish your profile"
+  description: "Heading of the offer after the bank, shown once at the end of the first walk (#681, ADR-010 §22). The agent's."
+  fi: "Viimeistele profiilisi"
+  sv: "Gör klart din profil"
   machine: { fi: true, sv: true }
 
-onboarding.prompts.explain:
-  en: "Answer two questions, write a bio of at least {min, number} characters, or pick a ready line."
-  description: "Under the prompts step's heading (#146, ADR-009 §4, #581): the one place on the step that says what Save and continue waits for; a ready line finishes the step too (#239)."
-  fi: "Vastaa kahteen kysymykseen, kirjoita vähintään {min, number} merkin esittely tai valitse valmis rivi."
-  sv: "Svara på två frågor, skriv en presentation på minst {min, number} tecken eller välj en färdig rad."
+onboarding.offer.body:
+  en: "A fuller profile brings much better suggestions. Add a few words about yourself or answer a few questions, or go on as you are."
+  description: "The offer's one line (#681, ADR-010 §22): the maintainer's reason (14/11/2026), and that going on without it is fine. No reminder comes back: the profile's own screen carries the rest."
+  fi: "Täydempi profiili tuo paljon parempia ehdotuksia. Kerro itsestäsi muutamalla sanalla tai vastaa muutamaan kysymykseen, tai jatka sellaisenaan."
+  sv: "En fylligare profil ger mycket bättre förslag. Skriv några ord om dig själv eller svara på några frågor, eller fortsätt som du är."
   machine: { fi: true, sv: true }
 
-onboarding.prompts.save:
-  en: "Save and continue"
-  description: "Button of the prompts step: saves the profile and moves on (#146)."
-  fi: "Tallenna ja jatka"
-  sv: "Spara och fortsätt"
+onboarding.offer.finish:
+  en: "Finish my profile"
+  description: "The offer's first button (#681, ADR-010 §22): opens the profile."
+  fi: "Viimeistele profiilini"
+  sv: "Gör klart min profil"
+  machine: { fi: true, sv: true }
+
+onboarding.offer.later:
+  en: "Not now"
+  description: "The offer's second button (#681, ADR-010 §22): home, as the profile is."
+  fi: "Ei nyt"
+  sv: "Inte nu"
   machine: { fi: true, sv: true }
 
 photos.title:
@@ -4611,6 +4709,13 @@ photos.uploading:
   description: Photos screen, upload progress. {percent} is a whole number 0 to 100.
   fi: "Lähetetään… {percent, number} %"
   sv: "Laddar upp… {percent, number} %"
+  machine: { fi: true, sv: true }
+
+photos.uploading.many:
+  en: "Uploading photo {index, number} of {photos, number}… {percent, number} %"
+  description: "Photos screen, upload progress when several photos were picked at once (#681): they go one after another, in the order picked. {index} is the photo being sent, from 1; {photos} is how many were picked; {percent} is that photo's progress, a whole number 0 to 100."
+  fi: "Lähetetään kuvaa {index, number}/{photos, number}… {percent, number} %"
+  sv: "Laddar upp foto {index, number} av {photos, number}… {percent, number} %"
   machine: { fi: true, sv: true }
 
 photos.state.pending:
@@ -4730,6 +4835,13 @@ photos.refused.local:
   description: Photos screen, the on-device check refused the picked photo; nothing was sent. Deliberately says no more.
   fi: Tätä kuvaa ei voi käyttää.
   sv: Det här fotot kan inte användas.
+  machine: { fi: true, sv: true }
+
+photos.refused.localSome:
+  en: "{refused, plural, one {One of the photos cannot be used.} other {# of the photos cannot be used.}}"
+  description: "Photos screen, after several photos were picked at once (#681): the on-device check refused {refused} of them, which were not sent; the others went on. Said once, at the end. Deliberately says no more, as photos.refused.local does: the grid shows which ones arrived."
+  fi: "{refused, plural, one {Yhtä kuvista ei voi käyttää.} other {# kuvaa ei voi käyttää.}}"
+  sv: "{refused, plural, one {Ett av fotona kan inte användas.} other {# av fotona kan inte användas.}}"
   machine: { fi: true, sv: true }
 
 photos.error.permission:
@@ -6171,8 +6283,8 @@ admin.automaticBans.rule.cards_served:
   description: "Admin panel, the automatic shadow bans: the velocity rule on cards served applied it; {people} is of how many different people, {first} the first card's time and {at} when the rule applied the ban (#86)."
 
 admin.automaticBans.rule.queue_reads:
-  en: "Read the queue or opened a starred card {reads, plural, one {# time} other {# times}} between {first} and {at}."
-  description: "Admin panel, the automatic shadow bans: the velocity rule on reads of the queue applied it; {reads} is how many served reads of the queue, each starred card opened from the Starred list counted as one (ADR-064 §4), {first} the first one's time and {at} when the rule applied the ban (#86, ADR-041)."
+  en: "Read the queue or opened a card from the Later list {reads, plural, one {# time} other {# times}} between {first} and {at}."
+  description: "Admin panel, the automatic shadow bans: the velocity rule on reads of the queue applied it; {reads} is how many served reads of the queue, each card opened from the Later list counted as one (ADR-064 §4, #681), {first} the first one's time and {at} when the rule applied the ban (#86, ADR-041)."
 
 admin.automaticBans.hidden:
   en: "Hidden: {age}."
@@ -7447,10 +7559,10 @@ account.export.queue.relaxation.aside:
   machine: { fi: true, sv: true }
 
 account.export.queue.reason.fish:
-  en: "Had sent you a fish"
-  description: "Inside the downloaded data file (#378), why a card was in the person's queue: the card's person had sent them a fish, as the card's label said."
-  fi: "Oli lähettänyt sinulle kalan"
-  sv: "Hade skickat en fisk till dig"
+  en: "Had sent you a flower"
+  description: "Inside the downloaded data file (#378), why a card was in the person's queue: the card's person had sent them a flower, as the card's label said."
+  fi: "Oli lähettänyt sinulle kukan"
+  sv: "Hade skickat en blomma till dig"
   machine: { fi: true, sv: true }
 
 account.export.queue.decision.like:
@@ -7461,10 +7573,10 @@ account.export.queue.decision.like:
   machine: { fi: true, sv: true }
 
 account.export.queue.decision.fish:
-  en: "Sent a fish"
-  description: "Inside the downloaded data file (#378), the person's decision on a card of their queue: a fish, a like that says a little more, of which a person may send matching_config fish_budget in each calendar week, Monday to Sunday (fish_window_days counted from a Monday, #475)."
-  fi: "Lähetit kalan"
-  sv: "Skickade en fisk"
+  en: "Sent a flower"
+  description: "Inside the downloaded data file (#378), the person's decision on a card of their queue: a flower, a like that says a little more, of which a person may send matching_config fish_budget in each calendar week, Monday to Sunday (fish_window_days counted from a Monday, #475)."
+  fi: "Lähetit kukan"
+  sv: "Skickade en blomma"
   machine: { fi: true, sv: true }
 
 account.export.queue.decision.pass:
@@ -7481,11 +7593,39 @@ account.export.queue.decision.skip:
   sv: "Lämnade till senare"
   machine: { fi: true, sv: true }
 
+account.export.anchor.photo:
+  en: "Liked their photo"
+  description: "Inside the downloaded data file (#463), the part of the other person's card the reader's own like named: one of their photos. Never says which photo or whose."
+  fi: "Tykkäsit kuvasta"
+  sv: "Gillade en bild"
+  machine: { fi: true, sv: true }
+
+account.export.anchor.prompt:
+  en: "Liked their answer to: {prompt}"
+  description: "Inside the downloaded data file (#463), the part the reader's own like named: the other person's answer to a prompt. {prompt} is the prompt's question in the reader's language, never the answer."
+  fi: "Tykkäsit vastauksesta kysymykseen: {prompt}"
+  sv: "Gillade svaret på: {prompt}"
+  machine: { fi: true, sv: true }
+
+account.export.anchor.bio:
+  en: "Liked their bio"
+  description: "Inside the downloaded data file (#463), the part the reader's own like named: the other person's bio or its ready line, which count as one."
+  fi: "Tykkäsit esittelystä"
+  sv: "Gillade presentationen"
+  machine: { fi: true, sv: true }
+
+account.export.anchor.shared:
+  en: "Liked what you share: {option}"
+  description: "Inside the downloaded data file (#463), the part the reader's own like named: an answer both people gave, such as a hobby or a language. {option} is the answer in words, which the reader gave too."
+  fi: "Tykkäsit yhteisestä: {option}"
+  sv: "Gillade det ni delar: {option}"
+  machine: { fi: true, sv: true }
+
 account.export.star.about:
-  en: "When you put each star you have now. Who it is on is not written here."
-  description: "Inside the downloaded data file (#575, ADR-064 §9), the text that opens the part listing the person's stars by date only. Plain; says why no name is there."
-  fi: "Milloin laitoit kunkin nykyisen tähtesi. Sitä, kenelle se on, ei kirjoiteta tähän."
-  sv: "När du satte var och en av dina stjärnor. Vem den gäller står inte här."
+  en: "When you put each person on your Later list who is on it now. Who they are is not written here."
+  description: "Inside the downloaded data file (#575, ADR-064 §9, #681), the text that opens the part listing the people on the person's Later list by date only. Plain; says why no name is there."
+  fi: "Milloin laitoit kunkin nyt Myöhemmin-listallasi olevan henkilön listalle. Sitä, kuka hän on, ei kirjoiteta tähän."
+  sv: "När du lade till var och en som nu finns i din Senare-lista. Vem det är står inte här."
   machine: { fi: true, sv: true }
 
 account.export.block.about:
@@ -8032,7 +8172,7 @@ pond.counter.small:
 # --- The gate card (#500, ADR-060): whether matching is open for the person ---
 pond.gate.incomplete:
   en: "Matching opens for finished profiles. Yours still lacks something."
-  description: "Gate card when the person's profile or onboarding is not complete. The profile screen says what is missing; this only says that something is."
+  description: "Gate card when the person's profile or onboarding is not complete. Under it the card lists what the profile lacks, a line each in the profile screen's words (profile.completeness.*), then the button to the profile (#745); it stands alone when that list cannot be read or names nothing, as when what is missing is not the profile's."
   fi: "Seuranhaku avautuu valmiille profiileille. Sinun profiilistasi puuttuu vielä jotakin."
   sv: "Matchningen öppnar för färdiga profiler. I din saknas ännu något."
   machine: { fi: true, sv: true }
@@ -8097,10 +8237,10 @@ queue.reason.seen_before:
   machine: { fi: true, sv: true }
 
 queue.reason.fish:
-  en: "Sent you a fish"
-  description: "Why a card is in the queue (TD-12, #378, ADR-039): this person sent the reader a fish, a like that goes first; liking back makes a match. The word fish is the app's own for it (ADR-039 Open 1), for the native review. A short label."
-  fi: "Lähetti sinulle kalan"
-  sv: "Skickade en fisk till dig"
+  en: "Sent you a flower"
+  description: "Why a card is in the queue (TD-12, #378, ADR-039): this person sent the reader a flower, a like that goes first; liking back makes a match. The word flower (kukka) is the maintainer's of 18/11/2026 (#681), which settles ADR-039 Open 1; its icon is a dandelion's seed head. A short label."
+  fi: "Lähetti sinulle kukan"
+  sv: "Skickade en blomma till dig"
   machine: { fi: true, sv: true }
 
 queue.reason.relaxedField:
@@ -8174,10 +8314,10 @@ queue.short.nobody:
   machine: { fi: true, sv: true }
 
 queue.fish:
-  en: "Send a fish"
-  description: "Decision button on a queue card, above like and pass, a filled rounded square with a fish (#378, ADR-039): a like with a mark, first in the other person's queue; matching_config fish_budget of them in a calendar week, Monday to Sunday (fish_window_days from a Monday). Not offered on a card that liked the reader or sent a fish, nor with no likes left except on a card already liked (#503), nor once no fish can go (the week's is sent and no earned one waits), except on the card that holds it (#475). Never a number or a period on the button: both are tunables. The word fish is the app's own (ADR-039 Open 1), for the native review."
-  fi: "Lähetä kala"
-  sv: "Skicka en fisk"
+  en: "Send a flower"
+  description: "Decision button on a queue card, in the smaller row above like and pass, a filled rounded square with a dandelion (#378, ADR-039, #681): a like with a mark, first in the other person's queue; matching_config fish_budget of them in a calendar week, Monday to Sunday (fish_window_days from a Monday). Not offered on a card that liked the reader or sent a flower, nor with no likes left except on a card already liked (#503), nor once no flower can go (the week's is sent and no earned one waits), except on the card that holds it (#475). Never a number or a period on the button: both are tunables. The word flower (kukka) is the maintainer's of 18/11/2026 (#681), which settles ADR-039 Open 1; its icon is a dandelion's seed head."
+  fi: "Lähetä kukka"
+  sv: "Skicka en blomma"
   max_length: 24
   machine: { fi: true, sv: true }
 
@@ -8201,7 +8341,7 @@ queue.pass:
 
 queue.skip:
   en: "Later"
-  description: "Decision button on a card (ADR-062 §3): move on without deciding. It spends nothing and costs nobody anything, and the card returns another day. Plainer than Like and Pass, a text button. Finnish Ohita is already Pass, so this is never that word. One word."
+  description: "Decision button on a card (ADR-062 §3, #681): move on without deciding, and put the person on the Later list to come back to (the maintainer, 18/11/2026); the list's title is the same word. It spends nothing and costs nobody anything, and nobody else learns of it. Plainer than Like and Pass, a text button. Finnish Ohita is already Pass, so this is never that word. One word."
   fi: "Myöhemmin"
   sv: "Senare"
   max_length: 14
@@ -8229,6 +8369,76 @@ queue.undo.label:
   sv: "Ångra ditt senaste val"
   machine: { fi: true, sv: true }
 
+queue.likedYour.photo:
+  en: "Liked your photo"
+  description: "On a liked-you or flower card of the queue (#463), under the reason label: the part of the reader's own card this person's like named, one of the reader's photos, shown small beside the line. Never says when."
+  fi: "Tykkäsi kuvastasi"
+  sv: "Gillade din bild"
+  machine: { fi: true, sv: true }
+
+queue.likedYour.prompt:
+  en: "Liked your answer to: {prompt}"
+  description: "On a liked-you or flower card of the queue (#463): this person's like named the reader's answer to a prompt. {prompt} is the prompt's question in the reader's language."
+  fi: "Tykkäsi vastauksestasi kysymykseen: {prompt}"
+  sv: "Gillade ditt svar på: {prompt}"
+  machine: { fi: true, sv: true }
+
+queue.likedYour.bio:
+  en: "Liked your bio"
+  description: "On a liked-you or flower card of the queue (#463): this person's like named the reader's bio or its ready line, which count as one."
+  fi: "Tykkäsi esittelystäsi"
+  sv: "Gillade din presentation"
+  machine: { fi: true, sv: true }
+
+queue.likedYour.shared:
+  en: "Liked what you share: {option}"
+  description: "On a liked-you or flower card of the queue (#463): this person's like named an answer both gave, such as a hobby or a language. {option} is the answer in words."
+  fi: "Tykkäsi yhteisestä: {option}"
+  sv: "Gillade det ni delar: {option}"
+  machine: { fi: true, sv: true }
+
+queue.anchor.photo:
+  en: "Liking their photo"
+  description: "Floating above Like and the flower while the reader has picked one of the card's photos (#463): the like or flower they send names that photo. Tap the photo again, or Clear, to name nothing."
+  fi: "Tykkäät kuvasta"
+  sv: "Du gillar bilden"
+  machine: { fi: true, sv: true }
+
+queue.anchor.prompt:
+  en: "Liking their answer to: {prompt}"
+  description: "Floating above Like and the flower while the reader has picked one of the card's answered prompts (#463). {prompt} is the prompt's question."
+  fi: "Tykkäät vastauksesta kysymykseen: {prompt}"
+  sv: "Du gillar svaret på: {prompt}"
+  machine: { fi: true, sv: true }
+
+queue.anchor.bio:
+  en: "Liking their bio"
+  description: "Floating above Like and the flower while the reader has picked the card's bio or its ready line (#463)."
+  fi: "Tykkäät esittelystä"
+  sv: "Du gillar presentationen"
+  machine: { fi: true, sv: true }
+
+queue.anchor.shared:
+  en: "Liking what you share: {option}"
+  description: "Floating above Like and the flower while the reader has picked an answer both gave (#463), such as a hobby. {option} is the answer in words."
+  fi: "Tykkäät yhteisestä: {option}"
+  sv: "Du gillar det ni delar: {option}"
+  machine: { fi: true, sv: true }
+
+queue.anchor.clear:
+  en: "Clear"
+  description: "The button beside the floating line of a picked part (#463): the like names nothing again. One short word; its screen-reader name is queue.anchor.clearLabel."
+  fi: "Poista"
+  sv: "Rensa"
+  machine: { fi: true, sv: true }
+
+queue.anchor.clearLabel:
+  en: "Name no part in your like"
+  description: "What a screen reader hears for Clear beside the picked part (#463): the like or flower names nothing again."
+  fi: "Älä nimeä mitään tykkäyksessäsi"
+  sv: "Nämn ingen del i din gillning"
+  machine: { fi: true, sv: true }
+
 queue.revisit.like:
   en: "You liked this person. You can change that until midnight."
   description: "Above a card the reader brought back with Undo, when its decision is a like (ADR-034 §5): the like stands until another button is pressed."
@@ -8251,10 +8461,10 @@ queue.revisit.skip:
   machine: { fi: true, sv: true }
 
 queue.revisit.fish:
-  en: "You sent this person a fish. You can change that until midnight."
-  description: "Above a card the reader brought back with Undo, when its decision is a fish (ADR-034 §5, ADR-039): changed the same day, the fish is given back."
-  fi: "Lähetit tälle henkilölle kalan. Voit muuttaa sitä keskiyöhön asti."
-  sv: "Du skickade en fisk till den här personen. Du kan ändra det fram till midnatt."
+  en: "You sent this person a flower. You can change that until midnight."
+  description: "Above a card the reader brought back with Undo, when its decision is a flower (ADR-034 §5, ADR-039): changed the same day, the flower is given back."
+  fi: "Lähetit tälle henkilölle kukan. Voit muuttaa sitä keskiyöhön asti."
+  sv: "Du skickade en blomma till den här personen. Du kan ändra det fram till midnatt."
   machine: { fi: true, sv: true }
 
 queue.done:
@@ -8307,138 +8517,171 @@ queue.match.continue:
   sv: "Tillbaka till människorna"
   machine: { fi: true, sv: true }
 
-# --- The match as a hello: the designers' try (outside production), Sini's idea of 15/11/2026 ---
+# --- The match as a hello: Kumpa, the look every phone starts in, and the designers' try; Sini's idea of 15/11/2026 ---
 
 queue.hello.title:
   en: "Well, hello!"
-  description: "The neubrutalism try's match moment (outside production): the headline in a tilted slab after a like made a match. A greeting, not the word match: the two would like to hear more about each other, like a smile across a room. Two or three short words. The Finnish is Sini's, with her exclamation mark, which the tone guide does not allow: the maintainer's call before it leaves the try."
+  description: "The match moment of Kumpa, the look every phone starts in, released too, and of the designers' tries: the headline after a like made a match, large, in a tilted slab in the neubrutalism try. A greeting, not the word match: the two would like to hear more about each other, like a smile across a room. Two or three short words. The Finnish is Sini's, with her exclamation mark, which the tone guide does not allow: the maintainer's call before a release."
   fi: "Kas moi!"
   sv: "Nämen hej!"
   machine: { fi: true, sv: true }
 
 queue.hello.both:
   en: "You would both like to hear more about each other."
-  description: "The neubrutalism try's match moment (outside production), the one sentence under the headline: what happened, in plain words. Never a score, a fit or a feeling the two are said to share."
+  description: "The match moment of Kumpa, the look every phone starts in, released too, and of the designers' tries, the one sentence under the headline: what happened, in plain words. Never a score, a fit or a feeling the two are said to share."
   fi: "Te molemmat haluatte kuulla toisistanne lisää."
   sv: "Ni vill båda höra mer om varandra."
   machine: { fi: true, sv: true }
 
 queue.hello.open:
   en: "Say hello"
-  description: "The neubrutalism try's match moment (outside production): the button that opens the conversation the match opened. It sends nothing by itself."
+  description: "The match moment of Kumpa, the look every phone starts in, released too, and of the designers' tries: the button that opens the conversation the match opened. It sends nothing by itself."
   fi: "Sano moi"
   sv: "Säg hej"
   machine: { fi: true, sv: true }
 
 queue.hello.you:
   en: "You"
-  description: "The neubrutalism try's match moment (outside production): the caption under the reader's own photo; the other photo's caption is that person's name."
+  description: "The match moment of Kumpa, the look every phone starts in, released too, and of the designers' tries: the name of the reader's own photo, a caption under it in the neubrutalism try, where the other photo's caption is that person's name."
   fi: "Sinä"
   sv: "Du"
   machine: { fi: true, sv: true }
 
 queue.hello.photos:
   en: "You and {name}"
-  description: "The neubrutalism try's match moment (outside production): what a screen reader says for the two photos side by side. {name} is the other person's display name, in a list, so never inflected."
+  description: "The match moment of Kumpa, the look every phone starts in, released too, and of the designers' tries: what a screen reader says for the two photos side by side. {name} is the other person's display name, in a list, so never inflected."
   fi: "Sinä ja {name}"
   sv: "Du och {name}"
   machine: { fi: true, sv: true }
 
-# --- The end of making a profile, celebrated: the designers' try (outside production), Sini's screens of 15/11/2026 ---
+# --- The end of making a profile, celebrated: Kumpa, the look every phone starts in, and the designers' try; Sini's screens of 15/11/2026 ---
 
 onboarding.ready.title:
   en: "Profile ready!"
-  description: "The neubrutalism try's celebration at the end of making a profile (outside production): the headline in a tilted slab, over a high five. Two short words. The Finnish is Sini's, with her exclamation mark, which the tone guide does not allow: the maintainer's call before it leaves the try."
+  description: "The celebration at the end of making a profile, in Kumpa, the look every phone starts in, released too, and in the designers' tries: the headline, large, in a tilted slab over a high five in the neubrutalism try. Two short words. The Finnish is Sini's, with her exclamation mark, which the tone guide does not allow: the maintainer's call before a release."
   fi: "Profiili valmis!"
   sv: "Profilen klar!"
   machine: { fi: true, sv: true }
 
 onboarding.ready.body:
   en: "Nicely done. That was the hard part."
-  description: "The neubrutalism try's celebration at the end of making a profile (outside production), the one line under the high five: making a profile is the laborious part, and it is behind. It promises nothing about who sees the profile or when; home's matching card says that."
+  description: "The celebration at the end of making a profile, in Kumpa, the look every phone starts in, released too, and in the designers' tries, the one line under the headline and its picture: making a profile is the laborious part, and it is behind. It promises nothing about who sees the profile or when; home's matching card says that."
   fi: "Hienoa. Se oli se työläin osa."
   sv: "Snyggt. Det där var den jobbiga delen."
   machine: { fi: true, sv: true }
 
-# --- The stars (#575, ADR-064): somebody marked for later, without a like or a pass ---
+# --- The Later list (#575, ADR-064, #681): somebody saved to come back to, without a like or a pass ---
 
-queue.star:
-  en: "Star"
-  description: "Button on a card with no star on it (#575, ADR-064 §1): mark this person to come back to later, without a like or a pass. A private bookmark that spends nothing. Never a rating, a super like or anything the other person sees. One word."
-  fi: "Tähti"
-  sv: "Stjärna"
-  max_length: 14
-  machine: { fi: true, sv: true }
-
-queue.star.on:
-  en: "Starred"
-  description: "The same button with the star on it (#575): a tap takes it off. The icon is filled as well, so the state is never colour alone. One word."
-  fi: "Tähdellä"
-  sv: "Stjärnmärkt"
-  max_length: 14
-  machine: { fi: true, sv: true }
-
-queue.star.label:
-  en: "Star: {name}"
-  description: "What a screen reader says for the star on a card (#575), naming the person; the reader adds whether it is selected. {name} stays in the nominative after the colon."
-  fi: "Tähti: {name}"
-  sv: "Stjärna: {name}"
-  machine: { fi: true, sv: true }
-
-queue.star.first:
-  en: "Only you can see your stars."
-  description: "Above the card when a star is the only one on the person's list (#575, ADR-064 §7), so that it cannot be taken for a super like, which other apps use a star for. The one line that says who sees a star: the Starred list says nothing of it (#581). Plain and calm."
-  fi: "Vain sinä näet tähtesi."
-  sv: "Bara du ser dina stjärnor."
+queue.later.first:
+  en: "Saved to your Later list. Only you can see it."
+  description: "Above the next card when Later has put the first person on the person's Later list (#575, ADR-064 §7, #681): where Later put them, and that nobody else sees it, so that it cannot be taken for a super like. The one line that says who sees the list: the list says nothing of it (#581). Plain and calm."
+  fi: "Tallennettu Myöhemmin-listallesi. Vain sinä näet sen."
+  sv: "Sparad i din Senare-lista. Bara du ser den."
   machine: { fi: true, sv: true }
 
 stars.title:
-  en: "Starred"
-  description: "Title of the list of people the person put a star on (#575, ADR-064 §6). A plain name, and it shrinks to fit one line."
-  fi: "Tähdellä merkityt"
-  sv: "Stjärnmärkta"
+  en: "Later"
+  description: "Title of the Later list, the people the person chose Later on to come back to (#575, ADR-064 §6, #681): the same word as the card's button (queue.skip). A plain name, and it shrinks to fit one line."
+  fi: "Myöhemmin"
+  sv: "Senare"
   machine: { fi: true, sv: true }
 
 stars.home.open:
-  en: "Starred"
-  description: "Button on the home screen into the list of people the person starred, shown only when there is one (#575, ADR-064 §6). Its word only: no count."
-  fi: "Tähdellä merkityt"
-  sv: "Stjärnmärkta"
+  en: "Later list"
+  description: "Button into the Later list, on the home screen and where the queue ends, shown only when somebody is on it (#575, ADR-064 §6, #681). Its words only: no count."
+  fi: "Myöhemmin-lista"
+  sv: "Senare-listan"
   machine: { fi: true, sv: true }
 
 stars.back:
   en: "Back to home"
-  description: "Back arrow of the Starred list, heard by a screen reader: where it goes (#575)."
+  description: "Back arrow of the Later list, heard by a screen reader: where it goes (#575, #681)."
   fi: "Takaisin alkuun"
   sv: "Tillbaka till start"
   machine: { fi: true, sv: true }
 
 stars.none:
   en: "Nobody here right now."
-  description: "The Starred list with nobody to show (#575). It may hold stars left out for now, so it never says the person has none, and never why anybody is gone (ADR-064 §6)."
+  description: "The Later list with nobody to show (#575, #681). It may hold people left out for now, so it never says the list is empty, and never why anybody is gone (ADR-064 §6)."
   fi: "Täällä ei ole nyt ketään."
   sv: "Ingen här just nu."
   machine: { fi: true, sv: true }
 
 stars.clear.label:
-  en: "Take the star off: {name}"
-  description: "What a screen reader says for the star on a row of the Starred list (#575): a tap takes it off and the row goes. {name} stays in the nominative after the colon."
-  fi: "Poista tähti: {name}"
-  sv: "Ta bort stjärnan: {name}"
+  en: "Take off the list: {name}"
+  description: "What a screen reader says for the button on a row of the Later list that takes the person off it (#575, #681): a tap takes them off and the row goes. {name} stays in the nominative after the colon."
+  fi: "Poista listalta: {name}"
+  sv: "Ta bort från listan: {name}"
   machine: { fi: true, sv: true }
 
 stars.photo.label:
   en: "Photo: {name}"
-  description: "What a screen reader says for a row's small photo on the Starred list (#575), where it reads the photo at all: the row says the name first. {name} stays in the nominative after the colon."
+  description: "What a screen reader says for a row's small photo on the Later list (#575, #681), where it reads the photo at all: the row says the name first. {name} stays in the nominative after the colon."
   fi: "Kuva: {name}"
   sv: "Foto: {name}"
   machine: { fi: true, sv: true }
 
 stars.card.back:
-  en: "Back to Starred"
-  description: "The back arrow's spoken name and the button on a card opened from the Starred list, once it is decided (#575): where they go. Once the card is gone this button is all that stands, and the screen reader is taken to it (#581)."
-  fi: "Takaisin tähdellä merkittyihin"
-  sv: "Tillbaka till stjärnmärkta"
+  en: "Back to Later list"
+  description: "The back arrow's spoken name and the button on a card opened from the Later list, once it is decided (#575, #681): where they go. Once the card is gone this button is all that stands, and the screen reader is taken to it (#581)."
+  fi: "Takaisin Myöhemmin-listaan"
+  sv: "Tillbaka till Senare-listan"
+  machine: { fi: true, sv: true }
+
+stars.fresh:
+  en: "Not compared yet"
+  description: "A mark under the name of a row of the Later list for somebody who came onto it after the person put it in order with Kumpa (ADR-064 §6): they stand at the top until Kumpa gives them a place. The person's own order, seen by nobody else."
+  fi: "Ei vielä verrattu"
+  sv: "Inte jämförd än"
+  machine: { fi: true, sv: true }
+
+stars.fresh.label:
+  en: "{name}, {years, number}, not compared yet"
+  description: "What a screen reader says for a row of the Later list marked as not compared yet (stars.fresh): the name and the age as on a card (profile.card.nameAge), then the mark. {name} stays in the nominative."
+  fi: "{name}, {years, number}, ei vielä verrattu"
+  sv: "{name}, {years, number}, inte jämförd än"
+  machine: { fi: true, sv: true }
+
+stars.kumpa.open:
+  en: "Kumpa?"
+  description: "The button at the top of the Later list that opens Kumpa (ADR-064 §6, the maintainer, 26/11/2026): the person puts their own Later list in order, picking one of two people at a time. Kumpa is the feature's name in every language, the question \"which of the two?\", as the app's name says it; never translated. Shown while the list shows two people or more."
+  fi: "Kumpa?"
+  sv: "Kumpa?"
+  machine: { fi: true, sv: true }
+
+stars.kumpa.label:
+  en: "Kumpa? Put your Later list in order, two at a time."
+  description: "What a screen reader says for the Kumpa button of the Later list (stars.kumpa.open; the maintainer, 26/11/2026): the name, then what it does. Kumpa is never translated."
+  fi: "Kumpa? Järjestä Myöhemmin-listasi kaksi kerrallaan."
+  sv: "Kumpa? Ordna din Senare-lista, två i taget."
+  machine: { fi: true, sv: true }
+
+stars.kumpa.title:
+  en: "Kumpa?"
+  description: "Title of Kumpa's screen, where two people of the Later list stand one under the other, side by side on a wide window, and the person taps the one they would put first (ADR-064 §6). The question itself; it shrinks to fit one line. Never translated."
+  fi: "Kumpa?"
+  sv: "Kumpa?"
+  machine: { fi: true, sv: true }
+
+stars.kumpa.pick.hint:
+  en: "Puts them before the other one."
+  description: "What a screen reader adds after the name and age of either of the two people on Kumpa's screen (an accessibility hint): a tap puts this person before the other on the person's own Later list. No word of liking: it orders the list and nothing else."
+  fi: "Asettaa hänet toisen edelle."
+  sv: "Sätter hen före den andra."
+  machine: { fi: true, sv: true }
+
+stars.kumpa.done:
+  en: "Your Later list is in order."
+  description: "Kumpa's screen once everybody on the Later list has a place (ADR-064 §6): the screen reader is taken to it. No count of anybody."
+  fi: "Myöhemmin-listasi on järjestyksessä."
+  sv: "Din Senare-lista är i ordning."
+  machine: { fi: true, sv: true }
+
+stars.kumpa.again:
+  en: "Start again"
+  description: "Button on Kumpa's screen once the Later list is in order: forgets the order the person gave it and starts the pairs again from the beginning (ADR-064 §6)."
+  fi: "Aloita alusta"
+  sv: "Börja om"
   machine: { fi: true, sv: true }
 
 # --- The chat (#348, ADR-031): the list of conversations, a conversation and its composer ---
@@ -8448,6 +8691,62 @@ chat.list.title:
   description: "Title of the list of conversations (#348)."
   fi: "Keskustelut"
   sv: "Samtal"
+  machine: { fi: true, sv: true }
+
+chat.anchor.mine.photo:
+  en: "You liked their photo"
+  description: "Above the first message of a conversation (#463): the part of the other person's card the reader's like named when the two matched, with that photo small beside it. Not a message."
+  fi: "Tykkäsit kuvasta"
+  sv: "Du gillade bilden"
+  machine: { fi: true, sv: true }
+
+chat.anchor.mine.prompt:
+  en: "You liked their answer to: {prompt}"
+  description: "Above the first message of a conversation (#463): the reader's like named the other person's answer to a prompt. {prompt} is the prompt's question."
+  fi: "Tykkäsit vastauksesta kysymykseen: {prompt}"
+  sv: "Du gillade svaret på: {prompt}"
+  machine: { fi: true, sv: true }
+
+chat.anchor.mine.bio:
+  en: "You liked their bio"
+  description: "Above the first message of a conversation (#463): the reader's like named the other person's bio."
+  fi: "Tykkäsit esittelystä"
+  sv: "Du gillade presentationen"
+  machine: { fi: true, sv: true }
+
+chat.anchor.mine.shared:
+  en: "You liked what you share: {option}"
+  description: "Above the first message of a conversation (#463): the reader's like named an answer both gave. {option} is the answer in words."
+  fi: "Tykkäsit yhteisestä: {option}"
+  sv: "Du gillade det ni delar: {option}"
+  machine: { fi: true, sv: true }
+
+chat.anchor.theirs.photo:
+  en: "They liked your photo"
+  description: "Above the first message of a conversation (#463): the part of the reader's own card the other person's like named, with that photo of the reader's small beside it. Not a message."
+  fi: "Hän tykkäsi kuvastasi"
+  sv: "Hen gillade din bild"
+  machine: { fi: true, sv: true }
+
+chat.anchor.theirs.prompt:
+  en: "They liked your answer to: {prompt}"
+  description: "Above the first message of a conversation (#463): the other person's like named the reader's answer to a prompt. {prompt} is the prompt's question."
+  fi: "Hän tykkäsi vastauksestasi kysymykseen: {prompt}"
+  sv: "Hen gillade ditt svar på: {prompt}"
+  machine: { fi: true, sv: true }
+
+chat.anchor.theirs.bio:
+  en: "They liked your bio"
+  description: "Above the first message of a conversation (#463): the other person's like named the reader's bio."
+  fi: "Hän tykkäsi esittelystäsi"
+  sv: "Hen gillade din presentation"
+  machine: { fi: true, sv: true }
+
+chat.anchor.theirs.shared:
+  en: "They liked what you share: {option}"
+  description: "Above the first message of a conversation (#463): the other person's like named an answer both gave. {option} is the answer in words."
+  fi: "Hän tykkäsi yhteisestä: {option}"
+  sv: "Hen gillade det ni delar: {option}"
   machine: { fi: true, sv: true }
 
 chat.back:
@@ -9188,14 +9487,14 @@ tech.errorTest.send:
 
 tech.look.title:
   en: "Style to try"
-  description: "Heading of the tech screen's choice of style for the designers' try (outside production only): today's look, or one of Sini's four styles, each with its own colours, which a released app never shows."
+  description: "Heading of the tech screen's choice of style (outside production only): Kumpa, the look every phone starts in, a released app's too; today's look, the app's before Kumpa; or one of Sini's four styles of the designers' try, each with its own colours, which a released app never shows."
   fi: "Kokeiltava tyyli"
   sv: "Stil att prova"
   machine: { fi: true, sv: true }
 
 tech.look.today:
   en: "Today's"
-  description: "The style of the app as it is today, one of the tech screen's choices of style (outside production only)."
+  description: "The app's style before Kumpa (20/11/2026), still named today's, one of the tech screen's choices of style (outside production only)."
   fi: "Nykyinen"
   sv: "Nuvarande"
   machine: { fi: true, sv: true }
@@ -9226,6 +9525,13 @@ tech.look.bold:
   description: "Sini's Bold Contrast style, strong colour blocks (cream, plum, coral and lime by day, navy, lime and electric blue by night), pill-shaped controls and an italic headline, one of the tech screen's choices of style (outside production only). A style's name, kept in English in every language."
   fi: "Bold Contrast"
   sv: "Bold Contrast"
+  machine: { fi: true, sv: true }
+
+tech.look.kumpa:
+  en: "Kumpa"
+  description: "Kumpa's own style, the design shown to Helsingin Sanomat on 20/11/2026: cream ground, ink outlines with hard shadows, royal blue, lavender and orange, pastel chips, and the card as a poster with round buttons. The style every phone starts in, a released app's too, and one of the tech screen's choices of style. The app's name, kept as it is in every language."
+  fi: "Kumpa"
+  sv: "Kumpa"
   machine: { fi: true, sv: true }
 
 tech.errorTest.sent:
@@ -9275,6 +9581,41 @@ tech.licenses.postalAreas:
   description: "Licences screen (#514, ADR-061 §4): the name of the list of postal areas behind the home step. Its source, licence and what Kuutti changed follow it in the list's own words."
   fi: "Postinumeroalueet"
   sv: "Postnummerområden"
+  machine: { fi: true, sv: true }
+
+tech.licenses.images:
+  en: "Images"
+  description: "Licences screen (#405): the heading over the images the app carries whose licences ask for their author to be credited, after the data and before the licence texts."
+  fi: "Kuvat"
+  sv: "Bilder"
+  machine: { fi: true, sv: true }
+
+tech.licenses.zodiac:
+  en: "Star signs"
+  description: "Licences screen (#405): the name of the set of star sign symbols shown before the star sign answer in a profile (profile.field.zodiac). Who drew them, where they were found and their licence follow it in tech.licenses.credit."
+  fi: "Horoskooppimerkit"
+  sv: "Stjärntecken"
+  machine: { fi: true, sv: true }
+
+tech.licenses.credit:
+  en: "Author: {author}. Source: {source}. Licence: {licence}, {licenceUrl}"
+  description: "Licences screen (#405): under the name of a set of images, read after the name as one sentence, as Creative Commons licences ask. {author} is the name the author gives on the site the images came from (Kwamikagami), {source} that site (Wikimedia Commons), {licence} the licence's short name (CC BY-SA 4.0) and {licenceUrl} the licence's address; all four stay as they are, in the nominative."
+  fi: "Tekijä: {author}. Lähde: {source}. Lisenssi: {licence}, {licenceUrl}"
+  sv: "Upphovsperson: {author}. Källa: {source}. Licens: {licence}, {licenceUrl}"
+  machine: { fi: true, sv: true }
+
+tech.licenses.typeface:
+  en: "Typeface"
+  description: "Licences screen (#405): the heading over the typeface the app's headings and buttons are set in (Saiga), after the images and before the licence texts. Shown only in a build that carries the typeface."
+  fi: "Kirjasin"
+  sv: "Typsnitt"
+  machine: { fi: true, sv: true }
+
+tech.licenses.typefaceCredit:
+  en: "Designer: {designer}. Foundry: {foundry}"
+  description: "Licences screen (#405): under the typeface's name (Saiga), its credit, read after the name as one sentence, in the form of tech.licenses.credit. {designer} is the person who designed it (Teo Tuominen) and {foundry} the type foundry the designer is part of (Spoke Type); both stay as they are, in the nominative."
+  fi: "Suunnittelija: {designer}. Kirjasinvalimo: {foundry}"
+  sv: "Formgivare: {designer}. Typsnittsgjuteri: {foundry}"
   machine: { fi: true, sv: true }
 
 tech.licenses.texts:
@@ -9642,10 +9983,10 @@ sanction.statement.moderator:
   machine: { fi: true, sv: true }
 
 sanction.statement.contest:
-  en: "If you think we got this wrong, write to hello@kuutti.app. Someone other than the person who decided will look at it again."
-  description: "A sanction's statement (#715, ADR-073 §3), last: how to contest a decision staff made. The address is the association's public one, for now (the maintainer, 17/11/2026); the second look is ADR-024 §3's review by somebody else. The address stays exactly as it is in every language."
-  fi: "Jos olemme mielestäsi erehtyneet, kirjoita osoitteeseen hello@kuutti.app. Asian katsoo uudelleen joku muu kuin päätöksen tehnyt."
-  sv: "Om du tycker att vi har gjort fel, skriv till hello@kuutti.app. Någon annan än den som beslutade går igenom det på nytt."
+  en: "If you think we got this wrong, write to hello@kumpa.fi. Someone other than the person who decided will look at it again."
+  description: "A sanction's statement (#715, ADR-073 §3), last: how to contest a decision staff made. The address is the association's public one, for now (the maintainer, 17/11/2026), and the website's: hello@kumpa.fi since his word of 21/11/2026; the second look is ADR-024 §3's review by somebody else. The address stays exactly as it is in every language."
+  fi: "Jos olemme mielestäsi erehtyneet, kirjoita osoitteeseen hello@kumpa.fi. Asian katsoo uudelleen joku muu kuin päätöksen tehnyt."
+  sv: "Om du tycker att vi har gjort fel, skriv till hello@kumpa.fi. Någon annan än den som beslutade går igenom det på nytt."
   machine: { fi: true, sv: true }
 
 notices.read:
@@ -9663,10 +10004,10 @@ notices.invitationCounted.title:
   machine: { fi: true, sv: true }
 
 notices.invitationCounted.body:
-  en: "Somebody you invited has finished their profile. {fish, plural, =0 {Thank you for inviting them.} one {You earned a fish.} other {You earned # fish.}}"
-  description: "The home screen's notices (#107, ADR-044 §9), under the title: what the counted invitation earned its inviter. fish is the units it earned; =0 when it earned nothing (matching_config invitation_reward switched off). Never who was invited, never when they joined. Fish is the app's super-like (ADR-039)."
-  fi: "Joku kutsumasi on saanut profiilinsa valmiiksi. {fish, plural, =0 {Kiitos, että kutsuit hänet.} one {Ansaitsit kalan.} other {Ansaitsit # kalaa.}}"
-  sv: "Någon du bjöd in har gjort klart sin profil. {fish, plural, =0 {Tack för att du bjöd in.} one {Du fick en fisk.} other {Du fick # fiskar.}}"
+  en: "Somebody you invited has finished their profile. {fish, plural, =0 {Thank you for inviting them.} one {You earned a flower.} other {You earned # flowers.}}"
+  description: "The home screen's notices (#107, ADR-044 §9), under the title: what the counted invitation earned its inviter. fish is the flowers it earned; =0 when it earned nothing (matching_config invitation_reward switched off). Never who was invited, never when they joined. A flower is the app's like that says a little more (ADR-039, #681)."
+  fi: "Joku kutsumasi on saanut profiilinsa valmiiksi. {fish, plural, =0 {Kiitos, että kutsuit hänet.} one {Ansaitsit kukan.} other {Ansaitsit # kukkaa.}}"
+  sv: "Någon du bjöd in har gjort klart sin profil. {fish, plural, =0 {Tack för att du bjöd in.} one {Du fick en blomma.} other {Du fick # blommor.}}"
   machine: { fi: true, sv: true }
 
 notices.invitationFriend.title:
@@ -9677,10 +10018,10 @@ notices.invitationFriend.title:
   machine: { fi: true, sv: true }
 
 notices.invitationFriend.body:
-  en: "The invitation earned you {fish, plural, one {a fish} other {# fish}}."
-  description: "The home screen's notices (#503, ADR-044 §9), under the title: what the invitation earned the person who used it. The invitation earned it, never the finished profile: finishing one's own profile earns nothing (the maintainer, 31/10/2026). fish is the units it earned them, at least one. Never who invited them. Fish is the app's super-like (ADR-039). Nothing here on how a fish is spent, which it does by itself (#581), and never a number of days or a period (tunables)."
-  fi: "Kutsu toi sinulle {fish, plural, one {kalan} other {# kalaa}}."
-  sv: "Inbjudan gav dig {fish, plural, one {en fisk} other {# fiskar}}."
+  en: "The invitation earned you {fish, plural, one {a flower} other {# flowers}}."
+  description: "The home screen's notices (#503, ADR-044 §9), under the title: what the invitation earned the person who used it. The invitation earned it, never the finished profile: finishing one's own profile earns nothing (the maintainer, 31/10/2026). fish is the flowers it earned them, at least one. Never who invited them. A flower is the app's like that says a little more (ADR-039, #681). Nothing here on how a flower is spent, which it does by itself (#581), and never a number of days or a period (tunables)."
+  fi: "Kutsu toi sinulle {fish, plural, one {kukan} other {# kukkaa}}."
+  sv: "Inbjudan gav dig {fish, plural, one {en blomma} other {# blommor}}."
   machine: { fi: true, sv: true }
 
 # --- Invitations (#107, ADR-044): a code for one friend, made and withdrawn in Settings, typed by the friend after the bank login ---
@@ -9701,17 +10042,17 @@ settings.invite.waiting:
   machine: { fi: true, sv: true }
 
 settings.invite.earns:
-  en: "{reward, select, both {When a friend you invite finishes their profile, you get {inviterFish, plural, one {a fish} other {# fish}} and your friend gets {friendFish, plural, one {a fish} other {# fish}}.} inviter {When a friend you invite finishes their profile, you get {inviterFish, plural, one {a fish} other {# fish}}.} other {When a friend you invite finishes their profile, your friend gets {friendFish, plural, one {a fish} other {# fish}}.}}"
-  description: "The Invitations panel, what an invitation earns today (#107, ADR-044 §4, §8, #503, #581), from matching_config invitation_reward: reward says which of the two earn, both, inviter, or the friend alone; inviterFish and friendFish are their fish. Not drawn when neither earns. Never a number of days or a period (tunables)."
-  fi: "{reward, select, both {Kun kutsumasi ystävä saa profiilinsa valmiiksi, saat {inviterFish, plural, one {kalan} other {# kalaa}} ja ystäväsi saa {friendFish, plural, one {kalan} other {# kalaa}}.} inviter {Kun kutsumasi ystävä saa profiilinsa valmiiksi, saat {inviterFish, plural, one {kalan} other {# kalaa}}.} other {Kun kutsumasi ystävä saa profiilinsa valmiiksi, ystäväsi saa {friendFish, plural, one {kalan} other {# kalaa}}.}}"
-  sv: "{reward, select, both {När en vän du bjuder in gör klart sin profil får du {inviterFish, plural, one {en fisk} other {# fiskar}} och din vän får {friendFish, plural, one {en fisk} other {# fiskar}}.} inviter {När en vän du bjuder in gör klart sin profil får du {inviterFish, plural, one {en fisk} other {# fiskar}}.} other {När en vän du bjuder in gör klart sin profil får din vän {friendFish, plural, one {en fisk} other {# fiskar}}.}}"
+  en: "{reward, select, both {When a friend you invite finishes their profile, you get {inviterFish, plural, one {a flower} other {# flowers}} and your friend gets {friendFish, plural, one {a flower} other {# flowers}}.} inviter {When a friend you invite finishes their profile, you get {inviterFish, plural, one {a flower} other {# flowers}}.} other {When a friend you invite finishes their profile, your friend gets {friendFish, plural, one {a flower} other {# flowers}}.}}"
+  description: "The Invitations panel, what an invitation earns today (#107, ADR-044 §4, §8, #503, #581), from matching_config invitation_reward: reward says which of the two earn, both, inviter, or the friend alone; inviterFish and friendFish are their flowers (#681). Not drawn when neither earns. Never a number of days or a period (tunables)."
+  fi: "{reward, select, both {Kun kutsumasi ystävä saa profiilinsa valmiiksi, saat {inviterFish, plural, one {kukan} other {# kukkaa}} ja ystäväsi saa {friendFish, plural, one {kukan} other {# kukkaa}}.} inviter {Kun kutsumasi ystävä saa profiilinsa valmiiksi, saat {inviterFish, plural, one {kukan} other {# kukkaa}}.} other {Kun kutsumasi ystävä saa profiilinsa valmiiksi, ystäväsi saa {friendFish, plural, one {kukan} other {# kukkaa}}.}}"
+  sv: "{reward, select, both {När en vän du bjuder in gör klart sin profil får du {inviterFish, plural, one {en blomma} other {# blommor}} och din vän får {friendFish, plural, one {en blomma} other {# blommor}}.} inviter {När en vän du bjuder in gör klart sin profil får du {inviterFish, plural, one {en blomma} other {# blommor}}.} other {När en vän du bjuder in gör klart sin profil får din vän {friendFish, plural, one {en blomma} other {# blommor}}.}}"
   machine: { fi: true, sv: true }
 
 settings.invite.fish:
-  en: "A fish is a like that comes first in the other person's queue, ahead of ordinary likes."
-  description: "Under what an invitation earns, on the Invitations panel (#616): what a fish is, where many first meet the word. Drawn only with that line. ADR-039 §1, §6 and ADR-062 §2; the word itself is ADR-039 Open 1."
-  fi: "Kala on tykkäys, joka tulee toisen jonossa ensimmäisenä, tavallisten tykkäysten edellä."
-  sv: "En fisk är ett gillande som kommer först i den andras kö, före vanliga gillanden."
+  en: "A flower is a like that comes first in the other person's queue, ahead of ordinary likes."
+  description: "Under what an invitation earns, on the Invitations panel (#616): what a flower is, where many first meet the word. Drawn only with that line. ADR-039 §1, §6 and ADR-062 §2. The word flower (kukka) is the maintainer's of 18/11/2026 (#681), which settles ADR-039 Open 1; its icon is a dandelion's seed head."
+  fi: "Kukka on tykkäys, joka tulee toisen jonossa ensimmäisenä, tavallisten tykkäysten edellä."
+  sv: "En blomma är ett gillande som kommer först i den andras kö, före vanliga gillanden."
   machine: { fi: true, sv: true }
 
 settings.invite.notYet:
@@ -9846,10 +10187,10 @@ settings.invite.withdrawn:
   machine: { fi: true, sv: true }
 
 settings.invite.earned.fish:
-  en: "{fish, plural, one {You have an earned fish waiting.} other {You have # earned fish waiting.}}"
-  description: "The Invitations screen (#107, ADR-044 §8): fish is how many fish invitations earned the person that are not used yet, those they made and the one they used; shown only when there is one."
-  fi: "{fish, plural, one {Sinulla on yksi ansaittu kala odottamassa.} other {Sinulla on # ansaittua kalaa odottamassa.}}"
-  sv: "{fish, plural, one {Du har en intjänad fisk som väntar.} other {Du har # intjänade fiskar som väntar.}}"
+  en: "{fish, plural, one {You have an earned flower waiting.} other {You have # earned flowers waiting.}}"
+  description: "The Invitations screen (#107, ADR-044 §8, #681): fish is how many flowers invitations earned the person that are not used yet, those they made and the one they used; shown only when there is one."
+  fi: "{fish, plural, one {Sinulla on yksi ansaittu kukka odottamassa.} other {Sinulla on # ansaittua kukkaa odottamassa.}}"
+  sv: "{fish, plural, one {Du har en intjänad blomma som väntar.} other {Du har # intjänade blommor som väntar.}}"
   machine: { fi: true, sv: true }
 
 invite.redeem.title:
@@ -9860,10 +10201,10 @@ invite.redeem.title:
   machine: { fi: true, sv: true }
 
 invite.redeem.earns:
-  en: "{reward, select, both {The code earns you {friendFish, plural, one {a fish} other {# fish}} and your friend {inviterFish, plural, one {a fish} other {# fish}} once your profile is complete.} other {The code earns you {friendFish, plural, one {a fish} other {# fish}} once your profile is complete.}}"
-  description: "Over the code's field, on the Invitations screen and in onboarding's invitation step (#503, ADR-044 §12, #581): what the invitation earns the person typing it, shown only while matching_config invitation_reward gives them a fish. reward is both when the inviter earns too; friendFish is the person's fish, inviterFish their friend's."
-  fi: "{reward, select, both {Koodista saat {friendFish, plural, one {kalan} other {# kalaa}} ja ystäväsi saa {inviterFish, plural, one {kalan} other {# kalaa}}, kun profiilisi on valmis.} other {Koodista saat {friendFish, plural, one {kalan} other {# kalaa}}, kun profiilisi on valmis.}}"
-  sv: "{reward, select, both {Koden ger dig {friendFish, plural, one {en fisk} other {# fiskar}} och din vän {inviterFish, plural, one {en fisk} other {# fiskar}} när din profil är klar.} other {Koden ger dig {friendFish, plural, one {en fisk} other {# fiskar}} när din profil är klar.}}"
+  en: "{reward, select, both {The code earns you {friendFish, plural, one {a flower} other {# flowers}} and your friend {inviterFish, plural, one {a flower} other {# flowers}} once your profile is complete.} other {The code earns you {friendFish, plural, one {a flower} other {# flowers}} once your profile is complete.}}"
+  description: "Over the code's field, on the Invitations screen and in onboarding's invitation step (#503, ADR-044 §12, #581): what the invitation earns the person typing it, shown only while matching_config invitation_reward gives them a flower (#681). reward is both when the inviter earns too; friendFish is the person's flowers, inviterFish their friend's."
+  fi: "{reward, select, both {Koodista saat {friendFish, plural, one {kukan} other {# kukkaa}} ja ystäväsi saa {inviterFish, plural, one {kukan} other {# kukkaa}}, kun profiilisi on valmis.} other {Koodista saat {friendFish, plural, one {kukan} other {# kukkaa}}, kun profiilisi on valmis.}}"
+  sv: "{reward, select, both {Koden ger dig {friendFish, plural, one {en blomma} other {# blommor}} och din vän {inviterFish, plural, one {en blomma} other {# blommor}} när din profil är klar.} other {Koden ger dig {friendFish, plural, one {en blomma} other {# blommor}} när din profil är klar.}}"
   machine: { fi: true, sv: true }
 
 invite.redeem.label:
@@ -9904,10 +10245,10 @@ invite.step.skip:
   machine: { fi: true, sv: true }
 
 invite.share.message:
-  en: "You're invited to Kumpa, a free dating app for Finland where everyone signs in with their bank ID. {reward, select, both {The code earns you {friendFish, plural, one {a fish} other {# fish}} and your friend {inviterFish, plural, one {a fish} other {# fish}} once your profile is complete. A fish is a like that says a little more. } friend {The code earns you {friendFish, plural, one {a fish} other {# fish}} once your profile is complete. A fish is a like that says a little more. } other {}}Get the app: {link} After signing in, type this code: {code}"
-  description: "The message the phone's share sheet sends with an invitation (#107, ADR-044 Context 5, §12), to somebody who may not know Kuutti: free, bank-verified, Finland's; what the reader gets (#503), from matching_config invitation_reward, left out when it gives them no fish (reward is both, friend, or anything else; friendFish is the reader's, inviterFish their friend's); after a colon the one link with the code in it (https://api.kuutti.app/i/XXXXX-XXXXX, #574), which sends the friend's phone to its store, and the code (XXXXX-XXXXX) after a colon at the end, to type where the store cannot carry it. Nothing else about the sender."
-  fi: "Sinut on kutsuttu: Kumpa on ilmainen suomalainen deittisovellus, jossa jokainen kirjautuu pankkitunnuksillaan. {reward, select, both {Koodista saat {friendFish, plural, one {kalan} other {# kalaa}} ja ystäväsi saa {inviterFish, plural, one {kalan} other {# kalaa}}, kun profiilisi on valmis. Kala on tykkäys, joka sanoo vähän enemmän. } friend {Koodista saat {friendFish, plural, one {kalan} other {# kalaa}}, kun profiilisi on valmis. Kala on tykkäys, joka sanoo vähän enemmän. } other {}}Lataa sovellus: {link} Kirjoita kirjautumisen jälkeen tämä koodi: {code}"
-  sv: "Du är inbjuden till Kumpa, en gratis dejtingapp för Finland där alla loggar in med sina bankkoder. {reward, select, both {Koden ger dig {friendFish, plural, one {en fisk} other {# fiskar}} och din vän {inviterFish, plural, one {en fisk} other {# fiskar}} när din profil är klar. En fisk är ett gillande som säger lite mer. } friend {Koden ger dig {friendFish, plural, one {en fisk} other {# fiskar}} när din profil är klar. En fisk är ett gillande som säger lite mer. } other {}}Hämta appen: {link} Skriv in den här koden efter inloggningen: {code}"
+  en: "You're invited to Kumpa, a free dating app for Finland where everyone signs in with their bank ID. {reward, select, both {The code earns you {friendFish, plural, one {a flower} other {# flowers}} and your friend {inviterFish, plural, one {a flower} other {# flowers}} once your profile is complete. A flower is a like that says a little more. } friend {The code earns you {friendFish, plural, one {a flower} other {# flowers}} once your profile is complete. A flower is a like that says a little more. } other {}}Get the app: {link} After signing in, type this code: {code}"
+  description: "The message the phone's share sheet sends with an invitation (#107, ADR-044 Context 5, §12), to somebody who may not know Kuutti: free, bank-verified, Finland's; what the reader gets (#503), from matching_config invitation_reward, left out when it gives them no flower (reward is both, friend, or anything else; friendFish is the reader's, inviterFish their friend's); after a colon the one link with the code in it (https://api.kuutti.app/i/XXXXX-XXXXX, #574), which sends the friend's phone to its store, and the code (XXXXX-XXXXX) after a colon at the end, to type where the store cannot carry it. Nothing else about the sender."
+  fi: "Sinut on kutsuttu: Kumpa on ilmainen suomalainen deittisovellus, jossa jokainen kirjautuu pankkitunnuksillaan. {reward, select, both {Koodista saat {friendFish, plural, one {kukan} other {# kukkaa}} ja ystäväsi saa {inviterFish, plural, one {kukan} other {# kukkaa}}, kun profiilisi on valmis. Kukka on tykkäys, joka sanoo vähän enemmän. } friend {Koodista saat {friendFish, plural, one {kukan} other {# kukkaa}}, kun profiilisi on valmis. Kukka on tykkäys, joka sanoo vähän enemmän. } other {}}Lataa sovellus: {link} Kirjoita kirjautumisen jälkeen tämä koodi: {code}"
+  sv: "Du är inbjuden till Kumpa, en gratis dejtingapp för Finland där alla loggar in med sina bankkoder. {reward, select, both {Koden ger dig {friendFish, plural, one {en blomma} other {# blommor}} och din vän {inviterFish, plural, one {en blomma} other {# blommor}} när din profil är klar. En blomma är ett gillande som säger lite mer. } friend {Koden ger dig {friendFish, plural, one {en blomma} other {# blommor}} när din profil är klar. En blomma är ett gillande som säger lite mer. } other {}}Hämta appen: {link} Skriv in den här koden efter inloggningen: {code}"
   machine: { fi: true, sv: true }
 
 settings.contacts.intro:

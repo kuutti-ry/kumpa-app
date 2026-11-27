@@ -11,6 +11,7 @@ apps/mobile/src/features/profile/PlaceScreen.tsx
 apps/mobile/src/features/profile/gender/GenderScreen.tsx
 apps/mobile/src/features/profile/CardPreviewScreen.tsx
 apps/mobile/src/features/profile/ProfileCardView.tsx
+apps/mobile/src/components/InSight.tsx
 apps/mobile/src/features/profile/later/LaterFieldScreen.tsx
 apps/mobile/src/features/profile/seek/SeekScreen.tsx
 apps/mobile/src/features/profile/DealBreakerRows.tsx
@@ -91,10 +92,10 @@ flowchart TB
 
 1. The person opens "Your profile" from the home screen.
 2. The app asks the API for the profile, for the photos to count the approved ones, and for the gender. It asks again whenever the list is back in front, so what it shows follows what was saved.
-3. The API answers the profile as saved and what it still lacks before the card can be shown to anybody: a name, enough approved photos, a bio, a ready line or answered questions, whom the person seeks and their age window.
+3. The API answers the profile as saved and what it still lacks before the card can be shown to anybody: a name, enough approved photos, whom the person seeks and their age window. A bio, a ready line or answered questions are no part of it.
 4. The app shows "Your profile". At the top, only while something is missing, "Before your card can be shown" says what. Then rows across the whole width: "Photos", "Home" with the town or area the card shows, "Gender" with the answer, and the sections "The basics", "Questions", "Relationship and kids", "Work and education", "Lifestyle", "Hobbies" and "Beliefs", each with a check mark once done or how far it is filled; then "What you seek" and, only while a later question is unanswered, "Fill in the rest when you have a moment". "Photos" and "What you seek" are starred as what a card needs, with the footnote "Needed before your card can be shown", which a screen reader hears on each starred row. Nothing is edited on the list itself.
 5. The person chooses what to open. A section: 6. "Photos": 15. "Home" or "Gender": 16. The eye at the top, "See your card": 17. "Fill in the rest when you have a moment": 18. "What you seek": 19.
-6. The app shows the section's questions, each with its icon, and no Save button. In "The basics" the name is starred as what a card needs, and beside the bio, as beside "Questions", a line says that the card needs one of a long enough bio, a ready line or answered questions. The identity label shows in "The basics" only once it was given, to change or clear it. What one is here for is a section of its own, opened from What you seek (part 5). A party or a religion carries no note on its consent: Settings is the one place for it.
+6. The app shows the section's questions, each with its icon, and no Save button. In "The basics" the name is starred as what a card needs; the bio and "Questions" are not, since a card needs neither. The identity label shows in "The basics" only once it was given, to change or clear it. What one is here for is a section of its own, opened from What you seek (part 5). A party or a religion carries no note on its consent: Settings is the one place for it.
 7. The person answers or changes: a choice is a button, and tapped again it is taken back; a question with several answers takes as many as apply, and an answer such as "None of them" stands alone and clears the others; the height has a stepper and "Clear the answer"; the name and the job title are short texts; the bio can be written, or a ready line picked in its place ("Or pick a line instead"); "Questions" are answered in the person's own words. A long list (the languages, the hobbies, the lines of work, a large school's guilds) has "Search", and "Another language" shows only for a search that finds nothing else. In "Work and education", after the job title, "University" lists the capital area's ten schools, and once one is chosen "Guild or student association" lists its guilds under the school's name, the University of Helsinki's under their faculties, each guild by its own name in every language, without its school's name before it, with the name its members say after it in brackets where its register gives one ("Nuoret Designerit Ry (NuDe)"), so "Search" finds it by either, with "Another guild" last under each school; a school tapped again takes its guilds with it. Neither is ever counted as missing. Once an answer a card carries is given, "Hide" beside its title keeps it off the card: "Hidden from your card.", or "Hidden from your card. Still used for matching." where matching reads it; "Show" puts it back ("Back on your card."). A soft answer (education, drinking, the attitude to drugs) says "Never on your card. Only used for matching."
 8. The person goes back: the arrow "Back to your profile", the edge swipe or Android's back key. Leaving is never held up.
 9. The app checks whether anything in the section changed. No: 2. Yes: 10.
@@ -176,10 +177,10 @@ flowchart TB
 ```mermaid
 flowchart TB
   accTitle: The card as others see it
-  accDescr: From the eye on the profile, the person sees their own card, built the way People builds it, with nothing recorded. What it still lacks stands above it. The card is short first, and the whole card opens in place under it.
+  accDescr: From the eye on the profile, the person sees their own card, built the way People builds it, with nothing recorded. What it still lacks stands above it. The card is one scroll, nothing opened or tapped through: the name and the first photo with the key answers, then each further photo with the person's own words after it, and the rest of the answers at its end. A photo is asked for once it comes into sight.
   subgraph person["The person"]
     s34(["Taps the eye, See your card"])
-    s41{"Shows the whole card, taps through the photos, or goes back?"}
+    s41{"Scrolls down the card, or goes back?"}
     s44(["Goes back to the profile"])
   end
   subgraph app["The app"]
@@ -187,9 +188,9 @@ flowchart TB
     s37{"Complete?"}
     s38["Lists Before your card can be shown, and what is missing"]
     s39["Says: This is what others see."]
-    s40["Shows the short card: the name and age, one line, the photos, the key answers, one answer in words"]
-    s42["Opens the whole card in place: the bio, the other answers to questions, the rest under the profile's sections"]
-    s43["Shows the next or the previous photo, and says which"]
+    s40["Shows the card's top: the name and age, one line, the first photo, the key answers"]
+    s42["Shows what the scroll brings: each further photo with an answer in words after it, then the rest under the profile's sections"]
+    s43["Asks for a photo once it comes into sight, its blurhash until then"]
   end
   subgraph api["The API"]
     s36["Builds the card the way People builds it, recording nothing"]
@@ -202,9 +203,8 @@ flowchart TB
   s38 --> s40
   s39 --> s40
   s40 --> s41
-  s41 -->|"Show the whole card"| s42
-  s42 --> s41
-  s41 -->|"a half of the photo"| s43
+  s41 -->|"down"| s42
+  s42 --> s43
   s43 --> s41
   s41 -->|"back"| s44
 ```
@@ -217,10 +217,10 @@ flowchart TB
 37. Is the profile complete? No: 38. Yes: 39.
 38. Above the card, the app lists "Before your card can be shown" and what is missing (40).
 39. The app says "This is what others see." (40)
-40. The app shows the short card, as People shows it: the name with the age; one line with the gender, the identity label and the home, to which a card in People adds how far the person lives; the photos, the main one first; the key answers as chips, what one is here for and the fields a deal-breaker can be set on, each in the person's own words after its icon; and the first answer to a question, or the bio where there is none. A photo the API will not show is said under the card, never left as a silent gap. On somebody else's card, a hobby or a language both people gave is filled and in bold, heard as shared; the person's own preview has nobody to compare with.
-41. The person chooses. "Show the whole card", there while the card holds more: 42. The right or the left half of the photo: 43. Back, "Back to your profile": 44.
-42. The whole card opens in place under the short one: the bio, the other answers to questions, and the rest of the answers as chips under the profile's own section titles, a field and a work that read the same as one chip. A school and a guild stand under "Work and education", only here and never on the short card; on somebody else's card one both people named is filled and in bold like a shared hobby, "Another guild" never. "Show less" closes it. Then 41.
-43. The next or the previous photo comes to the front, a bar per photo above them saying where, and a screen reader hears which photo it is. A photo is asked for only when it first comes to the front. Then 41.
+40. The app shows the card from its top, as People shows it: the name with the age; one line with the gender, the identity label and the home, to which a card in People adds how far the person lives; the first photo, the main one; and the key answers as chips, what one is here for and the fields a deal-breaker can be set on, each in the person's own words after its icon. A photo the API will not show is said under the card, never left as a silent gap. On somebody else's card, a hobby or a language both people gave is filled and in bold, heard as shared; the person's own preview has nobody to compare with.
+41. The person chooses. Down the card: 42. Back, "Back to your profile": 44.
+42. The scroll brings the rest of the same card, with nothing to open or tap through: each further photo with the next of the person's own words after it, the first answer to a question, then the bio or its ready line, then the other answers to questions; what is left of either once the other runs out, one after another; and at the end the rest of the answers as chips under the profile's own section titles, a field and a work that read the same as one chip. A school and a guild stand under "Work and education", never among the key answers; on somebody else's card one both people named is filled and in bold like a shared hobby, "Another guild" never. Then 43.
+43. A photo is asked for only when it first comes into sight on the screen, its blurhash standing in until then, and it stays once shown; a screen reader hears each photo with its place, "Photo 2 of 5", either way. Then 41.
 44. The person goes back to the profile.
 
 ## Part 4: the later questions
@@ -453,7 +453,7 @@ flowchart TB
 91. On What you seek, its row says "Paused until you answer it yourself.", and its screen draws what stands read-only, with "Answer it" (part 6).
 92. The person answers the field again.
 93. The API saves the profile, and the deal-breaker is no longer paused.
-94. Nothing waits for the night: both people's filters are asked on every read of People, on every like and on every read of Starred. A change of whom one seeks, the ages, what one is here for, a deal-breaker or the home works on the next read, narrowing and widening at once; a paused deal-breaker, meanwhile, filters nothing.
+94. Nothing waits for the night: both people's filters are asked on every read of People, on every like and on every read of the Later list. A change of whom one seeks, the ages, what one is here for, a deal-breaker or the home works on the next read, narrowing and widening at once; a paused deal-breaker, meanwhile, filters nothing.
 95. For the two people, the API asks each deal-breaker of both, not paused, against the other's own answer, a hidden one included: an answer passes when the holder accepts it (for the languages, any one in common; for the height, against the holder's own; for the distance, the band between the two homes), and no answer passes only while the holder's "Also people who did not answer" is on. Whom each seeks, the age windows and what each is here for are asked both ways too. Refused by either: 96. Otherwise: 97.
 96. Neither is a card in the other's queue, whichever of the two holds the filter. A card already in today's log that no longer fits is left out while it does not fit, and a like on it is refused as a card no longer available; a pass or Later still works, so a like can always be taken back.
 97. As far as the filters go, the two stay in each other's pool; a block and "Hide me from people in my field" still hold on their own. A queue that runs short can offer to relax a deal-breaker for that day alone: [People](queue.md), part 5.
@@ -506,3 +506,6 @@ flowchart TB
 - 2026-11-07 (#616, PR #641): what a card needs is starred where it is edited; a later question asks only the half still open; a deal-breaker on the languages never takes "Another language".
 - 2026-11-08 (#644, PR #647): the card in two depths, a short card and the whole card in place, its answers as chips, a shared one filled and in bold.
 - 2026-11-15 (#677, PR #682): "University" and "Guild or student association" join "Work and education" and the education's later question; both show on the whole card, a shared one filled and in bold. A guild's name leaves out its school's before its own.
+- 2026-11-18 (#681): the filters are asked on every read of the Later list, which took the star's place.
+- 2026-11-19 (#681): a finished profile needs no words: a bio, a ready line or answered questions leave what the card still needs, and the line beside the bio and Questions goes; onboarding offers them once instead.
+- 2026-11-26 (#752): the card is one scroll, its photos between the person's own words and the rest of the answers at its end, with no gallery to tap through and no whole card to open; a photo is asked for once it comes into sight.

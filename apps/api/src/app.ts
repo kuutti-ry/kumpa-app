@@ -20,6 +20,7 @@ import { healthRoutes } from "./health/index.ts";
 import {
   accountRoutes,
   adminSessionStore,
+  appLinkRoutes,
   authRoutes,
   currentConsent,
   type IdentityBroker,
@@ -28,7 +29,6 @@ import {
   onboardingRoutes,
   refuseSignInStart,
   sessionStore,
-  wellKnownRoutes,
 } from "./identity/index.ts";
 import { isComplete, matchingStatusOf } from "./jobs/pool.ts";
 import { fillQueue, fitsNow, relaxationOffers, relaxedCandidates } from "./jobs/queue-builder.ts";
@@ -53,16 +53,24 @@ import { servedDocument } from "./lib/openapi.ts";
 import type { Pusher } from "./lib/push.ts";
 import { addressOf, limited, personOf, rateLimit } from "./lib/rate-limit.ts";
 import { serverRequestId } from "./lib/request-id.ts";
-import { preferencesRoutes, queueRoutes, readPreferences, starRoutes } from "./matching/index.ts";
+import {
+  preferencesRoutes,
+  putOnLaterList,
+  queueRoutes,
+  readPreferences,
+  starRoutes,
+} from "./matching/index.ts";
 import { type MediaDeps, photoAdminRoutes, photoRoutes, UPLOAD_ROUTE } from "./media/index.ts";
 import {
   announcementAdminRoutes,
   createPush,
   notificationRoutes,
   type Push,
+  unsubscribeBase,
+  unsubscribeRoutes,
 } from "./notifications/index.ts";
 import { pondAdminRoutes, pondRoutes } from "./pond/index.ts";
-import { buildCard, exportProfile, profileRoutes } from "./profile/index.ts";
+import { buildCard, cardParts, exportProfile, profileRoutes } from "./profile/index.ts";
 import { invitationLinkRoutes, invitationRoutes } from "./rewards/index.ts";
 import {
   accountAdminRoutes,
@@ -146,12 +154,20 @@ export const PUBLIC_ROUTES = new Set([
   "POST /auth/refresh",
   "GET /.well-known/assetlinks.json",
   "GET /.well-known/apple-app-site-association",
+  // The bank login's return when the phone kept it in the browser (#184, ADR-074 §3):
+  // a redirect to the app's scheme, no page, no lookup.
+  "GET /auth/return",
   // The one link (#574, ADR-044 §13): a redirect to a store, no page, no lookup.
   "GET /i",
   "GET /i/:code",
   // The app's links to the legal texts (#208, ADR-010 §4): a redirect to the website, no page.
   "GET /legal/terms",
   "GET /legal/privacy",
+  // One-click unsubscribe from the announcement email (#196, RFC 8058): the
+  // mail app's POST carries the link alone, whose secret is the scope; a GET
+  // changes nothing and is answered 405, no page.
+  "POST /mail/unsubscribe/:token",
+  "GET /mail/unsubscribe/:token",
   "GET /admin/auth/start",
   "POST /admin/auth/exchange",
   // The chat's socket (#349): its first frame carries the session's token, checked
@@ -247,9 +263,10 @@ export function createApp(deps: Deps) {
   app.route("/", healthRoutes(deps));
   app.route("/", authRoutes(deps, guard, moderators));
   app.route("/", accountRoutes(deps, guard));
-  app.route("/", wellKnownRoutes(deps));
+  app.route("/", appLinkRoutes(deps));
   app.route("/", legalTextRoutes());
   app.route("/", invitationLinkRoutes(deps));
+  app.route("/", unsubscribeRoutes(deps));
   // A URL of somebody else's photo is checked by the velocity rule (#86,
   // ADR-041): the safety slice decides, the media slice only issues.
   app.route(
@@ -282,6 +299,8 @@ export function createApp(deps: Deps) {
   // The pushes (#102, ADR-055): the notifications slice decides whom to tell,
   // the chat, the queue's and the sanctions' routes only say when; a
   // sanction staff applied is mailed to its person (#715, ADR-073 §4).
+  // An announcement's email carries its one-click unsubscribe (#196).
+  const unsubscribe = unsubscribeBase(deps.config);
   const push =
     deps.push ??
     createPush({
@@ -290,6 +309,7 @@ export function createApp(deps: Deps) {
       now: deps.now ?? (() => new Date()),
       ...(deps.pusher ? { pusher: deps.pusher } : {}),
       ...(deps.mailer ? { mailer: deps.mailer } : {}),
+      ...(unsubscribe ? { unsubscribe } : {}),
       online: (accountId) => live.online(accountId),
     });
   // The conversations a match opens and their text messages (#348, ADR-031).
@@ -349,6 +369,10 @@ export function createApp(deps: Deps) {
     logger: deps.logger,
     now: () => deps.now?.() ?? new Date(),
   });
+  // Whom of these the person's Later list shows now (#575, #681): the list's read,
+  // and Later's count of how full it is.
+  const shownOnList = (db: Queryable, accountId: string, candidateIds: readonly string[]) =>
+    starsShown(builderDeps(), db, accountId, candidateIds);
   // The caller's own answers, which the deal-breakers' pause and the cards' "did not answer" read (#149, #99).
   const ownFieldsOf = async (accountId: string) =>
     (await exportProfile(deps.db, accountId))?.fields ?? {};
@@ -384,6 +408,10 @@ export function createApp(deps: Deps) {
       {
         fill: (accountId) => fillQueue(builderDeps(), accountId),
         fits: (db, accountId, candidateIds) => fitsNow(builderDeps(), db, accountId, candidateIds),
+        // Later puts the person on the list (#681), which the stars read as their list does.
+        later: (tx, input) => putOnLaterList(tx, { shown: shownOnList }, input),
+        // What of a card a like may name (#463, ADR-077), read with nothing recorded.
+        parts: cardParts,
       },
       // A match is a conversation (#100, ADR-031): the chat slice's, handed in
       // here since the chat imports the profile, which imports matching.
@@ -412,10 +440,10 @@ export function createApp(deps: Deps) {
       guard,
       cardOf,
       {
-        shown: (db, accountId, candidateIds) =>
-          starsShown(builderDeps(), db, accountId, candidateIds),
+        shown: shownOnList,
         place: (accountId, candidateId) => starPlace(builderDeps(), accountId, candidateId),
         people: (accountId) => starredPeople(builderDeps(), accountId),
+        parts: cardParts,
       },
       { yourTurn: conversationsOnTurn },
       queueRead,

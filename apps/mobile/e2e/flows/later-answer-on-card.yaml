@@ -1,4 +1,4 @@
-# An answer saved on its later screen shows on the whole card under its
+# An answer saved on its later screen shows at the card's end under its
 # section, and taking it back takes it off (#148, #213, #644). The article 9
 # fields take the consent given with whom one seeks (#204): Sanna's parties
 # show under Beliefs, a chip each, and the star signs include the corgi. The
@@ -6,13 +6,13 @@
 # screen reader; the name beside it is what is asserted, and on iOS a chip's
 # label carries its question first, which the patterns allow. The flow clears
 # what it saved.
-appId: fi.kuutti.app
+appId: fi.kumpa
 name: A party and a star sign saved on their screens show on the card, and clearing them takes them off
 ---
 - runFlow: ../common/sign-in.yaml
 
 # Two parties: chosen and saved.
-- openLink: kuutti://profile/later/politics
+- openLink: fi.kumpa://profile/later/politics
 - extendedWaitUntil:
     visible: "Parties you could vote for|Puolueet, joita voisit äänestää|Partier du kunde rösta på"
     timeout: 15000
@@ -33,7 +33,7 @@ name: A party and a star sign saved on their screens show on the card, and clear
     timeout: 15000
 
 # The corgi, between Virgo and Libra.
-- openLink: kuutti://profile/later/zodiac
+- openLink: fi.kumpa://profile/later/zodiac
 - extendedWaitUntil:
     visible: "Star sign|Horoskooppimerkki|Stjärntecken"
     timeout: 15000
@@ -50,17 +50,11 @@ name: A party and a star sign saved on their screens show on the card, and clear
     visible: "A way to stay in touch|Tapa pitää yhteyttä|Ett sätt att hålla kontakten"
     timeout: 15000
 
-# On the whole card, under Beliefs.
-- openLink: kuutti://profile/card
+# At the card's end, under Beliefs.
+- openLink: fi.kumpa://profile/card
 - extendedWaitUntil:
     visible: "Your card|Korttisi|Ditt kort"
     timeout: 15000
-- scrollUntilVisible:
-    element: "Show the whole card|Näytä koko kortti|Visa hela kortet"
-    direction: DOWN
-    centerElement: true
-    timeout: 60000
-- tapOn: "Show the whole card|Näytä koko kortti|Visa hela kortet"
 - scrollUntilVisible:
     element: "Beliefs|Vakaumus|Övertygelse"
     direction: DOWN
@@ -80,7 +74,7 @@ name: A party and a star sign saved on their screens show on the card, and clear
 
 # Cleared again: off the card. The screen shows the stored answer once it has
 # read it; a tap before that is overwritten, so the flow waits for it.
-- openLink: kuutti://profile/later/politics
+- openLink: fi.kumpa://profile/later/politics
 - extendedWaitUntil:
     visible:
       text: "Centre Party|Keskusta|Centern"
@@ -98,7 +92,7 @@ name: A party and a star sign saved on their screens show on the card, and clear
 - extendedWaitUntil:
     visible: "Religion|Uskonto"
     timeout: 15000
-- openLink: kuutti://profile/later/zodiac
+- openLink: fi.kumpa://profile/later/zodiac
 - extendedWaitUntil:
     visible:
       text: "Corgi"
@@ -115,17 +109,11 @@ name: A party and a star sign saved on their screens show on the card, and clear
 - extendedWaitUntil:
     visible: "A way to stay in touch|Tapa pitää yhteyttä|Ett sätt att hålla kontakten"
     timeout: 15000
-- openLink: kuutti://profile/card
+- openLink: fi.kumpa://profile/card
 - extendedWaitUntil:
     visible: "Your card|Korttisi|Ditt kort"
     timeout: 15000
-- scrollUntilVisible:
-    element: "Show the whole card|Näytä koko kortti|Visa hela kortet"
-    direction: DOWN
-    centerElement: true
-    timeout: 60000
-- tapOn: "Show the whole card|Näytä koko kortti|Visa hela kortet"
-# Her hobbies end the whole card once Beliefs has nothing left.
+# Her hobbies end the card once Beliefs has nothing left.
 - scrollUntilVisible:
     element: "(.*: )?(Swimming|Uinti|Simning)"
     direction: DOWN

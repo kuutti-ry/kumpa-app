@@ -69,9 +69,6 @@ const read = async (ctx: TestContext) =>
 
 const numberOf = async (ctx: TestContext) => (await read(ctx)).finished;
 
-/** Long enough to count as a bio, by the rule of the profile. */
-const A_BIO = "A bio that is long enough to count as one, by the rule of the profile.";
-
 describe("the bar of whom a pond seeks (#507)", () => {
   describe("The bar is said only when every band is at least k", () => {
     test.for([
@@ -106,20 +103,26 @@ describe("the bar of whom a pond seeks (#507)", () => {
   test("The bar moves once k finished profiles have come or gone", async ({ ctx }) => {
     await pondWithBands(ctx, [10, 10, 10]);
     const person = await personOf(ctx);
-    // Everything a finished profile has, but for its bio.
+    // Everything a finished profile has, but for its second photo.
     const finishing = await people(ctx.client, 10, {
       complete: true,
       consented: true,
       seeks: ["man"],
-      bio: "none",
+      photos: 1,
     });
     await taken(ctx);
     const said = await askBar(ctx, person.headers);
     expect(said).toEqual({ men: 35, everyone: 30, women: 35 });
     const before = await read(ctx);
     expect(before).toMatchObject({ day: "2026-10-05", finished: 30 });
+    // The second approved photo, as the helper writes the first.
     const finish = (ids: string[]) =>
-      ctx.client.query("UPDATE profile SET bio = $2 WHERE account_id = ANY($1)", [ids, A_BIO]);
+      ctx.client.query(
+        `INSERT INTO photo (account_id, key, blurhash, width, height, state, position)
+         SELECT id, md5(id::text || 'second'), 'LEHV6nWB2yk8pyo0adR*.7kCMdnj', 800, 1067, 'approved', 1
+         FROM unnest($1::uuid[]) AS id`,
+        [ids],
+      );
     await finish(finishing.slice(0, 9));
     await taken(ctx, NEXT_DAY);
     expect(await askBar(ctx, person.headers)).toEqual(said);
@@ -340,7 +343,7 @@ describe("the counter", () => {
   }) => {
     await people(ctx.client, 10, { gender: "woman", complete: true });
     await people(ctx.client, 10, { gender: "man", complete: true });
-    await people(ctx.client, 10, { gender: "woman", complete: true, bio: "none" });
+    await people(ctx.client, 10, { gender: "woman", complete: true, photos: 1 });
     await taken(ctx);
     const text = await (await ctx.app.request("/ponds/counter")).text();
     // Every field by name: a total of thirty, a split or the ten who have not finished has no place.

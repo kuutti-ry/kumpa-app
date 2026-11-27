@@ -1,33 +1,36 @@
 import type { PlainMessageKey } from "@kuutti/i18n";
-import type { QueueChoice, QueueReason } from "@kuutti/schema";
+import type { LikeAnchor, LikedPart, QueueChoice, QueueReason } from "@kuutti/schema";
 import { useFocusEffect, useRouter } from "expo-router";
 import ArrowRight from "lucide-react-native/icons/arrow-right";
-import Fish from "lucide-react-native/icons/fish";
 import Star from "lucide-react-native/icons/star";
 import Undo2 from "lucide-react-native/icons/undo-2";
 import { type ReactNode, type Ref, useCallback, useRef, useState } from "react";
-import { ScrollView, useWindowDimensions, View } from "react-native";
+import { Pressable, ScrollView, useWindowDimensions, View, type ViewStyle } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Backdrop } from "@/components/backdrop";
+import { SightProvider, useSightScroll } from "@/components/InSight";
 import { LoadFailed } from "@/components/LoadFailed";
 import { useSpokenOnIos } from "@/components/Notice";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
-import { CachedPhoto, OwnPhoto, photoRefusalKey } from "@/features/media";
-import { fieldLabelKey, ProfileCardView, SEEK_PATH } from "@/features/profile";
+import { CachedPhoto, OwnPhoto, PhotoImage, photoRefusalKey } from "@/features/media";
+import { fieldLabelKey, ProfileCardView, partWords, SEEK_PATH } from "@/features/profile";
 import { useDecisionButtons } from "@/lib/decision-buttons";
 import { useT } from "@/lib/locale";
 import { cn } from "@/lib/utils";
-import { focusOnMount } from "@/theme/a11y";
+import { focusOnMount, MINIMUM_TARGET } from "@/theme/a11y";
 import { useHapticTap } from "@/theme/haptics";
+import { HARD_SHADOW, useHardShadow, useLift } from "@/theme/shadow";
 import { useLookTraits, useTheme } from "@/theme/ThemeProvider";
 import { useReducedMotion } from "@/theme/useReducedMotion";
+import { Dandelion } from "./dandelion";
 import { DECISION_ICONS, type DecisionIcons } from "./faceButtons";
 import { MatchHello } from "./MatchHello";
 import { MatchPop } from "./MatchPop";
 import { ShortPool } from "./ShortPool";
+import { StarsButton } from "./StarsButton";
 import { type QueueCard, useQueue } from "./useQueue";
 
 /**
@@ -53,6 +56,12 @@ const REVISIT: Readonly<Record<QueueChoice, PlainMessageKey>> = {
 /** A card that answers somebody's like takes a like back, never a fish (ADR-039 §2). */
 const ANSWERS_A_LIKE: ReadonlySet<QueueReason> = new Set(["liked_you", "fish"]);
 
+/** A card's place in the day's queue: where a pick of its part is kept (#463). */
+const placeOf = ({ day, entry }: QueueCard) => `${day}/${entry.position}`;
+
+/** The decisions that may name a part of the card (#463, ADR-077): a pass or Later names none. */
+const NAMES_A_PART: ReadonlySet<QueueChoice> = new Set(["like", "fish"]);
+
 /**
  * From this OS font scale, Undo in the header is its icon alone (#467, the
  * maintainer's of 28/10/2026): its word grows with the text and the title
@@ -64,45 +73,70 @@ const ANSWERS_A_LIKE: ReadonlySet<QueueReason> = new Set(["liked_you", "fish"]);
 const WORDLESS_UNDO_FONT_SCALE = 1.3;
 
 /**
+ * How what floats over the card stands off it (#681): a drawn button in a style
+ * of hard shadows keeps its own, and everything else, a drawn button elsewhere
+ * and the plain pieces with the ground's fill, takes the lift.
+ */
+function useFloat(): { drawn: ViewStyle | undefined; plain: ViewStyle } {
+  const { ink } = useLookTraits();
+  const lift = useLift();
+  const hard = useHardShadow(HARD_SHADOW.control);
+  return { drawn: ink ? undefined : lift, plain: ink ? hard : lift };
+}
+
+/**
  * The queue (#379, #502, ADR-034, ADR-062): one card at a time through the card
  * others see (#47), with why it is there above it, and Block or report on it
  * (ADR-030 §11), as far as the person likes, to the end of who fits them. Like
  * and pass are buttons at the bottom, never a swipe: pass an outlined rectangle
  * at the left, like a filled pill at the right, each with its word and its
- * icon, no red and green; the fish (#378), a like with a mark, a filled rounded
- * square above them, on a card that answers nobody's like, while a fish can go
- * today and on the card that holds it (#475): once the week's is sent it is
- * left out, as on a liked-you card, and nothing says when the next comes, which
- * is Monday's (the maintainer's of 29/10/2026). Later, a text button beside the
- * fish, moves on and costs nobody anything (ADR-062 §3). Beside them the bar
- * says in words how many of the day's likes are left (#524). Undo in the header
- * brings the last card back. Where they sit is the person's (#82): for the
- * right hand as above, or mirrored for the left; and one-handed, Undo, the fish,
- * Later, Pass and Like in one column at the bottom on that side, Undo brought
- * down from the header, within a thumb's reach. A like that makes a match says
- * so and leads to the conversation; one refused over the conversations waiting
- * says how many, and the card stays (ADR-062 §5). In the designers' try (the tech
- * screen's neubrutalism or Organic Pop, outside production) the match is a hello
- * instead, `MatchHello` or `MatchPop`, with the same two ways on. The queue's end says so, with
- * no count and nothing about tomorrow, which in a thin set would be false for a
- * month; then what may be relaxed for today (#99, ADR-042), and one plain way
+ * icon, no red and green; the flower, the fish until #681 (#378), a like with
+ * a mark, a filled rounded square above them, on a card that answers nobody's
+ * like, while one can go today and on the card that holds it (#475): once the
+ * week's is sent it is left out, as on a liked-you card, and nothing says when
+ * the next comes, which is Monday's (the maintainer's of 29/10/2026). Later,
+ * beside the flower, moves on, costs nobody anything (ADR-062 §3) and puts the
+ * person on the Later list (#681, ADR-064): the first there says that only the
+ * person sees it, and at the most the list may hold a line says the card comes
+ * back another day. Beside them the bar says in words how many of the day's
+ * likes are left (#524). The bar floats over the card, which scrolls under it
+ * and whose end scrolls clear (#681). Undo in the header brings the last card
+ * back. Where they sit is the person's (#82): for the right hand as above, or
+ * mirrored for the left; and one-handed, Undo, the flower, Later, Pass and Like
+ * in one column at the bottom on that side, Undo brought down from the header,
+ * within a thumb's reach. A like that makes a match says so and leads to the
+ * conversation; one refused over the conversations waiting says how many, and
+ * the card stays (ADR-062 §5). In every look but today's (Kumpa, the look
+ * every phone starts in, and the tech screen's tries) the match is a hello
+ * instead, `MatchPop` in the pill styles, Kumpa's among them, and `MatchHello`
+ * in neubrutalism, with the same two ways on. The queue's
+ * end says so, with no count and nothing about tomorrow, which in a thin set
+ * would be false for a month; then the way to the Later list while it shows
+ * somebody, what may be relaxed for today (#99, ADR-042), and one plain way
  * into What you seek, the same words for everybody (ADR-062 §11). Each relaxed
  * card says the deal-breaker it came in by and undoes it in one tap, and every
  * card names the person's deal-breakers its person did not answer.
  *
- * A card that holds no like or pass takes a star (#575, ADR-064): beside the
- * reason, and one-handed at the thumb with Undo, its word and an outlined icon
- * against a filled one, so that the state is never colour alone. It decides
- * nothing and the card stays. Given `star`, the id of one on the Starred list, the
- * screen is that one card, and what comes after it is the way back to the list.
+ * Given `star`, the id of one on the Later list, the screen is that one card,
+ * and what comes after it is the way back to the list.
+ *
+ * A like or a flower may name one part of the card (#463, ADR-077, the
+ * maintainer's of 26/11/2026): a tap on a photo, an answered prompt, the bio
+ * or a shared answer picks it, a second tap takes it back, and a line floating
+ * over the buttons says what the like names, with Clear; Like and the flower
+ * say it too, as their hint. The pick stays with the card's place, so a card
+ * Undo brings back has it still; one the API finds gone from the card is
+ * cleared, with a line that says so. A card that answers somebody's like says
+ * the part that like named, a photo with a small copy of the reader's own.
  *
  * As a card, the end or a match takes the place of what had the focus, the
- * screen reader is taken to its first line, and from a card of the Starred list
+ * screen reader is taken to its first line, and from a card of the Later list
  * that is gone, to the way back (#581); a notice is spoken where it appears,
  * under the header, in sight however far the card was scrolled.
  */
 export function QueueScreen({ star }: { star?: string }) {
   const { t } = useT();
+  const { poster } = useLookTraits();
   const router = useRouter();
   const tap = useHapticTap();
   const queue = useQueue(star);
@@ -142,13 +176,23 @@ export function QueueScreen({ star }: { star?: string }) {
   // The card the last like or fish went to: the one a match is with, for the
   // try's hello, which shows its person beside the reader.
   const [liked, setLiked] = useState<QueueCard | null>(null);
+  // The part each card's like will name, by its place in the day's queue (#463).
+  const [picks, setPicks] = useState<Readonly<Record<string, LikeAnchor>>>({});
+  const pick = (place: string, anchor: LikeAnchor | null) =>
+    setPicks(({ [place]: _, ...others }) => (anchor ? { ...others, [place]: anchor } : others));
+  const picked = current ? (picks[placeOf(current)] ?? null) : null;
   const choose = (card: QueueCard, decision: QueueChoice) => {
     tap();
     if (decision === "like" || decision === "fish") setLiked(card);
-    void queue.choose(card, decision);
+    const place = placeOf(card);
+    const anchor = NAMES_A_PART.has(decision) ? (picks[place] ?? null) : null;
+    void queue.choose(card, decision, anchor).then((refused) => {
+      // The part has left the card since it was read: the pick goes with it.
+      if (refused === "anchor_not_on_card") pick(place, null);
+    });
   };
-  // The designers' try (outside production): a match is a hello. Read here, long
-  // before a match, so the setting is known when the hello mounts.
+  // Every look but today's, Kumpa's among them: a match is a hello. Read here,
+  // long before a match, so the setting is known when the hello mounts.
   const still = useReducedMotion();
   const { moment } = useLookTraits();
   const { highContrast } = useTheme();
@@ -164,6 +208,11 @@ export function QueueScreen({ star }: { star?: string }) {
   // Where the decision buttons sit (#82): for the right hand or the left,
   // and one-handed in a column on that side with Undo among them.
   const { settings: placement } = useDecisionButtons();
+  const float = useFloat();
+  // The floating bar's height, which the card's end scrolls clear of (#681).
+  const [barHeight, setBarHeight] = useState(0);
+  // A card's photos further down are asked for as they scroll into sight (ADR-008).
+  const scroll = useSightScroll();
   const { fontScale } = useWindowDimensions();
   // Android sends its scale as a float: 130 % arrives as 1.2999999523.
   const wordless = !placement.oneHanded && fontScale >= Math.fround(WORDLESS_UNDO_FONT_SCALE);
@@ -171,7 +220,7 @@ export function QueueScreen({ star }: { star?: string }) {
     <Button
       variant="ghost"
       size={wordless ? "icon" : "default"}
-      className={cn(placement.oneHanded && "w-full")}
+      className={cn(placement.oneHanded && "w-full rounded-full")}
       accessibilityLabel={t("queue.undo.label")}
       onPress={() => {
         tap();
@@ -182,24 +231,10 @@ export function QueueScreen({ star }: { star?: string }) {
       {!wordless && <Text>{t("queue.undo")}</Text>}
     </Button>
   );
-  // A like or a pass takes the star off, so a card holding one has none to offer.
-  const starred = !!entry?.star;
-  const starToggle = current && (entry?.decision === null || entry?.decision === "skip") && (
-    <Button
-      variant="ghost"
-      className={cn(placement.oneHanded && "w-full")}
-      disabled={queue.busy}
-      accessibilityLabel={t("queue.star.label", { name: current.entry.card.displayName })}
-      accessibilityState={{ selected: starred }}
-      onPress={() => {
-        tap();
-        void queue.toggleStar(current);
-      }}
-    >
-      <Icon as={Star} fill={starred ? "currentColor" : "none"} />
-      <Text>{t(starred ? "queue.star.on" : "queue.star")}</Text>
-    </Button>
-  );
+  // The decisions over a card, or one-handed Undo alone once none is left.
+  const floating =
+    match === null &&
+    ((current && view.status === "ready") || (!current && placement.oneHanded && !!undo));
   const backToStars = (ref?: Ref<View>) => (
     <Button
       ref={ref}
@@ -227,217 +262,307 @@ export function QueueScreen({ star }: { star?: string }) {
           {words}
         </Text>
       )}
-      {/* Keyed by the card, so each one starts at its top. */}
-      <ScrollView
-        key={match ?? entry?.position ?? "queue"}
-        contentContainerClassName="flex-grow gap-4 p-6"
-      >
-        {view.status === "loading" && (
-          <Text accessibilityLiveRegion="polite">{t("load.loading")}</Text>
-        )}
-        {view.status === "failed" && <LoadFailed error={view.error} onRetry={queue.retry} />}
-        {view.status === "budget" && (
-          <Text ref={focusOnMount} accessibilityLiveRegion="polite">
-            {t("errors.card_budget_exceeded")}
-          </Text>
-        )}
-        {view.status === "gone" && (
-          <>
-            <Text ref={focusOnMount} accessibilityLiveRegion="polite">
-              {t("queue.gone")}
-            </Text>
-            {backToStars()}
-          </>
-        )}
-        {entries === null && <Text ref={focusOnMount}>{t("queue.none")}</Text>}
-        {match !== null && (
-          <View className="gap-4">
-            {hello ? (
-              <Hello
-                name={hello.displayName}
-                still={still}
-                you={<OwnPhoto label={t("queue.hello.you")} />}
-                them={
-                  helloPhoto && (
-                    <CachedPhoto
-                      id={helloPhoto.id}
-                      variant="card"
-                      blurhash={helloPhoto.blurhash}
-                      style={{ width: "100%", height: "100%" }}
-                    />
-                  )
-                }
+      <View className="flex-1">
+        {/* Keyed by the card, so each one starts at its top. */}
+        <ScrollView
+          key={match ?? entry?.position ?? "queue"}
+          contentContainerClassName="flex-grow gap-4 p-6"
+          onScroll={scroll.onScroll}
+          scrollEventThrottle={scroll.scrollEventThrottle}
+        >
+          <SightProvider value={scroll.sight}>
+            {view.status === "loading" && (
+              <Text accessibilityLiveRegion="polite">{t("load.loading")}</Text>
+            )}
+            {view.status === "failed" && <LoadFailed error={view.error} onRetry={queue.retry} />}
+            {view.status === "budget" && (
+              <Text ref={focusOnMount} accessibilityLiveRegion="polite">
+                {t("errors.card_budget_exceeded")}
+              </Text>
+            )}
+            {view.status === "gone" && (
+              <>
+                <Text ref={focusOnMount} accessibilityLiveRegion="polite">
+                  {t("queue.gone")}
+                </Text>
+                {backToStars()}
+              </>
+            )}
+            {entries === null && <Text ref={focusOnMount}>{t("queue.none")}</Text>}
+            {match !== null && (
+              <View className="gap-4">
+                {hello ? (
+                  <Hello
+                    name={hello.displayName}
+                    still={still}
+                    you={<OwnPhoto label={t("queue.hello.you")} />}
+                    them={
+                      helloPhoto && (
+                        <CachedPhoto
+                          id={helloPhoto.id}
+                          variant="card"
+                          blurhash={helloPhoto.blurhash}
+                          style={{ width: "100%", height: "100%" }}
+                        />
+                      )
+                    }
+                  />
+                ) : (
+                  <Text ref={focusOnMount} variant="h2" accessibilityLiveRegion="polite">
+                    {t("queue.match.title")}
+                  </Text>
+                )}
+                <Button
+                  size={hello ? "lg" : "default"}
+                  className={
+                    lime ? "bg-accent active:bg-accent/85 web:hover:bg-accent/90" : undefined
+                  }
+                  accessibilityLabel={t(hello ? "queue.hello.open" : "queue.match.open")}
+                  onPress={() => {
+                    tap();
+                    away.current = true;
+                    router.push(`/chats/${match}`);
+                  }}
+                >
+                  <Text className={lime ? "text-accent-foreground" : undefined}>
+                    {t(hello ? "queue.hello.open" : "queue.match.open")}
+                  </Text>
+                  {hello && (
+                    <Icon as={ArrowRight} className={lime ? "text-accent-foreground" : undefined} />
+                  )}
+                </Button>
+                {star ? (
+                  backToStars()
+                ) : (
+                  <Button
+                    variant="outline"
+                    onPress={() => {
+                      tap();
+                      queue.closeMatch();
+                    }}
+                  >
+                    {t("queue.match.continue")}
+                  </Button>
+                )}
+              </View>
+            )}
+            {match === null && current && (
+              <View className="gap-3">
+                <View className="flex-row flex-wrap items-center justify-between gap-2">
+                  <Text
+                    ref={focusOnMount}
+                    variant="small"
+                    className="rounded-full bg-secondary px-3 py-1 text-secondary-foreground"
+                  >
+                    {current.entry.relaxedField
+                      ? t("queue.reason.relaxedField", {
+                          field: t(fieldLabelKey(current.entry.relaxedField)),
+                        })
+                      : t(REASON[current.entry.reason as Exclude<QueueReason, "relaxed">])}
+                  </Text>
+                </View>
+                {ANSWERS_A_LIKE.has(current.entry.reason) && current.entry.likedYour && (
+                  <LikedYour part={current.entry.likedYour} />
+                )}
+                {(current.entry.notAnswered ?? []).map((field) => (
+                  <Text key={field} variant="muted">
+                    {t("queue.notAnswered", { field: t(fieldLabelKey(field)) })}
+                  </Text>
+                ))}
+                {current.entry.relaxedField && current.entry.decision === null && (
+                  <Button
+                    variant="ghost"
+                    className="self-start"
+                    disabled={queue.busy}
+                    accessibilityLabel={t("queue.relaxed.undo", {
+                      field: t(fieldLabelKey(current.entry.relaxedField)),
+                    })}
+                    onPress={() => {
+                      tap();
+                      const field = current.entry.relaxedField;
+                      if (field) void queue.unrelax(current.day, field);
+                    }}
+                  >
+                    {t("queue.relaxed.undo", {
+                      field: t(fieldLabelKey(current.entry.relaxedField)),
+                    })}
+                  </Button>
+                )}
+                {current.entry.decision !== null && (
+                  <Text>{t(REVISIT[current.entry.decision])}</Text>
+                )}
+                <ProfileCardView
+                  bleed={poster}
+                  card={current.entry.card}
+                  distance={current.entry.distance}
+                  // No block or report while a decision is on its way: one finishing
+                  // after the next card took this one's place would never take the
+                  // blocked person off, and Undo would bring them back (ADR-030 §11).
+                  onGone={
+                    queue.busy ? undefined : () => queue.drop(current.day, current.entry.position)
+                  }
+                  onRefused={(code) =>
+                    setRefused({
+                      day: current.day,
+                      position: current.entry.position,
+                      code: code ?? "",
+                    })
+                  }
+                  picking={{ anchor: picked, onPick: (anchor) => pick(placeOf(current), anchor) }}
+                />
+                {refused?.day === current.day && refused.position === current.entry.position && (
+                  <Text variant="muted" accessibilityLiveRegion="polite">
+                    {t(photoRefusalKey(refused.code))}
+                  </Text>
+                )}
+              </View>
+            )}
+            {/* A card of the Later list, decided or blocked: the way back is all that stands, and the reader is taken to it (#581). */}
+            {star &&
+              match === null &&
+              !entry &&
+              entries &&
+              view.status === "ready" &&
+              backToStars(focusOnMount)}
+            {/* The queue's end (ADR-062 §11): the line the reader is taken to, the way into the Later list while it shows somebody (#681), what may be relaxed for today (#99, ADR-042), and the same way into What you seek for everybody. */}
+            {!star && match === null && !entry && entries && view.status === "ready" && (
+              <>
+                <Text ref={focusOnMount}>{t("queue.done")}</Text>
+                <StarsButton replace />
+                <ShortPool
+                  day={view.queue.day}
+                  busy={queue.busy}
+                  onRelax={(relaxation) => queue.relax(view.queue.day, relaxation)}
+                  onUndo={(field) => queue.unrelax(view.queue.day, field)}
+                />
+                <Button
+                  variant="outline"
+                  onPress={() => {
+                    tap();
+                    router.push(SEEK_PATH);
+                  }}
+                >
+                  {t("profile.seek.title")}
+                </Button>
+              </>
+            )}
+            {/* The card's end scrolls clear of the buttons floating over it (#681). */}
+            {floating && <View testID="queue-float-room" style={{ height: barHeight }} />}
+          </SightProvider>
+        </ScrollView>
+        {floating && (
+          <View
+            testID="queue-float"
+            pointerEvents="box-none"
+            className="absolute bottom-0 left-0 right-0 px-6 pb-3"
+            onLayout={(event) => setBarHeight(event.nativeEvent.layout.height)}
+          >
+            {match === null && current && view.status === "ready" ? (
+              <DecisionBar
+                card={current}
+                fishToSend={view.queue.fishToSend}
+                likesLeft={view.queue.likesLeft}
+                busy={queue.busy}
+                left={placement.hand === "left"}
+                oneHanded={placement.oneHanded}
+                icons={DECISION_ICONS[placement.style]}
+                poster={poster}
+                undo={undo}
+                float={float}
+                anchor={picked}
+                onClear={() => pick(placeOf(current), null)}
+                onChoose={choose}
               />
             ) : (
-              <Text ref={focusOnMount} variant="h2" accessibilityLiveRegion="polite">
-                {t("queue.match.title")}
-              </Text>
-            )}
-            <Button
-              size={hello ? "lg" : "default"}
-              className={lime ? "bg-accent active:bg-accent/85 web:hover:bg-accent/90" : undefined}
-              accessibilityLabel={t(hello ? "queue.hello.open" : "queue.match.open")}
-              onPress={() => {
-                tap();
-                away.current = true;
-                router.push(`/chats/${match}`);
-              }}
-            >
-              <Text className={lime ? "text-accent-foreground" : undefined}>
-                {t(hello ? "queue.hello.open" : "queue.match.open")}
-              </Text>
-              {hello && (
-                <Icon as={ArrowRight} className={lime ? "text-accent-foreground" : undefined} />
-              )}
-            </Button>
-            {star ? (
-              backToStars()
-            ) : (
-              <Button
-                variant="outline"
-                onPress={() => {
-                  tap();
-                  queue.closeMatch();
-                }}
+              // One-handed, Undo stays at the thumb when no card is left to decide:
+              // after the queue's last decision it can still be taken back (ADR-034 §5).
+              <View
+                testID="queue-one-handed"
+                pointerEvents="box-none"
+                className={cn("w-2/3", placement.hand === "left" ? "self-start" : "self-end")}
               >
-                {t("queue.match.continue")}
-              </Button>
+                <Afloat className="rounded-full" style={float.plain}>
+                  {undo}
+                </Afloat>
+              </View>
             )}
           </View>
         )}
-        {match === null && current && (
-          <View className="gap-3">
-            <View className="flex-row flex-wrap items-center justify-between gap-2">
-              <Text
-                ref={focusOnMount}
-                variant="small"
-                className="rounded-full bg-secondary px-3 py-1 text-secondary-foreground"
-              >
-                {current.entry.relaxedField
-                  ? t("queue.reason.relaxedField", {
-                      field: t(fieldLabelKey(current.entry.relaxedField)),
-                    })
-                  : t(REASON[current.entry.reason as Exclude<QueueReason, "relaxed">])}
-              </Text>
-              {!placement.oneHanded && starToggle}
-            </View>
-            {(current.entry.notAnswered ?? []).map((field) => (
-              <Text key={field} variant="muted">
-                {t("queue.notAnswered", { field: t(fieldLabelKey(field)) })}
-              </Text>
-            ))}
-            {current.entry.relaxedField && current.entry.decision === null && (
-              <Button
-                variant="ghost"
-                className="self-start"
-                disabled={queue.busy}
-                accessibilityLabel={t("queue.relaxed.undo", {
-                  field: t(fieldLabelKey(current.entry.relaxedField)),
-                })}
-                onPress={() => {
-                  tap();
-                  const field = current.entry.relaxedField;
-                  if (field) void queue.unrelax(current.day, field);
-                }}
-              >
-                {t("queue.relaxed.undo", { field: t(fieldLabelKey(current.entry.relaxedField)) })}
-              </Button>
-            )}
-            {current.entry.decision !== null && <Text>{t(REVISIT[current.entry.decision])}</Text>}
-            <ProfileCardView
-              card={current.entry.card}
-              distance={current.entry.distance}
-              // No block or report while a decision is on its way: one finishing
-              // after the next card took this one's place would never take the
-              // blocked person off, and Undo would bring them back (ADR-030 §11).
-              onGone={
-                queue.busy ? undefined : () => queue.drop(current.day, current.entry.position)
-              }
-              onRefused={(code) =>
-                setRefused({ day: current.day, position: current.entry.position, code: code ?? "" })
-              }
-            />
-            {refused?.day === current.day && refused.position === current.entry.position && (
-              <Text variant="muted" accessibilityLiveRegion="polite">
-                {t(photoRefusalKey(refused.code))}
-              </Text>
-            )}
-          </View>
-        )}
-        {/* A card of the Starred list, decided or blocked: the way back is all that stands, and the reader is taken to it (#581). */}
-        {star &&
-          match === null &&
-          !entry &&
-          entries &&
-          view.status === "ready" &&
-          backToStars(focusOnMount)}
-        {/* The queue's end (ADR-062 §11): the line the reader is taken to, what may be relaxed for today (#99, ADR-042), and the same way into What you seek for everybody. */}
-        {!star && match === null && !entry && entries && view.status === "ready" && (
-          <>
-            <Text ref={focusOnMount}>{t("queue.done")}</Text>
-            <ShortPool
-              day={view.queue.day}
-              busy={queue.busy}
-              onRelax={(relaxation) => queue.relax(view.queue.day, relaxation)}
-              onUndo={(field) => queue.unrelax(view.queue.day, field)}
-            />
-            <Button
-              variant="outline"
-              onPress={() => {
-                tap();
-                router.push(SEEK_PATH);
-              }}
-            >
-              {t("profile.seek.title")}
-            </Button>
-          </>
-        )}
-      </ScrollView>
-      {match === null && current && view.status === "ready" && (
-        <DecisionBar
-          card={current}
-          fishToSend={view.queue.fishToSend}
-          likesLeft={view.queue.likesLeft}
-          busy={queue.busy}
-          left={placement.hand === "left"}
-          oneHanded={placement.oneHanded}
-          icons={DECISION_ICONS[placement.style]}
-          undo={undo}
-          star={starToggle}
-          onChoose={choose}
-        />
-      )}
-      {/* One-handed, Undo stays at the thumb when no card is left to decide:
-          after the queue's last decision it can still be taken back (ADR-034 §5). */}
-      {match === null && !current && placement.oneHanded && undo && (
-        <View className="border-t border-border bg-background px-6 py-3">
-          <View
-            testID="queue-one-handed"
-            className={cn("w-2/3", placement.hand === "left" ? "self-start" : "self-end")}
-          >
-            {undo}
-          </View>
-        </View>
-      )}
+      </View>
     </SafeAreaView>
   );
 }
 
 /**
- * Like, Pass, Later and the fish at the bottom of the queue (#82): in a row for
- * the right hand (Pass, Like) or mirrored for the left, the fish and Later above
- * on the hand's side; one-handed, a column on that side, Undo first and Like
- * last, nearest the thumb. Each keeps its shape, word and icon wherever it sits.
- * The fish is there while one can go today, and on the card that holds it,
- * read back selected and open to change (#475). Later is there on every card,
- * a text button with no fill and no outline, plainer than the two that decide:
- * it spends nothing and answers nobody (ADR-062 §3), and a wide word in the row
- * of two would take their room, so it sits with the fish and wraps with it, never
- * on a line of its own while there is room beside the fish. How many of the
+ * A piece of what floats over the card (#681): the ground's fill in the piece's
+ * shape, so its words read over any photo, a busy button's too, which is drawn
+ * with no fill of its own, and the lift that stands it off the card.
+ */
+function Afloat({
+  className,
+  style,
+  children,
+}: {
+  className: string;
+  style: ViewStyle | undefined;
+  children: ReactNode;
+}) {
+  return (
+    <View className={cn("bg-background", className)} style={style}>
+      {children}
+    </View>
+  );
+}
+
+/**
+ * The part of the reader's card that this person's like named (#463, ADR-077),
+ * under the card's reason: in words, and a photo with a small copy of the
+ * reader's own, heard as one line, the words alone.
+ */
+function LikedYour({ part }: { part: LikedPart }) {
+  const { t } = useT();
+  const words = partWords(t, "queue.likedYour", part);
+  return (
+    <View
+      accessible
+      accessibilityLabel={words}
+      testID="queue-liked-your"
+      className="flex-row items-center gap-3"
+    >
+      {part.kind === "photo" && (
+        <PhotoImage
+          id={part.photo.id}
+          variant="thumb"
+          blurhash={part.photo.blurhash}
+          accessibilityLabel={words}
+          style={LIKED_THUMB}
+        />
+      )}
+      <Text className="shrink">{words}</Text>
+    </View>
+  );
+}
+
+const LIKED_THUMB = { width: 48, height: 48, borderRadius: 8 } as const;
+
+/**
+ * Like, Pass, Later and the flower over the bottom of the card (#82, #681): in
+ * a row for the right hand (Pass, Like) or mirrored for the left, the flower,
+ * Later and the likes left in a smaller row above on the hand's side; one-handed,
+ * a column on that side, Undo first and Like last, nearest the thumb. Each keeps
+ * its shape, word and icon wherever it sits, and floats on its own fill with no
+ * band behind the bar, so the card shows between them and scrolls under them
+ * (the maintainer's of 18/11/2026). The flower is there while one can go today,
+ * and on the card that holds it, read back selected and open to change (#475).
+ * Later is there on every card, plainer than the two that decide, no outline: it
+ * spends nothing and answers nobody (ADR-062 §3), and a wide word in the row of
+ * two would take their room, so it sits with the flower and wraps with it, never
+ * on a line of its own while there is room beside the flower. How many of the
  * day's likes are left is plain text beside those two, above them where they do
  * not fit on one row, the same at ten as at one: no colour, no motion, and
- * nothing announces it after a decision (#524). The star is no decision and sits on
- * the card; one-handed it comes down with Undo, within the thumb's reach (#575).
+ * nothing announces it after a decision (#524). The part a like will name
+ * (#463) is a line of its own above them all, with Clear, and Like and the
+ * flower say it as their hint.
  */
 function DecisionBar({
   card,
@@ -447,12 +572,15 @@ function DecisionBar({
   left,
   oneHanded,
   icons,
+  poster,
   undo,
-  star,
+  float,
+  anchor,
+  onClear,
   onChoose,
 }: {
   card: QueueCard;
-  /** Whether a fish can go today, as the queue and each decision's answer say (#475). */
+  /** Whether a flower can go today, as the queue and each decision's answer say (#475). */
   fishToSend: boolean;
   /** How many of the day's likes are left, as the queue and each decision's answer say (#524). */
   likesLeft: number;
@@ -461,85 +589,153 @@ function DecisionBar({
   oneHanded: boolean;
   /** Like's and Pass's icons, in the person's style (#520); nothing else changes with it. */
   icons: DecisionIcons;
+  /** Kumpa's poster (the HS design): Pass, Like and Later as round buttons in a row of their own. */
+  poster: boolean;
   /** Undo, which comes down from the header in one-handed mode; nothing while there is nothing to undo. */
   undo: ReactNode;
-  /** The star, which comes down from the card in one-handed mode; nothing on a card holding a like or a pass. */
-  star: ReactNode;
+  /** How the pieces stand off the card (`useFloat`). */
+  float: { drawn: ViewStyle | undefined; plain: ViewStyle };
+  /** The part of the card a like or the flower will name (#463), or none. */
+  anchor: LikeAnchor | null;
+  onClear: () => void;
   onChoose: (card: QueueCard, decision: QueueChoice) => void;
 }) {
   const { t } = useT();
   const { entry } = card;
-  const likes = (
-    <Text variant="muted" className={cn(!left && "text-right")}>
-      {t("queue.likesLeft", { likes: likesLeft })}
-    </Text>
+  const naming = anchor ? partWords(t, "queue.anchor", anchor) : undefined;
+  const named = naming && (
+    <Afloat
+      className="flex-row items-center gap-2 self-stretch rounded-lg pl-3"
+      style={float.plain}
+    >
+      <Text testID="queue-anchor" className="flex-1">
+        {naming}
+      </Text>
+      <Button variant="ghost" accessibilityLabel={t("queue.anchor.clearLabel")} onPress={onClear}>
+        {t("queue.anchor.clear")}
+      </Button>
+    </Afloat>
   );
-  // A fish counts in the day's likes, so with none left it can go only on a
+  const likes = (
+    <Afloat
+      className={cn("rounded-lg px-3 py-1", oneHanded && (left ? "self-start" : "self-end"))}
+      style={float.plain}
+    >
+      <Text variant="muted" className={cn(!left && "text-right")}>
+        {t("queue.likesLeft", { likes: likesLeft })}
+      </Text>
+    </Afloat>
+  );
+  // A flower counts in the day's likes, so with none left it can go only on a
   // card whose like is paid for (#503, the maintainer's of 01/11/2026).
   const fishCanGo = fishToSend && (likesLeft > 0 || entry.decision === "like");
   const fish = !ANSWERS_A_LIKE.has(entry.reason) && (fishCanGo || entry.decision === "fish") && (
-    <Button
-      variant="secondary"
-      className={cn("rounded-lg", oneHanded && "w-full")}
-      disabled={busy}
-      accessibilityLabel={t("queue.fish")}
-      accessibilityState={{ selected: entry.decision === "fish" }}
-      onPress={() => onChoose(card, "fish")}
-    >
-      <Icon as={Fish} />
-      <Text>{t("queue.fish")}</Text>
-    </Button>
+    <Afloat className="rounded-lg" style={float.drawn}>
+      <Button
+        variant="secondary"
+        className="rounded-lg"
+        disabled={busy}
+        accessibilityLabel={t("queue.fish")}
+        accessibilityHint={naming}
+        accessibilityState={{ selected: entry.decision === "fish" }}
+        onPress={() => onChoose(card, "fish")}
+      >
+        <Icon as={Dandelion} />
+        <Text>{t("queue.fish")}</Text>
+      </Button>
+    </Afloat>
   );
   const later = (
-    <Button
-      variant="ghost"
-      className={cn(oneHanded && "w-full")}
-      disabled={busy}
-      accessibilityLabel={t("queue.skip")}
-      accessibilityState={{ selected: entry.decision === "skip" }}
-      onPress={() => onChoose(card, "skip")}
-    >
-      {t("queue.skip")}
-    </Button>
+    <Afloat className="rounded-full" style={float.plain}>
+      <Button
+        variant="ghost"
+        className="rounded-full"
+        disabled={busy}
+        accessibilityLabel={t("queue.skip")}
+        accessibilityState={{ selected: entry.decision === "skip" }}
+        onPress={() => onChoose(card, "skip")}
+      >
+        {t("queue.skip")}
+      </Button>
+    </Afloat>
   );
   const pass = (
-    <Button
-      key="pass"
-      variant="outline"
-      size="lg"
-      className={cn("rounded-md", oneHanded ? "w-full" : "flex-1")}
-      disabled={busy}
-      accessibilityLabel={t("queue.pass")}
-      accessibilityState={{ selected: entry.decision === "pass" }}
-      onPress={() => onChoose(card, "pass")}
-    >
-      <Icon as={icons.pass} />
-      <Text>{t("queue.pass")}</Text>
-    </Button>
+    <Afloat key="pass" className={cn("rounded-md", !oneHanded && "flex-1")} style={float.drawn}>
+      <Button
+        variant="outline"
+        size="lg"
+        className="rounded-md"
+        disabled={busy}
+        accessibilityLabel={t("queue.pass")}
+        accessibilityState={{ selected: entry.decision === "pass" }}
+        onPress={() => onChoose(card, "pass")}
+      >
+        <Icon as={icons.pass} />
+        <Text>{t("queue.pass")}</Text>
+      </Button>
+    </Afloat>
   );
   const like = (
-    <Button
-      key="like"
-      size="lg"
-      className={cn("rounded-full", oneHanded ? "w-full" : "flex-1")}
-      disabled={busy}
-      accessibilityLabel={t("queue.like")}
-      accessibilityState={{ selected: entry.decision === "like" }}
-      onPress={() => onChoose(card, "like")}
-    >
-      <Icon as={icons.like} />
-      <Text>{t("queue.like")}</Text>
-    </Button>
+    <Afloat key="like" className={cn("rounded-full", !oneHanded && "flex-1")} style={float.drawn}>
+      <Button
+        size="lg"
+        className="rounded-full"
+        disabled={busy}
+        accessibilityLabel={t("queue.like")}
+        accessibilityHint={naming}
+        accessibilityState={{ selected: entry.decision === "like" }}
+        onPress={() => onChoose(card, "like")}
+      >
+        <Icon as={icons.like} />
+        <Text>{t("queue.like")}</Text>
+      </Button>
+    </Afloat>
   );
+  const round = poster && !oneHanded;
+  const rounds = round && [
+    <RoundChoice
+      key="pass"
+      label={t("queue.pass")}
+      icon={icons.pass}
+      outer
+      selected={entry.decision === "pass"}
+      disabled={busy}
+      onPress={() => onChoose(card, "pass")}
+    />,
+    <RoundChoice
+      key="like"
+      label={t("queue.like")}
+      icon={icons.like}
+      filled
+      hint={naming}
+      selected={entry.decision === "like"}
+      disabled={busy}
+      onPress={() => onChoose(card, "like")}
+    />,
+    <RoundChoice
+      key="later"
+      label={t("queue.skip")}
+      icon={Star}
+      outer
+      selected={entry.decision === "skip"}
+      disabled={busy}
+      onPress={() => onChoose(card, "skip")}
+    />,
+  ];
   return (
-    <View className="gap-3 border-t border-border bg-background px-6 py-3">
+    <View pointerEvents="box-none" className="gap-3">
+      {named}
       {oneHanded ? (
         <View
           testID="queue-one-handed"
+          pointerEvents="box-none"
           className={cn("w-2/3 gap-3", left ? "self-start" : "self-end")}
         >
-          {undo}
-          {star}
+          {undo && (
+            <Afloat className="rounded-full" style={float.plain}>
+              {undo}
+            </Afloat>
+          )}
           {likes}
           {fish}
           {later}
@@ -550,25 +746,148 @@ function DecisionBar({
         <>
           <View
             testID="queue-likes-row"
+            pointerEvents="box-none"
             className={cn(
               "flex-row flex-wrap items-center justify-end gap-x-4 gap-y-3",
               left && "flex-row-reverse",
             )}
           >
             {likes}
+            {/* Held to the row's width, or a View, which does not shrink, never
+                wraps and runs off the screen's edge: "Send a flower" at 320 pt. */}
             <View
+              pointerEvents="box-none"
               className={cn(
-                "flex-row flex-wrap items-center justify-end gap-x-4 gap-y-3",
+                "max-w-full shrink flex-row flex-wrap items-center justify-end gap-x-4 gap-y-3",
                 left && "flex-row-reverse",
               )}
             >
               {fish}
-              {later}
+              {!round && later}
             </View>
           </View>
-          <View className="flex-row gap-4">{left ? [like, pass] : [pass, like]}</View>
+          {rounds ? (
+            <View pointerEvents="box-none" className="flex-row items-start justify-center gap-5">
+              {left ? [...rounds].reverse() : rounds}
+            </View>
+          ) : (
+            <View pointerEvents="box-none" className="flex-row gap-4">
+              {left ? [like, pass] : [pass, like]}
+            </View>
+          )}
         </>
       )}
     </View>
+  );
+}
+
+/** Where a pressed round button sits: in its own hard shadow, which it covers. */
+const ROUND_SHADOW = 4;
+const ROUND_PRESSED: ViewStyle = {
+  transform: [{ translateX: ROUND_SHADOW }, { translateY: ROUND_SHADOW }],
+};
+
+/**
+ * Kumpa's round buttons (the HS design): a disc in the ink's outline on its
+ * hard shadow, Like filled in the blue, each with its word under it on the
+ * ground's fill, so the meaning rests on neither the icon nor the colour. The
+ * word is inside the press, so a tap on it decides as a tap on the disc does,
+ * and a screen reader meets one button. Busy, the disc is drawn as every
+ * disabled control is, a dashed outline with no fill, never faded.
+ *
+ * The word is not held to its disc's width (#753): held there, it broke in the
+ * middle, "Myöhem / min" at the default size and "Late / r" at the largest. At
+ * an end of the row it may take the row's gap (`gap-5`) on each side of its
+ * disc, centred under it still; Like's, always in the middle, keeps to its
+ * disc, so two words never meet. Each word is a line of its own, so "Hoppa
+ * över" breaks only between its words, and a word still wider than its room
+ * shrinks to fit rather than break (#467). Like ScreenHeader's title, it has
+ * no fixed line height: iOS seats a shrunk font at the foot of the line height
+ * set for the font before it shrank (the size's tracking is given back, which
+ * a size with its own line height leaves out). The web preview cannot shrink
+ * text, but it has no larger sizes either, and at its one size every word fits
+ * its room down to 320 pt. The room lets touches through to what lies under
+ * it; the word decides, past the disc's edge too.
+ */
+function RoundChoice({
+  label,
+  icon,
+  filled = false,
+  outer = false,
+  hint,
+  selected,
+  disabled,
+  onPress,
+}: {
+  label: string;
+  icon: DecisionIcons["like"];
+  filled?: boolean;
+  /** At an end of the row, where the word may take the gaps beside its disc. */
+  outer?: boolean;
+  /** Like's: the part of the card the like will name (#463). */
+  hint?: string;
+  selected: boolean;
+  disabled: boolean;
+  onPress: () => void;
+}) {
+  const shadow = useHardShadow(ROUND_SHADOW);
+  const [pressed, setPressed] = useState(false);
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityHint={hint}
+      accessibilityState={{ selected, disabled }}
+      disabled={disabled}
+      onPress={onPress}
+      onPressIn={() => setPressed(true)}
+      onPressOut={() => setPressed(false)}
+      className="max-w-[92px] flex-1 items-center gap-2"
+      style={MINIMUM_TARGET}
+    >
+      <View
+        className={cn(
+          "aspect-square w-full items-center justify-center rounded-full border-[2.5px]",
+          disabled
+            ? "border-dashed border-input bg-transparent"
+            : cn("border-solid border-stroke", filled ? "bg-primary" : "bg-card"),
+        )}
+        style={pressed || disabled ? ROUND_PRESSED : shadow}
+      >
+        <Icon
+          as={icon}
+          size={34}
+          strokeWidth={2.5}
+          className={
+            disabled
+              ? "text-muted-foreground"
+              : filled
+                ? "text-primary-foreground"
+                : "text-foreground"
+          }
+        />
+      </View>
+      <View pointerEvents="box-none" className={cn("items-center self-stretch", outer && "-mx-5")}>
+        <Afloat
+          className="flex-row flex-wrap justify-center gap-x-1 rounded-full px-2"
+          style={undefined}
+        >
+          {label.split(" ").map((word) => (
+            <Text
+              key={word}
+              variant="small"
+              className={cn(
+                "text-center font-sans text-label/[normal] tracking-[0.15px]",
+                disabled && "text-muted-foreground",
+              )}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+            >
+              {word}
+            </Text>
+          ))}
+        </Afloat>
+      </View>
+    </Pressable>
   );
 }

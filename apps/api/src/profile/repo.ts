@@ -17,7 +17,7 @@ import {
 // the test harness hands a rolled-back transaction through. Every statement
 // about the caller's own profile carries the caller's account id in its WHERE
 // clause (rule 6). The one read by another account's id, findCardSubject, is
-// the card: what the queue and the Starred list serve after the matching
+// the card: what the queue and the Later list serve after the matching
 // rules chose the subject (`cardOf` in app.ts), and what the owner previews
 // for themselves (ADR-009).
 
@@ -68,9 +68,6 @@ const storedHidden = (raw: unknown): HiddenField[] =>
   (raw as string[]).filter((key): key is HiddenField =>
     (CARD_FIELD_KEYS as readonly string[]).includes(key),
   );
-
-/** How many prompts of a stored document still count: the ones the registry still knows (#54 reads many rows at once). */
-export const answeredPromptsOf = (raw: unknown): number => storedPrompts(raw).prompts.length;
 
 /** A stored document's answers as the registry still knows them, a removed option unanswered: the pool reads many rows at once (#87). */
 export const answeredFieldsOf = (raw: unknown): ProfileFields => storedFields(raw).fields;

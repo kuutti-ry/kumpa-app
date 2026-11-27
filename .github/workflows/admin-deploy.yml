@@ -105,7 +105,7 @@ jobs:
       id-token: write
     # kuutti-ci-apply, as the infrastructure apply has it. It is one role for
     # both environments, so prod's reviewer gates this job and not the role
-    # (ADR-025, Open). The plan role may write pr-* alone (§7).
+    # (ADR-025, Open).
     env:
       AWS_REGION: ${{ vars.AWS_REGION }}
       AWS_ROLE_ARN: ${{ vars.AWS_APPLY_ROLE_ARN }}

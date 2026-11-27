@@ -336,6 +336,32 @@ resource "aws_iam_role_policy" "ci_plan_deny_data" {
   policy = data.aws_iam_policy_document.ci_plan_deny_data.json
 }
 
+# Apply this in bootstrap before production creates the tables. A PR may
+# inspect their configuration from the first instant they exist.
+data "aws_iam_policy_document" "ci_plan_waitlist" {
+  statement {
+    sid    = "WaitlistMetadataOnly"
+    effect = "Deny"
+    not_actions = [
+      "dynamodb:Describe*",
+      "dynamodb:GetResourcePolicy",
+      "dynamodb:ListTagsOfResource",
+    ]
+    resources = flatten([
+      for name in ["${var.project}-prod-launch-waitlist", "${var.project}-prod-launch-waitlist-challenges"] : [
+        "arn:aws:dynamodb:${var.region}:${local.account_id}:table/${name}",
+        "arn:aws:dynamodb:${var.region}:${local.account_id}:table/${name}/*",
+      ]
+    ])
+  }
+}
+
+resource "aws_iam_role_policy" "ci_plan_waitlist" {
+  name   = "waitlist-metadata-only"
+  role   = aws_iam_role.ci_plan.id
+  policy = data.aws_iam_policy_document.ci_plan_waitlist.json
+}
+
 # The weekly export of what exists only on GitHub (#16 D.2, export.yml) has a
 # role of its own. The plan role is assumable from any pull request, and a
 # pull request that could write under github-export/ could replace the bundle
@@ -549,6 +575,19 @@ data "aws_iam_policy_document" "ci_apply_iam" {
       test     = "StringEquals"
       variable = "iam:PassedToService"
       values   = ["ec2.amazonaws.com", "monitoring.rds.amazonaws.com"]
+    }
+  }
+
+  statement {
+    sid       = "PassLaunchWaitlistRoleToLambda"
+    effect    = "Allow"
+    actions   = ["iam:PassRole"]
+    resources = ["arn:aws:iam::${local.account_id}:role${local.iam_path}${var.project}-prod-launch-waitlist"]
+
+    condition {
+      test     = "StringEquals"
+      variable = "iam:PassedToService"
+      values   = ["lambda.amazonaws.com"]
     }
   }
 

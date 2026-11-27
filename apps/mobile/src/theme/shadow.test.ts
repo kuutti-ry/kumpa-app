@@ -5,11 +5,20 @@ import { renderHook } from "@testing-library/react-native";
 
 let mockInk: unknown;
 let mockPrimary: unknown;
+let mockGround: unknown;
+let mockScheme: "light" | "dark" = "light";
 jest.mock("nativewind", () => ({
   ...jest.requireActual("nativewind"),
   useUnstableNativeVariable: (name: string) =>
-    name === "--stroke" ? mockInk : name === "--primary" ? mockPrimary : undefined,
+    name === "--stroke"
+      ? mockInk
+      : name === "--primary"
+        ? mockPrimary
+        : name === "--background"
+          ? mockGround
+          : undefined,
 }));
+jest.mock("./ThemeProvider", () => ({ useTheme: () => ({ scheme: mockScheme }) }));
 
 const shadowOf = async (offset: number) => {
   const { useHardShadow } = jest.requireActual<typeof import("./shadow")>("./shadow");
@@ -88,5 +97,54 @@ describe("useTokenColour", () => {
       colour = await colourOf("primary");
     });
     expect(colour).toBe("hsl(var(--primary))");
+  });
+});
+
+// The soft lift under what floats over the queue's card (#681): the set's darker
+// end, the ink in a light set and the background in a dark one, whose ink is light.
+describe("useLift", () => {
+  const liftOf = async () => {
+    const { useLift } = jest.requireActual<typeof import("./shadow")>("./shadow");
+    const { result } = await renderHook(() => useLift());
+    return result.current;
+  };
+  beforeEach(() => {
+    mockInk = [222, "40%", "14%"];
+    mockGround = "222 40% 8%";
+  });
+
+  it("lifts with the ink at a third and more, down and blurred, in a light set", async () => {
+    mockScheme = "light";
+    expect(await liftOf()).toEqual({ boxShadow: "0px 2px 8px 0px hsla(222, 40%, 14%, 0.35)" });
+  });
+
+  it("lifts with the background in a dark set, whose ink is light", async () => {
+    mockScheme = "dark";
+    mockInk = "0 0% 98%";
+    expect(await liftOf()).toEqual({ boxShadow: "0px 2px 8px 0px hsla(222, 40%, 8%, 0.35)" });
+  });
+
+  it.each([
+    ["light", "stroke"],
+    ["dark", "background"],
+  ] as const)("draws no lift where the %s set's %s cannot be read", async (scheme, token) => {
+    mockScheme = scheme;
+    if (token === "stroke") mockInk = undefined;
+    else mockGround = "6px";
+    expect(await liftOf()).toEqual({});
+  });
+
+  it.each([
+    ["light", "stroke"],
+    ["dark", "background"],
+  ] as const)("names the %s set's %s variable itself on the web", async (scheme, token) => {
+    mockScheme = scheme;
+    let style: unknown;
+    await jest.isolateModulesAsync(async () => {
+      const isolated = jest.requireActual<typeof import("react-native")>("react-native");
+      jest.replaceProperty(isolated.Platform, "OS", "web");
+      style = await liftOf();
+    });
+    expect(style).toEqual({ boxShadow: `0px 2px 8px 0px hsl(var(--${token}) / 0.35)` });
   });
 });

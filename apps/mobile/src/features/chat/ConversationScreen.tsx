@@ -3,6 +3,7 @@ import {
   type ChatMessage,
   type ConversationContacts,
   type ConversationDetail,
+  type LikedPart,
   MESSAGES_PAGE_DEFAULT,
   messageLength,
 } from "@kuutti/schema";
@@ -22,7 +23,8 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
-import { type PickedPhoto, pickPrepared, UPLOAD_REFUSALS } from "@/features/media";
+import { PhotoImage, type PickedPhoto, pickPrepared, UPLOAD_REFUSALS } from "@/features/media";
+import { partWords } from "@/features/profile";
 import { ConversationActions, type SafetyOutcome } from "@/features/safety";
 import { codeOf, statusOf } from "@/lib/api";
 import { useT } from "@/lib/locale";
@@ -667,6 +669,58 @@ export function ConversationScreen({ id }: { id: string }) {
   );
 }
 
+/**
+ * What each like named of the other's card (#463, ADR-077), above the first
+ * message and no message itself: in words, and a photo with a small copy of
+ * it, each line heard as its words alone. A part gone from its card since is
+ * left out by the API, and so is everything once the conversation has ended.
+ */
+function LikedParts({ anchors }: { anchors: NonNullable<ConversationDetail["anchors"]> }) {
+  const { t } = useT();
+  const lines = (
+    [
+      ["mine", "chat.anchor.mine", anchors.mine],
+      ["theirs", "chat.anchor.theirs", anchors.theirs],
+    ] as const
+  ).flatMap(([side, said, part]) =>
+    part ? [{ side, part, words: partWords(t, said, part) }] : [],
+  );
+  if (lines.length === 0) return null;
+  return (
+    <View testID="liked-parts" className="gap-2 rounded-xl border border-border bg-card p-3">
+      {lines.map(({ side, part, words }) => (
+        <LikedLine key={side} side={side} part={part} words={words} />
+      ))}
+    </View>
+  );
+}
+
+function LikedLine({ side, part, words }: { side: string; part: LikedPart; words: string }) {
+  return (
+    <View
+      accessible
+      accessibilityLabel={words}
+      testID={`liked-part-${side}`}
+      className="flex-row items-center gap-3"
+    >
+      {part.kind === "photo" && (
+        <PhotoImage
+          id={part.photo.id}
+          variant="thumb"
+          blurhash={part.photo.blurhash}
+          accessibilityLabel={words}
+          style={LIKED_THUMB}
+        />
+      )}
+      <Text variant="muted" className="shrink">
+        {words}
+      </Text>
+    </View>
+  );
+}
+
+const LIKED_THUMB = { width: 40, height: 40, borderRadius: 8 } as const;
+
 function Conversation({
   detail,
   messages,
@@ -717,6 +771,8 @@ function Conversation({
           {t("chat.history.earlier")}
         </Button>
       )}
+      {/* At the very start, once nothing earlier is left to read (#463). */}
+      {!more && detail.anchors && <LikedParts anchors={detail.anchors} />}
       {messages.map((message, i) => (
         <Fragment key={message.id}>
           {dayOf(locale, message.createdAt) !==

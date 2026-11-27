@@ -27,9 +27,10 @@ const HIGH_FIVE = require("../../../../assets/try/high-five.png");
 const HIGH_FIVE_RATIO = 960 / 971;
 
 /**
- * The end of making a profile, celebrated: the designers' try (outside
- * production, the tech screen's neubrutalism), from Sini's screens of
- * 15/11/2026. Making a profile is the laborious part, so its end says so: the
+ * The end of making a profile, celebrated, in every look but today's: in the
+ * pill styles, Kumpa's among them, as `ReadyPop` below; in the tech screen's
+ * neubrutalism (outside production) as Sini's screens of 15/11/2026 draw it.
+ * Making a profile is the laborious part, so its end says so: the
  * headline in a tilted slab, Sini's high five, one line, and the
  * one way on, which is home's. It promises nothing about who will see the
  * profile or when, which the home screen's matching card says. With reduce
@@ -42,7 +43,7 @@ export function ProfileReady({
 }: {
   still: boolean;
   onContinue: () => void;
-  /** The person's own first photo, filling its circle in the Organic Pop try. */
+  /** The person's own first photo, filling its circle in the pill styles. */
   you?: ReactNode;
 }) {
   if (useLookTraits().moment === "pop") {
@@ -153,10 +154,12 @@ function ReadyLoud({ still, onContinue }: { still: boolean; onContinue: () => vo
 }
 
 /**
- * The same end in the Organic Pop try, after Sini's board of 15/11/2026, which
- * has no high five: the headline slanted on a soft shape, the person's own
- * photo in a circle among two more shapes and sparkles, as her "Hyvä löytö!",
- * one line, and the way on. The picture is decoration; the words say it all.
+ * The same end in the pill styles (Kumpa, the look every phone starts in, and
+ * the tech screen's Organic Pop, Glass and Bold Contrast), after Sini's Organic
+ * Pop board of 15/11/2026, which has no high five: the headline on the style's
+ * ground (none in Kumpa), the person's own photo in a circle among two more
+ * shapes and sparkles, as her "Hyvä löytö!", one line, and the way on. The
+ * picture is decoration; the words say it all.
  */
 function ReadyPop({
   still,

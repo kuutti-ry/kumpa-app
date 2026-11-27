@@ -2,11 +2,11 @@
 # the phone's language takes it back (#164, the first feature flow; the
 # texts are those of packages/i18n/messages.yaml in all three languages).
 # The language's choices open under its row (#511).
-appId: fi.kuutti.app
+appId: fi.kumpa
 name: The language choice in Settings changes the app's language at once
 ---
 - runFlow: ../common/sign-in.yaml
-- openLink: kuutti://settings
+- openLink: fi.kumpa://settings
 - extendedWaitUntil:
     visible: "Settings|Asetukset|Inställningar"
     timeout: 15000

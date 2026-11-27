@@ -36,8 +36,10 @@ jobs:
       - uses: ./.github/actions/pnpm
       - run: pnpm lint
       # The local stack's and the end-to-end runner's command lines refuse a flag
-      # given without a value before they start or copy anything (#235).
-      - name: env:up and e2e refuse a flag without a value
+      # given without a value before they start or copy anything (#235), and the
+      # runner's self-test holds config.yaml's order to the flows' names, which the
+      # e2e jobs would otherwise be the first to read (#761).
+      - name: env:up and e2e refuse a flag without a value, and the flows' order holds
         run: |
           node scripts/dev-env.ts --self-test
           node scripts/e2e.ts --self-test
@@ -50,6 +52,14 @@ jobs:
       # nothing fetched can become code in a generated file (#514, ADR-061 §4).
       - name: places writes the lists and refuses what it should
         run: node scripts/places.ts --self-test
+      # The website's visitor count over made-up logs, never AWS or RIPEstat: whom
+      # it counts, what it leaves out, and the answers it refuses.
+      - name: site-traffic counts made-up logs and refuses what it should
+        run: infra/scripts/site-traffic.sh --self-test
+      # The Telia keys and client metadata over throwaway folders and a stand-in
+      # for aws: each environment's names and callbacks, the kids, the refusals.
+      - name: telia-keys writes what Telia is sent and refuses what it should
+        run: infra/scripts/telia-keys.sh --self-test
       # What the hooks hold an agent to, over stand-ins of a session's transcript
       # and of GitHub (#525).
       - name: The pull request duties refuse what they should

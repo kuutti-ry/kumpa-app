@@ -3,7 +3,7 @@ import { InvitationCreated, Invitations, normaliseInvitationCode } from "@kuutti
 import type { App } from "../app.ts";
 import { eraseAccount } from "../identity/index.ts";
 import { isComplete } from "../jobs/pool.ts";
-import { signedInAccount } from "../test/account.ts";
+import { signedInAccount, withMatchingConfig } from "../test/account.ts";
 import { openExport } from "../test/export.ts";
 import { captureLogger, describe, expect, type TestContext, test } from "../test/harness.ts";
 import { completed, consented, earnedUnits, hashOf } from "../test/invitations.ts";
@@ -235,11 +235,7 @@ describe("invitations in erasure", () => {
     const { a, c, pending } = await invitedCountedAndWaiting(ctx);
     await erase(ctx, a);
     await completed(ctx.client, c.accountId);
-    await ctx.client.query(
-      `INSERT INTO matching_config (version, key, value, created_by)
-       SELECT max(version) + 1, 'invitation_reward', '{"inviterFish": 1, "friendFish": 0}'::jsonb, 'test'
-         FROM matching_config WHERE key = 'invitation_reward'`,
-    );
+    await withMatchingConfig(ctx.client, { invitation_reward: { inviterFish: 1, friendFish: 0 } });
 
     expect(await countTonight(ctx.client)).toEqual({ counted: 1, fish: 0 });
 

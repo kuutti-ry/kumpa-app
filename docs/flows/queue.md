@@ -1,14 +1,18 @@
-# People: the queue, likes, fish, the star and the match
+# People: the queue, likes, flowers, the Later list and the match
 
 <!-- draws
 apps/mobile/app/queue.tsx
 apps/mobile/app/stars/
 apps/mobile/src/features/matching/QueueButton.tsx
 apps/mobile/src/features/matching/QueueScreen.tsx
+apps/mobile/src/features/matching/MatchPop.tsx
 apps/mobile/src/features/matching/useQueue.ts
 apps/mobile/src/features/matching/ShortPool.tsx
 apps/mobile/src/features/matching/StarsButton.tsx
 apps/mobile/src/features/matching/StarredScreen.tsx
+apps/mobile/src/features/matching/KumpaScreen.tsx
+apps/mobile/src/features/matching/later-order.ts
+apps/mobile/src/features/matching/LaterOrderAtSignOut.tsx
 apps/mobile/src/features/matching/useStars.ts
 apps/mobile/src/features/settings/DecisionButtonChoices.tsx
 apps/api/src/matching/queue-routes.ts
@@ -26,14 +30,14 @@ apps/api/src/profile/card.ts
 apps/mobile/src/features/matching/faceButtons.tsx
 -->
 
-Once matching is open for a person, People shows them everybody who fits them, one card at a time, as far as they like: each card with the reason it is there, and Like, Pass, Later and the fish as buttons. This flow follows the queue from See people on the home screen, through each decision and the star, to a match that opens a conversation, the queue's end with its offer to relax a deal-breaker for the day, and what the night still does. How matching opens is [People on Kumpa](people-on-kuutti.md); the answers and filters a card is read against are [the profile](profile.md).
+Once matching is open for a person, People shows them everybody who fits them, one card at a time, as far as they like: each card with the reason it is there, and Like, Pass, Later and the flower as buttons. This flow follows the queue from See people on the home screen, through each decision and the Later list, to a match that opens a conversation, the queue's end with its offer to relax a deal-breaker for the day, and what the night still does. How matching opens is [People on Kumpa](people-on-kuutti.md); the answers and filters a card is read against are [the profile](profile.md).
 
 ## Part 1: People reads the queue
 
 ```mermaid
 flowchart TB
   accTitle: People reads the queue
-  accDescr: From See people the app asks for the next cards. The API serves the undecided cards of today's log that still fit both ways, and with none left adds the next people, fish and likes waiting first, then new people nearest first, then people seen before, then whom today's relaxations let in. With nobody added the queue has ended.
+  accDescr: From See people the app asks for the next cards. The API serves the undecided cards of today's log that still fit both ways, and with none left adds the next people, flowers and likes waiting first, then new people nearest first, then people seen before, then whom today's relaxations let in. With nobody added the queue has ended.
   subgraph person["The person"]
     s1(["Chooses See people on home, under Matching is open for you."])
   end
@@ -46,7 +50,7 @@ flowchart TB
   subgraph api["The API"]
     s3{"Matching open for the person?"}
     s5{"An undecided card in today's log that fits both ways now?"}
-    s6["Adds the next people to today's log: first whoever's fish waits on the person, then whoever's like, each the oldest first"]
+    s6["Adds the next people to today's log: first whoever's flower waits on the person, then whoever's like, each the oldest first"]
     s7["Then new people who fit both ways, the nearest first, then the most soft matches"]
     s8["Then people seen before whose clocks have run: skipped, passed, liked with no answer, former conversations"]
     s9["Once nobody new or seen before is left, whom today's relaxations let in"]
@@ -54,7 +58,7 @@ flowchart TB
     s11["Serves the next undecided cards, each with its reason"]
   end
   subgraph other["The other person"]
-    s14(["On a day that has ended, liked the person or sent them a fish"])
+    s14(["On a day that has ended, liked the person or sent them a flower"])
   end
   subgraph night["The night's jobs"]
     s15(["Each night, deletes the day logs past the time they are kept"])
@@ -82,16 +86,16 @@ flowchart TB
 2. The app opens People and asks the API for the next cards. Nothing is built at night: the first read of the Finnish day opens the day's log of whom the queue holds, what was shown and what was decided. A queue left open past midnight is read anew, with no word, when it comes back in sight.
 3. Is matching open for the person: an admin has opened it, and their profile and onboarding are complete, with the account active or shadow-banned? Nobody taking a break, suspended or banned has a queue. No: 4. Yes: 5. Somebody whose matching closed after today's log was opened reads what is left of it and then the queue's end (13); one whose profile stopped being complete meets the end at once. Home says why.
 4. The app says "There is nobody to show you yet."
-5. Is a card left in today's log that is undecided and fits both ways now? Both people's filters are asked on every read, never remembered: whom each seeks, the age windows, what each is here for, their deal-breakers, today's relaxations, a block either way, and "Hide me from people in my field". A card that does not fit now stays in the log, left out while it does not fit. A card starred and left undecided comes only through Starred (part 4), unless that person's like waits. Yes: 11. No: 6.
-6. The API adds the next people to today's log. First everybody whose fish waits on the person, then everybody whose like waits (14), each the oldest first, however many, and never moved by fit or distance: a like of a day that has ended, within `like_expiry_days`, answered by no like or pass, and the two still in each other's pool. A like from somebody the person passed within the pass's clock, or has or had a conversation with within its clock, never comes. A shadow-banned person gets none of these places, and the likes wait for the lift.
-7. Then, up to a page in all, new people: everybody complete and seen by others who fits both ways, not in today's log, not starred, not passed, liked or talked to within their clocks, whose like does not wait (they come in 6), and not held back by the inbox stop: somebody with `inbox_stop` likes waiting comes as nobody's new, seen-before or relaxed card until they have gone through enough of them to fall below it, while their own likes still arrive (6), and nothing tells anybody. The nearest band first, then the most soft matches (education, drinking, the attitude to drugs, from both sides), then an order fixed for the person and the day. Labelled "Matches your filters".
-8. Then people seen before whose clocks have run, labelled "Seen before": skipped cards first, the oldest skip first; then people passed, after `pass_cooldown_days`, or `second_pass_cooldown_days` after a second pass; then people liked with no answer, after `liked_cooldown_days`; then former conversations, after `ended_cooldown_days` from the close or the archive; within each, the one shown longest ago first. A block never runs out. Seen means displayed or decided: somebody queued and never displayed is new again another day. What is remembered is what the kept logs hold (15).
+5. Is a card left in today's log that is undecided and fits both ways now? Both people's filters are asked on every read, never remembered: whom each seeks, the age windows, what each is here for, their deal-breakers, today's relaxations, a block either way, and "Hide me from people in my field". A card that does not fit now stays in the log, left out while it does not fit. Somebody on the Later list comes only through it (part 4), unless their like waits. Yes: 11. No: 6.
+6. The API adds the next people to today's log. First everybody whose flower waits on the person, then everybody whose like waits (14), each the oldest first, however many, and never moved by fit or distance: a like of a day that has ended, within `like_expiry_days`, answered by no like or pass, and the two still in each other's pool. A like from somebody the person passed within the pass's clock, or has or had a conversation with within its clock, never comes. A shadow-banned person gets none of these places, and the likes wait for the lift.
+7. Then, up to a page in all, new people: everybody complete and seen by others who fits both ways, not in today's log, not on the Later list, not passed, liked or talked to within their clocks, whose like does not wait (they come in 6), and not held back by the inbox stop: somebody with `inbox_stop` likes waiting comes as nobody's new, seen-before or relaxed card until they have gone through enough of them to fall below it, while their own likes still arrive (6), and nothing tells anybody. The nearest band first, then the most soft matches (education, drinking, the attitude to drugs, from both sides), then an order fixed for the person and the day. Labelled "Matches your filters".
+8. Then people seen before whose clocks have run, labelled "Seen before": skipped cards first, those whom Later could not put on a full list or who were taken off it, the oldest skip first; then people passed, after `pass_cooldown_days`, or `second_pass_cooldown_days` after a second pass; then people liked with no answer, after `liked_cooldown_days`; then former conversations, after `ended_cooldown_days` from the close or the archive; within each, the one shown longest ago first. A block never runs out. Seen means displayed or decided: somebody queued and never displayed is new again another day. What is remembered is what the kept logs hold (15).
 9. Once nobody new or seen before is left, the people the day's relaxations let in (part 5), labelled "Relaxed for today: {field}".
 10. Was anybody added? Yes: 11. No: 13. Nothing fills a queue that has run out.
-11. The API serves the next undecided cards, at most a page, each with its reason and, for each of the person's own deal-breakers whose field the card's person does not answer or keeps off their card, "Doesn't say: {field}". Where the panel has set a ceiling of cards a day (`exposure_cards_per_day`, off at 0), past it the app says "You have seen many profiles today. New ones come after midnight."
+11. The API serves the next undecided cards, at most a page, each with its reason; on a "Liked you" or "Sent you a flower" card, the part of the person's own card the like named, read from the person's card as it stands, none where the like named none or the part has gone since; and, for each of the person's own deal-breakers whose field the card's person does not answer or keeps off their card, "Doesn't say: {field}". Where the panel has set a ceiling of cards a day (`exposure_cards_per_day`, off at 0), past it the app says "You have seen many profiles today. New ones come after midnight."
 12. The app shows the first card: part 2.
 13. The app says "That's everybody for now.": the queue's end, part 5.
-14. On a day that has ended, another person liked the person, or sent them a fish, from their own queue (part 2). That like waits for the person: 6.
+14. On a day that has ended, another person liked the person, or sent them a flower, from their own queue (part 2). That like waits for the person: 6.
 15. Each night, the jobs delete the day logs older than the time they are kept, a constant of the code that covers the longest clock, their entries and relaxations with them. So a pass older than that is forgotten, and the next pass counts as a first.
 
 ## Part 2: a card and its decision
@@ -99,12 +103,12 @@ flowchart TB
 ```mermaid
 flowchart TB
   accTitle: A card and its decision
-  accDescr: The app shows one card with its reason and the buttons. The person likes, passes, leaves it for later or sends a fish, or blocks or reports, stars it, or undoes the last decision. The API checks the day and the card, the your-turn limit and the fit for a new like, then the day's likes and the period's fish, and records the decision. A new like that meets a standing like is a match.
+  accDescr: The app shows one card with its reason and the buttons. A tap on a part of the card marks it for the like or the flower, and a second tap clears it. The person likes, passes, leaves it for later, which puts the person on the Later list, or sends a flower, or blocks or reports, or undoes the last decision. The API checks the day, the card and the part named, the your-turn limit and the fit for a new like, then the day's likes and the period's flowers, and records the decision. A new like that meets a standing like is a match.
   subgraph person["The person"]
     s18{"What does the person choose?"}
   end
   subgraph app["The app"]
-    s16["Shows the card with its reason, and Like, Pass, Later and, while one can go, Send a fish"]
+    s16["Shows the card with its reason, and floating over its foot Like, Pass, Later and, while one can go, Send a flower; a part tapped is marked and named above them"]
     s19["Sends the decision, the buttons waiting for the answer"]
     s23["Says why nothing was saved"]
     s26(["The match: part 3"])
@@ -112,22 +116,22 @@ flowchart TB
     s28(["Reads the next cards, as in part 1 from 5"])
     s29["Brings back the card last decided, saying what was decided"]
     s30["Block or report: see Report and block. The card leaves"]
-    s31(["The star: part 4"])
+    s31(["The Later list: part 4"])
   end
   subgraph api["The API"]
     s17["Records the card seen, the first time only"]
-    s20{"Still today, the card still there, and not a like that made a match?"}
+    s20{"Still today, the card still there, any part named still on it, and not a like that made a match?"}
     s21{"A new like: fewer than your_turn_limit conversations waiting, and the two still fit?"}
-    s22{"Within the day's likes, and a new fish within the period's or an earned one?"}
-    s24["Records the decision, changeable until midnight, and a like or a pass takes a star off"]
+    s22{"Within the day's likes, and a new flower within the period's or an earned one?"}
+    s24["Records the decision, with the part a like or a flower names, changeable until midnight: a like or a pass takes the person off the Later list"]
     s25{"A new like meeting the other's standing like?"}
   end
   s16 --> s17
   s16 --> s18
-  s18 -->|"Like, Pass, Later or Send a fish"| s19
+  s18 -->|"Like, Pass, Later or Send a flower"| s19
   s18 -->|"Undo"| s29
+  s18 -->|"Tap a part"| s16
   s18 -->|"Block or report"| s30
-  s18 -->|"Star"| s31
   s19 --> s20
   s20 -->|"no"| s23
   s20 -->|"yes"| s21
@@ -136,7 +140,8 @@ flowchart TB
   s22 -->|"no"| s23
   s22 -->|"yes"| s24
   s23 --> s16
-  s24 --> s25
+  s24 -->|"Later"| s31
+  s24 -->|"a like or a pass"| s25
   s25 -->|"yes"| s26
   s25 -->|"no"| s27
   s27 -->|"yes"| s16
@@ -147,22 +152,22 @@ flowchart TB
 
 ### Steps
 
-16. The app shows one card: the first undecided one, or the one Undo brought back (29). Above it is its reason, "Liked you", "Sent you a fish", "Seen before", "Matches your filters" or "Relaxed for today: {field}", with the star beside it (part 4); "Doesn't say: {field}" for each of the person's deal-breakers its person does not answer; and on an undecided relaxed card "Undo for today: {field}" (part 5, step 70). Then the card as others see it ([the profile](profile.md), part 3): the name and the age with "Block or report" beside them; one line with the gender, the identity label, the town or area of the home and how far it is in words; the photos one at a time, a tap on the right half showing the next and on the left half the previous; the key answers as chips; the first answer to a question, or the bio; and "Show the whole card", which opens the rest in place. A photo the API will not show is said under the card ("The photo could not be shown."). At the bottom: how many of the day's likes are left, in words, "No likes left today. New ones tomorrow." at none; "Send a fish" on a card that answers nobody's like, while a fish can go today and a like is left or the card holds the person's like already, and always on the card that holds the fish; "Later"; and Pass and Like. They are placed as the person chose under Settings › Appearance and language › Like and Pass: for the right hand (Pass at the left, Like at the right), mirrored for the left, or one-handed, Undo, the star, the likes left, the fish, Later, Pass and Like in one column on that hand's side; Like and Pass carry Kuutti's own icons, "✕ and ○" or "A and B". Each keeps its word, shape and place, and no swipe does anything. Nothing loads beyond the cards the app holds. The card is reported seen (17), and the person chooses (18).
+16. The app shows one card: the first undecided one, or the one Undo brought back (29). Above it is its reason, "Liked you", "Sent you a flower", "Seen before", "Matches your filters" or "Relaxed for today: {field}"; "Doesn't say: {field}" for each of the person's deal-breakers its person does not answer; and on an undecided relaxed card "Undo for today: {field}" (part 5, step 70). On a "Liked you" or "Sent you a flower" card whose like named a part of the person's own card, a line under the reason says which: "Liked your photo", with a small copy of that photo, "Liked your answer to: {prompt}", "Liked your bio" or "Liked what you share: {option}". Then the card as others see it ([the profile](profile.md), part 3), one scroll that starts at its top, with nothing to open or tap through: the name and the age with "Block or report" beside them; one line with the gender, the identity label, the town or area of the home and how far it is in words; the first photo; the key answers as chips; then each further photo with the next of the person's own words after it, the first answer to a question, the bio, the other answers; and the rest of the answers at its end. A photo is asked for when it first comes into sight, never before. A photo the API will not show is said under the card ("The photo could not be shown."). Floating over the foot of the card, whose end scrolls clear of them: how many of the day's likes are left, in words, "No likes left today. New ones tomorrow." at none; "Send a flower" on a card that answers nobody's like, while a flower can go today and a like is left or the card holds the person's like already, and always on the card that holds the flower; "Later"; and Pass and Like. They are placed as the person chose under Settings › Appearance and language › Like and Pass: for the right hand (Pass at the left, Like at the right), mirrored for the left, or one-handed, Undo, the likes left, the flower, Later, Pass and Like in one column on that hand's side; Like and Pass carry Kuutti's own icons, "✕ and ○" or "A and B". Each keeps its word, shape and place, and no swipe does anything. Nothing loads beyond the cards the app holds. Each part of the card is a button: each photo, each answered question, the bio or its ready line, and each chip both people share. A tap marks it, with an outline, a check and "In your like", and above the floating buttons a line names it, "Liking their photo", "Liking their answer to: {prompt}", "Liking their bio" or "Liking what you share: {option}", with "Clear"; a second tap or Clear takes the mark off, and a tap on another part moves it, one part at a time. A screen reader hears the part in Like and the flower; Pass and Later name none. The mark stays with its card while the card is shown, through an Undo too. The card is reported seen (17), and the person chooses (18).
 17. The app reports the card seen once it is on the screen, and not while a match stands in front of it; the API records the first report only. It decides nothing.
-18. The person chooses. Like, Pass, Later or Send a fish: 19. Undo, offered once a decision has been made and never after a match: 29. Block or report: 30. Star: 31.
-19. The app sends the decision; the buttons are dimmed until the answer comes, so nothing repeats. The same decision again changes nothing.
-20. Is it still the card's day, is the card still there (nobody blocked, sanctioned or gone since), and is it not a change to a like that made a match? No: 23. Yes: 21.
-21. Is it a new like, a like or a fish on a card that held no like? Then two more questions, in this order: does the person have fewer than `your_turn_limit` conversations on their turn (open, not archived, the last thing said in it from the other person, or a match where nothing is said yet), asked before anything is read of the other person so that the refusal says nothing of them; and do the two still fit both ways now? No: 23. Yes, or not a new like: 22. A pass or Later asks neither, so a like can always be taken back.
-22. Is it within the day's likes and the period's fish? Any like counts against the day's `like_budget_balanced`, a like back on a "Liked you" or "Sent you a fish" card too, and a fish is a like. A new fish also counts against `fish_budget` in each period of `fish_window_days`, the periods counted from a Monday; past it, a fish the person's invitations earned is used by itself ([Inviting a friend](invitations.md)), and given back if the decision changes the same day. On a card that answers a like, a fish is just a like. A pass or Later is never counted. Within them: 24. Otherwise: 23.
-23. Nothing is saved, and the app says why: "That day ended at midnight, so this was not saved.", and today's queue is read anew; "That card is no longer available.", and the card leaves, gone meanwhile or, for a new like, no longer fitting; "This like made a match, so it stays. You can still end the conversation under Conversations."; how many conversations are waiting, then "Answer or end one before you like anyone new.", and the card stays for a pass or Later; "You have used today's likes. New ones come after midnight; you can still pass."; "You cannot send a fish just now.", and the fish leaves the bar; or for anything else "That did not go through. Try again." Then 16.
-24. The API records the decision. It can change until midnight in Finland, except a like that made a match. A like or a pass takes the person's star off that card's person; Later leaves it. A pass of somebody passed on an earlier day is a second pass, and holds `second_pass_cooldown_days`.
+18. The person chooses. Like, Pass, Later or Send a flower: 19. A tap on a part of the card: 16, the part marked or its mark taken off. Undo, offered once a decision has been made and never after a match: 29. Block or report: 30.
+19. The app sends the decision, a like or a flower with the part marked, if any; the buttons are dimmed until the answer comes, so nothing repeats. The same decision again changes nothing.
+20. Is it still the card's day, is the card still there (nobody blocked, sanctioned or gone since), is a part the like names still on the card as it stands now, and is it not a change to a like that made a match? No: 23. Yes: 21.
+21. Is it a new like, a like or a flower on a card that held no like? Then two more questions, in this order: does the person have fewer than `your_turn_limit` conversations on their turn (open, not archived, the last thing said in it from the other person, or a match where nothing is said yet), asked before anything is read of the other person so that the refusal says nothing of them; and do the two still fit both ways now? No: 23. Yes, or not a new like: 22. A pass or Later asks neither, so a like can always be taken back.
+22. Is it within the day's likes and the period's flowers? Any like counts against the day's `like_budget_balanced`, a like back on a "Liked you" or "Sent you a flower" card too, and a flower is a like. A new flower also counts against `fish_budget` in each period of `fish_window_days`, the periods counted from a Monday; past it, a flower the person's invitations earned is used by itself ([Inviting a friend](invitations.md)), and given back if the decision changes the same day. On a card that answers a like, a flower is just a like. A pass or Later is never counted. Within them: 24. Otherwise: 23.
+23. Nothing is saved, and the app says why: "That day ended at midnight, so this was not saved.", and today's queue is read anew; "That card is no longer available.", and the card leaves, gone meanwhile or, for a new like, no longer fitting; "That part of their card has changed since. Pick another, or like without one.", and the card stays with its mark taken off; "This like made a match, so it stays. You can still end the conversation under Conversations."; how many conversations are waiting, then "Answer or end one before you like anyone new.", and the card stays for a pass or Later; "You have used today's likes. New ones come after midnight; you can still pass."; "You cannot send a flower just now.", and the flower leaves the bar; or for anything else "That did not go through. Try again." Then 16.
+24. The API records the decision. It can change until midnight in Finland, except a like that made a match. A like or a flower keeps the part it named: the same part again changes nothing, another part or none is a change like any other, and a like that made a match keeps its part. Nothing counts which parts draw likes. A like or a pass takes the card's person off the Later list; Later puts them on it: 31. A pass of somebody passed on an earlier day is a second pass, and holds `second_pass_cooldown_days`.
 25. Is it a new like of somebody whose like of the person still stands, today's included and within `like_expiry_days`? No match is made while the person is shadow-banned, nor with a block between the two. Yes: 26. No: 27. A like that met nothing waits: it comes first in the other person's queue once its day has ended (part 1, step 6), and the person is never told what became of it.
 26. The match: part 3.
 27. Is another card the app holds undecided? Yes: 16. No: 28.
 28. The app reads the next cards, as in part 1 from step 5; Undo stays for the last decision.
-29. Undo, in the header (its icon alone at a large text size; one-handed, at the thumb), brings back the card last decided, with what was decided: "You liked this person. You can change that until midnight.", "You passed on this person. You can change that until midnight.", "You left this person for later. You can change that until midnight." or "You sent this person a fish. You can change that until midnight." The decision stands until another replaces it: 16.
+29. Undo, in the header (its icon alone at a large text size; one-handed, at the thumb), brings back the card last decided, with what was decided: "You liked this person. You can change that until midnight.", "You passed on this person. You can change that until midnight.", "You left this person for later. You can change that until midnight." or "You sent this person a flower. You can change that until midnight." The decision stands until another replaces it: 16.
 30. Block or report, beside the name on the card: see [Report and block](report-and-block.md). It is not offered while a decision is on its way, so that a decision landing after the next card took its place can never bring the blocked person back. Once a block or a report has gone through, the card leaves the screen: 27.
-31. The star: part 4.
+31. Later puts the card's person on the Later list: part 4, step 42.
 
 ## Part 3: the match
 
@@ -175,11 +180,11 @@ flowchart TB
     s35["Goes to the conversation: see Chat"]
   end
   subgraph app["The app"]
-    s33["Says: It's a match, with Go to the conversation and Back to people"]
+    s33["Says: Well, hello!, with Say hello and Back to people"]
     s36(["Shows the next card: part 2, step 27"])
   end
   subgraph api["The API"]
-    s32["Opens a conversation for the two: a match, its like now final"]
+    s32["Opens a conversation for the two: a match, its like now final, with the parts both likes named"]
   end
   subgraph other["The other person"]
     s37["Told by push: You have a new match"]
@@ -190,7 +195,7 @@ flowchart TB
   end
   s32 --> s33
   s33 --> s34
-  s34 -->|"Go to the conversation"| s35
+  s34 -->|"Say hello"| s35
   s34 -->|"Back to people"| s36
   s35 -->|"back"| s36
   s32 --> s37
@@ -200,57 +205,58 @@ flowchart TB
 
 ### Steps
 
-32. The API opens a conversation for the two, in the decision's own transaction: a match. The like that made it is final, and changing it is refused (part 2, step 23). An earlier conversation of the two that stands archived is closed, so a pair has one conversation to write in. Then 33 for the person, 37 for the other person, and 39 while nobody writes.
-33. The app says "It's a match", with "Go to the conversation" and "Back to people". Nothing offers the like back.
-34. Which does the person choose? Go to the conversation: 35. Back to people: 36.
+32. The API opens a conversation for the two, in the decision's own transaction: a match. The like that made it is final, and changing it is refused (part 2, step 23). An earlier conversation of the two that stands archived is closed, so a pair has one conversation to write in. The part each like named goes with the conversation, which shows it above its first message ([Chat](chat.md)). Then 33 for the person, 37 for the other person, and 39 while nobody writes.
+33. The app says "Well, hello!" over the two people's first photos, "You would both like to hear more about each other.", with "Say hello" and "Back to people"; in today's look, chosen on the tech screen, "It's a match", with "Go to the conversation". Nothing offers the like back.
+34. Which does the person choose? Say hello: 35. Back to people: 36.
 35. The conversation opens over People: see [Chat](chat.md). Coming back, People goes on (36). After reporting one of the conversation's photos, the conversation list takes the conversation's place, and Back from the list leads to People.
 36. People shows the next card: part 2, step 27.
 37. The other person, whose earlier like the match met, is told by push, "You have a new match", never by whom, unless it is the quiet hours or they switched matches off ([Notifications and notices](notifications.md)).
 38. The other person finds the conversation under Conversations; a tap on the push opens the list.
 39. Each night, a conversation silent for `silent_match_archive_days` is put away, as any conversation quiet that long is: it leaves the your-turn count (part 2, step 21), and the two stay out of each other's queues for `ended_cooldown_days` from then, as after an end. The next message brings it back ([Chat](chat.md)).
 
-## Part 4: the star and Starred
+## Part 4: the Later list
 
 ```mermaid
 flowchart TB
-  accTitle: The star and Starred
-  accDescr: A star marks somebody for later without a like or a pass. It spends nothing, the card stays, and nobody is told. A starred person leaves the queue and comes through the Starred list, reached from home, whose rows open the card to decide or take the star off.
+  accTitle: The Later list
+  accDescr: Later puts the card's person on the person's Later list, to come back to without a like or a pass. It spends nothing and nobody is told. At the most the list may show, the card comes back another day instead. The list is reached from home and from the queue's end, and its rows open the card to decide, or take the person off; while it shows two people or more, Kumpa? puts it in the person's own order, part 6.
   subgraph person["The person"]
-    s40["Taps Star beside the card's reason"]
-    s48["Chooses Starred on home, there while the list shows somebody"]
-    s50{"Opens a row, or takes its star off?"}
+    s40["Chooses Later on a card"]
+    s48["Chooses Later list on home or at the queue's end, there while the list shows somebody"]
+    s50{"Opens a row, takes the person off, or chooses Kumpa?"}
+    s73(["Kumpa?: part 6"])
   end
   subgraph app["The app"]
-    s42(["Says: That card is no longer available. The card leaves"])
-    s44(["Says: You have as many stars as you can have. Take one off to add another."])
-    s46["Shows Starred on the card, which stays, and for the only star on the list: Only you can see your stars."]
-    s53(["Says: That card is no longer available, with Back to Starred"])
-    s55["Shows the card as in part 2, with Like, Later, Pass and the fish"]
-    s56(["After a decision or a block: Back to Starred, with Undo"])
+    s44(["Says over the next card: Your Later list is full, so this person will come back another day."])
+    s46["Shows the next card, and when the list showed nobody: Saved to your Later list. Only you can see it."]
+    s53(["Says: That card is no longer available, with Back to Later list"])
+    s55["Shows the card as in part 2, with Like, the flower, Pass and Later"]
+    s56(["After a decision or a block: Back to Later list, with Undo"])
   end
   subgraph api["The API"]
-    s41{"Today's card, still there, holding no like or pass, and served to the person?"}
-    s43{"Fewer stars on the list than stars_max?"}
-    s45["Puts the star: it spends nothing, decides nothing and reaches nobody"]
-    s47["Leaves the starred card out of the next reads and of who comes next"]
-    s49["Lists whom the person may meet now, the latest star first: a name, an age and a photo they were shown"]
-    s51(["Takes the star off: they come back where the queue would have them"])
+    s41["Records the Later as in part 2: it spends nothing and can change until midnight"]
+    s42{"Fewer people on the list than stars_max?"}
+    s43["Leaves the Later alone: the card comes back another day"]
+    s45["Puts the person on the list: it reaches nobody"]
+    s47["Leaves them out of the next reads and of who comes next"]
+    s49["Lists whom the person may meet now, the latest first: a name, an age and a photo they were shown"]
+    s51(["Takes them off: they come back where the queue would have them"])
     s52{"Still on the list?"}
     s54["Writes the card into today's log, or finds it there, with the reason the queue would give"]
   end
-  s40 -->|"Star"| s41
-  s40 -->|"Starred, to take it off"| s51
-  s41 -->|"no"| s42
-  s41 -->|"yes"| s43
-  s43 -->|"no"| s44
-  s43 -->|"yes"| s45
+  s40 --> s41
+  s41 --> s42
+  s42 -->|"no, full"| s43
+  s43 --> s44
+  s42 -->|"yes"| s45
   s45 --> s46
   s46 --> s47
   s47 -->|"later"| s48
   s48 --> s49
   s49 --> s50
-  s50 -->|"its star"| s51
+  s50 -->|"take off"| s51
   s50 -->|"a row"| s52
+  s50 -->|"Kumpa?, with two people or more"| s73
   s52 -->|"no"| s53
   s52 -->|"yes"| s54
   s54 --> s55
@@ -259,36 +265,37 @@ flowchart TB
 
 ### Steps
 
-40. On a card that holds no like or pass, the person taps "Star", beside the card's reason (one-handed, at the thumb with Undo): its word with an outlined icon, and once on, "Starred" with a filled one. Star: 41. Tapped again, "Starred" takes the star off: 51. It is dimmed while a decision or a star is on its way.
-41. Is it today's card, still there, holding no like or pass, and one the person was served? A day that has ended answers as in part 2, step 23. No: 42. Yes: 43.
-42. The app says "That card is no longer available." and the card leaves: part 2, step 27.
-43. Does the list show fewer people than `stars_max` (0 is off)? Those the list leaves out now do not count, and a person's stars stop at a ceiling of the contract whatever the panel sets. Yes: 45. No: 44.
-44. The app says "You have as many stars as you can have. Take one off to add another." The card stays.
-45. The API puts the star. It spends no like and reserves none, so a star with no likes left is allowed, and it decides nothing. Nobody is told of it, and nothing else reads it: it is in no count, no order of anybody's and no inbox rule.
-46. The card stays, its toggle reading "Starred". When it is the only star the list shows, the app says "Only you can see your stars.", the one place that says so.
-47. At the next read, a card starred and left undecided leaves the queue, and the starred person comes no more as an ordinary card, new or seen before, nor through a relaxation: they come through Starred. Somebody whose like or fish waits keeps coming as "Liked you" or "Sent you a fish" until the like expires, with the star on it. A like or a pass on the card takes the star off (part 2, step 24); Later leaves it.
-48. Later, the person chooses "Starred" on the home screen, under "See people". The line is there only while the list shows somebody, by its word and no count.
-49. The API lists the stars of the people the person may meet now: matching open, both people's filters as a read of the queue asks them, the other seen by others, and not held back by the inbox stop, asked so that the list never tells that somebody's pile is at it. Anybody else is left out with no word why, and comes back by themselves. The latest star first and in no other order, each row a name, an age and the main photo the person was shown. A star has no clock. With nobody on it, the app says "Nobody here right now."
-50. The person opens a row: 52. Or takes its star off with the star beside it ("Take the star off: {name}"), without opening the card: 51.
-51. The API takes the star off; the row goes, and the person comes back where the queue would have them. If it fails, the app says "That did not go through. Try again."
+40. On a card, the person chooses "Later" (part 2, step 18). It is on every card, one opened from the list too.
+41. The API records it as in part 2, steps 19 to 24: a Later, which spends no like, costs nobody a clock and can change until midnight. In the same moment: 42.
+42. Does the list show fewer people than `stars_max` (0 takes the most off)? Those the list leaves out now do not count, and one person's list stops at a ceiling of the contract whatever the panel sets. Somebody on the list already stays as they are. Yes: 45. No: 43. A card the person was never served takes no place, and nothing is said.
+43. The Later stands alone: the card comes back another day, with the skipped cards of part 1, step 8.
+44. Over the next card the app says "Your Later list is full, so this person will come back another day.", with no number.
+45. The API puts the person on the list. It spends no like and reserves none, so it works with no likes left. Nobody is told of it, and nothing else reads it: it is in no count, no order of anybody's and no inbox rule.
+46. The app shows the next card. When the person is the only one the list shows, it says "Saved to your Later list. Only you can see it.", the one place that says so.
+47. From the next read the person on the list comes no more as an ordinary card, new or seen before, nor through a relaxation: they come through the Later list. Somebody whose like or flower waits keeps coming as "Liked you" or "Sent you a flower" until the like expires. A like or a pass takes them off the list (part 2, step 24), and Later again leaves them on it.
+48. Later, the person chooses "Later list" on the home screen, under "See people", or at the queue's end (part 5, step 57). The line is there only while the list shows somebody, by its word and no count.
+49. The API lists the people the person may meet now: matching open, both people's filters as a read of the queue asks them, the other seen by others, and not held back by the inbox stop, asked so that the list never tells that somebody's pile is at it. Anybody else is left out with no word why, and comes back by themselves. The latest first, each row a name, an age and the main photo the person was shown, under the title "Later". The app shows them in that order until the person gives the list one of their own with Kumpa? (part 6), which the API never learns. A place on the list has no clock. With nobody on it, the app says "Nobody here right now."
+50. The person opens a row: 52. Or takes them off with the button beside it ("Take off the list: {name}"), without opening the card: 51. Or, while the list shows two people or more, chooses "Kumpa?" in its header: 73.
+51. The API takes them off; the row goes, and the person comes back where the queue would have them. If it fails, the app says "That did not go through. Try again."
 52. Does the list still show them? No: 53. Yes: 54.
-53. The app says "That card is no longer available.", with "Back to Starred".
-54. The API writes the card into today's log, or finds it there as it stands, so it is decided through the queue's own routes, every check of part 2 with it. Its reason is the one the queue would give: "Liked you" or "Sent you a fish" where a like waits; "Relaxed for today: {field}" for somebody who fits only through today's relaxations, so that a like on them can arrive; otherwise "Seen before".
-55. The app shows the card under "Starred", as in part 2: Like, Later, Pass and the fish spend what they spend anywhere, Block or report is beside the name, and the star is there.
-56. After a decision or a block, "Back to Starred" stands alone, with Undo still there for the decision; a like that makes a match says "It's a match", with "Go to the conversation" and "Back to Starred" (part 3).
+53. The app says "That card is no longer available.", with "Back to Later list".
+54. The API writes the card into today's log, or finds it there as it stands, so it is decided through the queue's own routes, every check of part 2 with it. Its reason is the one the queue would give: "Liked you" or "Sent you a flower" where a like waits; "Relaxed for today: {field}" for somebody who fits only through today's relaxations, so that a like on them can arrive; otherwise "Seen before".
+55. The app shows the card as in part 2, with the part a waiting like named under its reason: Like, the flower, Pass and Later spend what they spend anywhere, Later keeping the person on the list, and Block or report is beside the name.
+56. After a decision or a block, "Back to Later list" stands alone, with Undo still there for the decision; a like that makes a match says "Well, hello!", with "Say hello" and "Back to Later list" (part 3).
+73. Kumpa?: part 6, step 74.
 
 ## Part 5: the queue's end and the short pool
 
 ```mermaid
 flowchart TB
   accTitle: The queue's end and the short pool
-  accDescr: At the queue's end the app asks what may be relaxed today. Once nobody new is left, each of the person's own deal-breakers whose relaxing would add somebody is offered. A tap relaxes it for the day and adds a page of whom it lets in, and one tap undoes it. One plain button leads into What you seek. The next day's queue follows the deal-breakers as stored.
+  accDescr: At the queue's end the app shows the way to the Later list while it shows somebody, and asks what may be relaxed today. Once nobody new is left, each of the person's own deal-breakers whose relaxing would add somebody is offered. A tap relaxes it for the day and adds a page of whom it lets in, and one tap undoes it. One plain button leads into What you seek. The next day's queue follows the deal-breakers as stored.
   subgraph person["The person"]
     s63{"What does the person choose?"}
     s71(["Goes to What you seek: see the profile"])
   end
   subgraph app["The app"]
-    s57(["The queue's end: That's everybody for now."])
+    s57(["The queue's end: That's everybody for now., and Later list while it shows somebody"])
     s58["Asks what may be relaxed today"]
     s61["Under Few people today, each offer: the field, and about how many more people"]
     s62["Then Undo for today for each relaxed today, and What you seek"]
@@ -331,16 +338,16 @@ flowchart TB
 
 ### Steps
 
-57. The queue has ended (part 1, step 13): the app says "That's everybody for now.", with no count and nothing about tomorrow, which in a thin set could be false for weeks.
+57. The queue has ended (part 1, step 13): the app says "That's everybody for now.", with no count and nothing about tomorrow, which in a thin set could be false for weeks. Under it, while the Later list shows somebody, "Later list", the way to it (part 4, step 48), so that nobody left for later is lost at the end.
 58. The app asks what may be relaxed today; asking relaxes nothing. It asks again after each tap.
 59. Is the queue short: is nobody new left in it, counting nobody the inbox stop holds back? No: 62. Yes: 60.
 60. Would relaxing one of the person's own deal-breakers, not paused and not relaxed today, add somebody today? Each is counted in each of its two ways, on top of whatever is relaxed already. No: 62. Yes: 61.
 61. Under "Few people today", the offers stand in two groups: "Include today those who did not answer", while the deal-breaker leaves them out, and "Set aside for today", the only way for a distance deal-breaker. Each button names the field and says about how many more people it lets in, in the counter's steps of `pond_counter_k` ("A few more people" below one step), never a count of cards, and is heard whole: "Include those who did not answer: {field}" or "Set aside for today: {field}".
 62. Below come "Undo for today: {field}" for each deal-breaker relaxed today, and one plain button, "What you seek", the same words for everybody, naming no row and no number, so that nobody in a thin set is told to widen.
-63. The person chooses. An offer: 64. "Undo for today", here or on an undecided card it brought: 70. "What you seek": 71. Or nothing.
+63. The person chooses. An offer: 64. "Undo for today", here or on an undecided card it brought: 70. "What you seek": 71. "Later list": part 4, step 48. Or nothing.
 64. Was that deal-breaker relaxed today already, or did another phone relax or undo one since the offers were counted? Yes: 65. No: 66. A day that has ended is read anew, as in part 2, step 23.
 65. The app says "You relaxed that one for today already." or "Your relaxations for today changed meanwhile. Look again and choose.", and the offers are read again: 58.
-66. The API records the relaxation on today's log alone, and adds a page of whom it lets in after the last card, by the queue's own rules: new people first, then those seen before, never anybody cooling down, passed, already in the log, starred, kept apart by "Hide me from people in my field" or held back by the inbox stop. It loosens only the person's side: whoever comes in is somebody whose own filters let the person through. Nothing else is ever relaxed: whom one seeks, the age window, what one is here for and a block always hold. Then 67, and the next day 72.
+66. The API records the relaxation on today's log alone, and adds a page of whom it lets in after the last card, by the queue's own rules: new people first, then those seen before, never anybody cooling down, passed, already in the log, on the Later list, kept apart by "Hide me from people in my field" or held back by the inbox stop. It loosens only the person's side: whoever comes in is somebody whose own filters let the person through. Nothing else is ever relaxed: whom one seeks, the age window, what one is here for and a block always hold. Then 67, and the next day 72.
 67. Did it add anybody? No: 68. Yes: 69.
 68. The app says "Nobody new to show today after all." The relaxation stays recorded for the day and can be undone in one tap, and whoever it lets in later that day still comes. Then 58.
 69. The added cards come after the last, each labelled "Relaxed for today: {field}" and, while undecided, with "Undo for today: {field}": part 2. Once they are read, the queue goes on to the rest the relaxation lets in.
@@ -348,14 +355,66 @@ flowchart TB
 71. "What you seek" opens whom the person seeks, the ages, what they are here for and the deal-breakers: [the profile](profile.md), part 5. A change works on the next read: back on People, its end asks again (part 1, step 5).
 72. The next day's queue reads the deal-breakers as stored. A like the person gave on a relaxed card still reaches its person: in that person's queue, the deal-breakers it came in under are set aside for the person alone.
 
+## Part 6: Kumpa?
+
+```mermaid
+flowchart TB
+  accTitle: Kumpa? puts the Later list in the person's own order
+  accDescr: From the Later list's header, Kumpa? shows two people of the list, one under the other on a phone held upright and side by side on a wider window, which of them comes first drawn for each pair, each with the main photo the person was shown, and a tap on one puts them before the other, until everybody has a place. The order stays on the phone and the API is never told of a tap. Leaving keeps what was tapped. The list then shows the person's order, whoever came since at the top and marked Not compared yet, and a sign-out forgets it.
+  subgraph person["The person"]
+    s74["Chooses Kumpa? in the Later list's header"]
+    s78{"Taps one of the two, or leaves?"}
+    s81{"Back to the list, or Start again?"}
+  end
+  subgraph app["The app"]
+    s75{"Anybody on the list without a place in the order?"}
+    s76["Shows two, one under the other or side by side on a wide window, which first drawn for each pair, each with the main photo they were shown, a name and an age: one with a place, one without"]
+    s79["Puts the one tapped before the other, halving the places left, and keeps the order on the phone"]
+    s80(["Says: Your Later list is in order., with Back to Later list and Start again"])
+    s82["Forgets the order"]
+    s83["Shows the list in the person's order: whoever came since at the top, each marked Not compared yet"]
+    s84(["Forgets the order when the phone signs out"])
+  end
+  subgraph api["The API"]
+    s77["Gives the two photos at the card's size, as for a card opened from the list, and is never told of a tap"]
+  end
+  s74 --> s75
+  s75 -->|"yes"| s76
+  s76 --> s77
+  s77 --> s78
+  s78 -->|"taps one"| s79
+  s79 --> s75
+  s75 -->|"no, everybody has a place"| s80
+  s80 --> s81
+  s81 -->|"Start again"| s82
+  s82 --> s75
+  s81 -->|"back"| s83
+  s78 -->|"leaves"| s83
+  s83 -->|"a sign-out"| s84
+```
+
+### Steps
+
+74. On the Later list, while it shows two people or more, the person chooses "Kumpa?" in its header. A screen reader hears "Kumpa? Put your Later list in order, two at a time."
+75. Does anybody on the list still lack a place in the order this phone keeps? With no order yet, the first of the list takes the first place without a tap. Anybody who has left the list leaves the order, and whoever was being placed starts again among those left. Yes: 76. No: 80.
+76. The app shows two people, one under the other on a phone held upright and side by side on a window wider than it is high: one with a place in the order and the one being placed, which of them comes first drawn again for each pair, each with the main photo the person was shown, in a card's shape, their name and their age. Each is a button a screen reader hears by the name and the age, with "Puts them before the other one.", and after a tap it is taken to the next pair. Nothing counts how far the person is.
+77. The API gives the two photos at the card's size, as it gives them for a card opened from the list, and nothing ahead of the two on the screen. It is never told of a tap.
+78. The person taps the one they would rather come back to first: 79. Or leaves by the back arrow, "Back to Later list": 83. What was tapped stays, and Kumpa? goes on where it stopped.
+79. The app puts the one tapped before the other and halves the places left for the one being placed; once one place is left, they take it. The order is kept on this phone alone, never sent and never logged. Then: 75.
+80. The app says "Your Later list is in order.", and a screen reader is taken to it, with "Back to Later list" and "Start again".
+81. The person goes back to the list: 83. Or chooses "Start again": 82.
+82. The app forgets the order, and Kumpa? begins again with nobody placed: 75.
+83. The Later list shows the people in the person's own order. Whoever came since and has no place yet is at the top, in the list's own order, each marked "Not compared yet", until Kumpa? places them. Before anybody has a place, the list is in its own order and nobody is marked.
+84. When this phone signs out, it forgets the order, and so it does at a start that finds it signed out: whoever signs in here next begins with none.
+
 ## Where it lives
 
-- Screens: [queue.tsx](../../apps/mobile/app/queue.tsx) (People) delegates to [QueueScreen.tsx](../../apps/mobile/src/features/matching/QueueScreen.tsx), with [useQueue.ts](../../apps/mobile/src/features/matching/useQueue.ts), [ShortPool.tsx](../../apps/mobile/src/features/matching/ShortPool.tsx), [faceButtons.tsx](../../apps/mobile/src/features/matching/faceButtons.tsx) and [client.ts](../../apps/mobile/src/features/matching/client.ts); [stars/index.tsx](../../apps/mobile/app/stars/index.tsx) delegates to [StarredScreen.tsx](../../apps/mobile/src/features/matching/StarredScreen.tsx) with [useStars.ts](../../apps/mobile/src/features/matching/useStars.ts), and [stars/[id].tsx](../../apps/mobile/app/stars/%5Bid%5D.tsx) to QueueScreen for one card; the ways in are [QueueButton.tsx](../../apps/mobile/src/features/matching/QueueButton.tsx) and [StarsButton.tsx](../../apps/mobile/src/features/matching/StarsButton.tsx) on the home screen's [GateCard.tsx](../../apps/mobile/src/features/pond/GateCard.tsx); the card and its Block or report are [ProfileCardView.tsx](../../apps/mobile/src/features/profile/ProfileCardView.tsx) and [SafetyActions.tsx](../../apps/mobile/src/features/safety/SafetyActions.tsx); the Like and Pass row of Settings is [DecisionButtonChoices.tsx](../../apps/mobile/src/features/settings/DecisionButtonChoices.tsx), kept on the phone by [decision-buttons.tsx](../../apps/mobile/src/lib/decision-buttons.tsx) of `src/lib`. Slice: [matching](../../apps/mobile/src/features/matching/README.md).
-- API: `GET /queue/today`, `POST /queue/{day}/entries/{position}/seen`, `PUT /queue/{day}/entries/{position}/decision`, `GET` and `POST /queue/{day}/relaxations`, `DELETE /queue/{day}/relaxations/{field}` in [queue-routes.ts](../../apps/api/src/matching/queue-routes.ts); `PUT /queue/{day}/entries/{position}/star`, `GET /stars`, `POST /stars/{id}/open` and `DELETE /stars/{id}` in [star-routes.ts](../../apps/api/src/matching/star-routes.ts); the day's log, the read, the decision, the budgets, the match and the relaxations in [queue.ts](../../apps/api/src/matching/queue.ts); the star in [stars.ts](../../apps/api/src/matching/stars.ts); the pool both ways in [pool.ts](../../apps/api/src/matching/pool.ts); the order in [queue-order.ts](../../apps/api/src/matching/queue-order.ts); the conversation a match opens and whose turn it is in the chat slice's [conversations.ts](../../apps/api/src/chat/conversations.ts); the match's push in [push.ts](../../apps/api/src/notifications/push.ts). Slice: [matching](../../apps/api/src/matching/README.md).
-- Jobs: who comes next, the clocks, the inbox stop, whether two fit now and the short pool's offers in [queue-builder.ts](../../apps/api/src/jobs/queue-builder.ts); the Starred list's reads in [stars.ts](../../apps/api/src/jobs/stars.ts); who is complete in [pool.ts](../../apps/api/src/jobs/pool.ts); the night's prune of old logs and the archive of silent conversations ([archive.ts](../../apps/api/src/chat/archive.ts)) in [boot.ts](../../apps/api/src/boot.ts), run by [nightly.ts](../../apps/api/src/jobs/nightly.ts); all wired in [app.ts](../../apps/api/src/app.ts).
-- Spec: [queue.feature](../../features/matching/queue.feature), [decisions.feature](../../features/matching/decisions.feature), [fish.feature](../../features/matching/fish.feature), [earned.feature](../../features/matching/earned.feature), [matches.feature](../../features/matching/matches.feature), [short-pool.feature](../../features/matching/short-pool.feature), [stars.feature](../../features/matching/stars.feature), [filters.feature](../../features/matching/filters.feature), [your-turn.feature](../../features/chat/your-turn.feature), [push.feature](../../features/notifications/push.feature).
-- Maestro: [queue.yaml](../../apps/mobile/e2e/flows/queue.yaml), [star.yaml](../../apps/mobile/e2e/flows/star.yaml), [short-pool.yaml](../../apps/mobile/e2e/flows/short-pool.yaml), [decision-buttons.yaml](../../apps/mobile/e2e/flows/decision-buttons.yaml).
-- ADRs: [ADR-062](../adr/062-one-queue.md), [ADR-064](../adr/064-a-star.md), [ADR-034](../adr/034-the-queue-record.md), [ADR-036](../adr/036-the-days-likes.md), [ADR-037](../adr/037-liked-you-in-the-queue.md), [ADR-038](../adr/038-the-match.md), [ADR-039](../adr/039-the-fish.md), [ADR-042](../adr/042-the-short-pool.md), [ADR-044](../adr/044-invitations.md) §8, [ADR-055](../adr/055-push.md) §5, [ADR-060](../adr/060-no-waiting-at-the-pond.md), [ADR-061](../adr/061-one-home-no-ponds.md) §5 and §6, [ADR-030](../adr/030-reports-and-blocks.md) §11, [ADR-008](../adr/008-exposure-budget-and-client-address.md), [ADR-041](../adr/041-velocity.md).
+- Screens: [queue.tsx](../../apps/mobile/app/queue.tsx) (People) delegates to [QueueScreen.tsx](../../apps/mobile/src/features/matching/QueueScreen.tsx), with [useQueue.ts](../../apps/mobile/src/features/matching/useQueue.ts), [ShortPool.tsx](../../apps/mobile/src/features/matching/ShortPool.tsx), [MatchPop.tsx](../../apps/mobile/src/features/matching/MatchPop.tsx) (the hello at a match, in Kumpa), [faceButtons.tsx](../../apps/mobile/src/features/matching/faceButtons.tsx), [dandelion.tsx](../../apps/mobile/src/features/matching/dandelion.tsx) (the flower's icon) and [client.ts](../../apps/mobile/src/features/matching/client.ts); [stars/index.tsx](../../apps/mobile/app/stars/index.tsx) delegates to [StarredScreen.tsx](../../apps/mobile/src/features/matching/StarredScreen.tsx) with [useStars.ts](../../apps/mobile/src/features/matching/useStars.ts), [stars/kumpa.tsx](../../apps/mobile/app/stars/kumpa.tsx) to [KumpaScreen.tsx](../../apps/mobile/src/features/matching/KumpaScreen.tsx), the order's rules and its keeping on the phone in [later-order.ts](../../apps/mobile/src/features/matching/later-order.ts), forgotten at a sign-out by [LaterOrderAtSignOut.tsx](../../apps/mobile/src/features/matching/LaterOrderAtSignOut.tsx) of the root layout, and [stars/[id].tsx](../../apps/mobile/app/stars/%5Bid%5D.tsx) to QueueScreen for one card; the ways in are [QueueButton.tsx](../../apps/mobile/src/features/matching/QueueButton.tsx) and [StarsButton.tsx](../../apps/mobile/src/features/matching/StarsButton.tsx) on the home screen's [GateCard.tsx](../../apps/mobile/src/features/pond/GateCard.tsx); the card and its Block or report are [ProfileCardView.tsx](../../apps/mobile/src/features/profile/ProfileCardView.tsx) and [SafetyActions.tsx](../../apps/mobile/src/features/safety/SafetyActions.tsx); the Like and Pass row of Settings is [DecisionButtonChoices.tsx](../../apps/mobile/src/features/settings/DecisionButtonChoices.tsx), kept on the phone by [decision-buttons.tsx](../../apps/mobile/src/lib/decision-buttons.tsx) of `src/lib`. Slice: [matching](../../apps/mobile/src/features/matching/README.md).
+- API: `GET /queue/today`, `POST /queue/{day}/entries/{position}/seen`, `PUT /queue/{day}/entries/{position}/decision`, `GET` and `POST /queue/{day}/relaxations`, `DELETE /queue/{day}/relaxations/{field}` in [queue-routes.ts](../../apps/api/src/matching/queue-routes.ts); `GET /stars`, `POST /stars/{id}/open` and `DELETE /stars/{id}` in [star-routes.ts](../../apps/api/src/matching/star-routes.ts); the day's log, the read, the decision, the budgets, the match and the relaxations in [queue.ts](../../apps/api/src/matching/queue.ts); the Later list's place and its card in [stars.ts](../../apps/api/src/matching/stars.ts); the pool both ways in [pool.ts](../../apps/api/src/matching/pool.ts); the order in [queue-order.ts](../../apps/api/src/matching/queue-order.ts); the conversation a match opens and whose turn it is in the chat slice's [conversations.ts](../../apps/api/src/chat/conversations.ts); the match's push in [push.ts](../../apps/api/src/notifications/push.ts). Slice: [matching](../../apps/api/src/matching/README.md).
+- Jobs: who comes next, the clocks, the inbox stop, whether two fit now and the short pool's offers in [queue-builder.ts](../../apps/api/src/jobs/queue-builder.ts); the Later list's reads in [stars.ts](../../apps/api/src/jobs/stars.ts); who is complete in [pool.ts](../../apps/api/src/jobs/pool.ts); the night's prune of old logs and the archive of silent conversations ([archive.ts](../../apps/api/src/chat/archive.ts)) in [boot.ts](../../apps/api/src/boot.ts), run by [nightly.ts](../../apps/api/src/jobs/nightly.ts); all wired in [app.ts](../../apps/api/src/app.ts).
+- Spec: [queue.feature](../../features/matching/queue.feature), [decisions.feature](../../features/matching/decisions.feature), [fish.feature](../../features/matching/fish.feature), [earned.feature](../../features/matching/earned.feature), [matches.feature](../../features/matching/matches.feature), [short-pool.feature](../../features/matching/short-pool.feature), [stars.feature](../../features/matching/stars.feature), [filters.feature](../../features/matching/filters.feature), [your-turn.feature](../../features/chat/your-turn.feature), [push.feature](../../features/notifications/push.feature), [anchored-likes.feature](../../features/matching/anchored-likes.feature).
+- Maestro: [queue.yaml](../../apps/mobile/e2e/flows/queue.yaml) (a part picked and liked, #463), [later-list.yaml](../../apps/mobile/e2e/flows/later-list.yaml), [short-pool.yaml](../../apps/mobile/e2e/flows/short-pool.yaml), [decision-buttons.yaml](../../apps/mobile/e2e/flows/decision-buttons.yaml).
+- ADRs: [ADR-062](../adr/062-one-queue.md), [ADR-064](../adr/064-a-star.md), [ADR-034](../adr/034-the-queue-record.md), [ADR-036](../adr/036-the-days-likes.md), [ADR-037](../adr/037-liked-you-in-the-queue.md), [ADR-038](../adr/038-the-match.md), [ADR-039](../adr/039-the-fish.md), [ADR-042](../adr/042-the-short-pool.md), [ADR-044](../adr/044-invitations.md) §8, [ADR-055](../adr/055-push.md) §5, [ADR-060](../adr/060-no-waiting-at-the-pond.md), [ADR-061](../adr/061-one-home-no-ponds.md) §5 and §6, [ADR-030](../adr/030-reports-and-blocks.md) §11, [ADR-008](../adr/008-exposure-budget-and-client-address.md), [ADR-041](../adr/041-velocity.md), [ADR-077](../adr/077-the-anchored-like.md).
 - Rules: the register's [Queue](../decisions.md#queue), [Likes and fish](../decisions.md#likes-and-fish), [Match](../decisions.md#match), [Filters](../decisions.md#filters), [Chat](../decisions.md#chat) and [Limits](../decisions.md#limits) rows.
 
 ## History
@@ -387,3 +446,9 @@ flowchart TB
 - 2026-11-03 (#575, PR #582): a star marks somebody for later without a like or a pass, with Starred on home and its list.
 - 2026-11-08 (#644, PR #647): a card shows a short card first, with the whole card in place under it.
 - 2026-11-16 (#208): research leaves the app, so a star has no research event to stay out of.
+- 2026-11-18 (#681): Later puts the person on the Later list, which takes the star's place and its button, thirty at most, with its way in at the queue's end too; the decision buttons float over the foot of the card; the fish is shown as a flower, a dandelion's seed head.
+- 2026-11-19 (#681): a profile needs no words to be complete, so a card may come with neither a bio nor an answered question.
+- 2026-11-20 (#411): the Kumpa look is the one a phone starts in: each card a poster, Pass, Like and Later round buttons with their words, and a match says "Well, hello!" with "Say hello".
+- 2026-11-26 (#752): a card is one scroll, its photos between the person's own words and the rest of its answers at its end; nothing is tapped through or opened, and a photo is asked for once it comes into sight.
+- 2026-11-26 (#463): a like or a flower may name one part of the card, a photo, an answer, the bio or a shared item, marked by a tap; the person liked reads it under the card's reason, a photo with a small copy of it, and a match brings both likes' parts into the conversation.
+- 2026-11-26 (#764): Kumpa? puts the Later list in the person's own order, two at a time, one under the other on a phone held upright and side by side on a wide window, the first of each pair drawn at random, a tap putting one before the other; the order stays on the phone, whoever came since is marked Not compared yet, and a sign-out forgets it.

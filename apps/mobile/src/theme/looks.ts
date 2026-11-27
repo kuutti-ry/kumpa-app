@@ -2,12 +2,17 @@ import { Platform } from "react-native";
 import { cn } from "@/lib/utils";
 
 /**
- * The designers' try (#408), chosen on the tech screen, which production has
- * not, so a released app always looks as today: today's style, or one of
- * Sini's four from "finding style" of 15/11/2026, each with its own colours.
+ * The app's looks, each with its own colours. Kumpa, the HS design of
+ * 20/11/2026, is the one every phone starts in, a released app's too (the
+ * maintainer, 20/11/2026). The rest are chosen on the tech screen, which
+ * production has not: today's style, the app's look before Kumpa, and the
+ * designers' try (#408), Sini's four from "finding style" of 15/11/2026.
  */
-export const LOOKS = ["today", "neubrutalism", "organic", "glass", "bold"] as const;
+export const LOOKS = ["today", "neubrutalism", "organic", "glass", "bold", "kumpa"] as const;
 export type Look = (typeof LOOKS)[number];
+
+/** The style a phone starts in until one is chosen on the tech screen: Kumpa, the HS design. */
+export const DEFAULT_LOOK: Look = "kumpa";
 
 export const isLook = (value: string | null): value is Look =>
   (LOOKS as readonly (string | null)[]).includes(value);
@@ -23,6 +28,7 @@ export const LOOK_CLASS: Record<Look, { light?: string; dark?: string }> = {
   organic: { light: "look-organic", dark: "look-organic-dark" },
   glass: { light: "look-glass", dark: "look-glass-dark" },
   bold: { light: "look-bold", dark: "look-bold-dark" },
+  kumpa: { light: "look-kumpa", dark: "look-kumpa-dark" },
 };
 
 /**
@@ -54,6 +60,12 @@ export type LookTraits = {
    * words of a row are not paired with.
    */
   pressTint: boolean;
+  /**
+   * The card as a poster (Kumpa, the HS design of 20/11/2026): the photo to
+   * the screen's edges with a wavy end, the name large under it, pastel chips,
+   * and Pass, Like and Later as round buttons in the ink's outline.
+   */
+  poster: boolean;
 };
 
 const TRAITS: Record<Look, LookTraits> = {
@@ -66,6 +78,7 @@ const TRAITS: Record<Look, LookTraits> = {
     backdrop: "none",
     moment: "plain",
     pressTint: false,
+    poster: false,
   },
   neubrutalism: {
     ink: true,
@@ -76,6 +89,7 @@ const TRAITS: Record<Look, LookTraits> = {
     backdrop: "none",
     moment: "slab",
     pressTint: true,
+    poster: false,
   },
   organic: {
     ink: false,
@@ -86,6 +100,7 @@ const TRAITS: Record<Look, LookTraits> = {
     backdrop: "blobs",
     moment: "pop",
     pressTint: true,
+    poster: false,
   },
   glass: {
     ink: false,
@@ -96,6 +111,7 @@ const TRAITS: Record<Look, LookTraits> = {
     backdrop: "bubbles",
     moment: "pop",
     pressTint: true,
+    poster: false,
   },
   bold: {
     ink: false,
@@ -106,6 +122,18 @@ const TRAITS: Record<Look, LookTraits> = {
     backdrop: "blocks",
     moment: "pop",
     pressTint: true,
+    poster: false,
+  },
+  kumpa: {
+    ink: true,
+    pill: true,
+    glass: false,
+    lightText: false,
+    headline: "plain",
+    backdrop: "none",
+    moment: "pop",
+    pressTint: true,
+    poster: true,
   },
 };
 

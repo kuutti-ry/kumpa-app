@@ -1,6 +1,6 @@
 import * as ImagePicker from "expo-image-picker";
 import { setLocalCheck } from "./localCheck";
-import { pickPhoto, pickPrepared, prepareForUpload, UPLOAD_LONG_EDGE } from "./pick";
+import { pickPhotos, pickPrepared, prepareForUpload, UPLOAD_LONG_EDGE } from "./pick";
 
 const { ImageManipulator } = jest.requireMock("expo-image-manipulator") as {
   ImageManipulator: { manipulate: jest.Mock };
@@ -12,10 +12,12 @@ beforeEach(() => {
   ImageManipulator.manipulate.mockClear();
 });
 
-describe("picking a photo", () => {
+describe("picking photos", () => {
+  const asset = (name: string) => ({ uri: `file:///${name}.jpg`, width: 1200, height: 900 });
+
   it("asks for one still image without EXIF and reports a cancel as such", async () => {
     launch.mockResolvedValueOnce({ canceled: true, assets: null });
-    expect(await pickPhoto()).toEqual({ kind: "cancelled" });
+    expect(await pickPhotos()).toEqual({ kind: "cancelled" });
     expect(launch).toHaveBeenCalledWith(
       expect.objectContaining({
         mediaTypes: ["images"],
@@ -23,27 +25,65 @@ describe("picking a photo", () => {
         exif: false,
       }),
     );
+    expect(launch.mock.calls[0]?.[0]).not.toHaveProperty("selectionLimit");
   });
 
-  it("returns the picked asset's uri and size", async () => {
+  it("returns the picked asset's uri and size, and nothing else of it", async () => {
     launch.mockResolvedValueOnce({
       canceled: false,
+      assets: [{ uri: "file:///a.heic", width: 4032, height: 3024, exif: { GPS: 1 } }],
+    });
+    expect(await pickPhotos()).toEqual({
+      kind: "picked",
       assets: [{ uri: "file:///a.heic", width: 4032, height: 3024 }],
     });
-    expect(await pickPhoto()).toEqual({
-      kind: "picked",
-      asset: { uri: "file:///a.heic", width: 4032, height: 3024 },
+  });
+
+  it("asks for as many as there is room for, in the order picked, and hands them back in that order (#681)", async () => {
+    launch.mockResolvedValueOnce({ canceled: false, assets: [asset("b"), asset("a")] });
+    expect(await pickPhotos(4)).toEqual({ kind: "picked", assets: [asset("b"), asset("a")] });
+    expect(launch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        allowsMultipleSelection: true,
+        selectionLimit: 4,
+        orderedSelection: true,
+        allowsEditing: false,
+      }),
+    );
+  });
+
+  it("holds a picker that hands back more than the limit to it", async () => {
+    launch.mockResolvedValueOnce({
+      canceled: false,
+      assets: [asset("a"), asset("b"), asset("c")],
     });
+    expect(await pickPhotos(2)).toEqual({ kind: "picked", assets: [asset("a"), asset("b")] });
+  });
+
+  it.each([
+    [1, "one"],
+    [0, "no room"],
+    [-3, "less than none"],
+    [1.7, "a fraction"],
+  ])("asks for one photo, never the system's most, given %p (%s)", async (limit) => {
+    launch.mockResolvedValueOnce({ canceled: false, assets: [asset("a"), asset("b")] });
+    expect(await pickPhotos(limit)).toEqual({ kind: "picked", assets: [asset("a")] });
+    expect(launch).toHaveBeenCalledWith(
+      expect.objectContaining({ allowsMultipleSelection: false }),
+    );
+    expect(launch.mock.calls[0]?.[0]).not.toHaveProperty("selectionLimit");
   });
 
   it("reads a finished pick that hands back no asset as a cancel", async () => {
     launch.mockResolvedValueOnce({ canceled: false, assets: [] });
-    expect(await pickPhoto()).toEqual({ kind: "cancelled" });
+    expect(await pickPhotos()).toEqual({ kind: "cancelled" });
+    launch.mockResolvedValueOnce({ canceled: false, assets: null });
+    expect(await pickPhotos(3)).toEqual({ kind: "cancelled" });
   });
 
   it("reads a picker that throws as a denied permission", async () => {
     launch.mockRejectedValueOnce(new Error("Missing permission"));
-    expect(await pickPhoto()).toEqual({ kind: "denied" });
+    expect(await pickPhotos()).toEqual({ kind: "denied" });
   });
 });
 

@@ -21,9 +21,10 @@ import { photo } from "./media.ts";
  * every moderator action and every photo a member of staff looks at, with
  * who (an identity, never an account), what, on which subject, and when.
  * Append-only: a trigger in the custom migration next to this table's one
- * refuses UPDATE, DELETE and TRUNCATE from the application role; the owner
- * could still disable the trigger, which is why a separate owner role is the
- * M4 step (ADR-006). Kept five years, survives erasure (rules/db.md).
+ * refuses UPDATE, TRUNCATE and a DELETE before five years; the owner could
+ * still disable the trigger, which is why the table has an owner role of its
+ * own (ADR-006). Kept five years, survives erasure (rules/db.md): the night's
+ * `audit_log_prune()` (migration 0014, ADR-076) deletes what is older.
  * `detail` is bounded structured data, never text from a person. The actor
  * is null for one thing only: a shadow ban an automatic rule applied (#105,
  * ADR-033), which no person did; a check holds every other row to a person.

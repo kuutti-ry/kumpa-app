@@ -4,6 +4,7 @@ import { DEAL_BREAKERS_CAP } from "./deal-breakers.ts";
 import {
   ExportedQueueEntry,
   ExportedStars,
+  Later,
   QUEUE_PAGE,
   QUEUE_POSITION_MAX,
   QueueChoice,
@@ -22,7 +23,6 @@ import {
   RelaxationsResponse,
   RelaxationUndone,
   STARS_CEILING,
-  StarAnswer,
   StarList,
   StarParams,
   StarredPerson,
@@ -90,18 +90,68 @@ describe("a decision", () => {
       "unrecognized_keys",
     ]);
   });
+
+  it("may ask the answer for where a Later left the person (#745)", () => {
+    for (const decision of ["like", "pass", "fish", "skip"] as const) {
+      expect(QueueDecisionUpdate.parse({ decision, later: true })).toEqual({
+        decision,
+        later: true,
+      });
+    }
+  });
+
+  it("names a part of the card only with a like or a fish (#463, ADR-077)", () => {
+    const anchor = { kind: "bio" } as const;
+    for (const decision of ["like", "fish"] as const) {
+      expect(QueueDecisionUpdate.parse({ decision, anchor })).toEqual({ decision, anchor });
+    }
+    for (const decision of ["pass", "skip"] as const) {
+      const issues = QueueDecisionUpdate.safeParse({ decision, anchor }).error?.issues;
+      expect(
+        issues?.map((issue) => [issue.code, issue.path.join(".")]),
+        decision,
+      ).toEqual([["custom", "anchor"]]);
+    }
+    // A part that is no part of a card is refused as such, whatever the decision.
+    expect(codes(QueueDecisionUpdate, { decision: "like", anchor: { kind: "message" } })).toEqual([
+      "invalid_union",
+    ]);
+  });
+
+  // The ask is the one word: an app that does not want the key sends none.
+  it.each([
+    ["false", false],
+    ["null", null],
+    ["a word", "true"],
+    ["a number", 1],
+    ["a place on the list", "first"],
+  ] as const)("refuses the ask as %s", (_, later) => {
+    expect(codes(QueueDecisionUpdate, { decision: "skip", later })).toEqual(["invalid_value"]);
+  });
 });
 
 describe("the answer to a decision", () => {
   it("names a match or none, and says whether a fish can still go (#475) and whose turn waits (ADR-062 §5)", () => {
     const match = { conversationId: "7d8f3c2a-1b4e-4c6d-9e0f-2a3b4c5d6e7f" };
-    const made = { match, fishToSend: false, likesLeft: 0, yourTurn: 8 };
+    const made = { match, fishToSend: false, likesLeft: 0, yourTurn: 8, later: null };
     expect(QueueDecisionAnswer.parse(made)).toEqual(made);
-    const none = { match: null, fishToSend: true, likesLeft: 7, yourTurn: 0 };
+    const none = { match: null, fishToSend: true, likesLeft: 7, yourTurn: 0, later: null };
     expect(QueueDecisionAnswer.parse(none)).toEqual(none);
   });
 
-  const answer = { match: null, fishToSend: true, likesLeft: 7, yourTurn: 0 };
+  it("says where a Later left the person (#681)", () => {
+    const later = { match: null, fishToSend: true, likesLeft: 7, yourTurn: 0, later: "full" };
+    expect(QueueDecisionAnswer.parse(later)).toEqual(later);
+  });
+
+  it("has no word on Later for an app that did not ask (#745)", () => {
+    const unasked = { match: null, fishToSend: true, likesLeft: 7, yourTurn: 0 };
+    const parsed = QueueDecisionAnswer.parse(unasked);
+    expect(parsed).toEqual(unasked);
+    expect("later" in parsed).toBe(false);
+  });
+
+  const answer = { match: null, fishToSend: true, likesLeft: 7, yourTurn: 0, later: null };
 
   it.each([
     ["no word on the fish", { ...answer, fishToSend: undefined }, "invalid_type"],
@@ -113,6 +163,8 @@ describe("the answer to a decision", () => {
     ["the turn below zero", { ...answer, yourTurn: -1 }, "too_small"],
     ["the turn in part", { ...answer, yourTurn: 1.5 }, "invalid_type"],
     ["the turn as a flag", { ...answer, yourTurn: true }, "invalid_type"],
+    ["Later as a flag", { ...answer, later: true }, "invalid_value"],
+    ["Later as a place no list has", { ...answer, later: "second" }, "invalid_value"],
     ["anything else", { ...answer, liked: true }, "unrecognized_keys"],
   ] as const)("refuses %s", (_, input, code) => {
     expect(codes(QueueDecisionAnswer, input)).toEqual([code]);
@@ -179,10 +231,12 @@ describe("a star (#575, ADR-064)", () => {
     expect(codes(star, "not-a-uuid")).toEqual(["invalid_format"]);
   });
 
-  it("put on a card answers its id and whether it is the first, and nothing else", () => {
-    expect(StarAnswer.parse({ id, first: true })).toEqual({ id, first: true });
-    expect(codes(StarAnswer, { id })).toEqual(["invalid_type"]);
-    expect(codes(StarAnswer, { id, first: true, count: 3 })).toEqual(["unrecognized_keys"]);
+  it("put by Later says where it left the person, and nothing else", () => {
+    for (const later of ["first", "listed", "full", "not_listed"] as const) {
+      expect(Later.parse(later)).toBe(later);
+    }
+    expect(codes(Later, "starred")).toEqual(["invalid_value"]);
+    expect(codes(Later, 3)).toEqual(["invalid_value"]);
   });
 
   it("is addressed by its own id", () => {
@@ -318,6 +372,7 @@ describe("relaxing a deal-breaker for the day (#99, ADR-042)", () => {
       secondPass: false,
       distance: "nearby",
       distanceInWords: "Nearby",
+      anchor: null,
     };
     expect(ExportedQueueEntry.parse(entry).relaxedField).toBe("smoking");
     // Null on an entry from before the band; never a number, nor a word of no band.
@@ -349,6 +404,7 @@ describe("relaxing a deal-breaker for the day (#99, ADR-042)", () => {
       secondPass: false,
       distance: null,
       distanceInWords: null,
+      anchor: null,
     };
     expect(ExportedQueueEntry.parse(entry).decision).toBe("skip");
     const second = { ...entry, decision: "pass", decisionInWords: "Pass", secondPass: true };
@@ -357,5 +413,44 @@ describe("relaxing a deal-breaker for the day (#99, ADR-042)", () => {
       "invalid_type",
     ]);
     expect(codes(ExportedQueueEntry, { ...entry, secondPass: 1 })).toEqual(["invalid_type"]);
+  });
+
+  it("says in the export the part the person's like named, or null, and never the other's photo (#463)", () => {
+    const photo = { kind: "photo", prompt: null, shared: null, inWords: "Liked their photo" };
+    const entry = {
+      position: 1,
+      reason: "matches_filters",
+      reasonInWords: "Fits what you seek",
+      relaxedField: null,
+      relaxedFieldInWords: null,
+      seenAt: null,
+      decision: "like",
+      decisionInWords: "Liked",
+      decidedAt: "2026-10-19T09:00:00.000Z",
+      secondPass: false,
+      distance: null,
+      distanceInWords: null,
+      anchor: photo,
+    };
+    expect(ExportedQueueEntry.parse(entry).anchor).toEqual(photo);
+    const shared = {
+      kind: "shared",
+      prompt: null,
+      shared: { field: "hobbies", option: "Climbing" },
+      inWords: "Liked what you share: Climbing",
+    };
+    expect(ExportedQueueEntry.parse({ ...entry, anchor: shared }).anchor).toEqual(shared);
+    expect(ExportedQueueEntry.parse({ ...entry, anchor: null }).anchor).toBeNull();
+    expect(codes(ExportedQueueEntry, { ...entry, anchor: undefined })).toEqual(["invalid_type"]);
+    // A photo is only "a photo": its id, the other person's, has no place here.
+    expect(
+      codes(ExportedQueueEntry, {
+        ...entry,
+        anchor: { ...photo, photoId: "6f1c1c4e-9a8e-4a0b-9c3a-0c8d1e2f3a4b" },
+      }),
+    ).toEqual(["unrecognized_keys"]);
+    expect(codes(ExportedQueueEntry, { ...entry, anchor: { ...photo, kind: "message" } })).toEqual([
+      "invalid_value",
+    ]);
   });
 });

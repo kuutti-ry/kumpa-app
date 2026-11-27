@@ -3,6 +3,8 @@
 <!-- draws
 apps/mobile/src/features/rewards/Invitations.tsx
 apps/mobile/src/features/rewards/RedeemInvitation.tsx
+apps/mobile/src/features/rewards/held-code.ts
+apps/mobile/app/+native-intent.ts
 apps/mobile/src/features/rewards/InvitationStep.tsx
 apps/mobile/src/features/rewards/useInvitations.ts
 apps/mobile/src/features/rewards/words.ts
@@ -17,7 +19,7 @@ apps/api/src/jobs/invitation-count.ts
 apps/api/src/jobs/pool.ts
 -->
 
-How a person whose profile is complete invites a friend with a code and one link, how the friend gets the app and types the code, and what both earn the night the friend's profile is complete. It is for the person who invites and for the friend they invite.
+How a person whose profile is complete invites a friend with a code and one link, how the friend gets the app and uses the code, and what both earn the night the friend's profile is complete. It is for the person who invites and for the friend they invite.
 
 ## Part 1: making and sharing an invitation
 
@@ -87,11 +89,11 @@ flowchart TB
 ```mermaid
 flowchart TB
   accTitle: Inviting a friend, part 2: the friend follows the link and uses the code
-  accDescr: The link sends a phone to its store, and anything else to the website. After the bank login the friend is offered the code once in onboarding, or types it later in Settings. The API counts the day's tries, checks the friend and then the code, and records the invitation used.
+  accDescr: On a phone that has Kumpa the link opens it, and Kumpa keeps the code. Otherwise the link sends a phone to its store, and anything else to the website. After the bank login the friend is offered the code once in onboarding, with a code that came by the link or with an Android install already in the field, or uses it later in Settings. The API counts the day's tries, checks the friend and then the code, and records the invitation used.
   subgraph app["The app"]
-    s21["Takes the code from the link by itself: not built yet, #184"]:::notbuilt
-    s24(["Onboarding goes on to the name without a code"])
-    s25["Asks Did a friend invite you? once, before the name, with what the code earns, the field and Skip"]
+    s21["Keeps the link's code on the phone and opens at home"]
+    s24(["Onboarding goes on to its next step without a code"])
+    s25["Asks Did a friend invite you? once, right after the bank login, with what the code earns, the field, a code that came by itself already in it, and Skip"]
     s28(["Says: That is enough for today. You can try again after midnight."])
     s30(["Says this account cannot use an invitation code"])
     s32["Says: That code does not work. Check it and try again."]
@@ -109,16 +111,17 @@ flowchart TB
     s33["Records that the friend used the invitation: it leaves the person's list"]
   end
   subgraph other["The other person"]
-    s16(["The friend taps the link"])
-    s22["Gets the app and signs in with the bank"]
-    s26{"Types the code, or skips?"}
+    s16{"The friend taps the link: does the phone hand it to Kumpa?"}
+    s22["Gets the app if the phone has none, and signs in with the bank"]
+    s26{"Uses a code, typed or already in the field, or skips?"}
   end
-  s16 --> s17
+  s16 -->|"yes"| s21
+  s16 -->|"no, the browser opens it"| s17
   s17 -->|"iPhone or iPad"| s18
   s17 -->|"Android"| s19
   s17 -->|"anything else"| s20
   s18 --> s22
-  s19 --> s21
+  s19 --> s22
   s21 --> s22
   s20 --> s22
   s22 --> s23
@@ -126,7 +129,7 @@ flowchart TB
   s23 -->|"yes"| s25
   s25 --> s26
   s26 -->|"skips"| s24
-  s26 -->|"types it"| s27
+  s26 -->|"uses one"| s27
   s27 -->|"no"| s28
   s27 -->|"yes"| s29
   s29 -->|"no"| s30
@@ -135,30 +138,29 @@ flowchart TB
   s32 --> s26
   s31 -->|"yes"| s33
   s33 --> s34
-  classDef notbuilt stroke-dasharray: 5 5
 ```
 
 ### Steps
 
-16. The friend taps the link in the message.
+16. The friend taps the link in the message. A phone that has Kumpa, and has checked with the link's address that such links are Kumpa's, hands the link to Kumpa: 21. Any other phone, and a computer, opens it in the browser: 17.
 17. The API looks at which phone asks, by the request's User-Agent alone. The code is never looked up, so every code gets the same answer, and nothing is kept. iPhone or iPad: 18. Android: 19. Anything else: 20.
-18. An iPhone or an iPad goes to the App Store, or to the website, kumpa.fi, while the store's listing is not out (#193). The App Store carries nothing through an install, so the friend will type the code (25). Then 22.
-19. An Android phone goes to Play, the code with it as the install referrer, which Play hands the app at its first start; or to kumpa.fi while the listing is not out. Then 21.
+18. An iPhone or an iPad goes to the App Store, or to the website, kumpa.fi, while the store's listing is not out (#193). The App Store carries nothing through an install, so the friend types the code (25), or taps the link once more when Kumpa is on the phone (16). Then 22.
+19. An Android phone goes to Play, the code with it as the install referrer, which Kumpa asks Play for once, when the code's field first shows (25); or to kumpa.fi while the listing is not out. Then 22.
 20. Anything else goes to kumpa.fi, whose page has both stores. Then 22.
-21. The app takes the code from the link by itself: not built yet, #184's native batch. Today nothing reads it, and the friend will type the code (25). Then 22.
-22. The friend gets the app, accepts the terms and the privacy summary, and signs in with their bank ([Signing in](sign-in.md), [Onboarding](onboarding.md)).
+21. Kumpa keeps the link's code on the phone and opens at home. It keeps one code, the newest link's, and only what reads as a code: a link with anything else opens home with nothing kept. Nothing is looked up or sent, and no code is used by a tap on a link. The code waits on the phone, across the bank login and onboarding, until it is used or refused (30, 32, 34). A friend who has not signed in: 22. One who has: 23, the next time onboarding's step or Invitations opens.
+22. The friend gets the app if the phone has none, answers the first questions, accepts the terms and signs in with their bank ([Signing in](sign-in.md), [Onboarding](onboarding.md)).
 23. Onboarding asks the API whether the friend may still use a code: their profile and onboarding are not complete, their identity has never had an account deleted, they have used no code before, and they have given the current terms and privacy consents. Yes: 25. No, or the question could not be answered: 24.
-24. Onboarding goes on to the name without asking for a code. The flow ends here for the friend.
-25. Onboarding asks "Did a friend invite you?" once, before the name, with what the code earns them while `invitation_reward` gives the friend a fish ("The code earns you … once your profile is complete."), the field "Invitation code", "Use the code" and "Skip"; it has no number in onboarding's "Step {step} of {total}". The same field stays in Settings' Invitations, under "Have an invitation code?", for as long as step 23's answer is yes, so a friend who skipped, or got the code later, types it there, and the steps from 26 on are the same.
-26. The friend types the code, or chooses "Skip". "Use the code" stays dimmed until what is typed reads as a code (upper or lower case, with or without spaces and the hyphen, O read as zero, I and L as one), so a slip spends no try. Types it and chooses "Use the code": 27. Skips: 24.
+24. Onboarding goes on to its next step, what the card shows of the home or the ages, without asking for a code. The flow ends here for the friend.
+25. Onboarding asks "Did a friend invite you?" once, as its first step after the bank login, with what the code earns them while `invitation_reward` gives the friend a fish ("The code earns you … once your profile is complete."), the field "Invitation code", "Use the code" and "Skip"; it has no step number, as no step after the bank has. A code the phone kept from the link (21), or on an Android phone the one Play says the install came with, asked once, is already in the field in its two groups, unless the friend typed first; it is theirs to send, change or clear. The same field stays in Settings' Invitations, under "Have an invitation code?", for as long as step 23's answer is yes, so a friend who skipped, or got the code later, uses it there, and the steps from 26 on are the same.
+26. The friend types the code, or leaves the one already in the field, or chooses "Skip". "Use the code" stays dimmed until what is in the field reads as a code (upper or lower case, with or without spaces and the hyphen, O read as zero, I and L as one), so a slip spends no try. Chooses "Use the code": 27. Skips: 24, and a code the phone kept stays for Settings.
 27. The API counts the friend's tries of the Finnish day: every code typed counts, whatever the answer. Within `invitation_tries_per_day`: 29. Otherwise: 28.
-28. The app says "That is enough for today. You can try again after midnight." The flow ends here for today.
+28. The app says "That is enough for today. You can try again after midnight." The flow ends here for today; a code the phone kept stays.
 29. The API checks the friend again, as in step 23, under a lock on their account, before it looks at the code, so it tells nothing about a code to somebody who could not use one. Yes: 31. No: 30.
-30. The app says "This account cannot use an invitation code. A code is for someone new, before their profile is complete, and works once." It never says which condition failed.
+30. The app says "This account cannot use an invitation code. A code is for someone new, before their profile is complete, and works once." It never says which condition failed. If the code was the one the phone kept, the phone forgets it.
 31. The API looks the code up. An open invitation with that code, made by somebody else: 33. A code that does not exist, one already used and the friend's own all get the same answer: 32.
-32. The app says "That code does not work. Check it and try again." Back to 26.
+32. The app says "That code does not work. Check it and try again." If the code was the one the phone kept, the phone forgets it, so it is not offered again. Back to 26.
 33. The API records that the friend used the invitation. It leaves the person's list of invitations waiting, and the person's screen shows nothing more about it. A person can use one invitation, ever.
-34. The app says "The code is in."; in onboarding, "Continue" goes on to the name. Part 3.
+34. The app says "The code is in."; in onboarding, "Continue" goes on to its next step. The phone forgets any code it kept. Part 3.
 
 ## Part 3: the night counts it
 
@@ -211,12 +213,12 @@ flowchart TB
 
 ## Where it lives
 
-- Screens: the Invitations row of Settings, [SettingsScreen.tsx](../../apps/mobile/src/features/settings/SettingsScreen.tsx), holding the rewards slice's [Invitations.tsx](../../apps/mobile/src/features/rewards/Invitations.tsx), [RedeemInvitation.tsx](../../apps/mobile/src/features/rewards/RedeemInvitation.tsx), [useInvitations.ts](../../apps/mobile/src/features/rewards/useInvitations.ts) and [words.ts](../../apps/mobile/src/features/rewards/words.ts) ([README](../../apps/mobile/src/features/rewards/README.md)); onboarding's step, [InvitationStep.tsx](../../apps/mobile/src/features/rewards/InvitationStep.tsx), in [onboarding.tsx](../../apps/mobile/app/onboarding.tsx) and [OnboardingScreen.tsx](../../apps/mobile/src/features/identity/onboarding/OnboardingScreen.tsx); the notices on home, [index.tsx](../../apps/mobile/app/index.tsx), in [Notices.tsx](../../apps/mobile/src/features/notifications/Notices.tsx)
-- API: `GET /invitations`, `POST /invitations`, `DELETE /invitations/{id}` and `POST /invitations/redeem` in the rewards slice ([routes.ts](../../apps/api/src/rewards/routes.ts), [invitations.ts](../../apps/api/src/rewards/invitations.ts), [repo.ts](../../apps/api/src/rewards/repo.ts), [README](../../apps/api/src/rewards/README.md)); the one link, `GET /i/{code}`, in [link.ts](../../apps/api/src/rewards/link.ts); whether a profile is complete in the jobs' [pool.ts](../../apps/api/src/jobs/pool.ts); the night's count, [invitation-count.ts](../../apps/api/src/jobs/invitation-count.ts), run by [boot.ts](../../apps/api/src/boot.ts); the notices in [notifications.ts](../../apps/api/src/notifications/notifications.ts); spending what was earned in [ledger.ts](../../apps/api/src/rewards/ledger.ts), called by the matching slice's decisions in [queue.ts](../../apps/api/src/matching/queue.ts)
-- Config: `invitation_reward`, `invitations_open`, `invitation_tries_per_day`, `fish_budget` and `like_budget_balanced` in `matching_config` (defaults in [seed.ts](../../packages/db/src/seed.ts)); the stores' addresses are the API's configuration, unset until each listing is out
+- Screens: the Invitations row of Settings, [SettingsScreen.tsx](../../apps/mobile/src/features/settings/SettingsScreen.tsx), holding the rewards slice's [Invitations.tsx](../../apps/mobile/src/features/rewards/Invitations.tsx), [RedeemInvitation.tsx](../../apps/mobile/src/features/rewards/RedeemInvitation.tsx), [held-code.ts](../../apps/mobile/src/features/rewards/held-code.ts) (the code kept from a link or from Play, fed by [+native-intent.ts](../../apps/mobile/app/+native-intent.ts)), [useInvitations.ts](../../apps/mobile/src/features/rewards/useInvitations.ts) and [words.ts](../../apps/mobile/src/features/rewards/words.ts) ([README](../../apps/mobile/src/features/rewards/README.md)); onboarding's step, [InvitationStep.tsx](../../apps/mobile/src/features/rewards/InvitationStep.tsx), in [onboarding.tsx](../../apps/mobile/app/onboarding.tsx) and [OnboardingScreen.tsx](../../apps/mobile/src/features/identity/onboarding/OnboardingScreen.tsx); the notices on home, [index.tsx](../../apps/mobile/app/index.tsx), in [Notices.tsx](../../apps/mobile/src/features/notifications/Notices.tsx)
+- API: `GET /invitations`, `POST /invitations`, `DELETE /invitations/{id}` and `POST /invitations/redeem` in the rewards slice ([routes.ts](../../apps/api/src/rewards/routes.ts), [invitations.ts](../../apps/api/src/rewards/invitations.ts), [repo.ts](../../apps/api/src/rewards/repo.ts), [README](../../apps/api/src/rewards/README.md)); the one link, `GET /i/{code}`, in [link.ts](../../apps/api/src/rewards/link.ts), and the two files that make its address Kumpa's on a phone, in the identity slice's [links.ts](../../apps/api/src/identity/links.ts); whether a profile is complete in the jobs' [pool.ts](../../apps/api/src/jobs/pool.ts); the night's count, [invitation-count.ts](../../apps/api/src/jobs/invitation-count.ts), run by [boot.ts](../../apps/api/src/boot.ts); the notices in [notifications.ts](../../apps/api/src/notifications/notifications.ts); spending what was earned in [ledger.ts](../../apps/api/src/rewards/ledger.ts), called by the matching slice's decisions in [queue.ts](../../apps/api/src/matching/queue.ts)
+- Config: `invitation_reward`, `invitations_open`, `invitation_tries_per_day`, `fish_budget` and `like_budget_balanced` in `matching_config` (defaults in [seed.ts](../../packages/db/src/seed.ts)); the stores' addresses are the API's configuration, unset until each listing is out; a phone hands the link to Kumpa only where the API serves that platform's file, which is configuration too (`docs/runbooks/devices.md`, Verified links), and until then every tap takes the browser's way (17)
 - Spec: [earned.feature](../../features/matching/earned.feature) (spending what was earned); the invitations' scenarios in [erasure.feature](../../features/identity/erasure.feature); the routes, the link and the night's count have ordinary tests
-- Maestro: [invite.yaml](../../apps/mobile/e2e/flows/invite.yaml) (create, share, withdraw); [onboarding.yaml](../../apps/mobile/e2e/flows/onboarding.yaml) skips the code step
-- ADRs: [ADR-044](../adr/044-invitations.md), [ADR-060](../adr/060-no-waiting-at-the-pond.md) §7, [ADR-032](../adr/032-notification-choices-and-notices.md), [ADR-039](../adr/039-the-fish.md), [ADR-036](../adr/036-the-days-likes.md)
+- Maestro: [invite.yaml](../../apps/mobile/e2e/flows/invite.yaml) (create, share, withdraw); [onboarding.yaml](../../apps/mobile/e2e/flows/onboarding.yaml) skips the code step; a tap on the link has no flow yet ([ADR-074](../adr/074-the-links-the-app-takes.md), Left out on purpose)
+- ADRs: [ADR-044](../adr/044-invitations.md), [ADR-074](../adr/074-the-links-the-app-takes.md) §4, [ADR-060](../adr/060-no-waiting-at-the-pond.md) §7, [ADR-032](../adr/032-notification-choices-and-notices.md), [ADR-039](../adr/039-the-fish.md), [ADR-036](../adr/036-the-days-likes.md)
 - Rules: the register's [Invitations and rewards](../decisions.md#invitations-and-rewards) and [Likes and fish](../decisions.md#likes-and-fish) rows.
 
 ## History
@@ -230,3 +232,5 @@ flowchart TB
 - 2026-11-07 (#574, PR #642): the shared message carries one link with the code, which sends a phone to its store and anything else to the website.
 - 2026-11-16 (#700, PR #701): the invitation's message and the line under the code name the app Kumpa.
 - 2026-11-17 (#208): the website the link sends a computer to, or a phone whose store is not out, is kumpa.fi, the site's home since that day.
+- 2026-11-17 (#184, PR #723): on a phone that has Kumpa the link opens it, and its code waits in the code's field; on Android the code comes with an install from the link too. Nothing uses it but the friend's own tap.
+- 2026-11-19 (#681): the name and the other first questions move before the bank login, so the code step is onboarding's first after the bank and goes on to what the card shows of the home or the ages.

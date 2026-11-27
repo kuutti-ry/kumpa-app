@@ -18,10 +18,11 @@ import { useT } from "@/lib/locale";
  * opens the public site, never a page of the product (rule 8), as the
  * source-code offer does.
  */
-export function LegalTextLink({ kind }: { kind: LegalTextKind }) {
+export function LegalTextLink({ kind, label: named }: { kind: LegalTextKind; label?: string }) {
   const { t } = useT();
   const version = CONSENT_VERSIONS[kind] ?? "";
-  const label = t("onboarding.consents.fullText", { version });
+  // The terms screen names the text alone (#681): the version is still the one opened and recorded.
+  const label = named ?? t("onboarding.consents.fullText", { version });
   return (
     <Button
       variant="ghost"

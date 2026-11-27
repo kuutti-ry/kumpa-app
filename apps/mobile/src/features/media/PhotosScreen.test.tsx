@@ -421,13 +421,11 @@ describe("PhotosScreen", () => {
     expect(screen.queryByText(withoutObjects)).toBeNull();
   });
 
-  it("says the onboarding's step when it is that step, as every other step does, and none otherwise (#146)", async () => {
+  it("numbers no step, as onboarding's or on its own: the count was of the questions before the bank (#681)", async () => {
     fetchMock([answersList(list(2)), answersUrls]);
-    await show(
-      <PhotosScreen step={{ position: 8, total: 10, reading: false, onContinue: jest.fn() }} />,
-    );
-    expect(await screen.findByText("Step 8 of 10")).toBeTruthy();
-    expect(screen.getByText("Step 8 of 10").props.accessibilityLiveRegion).toBe("polite");
+    await show(<PhotosScreen step={{ reading: false, onContinue: jest.fn() }} />);
+    expect(await screen.findByText("Main photo")).toBeTruthy();
+    expect(screen.queryByText(/^Step /)).toBeNull();
     await show(<PhotosScreen />);
     expect(await screen.findByText("Main photo")).toBeTruthy();
     expect(screen.queryByText(/^Step /)).toBeNull();
@@ -451,7 +449,7 @@ describe("PhotosScreen", () => {
     const FAILED = "That did not go through. Try again.";
     const showStep = async () => {
       const onContinue = jest.fn();
-      await show(<PhotosScreen step={{ position: 7, total: 8, reading: false, onContinue }} />);
+      await show(<PhotosScreen step={{ reading: false, onContinue }} />);
       return onContinue;
     };
     const onward = () => screen.getByRole("button", { name: "Continue" });
@@ -481,12 +479,11 @@ describe("PhotosScreen", () => {
       };
     };
 
-    it("stands on the grid, under its number, its question as the heading and its line, with Continue in Done's place", async () => {
+    it("stands on the grid, its question as the heading and its line, with Continue in Done's place", async () => {
       fetchMock([answersList(inStates()), answersUrls]);
       await showStep();
       await screen.findByText(EXPLAIN);
       expect(drawn()).toEqual([
-        "Step 7 of 8",
         "Two photos of you",
         "Profiles with a face photo get seen.",
         EXPLAIN,
@@ -498,7 +495,6 @@ describe("PhotosScreen", () => {
       const heading = screen.getByRole("heading", { name: "Two photos of you" });
       expect(heading.props.accessibilityRole).toBe("header");
       expect(heading.props["aria-level"]).toBe("1");
-      expect(screen.getByText("Step 7 of 8").props.accessibilityLiveRegion).toBe("polite");
       expect(pressables(screen.toJSON() as HostNode).flatMap((node) => a11yProblems(node))).toEqual(
         [],
       );
@@ -507,25 +503,18 @@ describe("PhotosScreen", () => {
     it.each([
       [
         "fi-FI",
-        "Vaihe 7 / 8",
         "Kaksi kuvaa sinusta",
         "Profiilit, joissa on kasvokuva, tulevat nähdyiksi.",
         "Jatka",
       ],
-      [
-        "sv-FI",
-        "Steg 7 av 8",
-        "Två bilder på dig",
-        "Profiler med en ansiktsbild blir sedda.",
-        "Fortsätt",
-      ],
-    ])("says it in %s", async (tag, step, question, line, onwardWord) => {
+      ["sv-FI", "Två bilder på dig", "Profiler med en ansiktsbild blir sedda.", "Fortsätt"],
+    ])("says it in %s", async (tag, question, line, onwardWord) => {
       (useLocales as jest.Mock).mockReturnValue([{ languageTag: tag }]);
       try {
         fetchMock([answersList(inStates()), answersUrls]);
         await showStep();
         expect(await screen.findByRole("heading", { name: question })).toBeTruthy();
-        expect(drawn().slice(0, 3)).toEqual([step, question, line]);
+        expect(drawn().slice(0, 2)).toEqual([question, line]);
         expect(screen.getByRole("button", { name: onwardWord })).toBeTruthy();
       } finally {
         (useLocales as jest.Mock).mockReturnValue([{ languageTag: "en-US" }]);
@@ -576,7 +565,6 @@ describe("PhotosScreen", () => {
       await showStep();
       expect(readOnly()).toBe(true);
       expect(drawn()).toEqual([
-        "Step 7 of 8",
         "Two photos of you",
         "Profiles with a face photo get seen.",
         "Add a photo",
@@ -638,7 +626,7 @@ describe("PhotosScreen", () => {
     it("holds Continue while the status it asked for is read", async () => {
       fetchMock([answersList(inStates("approved", "approved")), answersUrls]);
       const onContinue = jest.fn();
-      await show(<PhotosScreen step={{ position: 7, total: 8, reading: true, onContinue }} />);
+      await show(<PhotosScreen step={{ reading: true, onContinue }} />);
       await screen.findByText(EXPLAIN);
       expect(readOnly()).toBe(true);
       await press(onward());
@@ -769,6 +757,118 @@ describe("PhotosScreen", () => {
     expect(await screen.findByText("This photo cannot be used.")).toBeTruthy();
     expect(FakeXhr.sent).toHaveLength(0);
     expect(screen.getAllByRole("button", { name: /^Open photo/ })).toHaveLength(1);
+  });
+
+  describe("several photos picked at once (#681)", () => {
+    /** An upload that waits for the test, so the words on the way can be read. */
+    class HeldXhr extends FakeXhr {
+      static held: HeldXhr[] = [];
+      override send(body: FormData | null): void {
+        FakeXhr.sent.push({ method: "POST", url: "", headers: {}, body });
+        HeldXhr.held.push(this);
+      }
+    }
+    const lands = (n: number) =>
+      act(async () => {
+        const xhr = HeldXhr.held.shift();
+        if (!xhr) throw new Error("no upload under way");
+        xhr.status = 201;
+        xhr.responseText = JSON.stringify({ ...photo(n), state: "pending" });
+        xhr.onload?.();
+      });
+    const picks = (...names: string[]) =>
+      launch.mockResolvedValueOnce({
+        canceled: false,
+        assets: names.map((name) => ({ uri: `file:///${name}.jpg`, width: 3000, height: 2000 })),
+      });
+    /** A photo's tile, in the language of the test. */
+    const tileIn = (position: number) =>
+      screen.queryByRole("button", {
+        name: new RegExp(`^(Open photo|Avaa kuva|Öppna foto) ${position}$`),
+      });
+    beforeEach(() => {
+      HeldXhr.held = [];
+    });
+
+    it.each([
+      ["en-US", "Add a photo", "Uploading photo 1 of 2… 50 %", "Uploading photo 2 of 2… 0 %"],
+      ["fi-FI", "Lisää kuva", "Lähetetään kuvaa 1/2… 50 %", "Lähetetään kuvaa 2/2… 0 %"],
+      [
+        "sv-FI",
+        "Lägg till ett foto",
+        "Laddar upp foto 1 av 2… 50 %",
+        "Laddar upp foto 2 av 2… 0 %",
+      ],
+    ])(
+      "says in %s which of how many is going, and the grid grows by each as it lands",
+      async (tag, add, first, second) => {
+        (useLocales as jest.Mock).mockReturnValue([{ languageTag: tag }]);
+        try {
+          fetchMock([answersLists(list(1), list(3)), answersUrls]);
+          picks("a", "b");
+          (globalThis as { XMLHttpRequest: unknown }).XMLHttpRequest = HeldXhr;
+          await show(<PhotosScreen />);
+          await press(await screen.findByRole("button", { name: add }));
+          await waitFor(() => expect(HeldXhr.held).toHaveLength(1));
+          await act(async () =>
+            HeldXhr.held[0]?.upload.onprogress?.({ lengthComputable: true, loaded: 1, total: 2 }),
+          );
+          expect(screen.getByText(first)).toBeTruthy();
+          await lands(2);
+          expect(await screen.findByText(second)).toBeTruthy();
+          expect(tileIn(2)).toBeTruthy();
+          await lands(3);
+          await waitFor(() => expect(tileIn(3)).toBeTruthy());
+          expect(screen.queryByText(second)).toBeNull();
+        } finally {
+          (useLocales as jest.Mock).mockReturnValue([{ languageTag: "en-US" }]);
+        }
+      },
+    );
+
+    it.each([
+      [
+        "en-US",
+        "Add a photo",
+        "One of the photos cannot be used.",
+        "2 of the photos cannot be used.",
+      ],
+      ["fi-FI", "Lisää kuva", "Yhtä kuvista ei voi käyttää.", "2 kuvaa ei voi käyttää."],
+      [
+        "sv-FI",
+        "Lägg till ett foto",
+        "Ett av fotona kan inte användas.",
+        "2 av fotona kan inte användas.",
+      ],
+    ])(
+      "says once in %s how many of those picked the check refused, and sends the rest",
+      async (tag, add, one, two) => {
+        (useLocales as jest.Mock).mockReturnValue([{ languageTag: tag }]);
+        try {
+          setLocalCheck(async (uri) => (uri.includes("nude") ? "refuse" : "allow"));
+          FakeXhr.answers = [
+            { status: 201, body: JSON.stringify({ ...photo(2), state: "pending" }) },
+          ];
+          fetchMock([answersLists(list(1, 6), list(2, 6)), answersUrls]);
+          picks("a", "nude");
+          await show(<PhotosScreen />);
+          await press(await screen.findByRole("button", { name: add }));
+          expect(await screen.findByText(one)).toBeTruthy();
+          expect(FakeXhr.sent).toHaveLength(1);
+          await waitFor(() => expect(tileIn(2)).toBeTruthy());
+
+          FakeXhr.sent.length = 0;
+          fetchMock([answersList(list(1, 6)), answersUrls]);
+          picks("nude-1", "nude-2", "b");
+          await show(<PhotosScreen />);
+          await press(await screen.findByRole("button", { name: add }));
+          expect(await screen.findByText(two)).toBeTruthy();
+          expect(FakeXhr.sent).toHaveLength(1);
+        } finally {
+          (useLocales as jest.Mock).mockReturnValue([{ languageTag: "en-US" }]);
+        }
+      },
+    );
   });
 
   it("shows the API's refusal in its own words and lets the person dismiss it", async () => {
@@ -1640,9 +1740,7 @@ describe("PhotosScreen in the Organic Pop try", () => {
 
   it("says the step's words in today's order, every control labelled, and none of its drawings", async () => {
     fetchMock([answersList(list(2)), answersUrls]);
-    await show(
-      <PhotosScreen step={{ position: 7, total: 8, reading: false, onContinue: jest.fn() }} />,
-    );
+    await show(<PhotosScreen step={{ reading: false, onContinue: jest.fn() }} />);
     expect(await screen.findByText("Main photo")).toBeTruthy();
     await waitFor(() =>
       expect(
@@ -1650,7 +1748,6 @@ describe("PhotosScreen in the Organic Pop try", () => {
       ).toMatch(/\brounded-3xl\b/),
     );
     expect(drawn().filter((each) => each !== "Main photo" && each !== "In review")).toEqual([
-      "Step 7 of 8",
       "Two photos of you",
       "Profiles with a face photo get seen.",
       "Hold a photo and drag it to change the order. A new photo is checked before anyone else sees it.",

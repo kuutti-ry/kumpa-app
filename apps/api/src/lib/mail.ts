@@ -3,8 +3,18 @@ import type { Config } from "./config.ts";
 import { errorName } from "./errors.ts";
 import type { Logger } from "./logger.ts";
 
-/** One plain-text message to one address (#385, ADR-043). */
-export type MailMessage = { to: string; subject: string; text: string };
+/**
+ * One plain-text message to one address (#385, ADR-043). `unsubscribe` is an
+ * announcement's one-click link (#196, ADR-068 §5), which goes in the headers
+ * RFC 8058 names and never in the text.
+ */
+export type MailMessage = { to: string; subject: string; text: string; unsubscribe?: string };
+
+/** RFC 8058 §3.1: the link, and the one key/value pair the mail app posts to it. */
+const unsubscribeHeaders = (link: string) => [
+  { Name: "List-Unsubscribe", Value: `<${link}>` },
+  { Name: "List-Unsubscribe-Post", Value: "List-Unsubscribe=One-Click" },
+];
 
 /** Where Kuutti's mail goes out: SES on AWS, the log on a developer's machine. */
 export type Mailer = { send: (message: MailMessage) => Promise<void> };
@@ -27,7 +37,7 @@ export class MailFailed extends Error {
 /** SES through the instance role (ADR-043 §5), from the configured sender. */
 export function sesMailer(client: Pick<SESv2Client, "send">, from: string): Mailer {
   return {
-    send: async ({ to, subject, text }) => {
+    send: async ({ to, subject, text, unsubscribe }) => {
       try {
         await client.send(
           new SendEmailCommand({
@@ -37,6 +47,7 @@ export function sesMailer(client: Pick<SESv2Client, "send">, from: string): Mail
               Simple: {
                 Subject: { Data: subject, Charset: "UTF-8" },
                 Body: { Text: { Data: text, Charset: "UTF-8" } },
+                ...(unsubscribe ? { Headers: unsubscribeHeaders(unsubscribe) } : {}),
               },
             },
           }),

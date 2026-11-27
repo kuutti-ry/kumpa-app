@@ -8,6 +8,7 @@ import {
   deletePreferencesOfAccount,
   eraseQueueOf,
   eraseStarsOf,
+  exportedAnchor,
   exportQueue,
   exportStars,
   readDealBreakers,
@@ -355,13 +356,17 @@ export async function exportAccount(
     listReportsOfAccount(deps.db, accountId, EXPORT_HISTORY_LIMIT),
     listBlocksOfAccount(deps.db, accountId, EXPORT_HISTORY_LIMIT),
     // A line's photo with the check's description in words, as a profile photo's (#296, #350).
-    exportConversations(deps.db, accountId, (photoId) => {
-      const sent = photos.sent.get(photoId);
-      if (!sent) return null;
-      return {
-        ...sent,
-        descriptionText: sent.description ? describePhoto(t, sent.description) : null,
-      };
+    exportConversations(deps.db, accountId, {
+      sentPhoto: (photoId) => {
+        const sent = photos.sent.get(photoId);
+        if (!sent) return null;
+        return {
+          ...sent,
+          descriptionText: sent.description ? describePhoto(t, sent.description) : null,
+        };
+      },
+      // The part the person's like named that made the match (#463), in words.
+      liked: (anchor) => exportedAnchor(t, anchor),
     }),
     exportContacts(deps, accountId),
     exportNotifications(deps.db, accountId),
@@ -481,6 +486,8 @@ export async function exportAccount(
           secondPass: entry.secondPass,
           distance: entry.distance,
           distanceInWords: entry.distance ? t(`profile.option.distance.${entry.distance}`) : null,
+          // The part the person's like named (#463), in words; never the other's.
+          anchor: entry.anchor ? exportedAnchor(t, entry.anchor) : null,
         })),
       })),
     },

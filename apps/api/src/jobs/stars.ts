@@ -20,7 +20,7 @@ import {
  */
 
 /**
- * Which of these people a person's Starred list shows now (ADR-064 §6): matching
+ * Which of these people a person's Later list shows now (ADR-064 §6): matching
  * open for the person, the two in each other's pool both ways as the queue asks it
  * (ADR-062 §8), the other seen by others, and not held back by the queue's rules
  * (`heldFromStars`). Asked on every read, and never remembered, so somebody left
@@ -76,7 +76,7 @@ export async function starPlace(
 }
 
 /**
- * The Starred list (ADR-064 §6), one statement that names the person (rule 6): the
+ * The Later list (ADR-064 §6), one statement that names the person (rule 6): the
  * latest star first and in no other order, each with a name, an age, and the main
  * one of the approved photos the person was shown, since a photo never shown has no
  * `card_shown` row and goes nowhere (ADR-008 §3), its blurhash included.

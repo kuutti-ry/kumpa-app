@@ -1,6 +1,6 @@
 import { StarredScreen } from "@/features/matching";
 
-/** The people the person starred (#575). */
+/** The Later list: the people the person chose Later on (#575, #681). */
 export default function StarredRoute() {
   return <StarredScreen />;
 }

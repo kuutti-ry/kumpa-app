@@ -88,7 +88,7 @@ From the schema (`packages/db/src/schema/`). "Erasure" is the person deleting th
 | Sanctions, with staff's note | `sanction` | erasure keeps the open bans and suspensions (ADR-024 §8) |
 | Feedback the person sent, in their words | `feedback` | until erasure |
 | The photo check's notes | `photo_check_note` | twelve months, or erasure |
-| What staff did or saw about the account | `audit_log` | five years by rule (`.claude/rules/db.md`), survives erasure. Nothing prunes it yet and the table's trigger refuses deletes, so rows are kept longer |
+| What staff did or saw about the account | `audit_log` | five years from each row's writing (`.claude/rules/db.md`, ADR-076), survives erasure; the night deletes a row past five years, and the table's trigger refuses every earlier delete |
 | The API's log line per request: account id, request id, method, route, status, duration; never a client address. Every container on the box logs to the same group, Traefik and Dokploy included (`infra/modules/compute/templates/user_data.sh.tpl`) | CloudWatch `/kuutti/prod/api` | 30 days |
 | Dokploy's state: `/etc/dokploy` on the box (Traefik's configuration among it) and its nightly copy | the box's disk; the backup bucket under `dokploy-backup/prod/` | the copies 90 days (`infra/bootstrap/main.tf`). Whether they hold an access log is open (below) |
 | Login attempts in flight | `auth_request` | ten minutes, swept nightly |
@@ -220,7 +220,7 @@ Person told:       no / yes, date, how
 Keep until:        date
 ```
 
-Keep each record five years, the period the audit log's rows have by rule (`.claude/rules/db.md`; nothing prunes the audit log yet, so its rows stay longer). This period is a proposal for counsel.
+Keep each record five years, the period the audit log's rows have (`.claude/rules/db.md`, ADR-076). This period is a proposal for counsel.
 
 ## 9. Timelines
 
@@ -246,7 +246,7 @@ What expires, and when. A request about an older event may find nothing:
 | a conversation and its messages | when the second of its two people is erased; messages sent under a shadow ban still open, at the sender's erasure |
 | a report | twelve months from filing, swept nightly |
 | the photo check's notes | twelve months |
-| the audit log | five years by rule; no prune exists yet, so kept longer |
+| the audit log | five years from each row's writing, swept nightly |
 | Telia's identification logs | five years, at Telia |
 
 Kuutti has no legal hold. If the person deletes their account while a request is open, the data goes (ADR-007). A request to preserve data goes to counsel. Never improvise a hold by editing rows.
@@ -299,7 +299,7 @@ Expected: the lookup by session index (step 5) finds a tombstone: the account wa
 
 **Debrief, 10 minutes.** For each round: the time taken, what the page did not say, what it said wrongly. Fix the page in a pull request and add a line to the log below.
 
-**Optional desk check, locally only.** Run the queries of step 5 against the local database, `psql postgres://kuutti:kuutti@127.0.0.1:5432/kuutti` (the default of `env.example`), never staging's or production's, so a typo in this page shows. With `pnpm env:up` and `pnpm demo:reset` (not while other work uses the local stack), Tapio is banned in his story, so his account is the one with an open ban: `SELECT account_id FROM sanction WHERE kind = 'ban' AND lifted_at IS NULL`. Use it for the account id query. Then open `http://localhost:5173/audit`, narrow it to subject type `account` and that id, and see the `audit.read` row it wrote. The audit viewer is an admin's: `docs/demo/runbook.md` grants the local persona `moderator`, and the same command grants `admin`. The mock bank's personas send no session index (`services/mock-idp/login.html`), so that query finds nothing locally.
+**Optional desk check, locally only.** Run the queries of step 5 against the local database, `psql postgres://kuutti:kuutti@127.0.0.1:5432/kuutti` (the default of `env.example`), never staging's or production's, so a typo in this page shows. With `pnpm env:up` and `pnpm demo:reset` (not while other work uses the local stack), Reijo is banned in his story, so his account is the one with an open ban: `SELECT account_id FROM sanction WHERE kind = 'ban' AND lifted_at IS NULL`. Use it for the account id query. Then open `http://localhost:5173/audit`, narrow it to subject type `account` and that id, and see the `audit.read` row it wrote. The audit viewer is an admin's: `docs/demo/runbook.md` grants the local persona `moderator`, and the same command grants `admin`. The mock bank's personas send no session index (`services/mock-idp/login.html`), so that query finds nothing locally.
 
 ### Log
 

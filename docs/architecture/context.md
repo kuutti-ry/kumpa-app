@@ -14,16 +14,17 @@ apps/mobile/src/lib/api-url.ts
 apps/mobile/src/lib/sentry.ts
 packages/i18n/src/legal.ts
 infra/bootstrap/
+infra/envs/prod/waitlist.tf
 -->
 
-Who uses Kuutti, and which outside services it depends on: the direction of every call and what travels on it. It is for a contributor or a reviewer who wants the whole picture before reading the code or `infra/`. It draws staging, the one environment that runs today; production, applied on 2026-10-24 without bank identification (ADR-049), composes the same services less a few ([Deployment](deployment.md), part 5). Outside AWS, Kuutti has six vendors: Expo, GitHub, Telia, Sentry and, for the app's store builds, Google Play and Apple's App Store Connect. This view draws ADR-001, ADR-004, ADR-005, ADR-006, ADR-014, ADR-016, ADR-017, ADR-018, ADR-025, ADR-031, ADR-032, ADR-041, ADR-043, ADR-052, ADR-055, ADR-056, ADR-057, ADR-062, ADR-063 and ADR-072.
+Who uses Kuutti, and which outside services it depends on: the direction of every call and what travels on it. It is for a contributor or a reviewer who wants the whole picture before reading the code or `infra/`. It draws staging, the one environment with every service on; production, applied from rehearsal tags since 2026-10-24 without bank identification (ADR-049), composes the same services less a few ([Deployment](deployment.md), part 5). Outside AWS, Kuutti has six vendors: Expo, GitHub, Telia, Sentry and, for the app's store builds, Google Play and Apple's App Store Connect. This view draws ADR-001, ADR-004, ADR-005, ADR-006, ADR-014, ADR-016, ADR-017, ADR-018, ADR-025, ADR-031, ADR-032, ADR-041, ADR-043, ADR-052, ADR-055, ADR-056, ADR-057, ADR-062, ADR-063 and ADR-072.
 
 ## Part 1: the people and what their devices reach
 
 ```mermaid
 flowchart TB
   accTitle: Context, part 1: the people and what their devices reach
-  accDescr: A person uses the phone app and a moderator uses the admin panel in a browser. Both reach the API through CloudFront, and both log in at their bank through Telia Tunnistus, which sends the browser back to the API. The app takes its JavaScript from Expo's EAS Update, reports errors to Sentry and opens the legal texts through the API, which sends the browser on to the website. The API sends its pushes to Expo's push service, which delivers them to the app through Apple's or Google's push service. App attestation is planned for later.
+  accDescr: A person uses the phone app and a moderator uses the admin panel in a browser. Both reach the API through CloudFront, and both log in at their bank through Telia Tunnistus, which sends the browser back to the API. The app takes its JavaScript from Expo's EAS Update, reports errors to Sentry and opens the legal texts through the API, which sends the browser on to the website. The API sends its pushes to Expo's push service, which delivers them to the app through Apple's or Google's push service. An iPhone asks Apple to certify the app at sign-in, and Apple and Google read from the API which links are the app's.
   subgraph people["The people"]
     n1["A person, with the phone app"]
     n2["A moderator, with the admin panel in a browser"]
@@ -40,7 +41,7 @@ flowchart TB
     n9["Sentry, EU region: error reports"]
     n10["The website kumpa.fi, also at kuutti.app, on Amplify Hosting, its own repository"]
     n11["Expo push, then Apple's APNs or Google's FCM: the pushes"]
-    n12["App attestation by Apple and Google: planned for later, ADR-056"]:::notbuilt
+    n12["Apple and Google, for the app itself: App Attest on an iPhone, the links that are the app's, Play's word on an install"]
   end
   n1 -->|"uses"| n3
   n2 -->|"uses"| n4
@@ -57,8 +58,8 @@ flowchart TB
   n5 -->|"sends the browser on to a legal text, from /legal/terms or /legal/privacy"| n10
   n5 -->|"a push: one line of the app's words and what it is about, never a text or a name"| n11
   n11 -->|"wakes the phone with it"| n3
-  n3 -.->|"planned for later, ADR-056"| n12
-  classDef notbuilt stroke-dasharray: 5 5
+  n3 -->|"an iPhone's key for Apple to attest at sign-in, and on Android a question to Play about the install"| n12
+  n12 -->|"read the two files that say which links are the app's"| n6
 ```
 
 ### Steps
@@ -74,14 +75,14 @@ flowchart TB
 9. Sentry, in its EU data region: error reports from the API and the app, with every category of data the SDK would collect by itself switched off in the API. Each is on only where a DSN is set: the parameter `sentry-dsn` for the API, `EXPO_PUBLIC_SENTRY_DSN` for the app.
 10. The website `kumpa.fi`, also served at `kuutti.app`, on AWS Amplify Hosting, built from its own repository `kuutti-ry/kumpa-app-site`. The full legal texts are there. The app opens the API's `/legal/terms` or `/legal/privacy` in the phone's browser, at the anchor of its version, and the API answers with a redirect to the site's page (#208, ADR-010 §21), so the site can move without a build of the app. That redirect is the one arrow between the API and the website: the API never calls the site, and its browser allowlist on staging names the panel's two origins, `kuutti.app`'s and `kumpa.fi`'s, and nothing else.
 11. Push through Expo (#102, ADR-055): the API sends each push to Expo's push service over HTTPS, at most a hundred a request, and Expo hands it to Apple's APNs or Google's FCM, which wake the phone. A push carries the device's token, one line of the app's own words in the device's language (a new message, a new match) and its kind, never a message's text, a name, an account or the conversation, whose id would pair the two phones for the vendors. The app registers its token with the API (`PUT /push-token`) once the phone lets Kuutti notify; the API sends where the parameter `push` says `expo`, as on staging, and reads receipts back once, fifteen minutes later, to forget tokens Apple or Google no longer know. What Expo receives and keeps: `docs/vendors/expo.md`.
-12. App attestation by Apple and Google: planned for later, not built. The third of ADR-056 §1's triggers has come with the queue, which serves cards outside a bounded queue (ADR-062); starting it is the maintainer's call, on its own issue. Screenshots are never noticed, so no service stands for them (ADR-056 §4).
+12. Apple and Google, for the app itself; three things, none of them a call the API makes. App Attest (ADR-069, #580): at sign-in an iPhone asks Apple to attest a key it made, over the one-time code, and the API verifies Apple's answer against Apple's root without calling Apple. A build holds the module and the entitlement since #184's native batch; no environment requires an attestation yet, and Android has nothing of the kind. The verified links (ADR-074): Apple's CDN and Google read the API's two well-known files, each served only where its parameter is set, which say that links to `/auth/return` and under `/i/` on the API's hosts are the app's, so that a phone hands them to the app alone. Play's install referrer: on Android the app asks Play, once, what its install came with, which is an invitation's code when the install came from one's link. Screenshots are never noticed, so no service stands for them (ADR-056 §4).
 
 ## Part 2: the API and the AWS services it calls
 
 ```mermaid
 flowchart TB
   accTitle: Context, part 2: the API and the AWS services it calls
-  accDescr: The API reads its configuration and secrets from SSM Parameter Store, keeps its data in RDS PostgreSQL, writes photos to the media bucket, and asks Rekognition to check photos. CloudFront reads the media bucket and the panel's bucket. Every container's logs go to CloudWatch, whose alarms mail through SNS, and Route 53 probes the API from outside. SES sends the e-mail code.
+  accDescr: The API reads its configuration and secrets from SSM Parameter Store, keeps its data in RDS PostgreSQL, writes photos to the media bucket, and asks Rekognition to check photos. CloudFront reads the media bucket and the panel's bucket. Every container's logs go to CloudWatch, whose alarms mail through SNS, and Route 53 probes the API from outside. SES sends the e-mail code, an announcement and a sanction's statement.
   subgraph kuutti2["Kuutti"]
     n13["The API, in a container on the EC2 box"]
   end
@@ -93,7 +94,7 @@ flowchart TB
     n18["S3, the panel's bucket"]
     n19["CloudFront, the panel's distribution"]
     n20["Rekognition: the photo check"]
-    n21["SES: the e-mail code, in the sandbox. More mail planned, #196"]
+    n21["SES: the e-mail code, announcements and a sanction's statement, in the sandbox. More mail planned, #196"]
     n22["CloudWatch: logs, metrics and alarms"]
     n23["SNS: alert mail"]
     n24["Route 53: DNS and the outside health probe"]
@@ -104,7 +105,7 @@ flowchart TB
   n17 -->|"reads media/ for a validly signed URL"| n16
   n19 -->|"reads the panel's files"| n18
   n13 -->|"a photo's bytes, for labels and faces"| n20
-  n13 -->|"the code from noreply@kuutti.app"| n21
+  n13 -->|"the code, an announcement or a sanction's statement, from noreply@kuutti.app"| n21
   n13 -->|"every container's log lines"| n22
   n22 -->|"an alarm"| n23
   n24 -->|"asks /health every 30 seconds"| n13
@@ -122,10 +123,10 @@ flowchart TB
 18. S3, the panel's private bucket: `main`'s build at its root, written by CI ([Delivery](delivery.md)); Saiga's faces under `fonts/`, which the maintainer uploads by hand (38).
 19. CloudFront, the panel's distribution: the only reader of the panel's bucket. It adds the panel's security headers to every answer and answers a page's path with `index.html`.
 20. Rekognition: three detect calls (moderation labels, faces, labels), on when the parameter `moderation` says `rekognition`, as it does on staging. The photo's bytes travel in the request and the call keeps nothing to answer it; AWS may keep them to improve its services until the organisation's AI services opt-out holds (ADR-006 §1). Without the parameter every photo waits for a person in the moderation queue.
-21. SES: the code that confirms the optional e-mail address, from `noreply@kuutti.app`, an alias at the association's Google Workspace (#385, ADR-043). The domain's identity lives in `infra/bootstrap`, which only the maintainer applies; he applied it on 2026-10-25, SES verified the domain, its DKIM and the MAIL FROM `mail.kuutti.app`, and staging's parameter `mail` says `ses`. SES is in its sandbox until the maintainer asks AWS for production access, so it delivers only to verified identities, the addresses of `kuutti.app` among them, and staging's role may mail only what the repository variable `MAIL_TESTERS` matches, `*@kuutti.app` since 2026-10-25. A second identity, `kumpa.fi`, with its DKIM and the MAIL FROM `mail.kumpa.fi`, is declared there for the move of ADR-072 and waits for his apply; the role may send as `noreply@` of either domain, and nothing sends as `kumpa.fi` until `MAIL_FROM` names it. Further mail is planned, #196.
+21. SES: the code that confirms the optional e-mail address, and to a confirmed one an announcement to everybody and the statement of a sanction (ADR-068 §5, ADR-073 §4), from `noreply@kuutti.app`, an alias at the association's Google Workspace (#385, ADR-043). The domain's identity lives in `infra/bootstrap`, which only the maintainer applies; he applied it on 2026-10-25, SES verified the domain, its DKIM and the MAIL FROM `mail.kuutti.app`, and staging's parameter `mail` says `ses`. SES is in its sandbox until the maintainer asks AWS for production access, so it delivers only to verified identities, the addresses of `kuutti.app` among them, and staging's role may mail only what the repository variable `MAIL_TESTERS` matches, `*@kuutti.app` since 2026-10-25. A second identity, `kumpa.fi`, with its DKIM and the MAIL FROM `mail.kumpa.fi`, is declared there for the move of ADR-072 and waits for his apply; the role may send as `noreply@` of either domain, and nothing sends as `kumpa.fi` until `MAIL_FROM` names it. An announcement's e-mail carries the person's one-click unsubscribe in its headers (#196, RFC 8058): their mail service posts it back to the API on the API's own name, through CloudFront as any request, and the API turns their Announcements switch off. Further mail is planned, #196.
 22. CloudWatch: Docker on the box sends every container's log lines to `/kuutti/staging/api`, Dokploy's own included. Metric filters count the API's 5xx answers, photo refusals, Rekognition calls, failed nightly jobs, bank identifications (#471) and the API's refusals for its limits (#41). Alarms watch each of those counts but the Rekognition one, the instance's status check, the instance's and the database's CPU credits, the database's free storage, and the box's free memory, which the box itself pushes every minute (#77).
 23. SNS: the topic `kuutti-staging-alerts` mails the address of the repository variable `ALERT_EMAIL`. The probe's alarm and the edge's, on the web ACL's refusals, have a topic of their own in us-east-1 with the same address, and the bootstrap's billing alarm and budget a third.
-24. Route 53: the zone `kuutti.app`, adopted from the domain's registration, holds every record but the second names. Its health check asks `https://api.staging.kuutti.app/health` every 30 seconds from three regions and wants the body to say the API is up; it is the one alarm that sees a stopped container. The zone `kumpa.fi`, the second domain's, adopted the same way, holds Google Workspace's mail records, a DMARC and a CAA like the home's, the records Amplify wrote for the website and, since #703, the second names of `api`, `origin.api`, `dokploy` and `admin` with their certificates' validation records (ADR-072).
+24. Route 53: the zone `kuutti.app`, adopted from the domain's registration, holds every record but the second names. Its health check asks `https://api.staging.kuutti.app/health` every 30 seconds from three regions and wants the body to say the API is up; it is the one alarm that sees a stopped container. The zone `kumpa.fi`, the second domain's, adopted the same way, holds Google Workspace's mail records, a DMARC and a CAA like the home's, the records Amplify wrote for the website and, since #703, the second names of `api`, `origin.api`, `dokploy` and `admin` with their certificates' validation records (ADR-072). The zone `kunpa.fi`, of the misspelling registered at Zoner, is the one the bootstrap creates and does not adopt: it holds the records Amplify wrote to redirect the name to `kumpa.fi`, and records that say it has no mail (#726).
 
 ## Part 3: how code reaches the services
 
@@ -157,6 +158,7 @@ flowchart TB
   subgraph site["The website"]
     n35["kuutti-ry/kumpa-app-site, its own repository"]
     n36["Amplify Hosting: kuutti.app and kumpa.fi"]
+    n41["Production launch notification signup in Frankfurt (#53)"]
   end
   n25 -->|"pushes a branch, opens a pull request"| n26
   n26 -->|"every push and pull request"| n27
@@ -168,6 +170,7 @@ flowchart TB
   n27 -->|"publishes updates, EXPO_TOKEN"| n32
   n27 -->|"uploads source maps, SENTRY_AUTH_TOKEN"| n34
   n35 -->|"a push to its main deploys"| n36
+  n36 -.->|"visitors submit the form to waitlist.kumpa.fi"| n41
   n27 -->|"reads /legal/versions.json"| n36
   n31 -->|"fetches Saiga before the install, FONTS_TOKEN, an EAS secret"| n37
   n36 -->|"fetches Saiga at build, FONTS_TOKEN, the site's own"| n37
@@ -194,6 +197,8 @@ flowchart TB
 39. Google Play, the association's developer account: a build of the profile `staging`, started by hand, is submitted by EAS to the app's internal testing track once it is built, with the key of a Google service account that EAS holds and no workflow sees ([Delivery](delivery.md), part 4; ADR-057). The team installs the staging app from Play. What Google receives: `docs/vendors/google-play.md`.
 40. App Store Connect, the association's Apple team (Kuutti ry): the same build's iOS side is submitted by EAS with an App Store Connect API key that EAS holds and no workflow sees, and reaches TestFlight's internal testing ([Delivery](delivery.md), part 4; ADR-063). The team installs it with TestFlight. What Apple receives: `docs/vendors/app-store.md`.
 
+41. The launch notification form automatically solves a challenge from the association's production collector before submitting the address. API Gateway, Lambda and DynamoDB keep the contact list separate from app accounts. Its deployment and access are shown in [Deployment](deployment.md).
+
 ## Where it lives
 
 - The API's outside calls: [lib/ssm.ts](../../apps/api/src/lib/ssm.ts), [lib/config.ts](../../apps/api/src/lib/config.ts) (`loadConfig`, `ssmPrefix`), [lib/s3.ts](../../apps/api/src/lib/s3.ts), [media/urls.ts](../../apps/api/src/media/urls.ts) (signed URLs), [media/wiring.ts](../../apps/api/src/media/wiring.ts) (Rekognition), [lib/mail.ts](../../apps/api/src/lib/mail.ts) (SES), [lib/sentry.ts](../../apps/api/src/lib/sentry.ts), [identity/oidc-broker.ts](../../apps/api/src/identity/oidc-broker.ts) (Telia, through `@kuutti-ry/tunnistus-oidc`)
@@ -201,12 +206,12 @@ flowchart TB
 - AWS: [infra/modules](../../infra/modules) (`compute`, `media`, `admin`, `observability`), [infra/envs/staging](../../infra/envs/staging), [infra/bootstrap](../../infra/bootstrap) (OIDC roles, the zones, the SES identities, billing, the organisation and its AI services opt-out); [infra/README.md](../../infra/README.md), Media, Mail, Admin panel, Observability, The website
 - Vendors: [docs/vendors/telia.md](../vendors/telia.md), [docs/vendors/expo.md](../vendors/expo.md), [docs/vendors/google-play.md](../vendors/google-play.md), [docs/vendors/app-store.md](../vendors/app-store.md)
 - Workflows: [.github/workflows](../../.github/workflows), drawn in [Delivery](delivery.md)
-- ADRs: [ADR-001](../adr/001-infrastructure-as-code.md) (one AWS account, OpenTofu), [ADR-004](../adr/004-eas-update-integrity.md) (updates not signed), [ADR-005](../adr/005-media-pipeline-and-delivery.md) (photos through CloudFront), [ADR-006](../adr/006-photo-moderation.md) (Rekognition), [ADR-014](../adr/014-demo-mode.md) §1 (the personas are the mock bank's alone), [ADR-016](../adr/016-fresh-bank-login.md) and [ADR-017](../adr/017-tunnistus-oidc-package.md) (the bank login and the Telia kit), [ADR-018](../adr/018-staging-is-the-demo.md) (staging holds test persons only), [ADR-025](../adr/025-admin-host.md) (the panel's host), [ADR-031](../adr/031-chat.md) and [ADR-032](../adr/032-notification-choices-and-notices.md) (no push yet), [ADR-041](../adr/041-velocity.md) (velocity), [ADR-056](../adr/056-attestation-later-no-screenshot-notice.md) (attestation later), [ADR-043](../adr/043-email-confirmation.md) (SES), [ADR-057](../adr/057-google-play-internal-testing.md) (the staging app on Google Play), [ADR-070](../adr/070-no-pull-request-previews.md) (no pull-request previews), [ADR-072](../adr/072-two-names-then-kumpa-alone.md) (two names, then `kumpa.fi` alone)
-- Issues: #102 (push), #86 (anti-scraping: attestation later), #385 and #196 (mail), #25 (production), #193 (the stores), #703 (the second names)
+- ADRs: [ADR-001](../adr/001-infrastructure-as-code.md) (one AWS account, OpenTofu), [ADR-004](../adr/004-eas-update-integrity.md) (updates not signed), [ADR-005](../adr/005-media-pipeline-and-delivery.md) (photos through CloudFront), [ADR-006](../adr/006-photo-moderation.md) (Rekognition), [ADR-014](../adr/014-demo-mode.md) §1 (the personas are the mock bank's alone), [ADR-016](../adr/016-fresh-bank-login.md) and [ADR-017](../adr/017-tunnistus-oidc-package.md) (the bank login and the Telia kit), [ADR-018](../adr/018-staging-is-the-demo.md) (staging holds test persons only), [ADR-025](../adr/025-admin-host.md) (the panel's host), [ADR-031](../adr/031-chat.md) and [ADR-032](../adr/032-notification-choices-and-notices.md) (no push yet), [ADR-041](../adr/041-velocity.md) (velocity), [ADR-056](../adr/056-attestation-later-no-screenshot-notice.md) (attestation later), [ADR-069](../adr/069-an-iphone-proves-it-runs-the-app.md) (App Attest), [ADR-074](../adr/074-the-links-the-app-takes.md) (the links that are the app's), [ADR-043](../adr/043-email-confirmation.md) (SES), [ADR-057](../adr/057-google-play-internal-testing.md) (the staging app on Google Play), [ADR-070](../adr/070-no-pull-request-previews.md) (no pull-request previews), [ADR-072](../adr/072-two-names-then-kumpa-alone.md) (two names, then `kumpa.fi` alone)
+- Issues: #102 (push), #86 (anti-scraping: attestation later), #580 (App Attest), #184 (the native batch: the verified links), #385 and #196 (mail), #25 (production), #193 (the stores), #703 (the second names)
 
 ## Open
 
 - SES: in its sandbox until the maintainer asks AWS for production access (ADR-043 Open 5, followed in #196); until then it delivers only to verified identities. The identities are in `infra/bootstrap`, which CI never applies; the maintainer applied `kuutti.app`'s on 2026-10-25, and `kumpa.fi`'s waits for his apply (ADR-072).
 - Sentry: whether `/kuutti/staging/sentry-dsn` and `EXPO_PUBLIC_SENTRY_DSN` are set is not in the repository. The Sentry organisation's slug is `kuutti-ry` (`kuutti-fi` until October 2026), which `deploy.yml` and the plugin block of `apps/mobile/app.json` name; this view names neither.
-- App attestation: the third of ADR-056 §1's triggers has come (ADR-062), and starting it stays the maintainer's. Nothing in the repository watches for the other two.
+- App attestation: built for iPhones on the maintainer's word of 2026-11-10 (ADR-069) and required nowhere; production's switch and Android's half are open there. Whether the App ID has the capability, and whether the verified links' parameters are set, is not in the repository (`docs/runbooks/devices.md`, Verified links).
 - Dokploy versus Kamal is open (CLAUDE.md, Decisions); the box is drawn with the tool it runs today.

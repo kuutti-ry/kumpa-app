@@ -43,7 +43,7 @@ describe("the tech config screen", () => {
   // The designers' try, on this screen alone, which production has not: one
   // group of radios, Sini's four styles after today's, that says and keeps its
   // choice and puts the style's colours on the root view.
-  const STYLES = ["Today's", "Neobrutalism", "Organic Pop", "Glass", "Bold Contrast"];
+  const STYLES = ["Today's", "Neobrutalism", "Organic Pop", "Glass", "Bold Contrast", "Kumpa"];
   it.each([
     ["Glass", "glass"],
     ["Bold Contrast", "bold"],

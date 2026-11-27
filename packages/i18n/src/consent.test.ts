@@ -22,14 +22,14 @@ import {
  * here, or revert the text.
  */
 const GOLDEN: Record<string, { version: string; hash: string }> = {
-  privacy: { version: "2026-11-1", hash: "884bedba27b248eb" },
+  privacy: { version: "2026-11-2", hash: "884bedba27b248eb" },
   special_category: { version: "2026-11-1", hash: "2dec874099c7169d" },
   terms: { version: "2026-11-1", hash: "5d729e8dacab1f1e" },
 };
 
 describe("consent versions", () => {
   // The app says that the English counts above a legal text read in Finnish
-  // and nowhere else (BeforeSignIn, OnboardingScreen): a Swedish phone reads
+  // and nowhere else (FirstQuestions, OnboardingScreen): a Swedish phone reads
   // the English itself. A wording in a third language is a translation too,
   // and those screens have to say so of it before it lands here.
   it("names every kind the API requires, in English and Finnish and in no other language", () => {

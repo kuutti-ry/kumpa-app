@@ -203,14 +203,14 @@ describe("onboarding and consents", () => {
     await answerUpToTheHome(app, a.headers);
     const waiting = await status(app, a.headers);
     expect(waiting.state).toBe("registered");
-    expect(waiting.missing).toEqual(["name", "intent", "home", "photos", "prompts_or_bio"]);
+    expect(waiting.missing).toEqual(["name", "home", "intent", "photos"]);
     expect((await putHome(app, a.headers, "00530")).status).toBe(200);
     const after = await status(app, a.headers);
     // Active on the six of ADR-010 §6; the profile steps of the sheet stay open (#146).
     expect(after).toMatchObject({
       state: "active",
       complete: false,
-      missing: ["name", "intent", "photos", "prompts_or_bio"],
+      missing: ["name", "intent", "photos"],
       gender: "woman",
       home: { town: { fi: "Helsinki", sv: "Helsingfors" }, area: { fi: "Kallio", sv: "Berghäll" } },
       preferences: { seeks: ["man", "non_binary"], ageWindow: { min: 25, max: 35 } },
@@ -229,7 +229,7 @@ describe("onboarding and consents", () => {
     expect(JSON.stringify(logs())).not.toContain("non_binary");
   });
 
-  test("The home is a required step, asked after the age window", async ({ ctx }) => {
+  test("The home is a required step, missing until a postal code is given", async ({ ctx }) => {
     const { app } = await appWith(ctx);
     const a = await signedInAccount(ctx.client, undefined, { state: "registered" });
     await answerUpToTheHome(app, a.headers);
@@ -583,7 +583,7 @@ describe("onboarding and consents", () => {
     expect([...GENDERS]).toEqual([...gender.enumValues]);
   });
 
-  it("missingSteps names the open steps in the sheet's order, and activation waits for six of them", () => {
+  it("missingSteps names the open steps in the order the app asks them, and activation waits for six of them", () => {
     const none = missingSteps({
       gender: null,
       preferences: { seeks: null, ageWindow: null },
@@ -591,7 +591,7 @@ describe("onboarding and consents", () => {
       terms: null,
       privacy: null,
       specialCategory: null,
-      profile: { name: false, intent: false, photos: false, promptsOrBio: false },
+      profile: { name: false, intent: false, photos: false },
     });
     expect(none).toEqual([...ONBOARDING_STEPS]);
     const answered = {
@@ -605,7 +605,7 @@ describe("onboarding and consents", () => {
       terms: "v",
       privacy: "v",
       specialCategory: "v",
-      profile: { name: true, intent: true, photos: true, promptsOrBio: true },
+      profile: { name: true, intent: true, photos: true },
     };
     expect(missingSteps(answered)).toEqual([]);
     // A seek answer without the special-category consent is no answer (ADR-019 §4);
@@ -613,26 +613,23 @@ describe("onboarding and consents", () => {
     const open = missingSteps({
       ...answered,
       specialCategory: null,
-      profile: { name: false, intent: false, photos: false, promptsOrBio: true },
+      profile: { name: false, intent: false, photos: false },
     });
     expect(open).toEqual(["name", "seeks", "intent", "photos"]);
     expect(activationWaitsFor(open)).toEqual(["seeks"]);
-    // The home is asked after the age window, and holds activation back (ADR-061 §1).
+    // The home is asked before the bank since #681, and holds activation back (ADR-061 §1).
     const homeless = missingSteps({ ...answered, home: null });
     expect(homeless).toEqual(["home"]);
     expect(activationWaitsFor(homeless)).toEqual(["home"]);
   });
 
-  test("The onboarding lists the profile steps the sheet asks, in its order", async ({ ctx }) => {
+  test("The onboarding lists the profile steps, in the order the app asks them", async ({
+    ctx,
+  }) => {
     const { app } = await appWith(ctx);
     const a = await signedInAccount(ctx.client, undefined, { state: "registered" });
     await onboard(app, a.headers);
-    expect((await status(app, a.headers)).missing).toEqual([
-      "name",
-      "intent",
-      "photos",
-      "prompts_or_bio",
-    ]);
+    expect((await status(app, a.headers)).missing).toEqual(["name", "intent", "photos"]);
     expect((await putProfile(app, a.headers, PROFILE)).status).toBe(200);
     expect((await status(app, a.headers)).missing).toEqual(["photos"]);
     // Uploaded counts here, with the moderator still to look (ADR-006); the card waits for approval.

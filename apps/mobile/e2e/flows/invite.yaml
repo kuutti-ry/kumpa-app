@@ -10,11 +10,11 @@
 # system's, in the phone's language, so the flow asserts only that the app's
 # own failure line never shows, and closes what opened (data-export.yaml).
 # Using a code and the night's count are the API's tests.
-appId: fi.kuutti.app
+appId: fi.kumpa
 name: An invitation made in Settings shows its code once, is shared, and is withdrawn after asking
 ---
 - runFlow: ../common/sign-in.yaml
-- openLink: kuutti://settings
+- openLink: fi.kumpa://settings
 - extendedWaitUntil:
     visible: "Settings|Asetukset|Inställningar"
     timeout: 15000
@@ -29,11 +29,11 @@ name: An invitation made in Settings shows its code once, is shared, and is with
       INSIDE: "When a friend you invite finishes their profile.*|Kun kutsumasi ystävä saa profiilinsa valmiiksi.*|När en vän du bjuder in gör klart sin profil.*|Loading…|Ladataan…|Laddar…"
 # What an invitation earns, from matching_config invitation_reward: a fish each.
 - extendedWaitUntil:
-    visible: "When a friend you invite finishes their profile, you get a fish and your friend gets a fish\\.|Kun kutsumasi ystävä saa profiilinsa valmiiksi, saat kalan ja ystäväsi saa kalan\\.|När en vän du bjuder in gör klart sin profil får du en fisk och din vän får en fisk\\."
+    visible: "When a friend you invite finishes their profile, you get a flower and your friend gets a flower\\.|Kun kutsumasi ystävä saa profiilinsa valmiiksi, saat kukan ja ystäväsi saa kukan\\.|När en vän du bjuder in gör klart sin profil får du en blomma och din vän får en blomma\\."
     timeout: 15000
 - tapOn:
     text: "Create an invitation|Tee kutsu|Skapa en inbjudan"
-    below: "When a friend you invite finishes their profile, you get a fish and your friend gets a fish\\.|Kun kutsumasi ystävä saa profiilinsa valmiiksi, saat kalan ja ystäväsi saa kalan\\.|När en vän du bjuder in gör klart sin profil får du en fisk och din vän får en fisk\\."
+    below: "When a friend you invite finishes their profile, you get a flower and your friend gets a flower\\.|Kun kutsumasi ystävä saa profiilinsa valmiiksi, saat kukan ja ystäväsi saa kukan\\.|När en vän du bjuder in gör klart sin profil får du en blomma och din vän får en blomma\\."
 # Ready: said aloud and not drawn (#581). The code's card is what the eye has: the
 # code in its two groups; where Maestro reads the label, as a screen reader
 # hears it, one character at a time.

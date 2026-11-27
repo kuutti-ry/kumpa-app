@@ -1,11 +1,8 @@
 import type { ContactKind, ConversationContacts } from "@kuutti/schema";
+import { setStringAsync } from "expo-clipboard";
 import { useEffect, useRef, useState } from "react";
-// shortcut: React Native's own Clipboard is deprecated and goes in a later
-// release, but 0.86 ships it with its native side, so Copy needs no new build;
-// expo-clipboard in the next native batch (#184) lifts it.
 import {
   AccessibilityInfo,
-  Clipboard,
   Linking,
   Platform,
   ScrollView,
@@ -87,10 +84,13 @@ export function SharedContacts({
     if (opened === false) tell({ said: "refused" });
   };
 
-  const copy = (kind: ContactKind, value: string) => {
+  const copy = async (kind: ContactKind, value: string) => {
     tap();
-    Clipboard.setString(value);
-    tell({ said: "copied", kind });
+    setNotice(null);
+    // Said once the clipboard has it. A failure goes in no log, as a refused
+    // open: nothing of the value leaves the phone.
+    const copied = await setStringAsync(value).catch(() => false);
+    if (copied) tell({ said: "copied", kind });
   };
 
   return (

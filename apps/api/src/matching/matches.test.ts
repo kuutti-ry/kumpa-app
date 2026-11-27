@@ -810,6 +810,7 @@ describe("the same moment", () => {
       await first.query("COMMIT");
       expect(await liking.outcome).toEqual({
         match: null,
+        later: null,
         fishToSend: true,
         likesLeft: 9,
         yourTurn: 0,

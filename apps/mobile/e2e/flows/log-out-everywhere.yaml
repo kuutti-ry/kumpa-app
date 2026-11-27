@@ -1,7 +1,7 @@
 # Log out everywhere (#35): every session of the account ends at once, this
 # device's with them, and opening the app again does not bring it back.
 # Sanna; her profile is untouched, only her sessions end.
-appId: fi.kuutti.app
+appId: fi.kumpa
 name: Log out everywhere ends this device's session, and reopening the app does not bring it back
 ---
 - runFlow: ../common/sign-in.yaml
@@ -13,7 +13,7 @@ name: Log out everywhere ends this device's session, and reopening the app does 
 # The scroll goes to the line under the button, which puts the whole button
 # in sight (the row is the list's foot, where nothing can be centred), and
 # the list's own scroll to the row ends before the tap.
-- openLink: kuutti://settings?open=device
+- openLink: fi.kumpa://settings?open=device
 - extendedWaitUntil:
     visible: "Settings|Asetukset|Inställningar"
     timeout: 15000
@@ -30,11 +30,13 @@ name: Log out everywhere ends this device's session, and reopening the app does 
 # Android the row's button behind the dialog, and its text, are matches too
 # for the row's words.
 - tapOn: "Log out on every phone|Kirjaudu ulos kaikilla puhelimilla|Logga ut på alla telefoner"
-- openLink: kuutti://
+# Signed out, the app opens on its first screen, where somebody with an
+# account goes on by I already have an account (#681, ADR-010 §22).
+- openLink: fi.kumpa://
 - extendedWaitUntil:
-    visible: "Sign in with your bank|Kirjaudu pankkitunnuksilla|Logga in med din bank"
+    visible: "I already have an account|Minulla on jo tili|Jag har redan ett konto"
     timeout: 15000
 - stopApp
 - runFlow: ../common/open-app.yaml
-- assertVisible: "Sign in with your bank|Kirjaudu pankkitunnuksilla|Logga in med din bank"
+- assertVisible: "I already have an account|Minulla on jo tili|Jag har redan ett konto"
 - assertNotVisible: "Your profile|Profiilisi|Din profil"

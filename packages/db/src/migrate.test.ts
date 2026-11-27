@@ -2,10 +2,11 @@ import { spawn } from "node:child_process";
 import { copyFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { inspect } from "node:util";
 import { ConfigKeyName, ConfigVersion } from "@kuutti/schema";
 import { describe, expect, it } from "vitest";
 import { readJournal } from "./journal.ts";
-import { migrate } from "./migrate.ts";
+import { MIGRATE_LOCK_KEY, migrate } from "./migrate.ts";
 import { migrationsStatus } from "./migrations.ts";
 import { createPool, type Queryable } from "./pool.ts";
 import { MATCHING_CONFIG_V1 } from "./seed.ts";
@@ -61,17 +62,28 @@ describe("migrate", () => {
       const pool = createPool({ connectionString: url, max: 2 });
       try {
         await migrate(pool, MIGRATIONS);
-        const { rows } = await pool.query<{ key: string; value: unknown; version: number }>(
-          "SELECT key, value, version FROM matching_config ORDER BY key, version",
-        );
+        const { rows } = await pool.query<{
+          key: string;
+          value: unknown;
+          version: number;
+          created_by: string;
+        }>("SELECT key, value, version, created_by FROM matching_config ORDER BY key, version");
         const at = (version: number) =>
           Object.fromEntries(
             rows.filter((r) => r.version === version).map((r) => [r.key, r.value]),
           );
         expect(at(1)).toEqual(MATCHING_CONFIG_V1);
-        // A new value is a new version (ADR-033 History, the maintainer's of 17/11/2026).
+        // A new value is a new version: the review hours' (ADR-033 History, the
+        // maintainer's of 17/11/2026) and the Later list's most (#681, ADR-064 History,
+        // the maintainer's of 18/11/2026).
         expect(rows.filter((r) => r.version !== 1)).toEqual([
-          { key: "auto_shadow_ban_review_hours", value: 168, version: 2 },
+          {
+            key: "auto_shadow_ban_review_hours",
+            value: 168,
+            version: 2,
+            created_by: "migration:0011",
+          },
+          { key: "stars_max", value: 30, version: 2, created_by: "migration:0016" },
         ]);
       } finally {
         await pool.end();
@@ -98,8 +110,9 @@ describe("migrate", () => {
           if (Number(rows[0]?.n) > 0) holding[table] = Number(rows[0]?.n);
         }
         expect(holding).toEqual({
-          // Version 1 of every key, and the review hours' second (migration 0011).
-          matching_config: Object.keys(MATCHING_CONFIG_V1).length + 1,
+          // Version 1 of every key, the review hours' second (migration 0011) and the
+          // Later list's (migration 0016).
+          matching_config: Object.keys(MATCHING_CONFIG_V1).length + 2,
         });
       } finally {
         await pool.end();
@@ -139,7 +152,7 @@ describe("migrate", () => {
         // A row without a reason is still written, as the seed writes one; the panel's carries its reason.
         await pool.query(
           `INSERT INTO matching_config (version, key, value, created_by)
-           VALUES (2, 'stars_max', '12'::jsonb, 'seed')`,
+           VALUES (3, 'stars_max', '12'::jsonb, 'seed')`,
         );
         await pool.query(
           `INSERT INTO matching_config (version, key, value, created_by, reason)
@@ -147,7 +160,7 @@ describe("migrate", () => {
         );
         const written = await pool.query<{ key: string; reason: string | null }>(
           `SELECT key, reason FROM matching_config
-            WHERE version = 2 AND key IN ('inbox_stop', 'stars_max') ORDER BY key`,
+            WHERE (key, version) IN (('inbox_stop', 2), ('stars_max', 3)) ORDER BY key`,
         );
         expect(written.rows).toEqual([
           { key: "inbox_stop", reason: "Smaller piles first" },
@@ -211,6 +224,213 @@ describe("migrate", () => {
       }
     });
   });
+
+  // Production at a release tag: 0002 adds 'announcement' to notice_kind and
+  // 0010's check names it. In one transaction Postgres refuses the value with
+  // 55P04 until it commits; a fresh database never shows it, since its type is
+  // created in the same transaction (#722).
+  it("takes a database at the baseline through every later migration in one boot, as a release takes production (#722, ADR-075)", async () => {
+    const atTheBaseline = migrationsBefore("0002_announcements");
+    try {
+      await withTemporaryDatabase(async (url) => {
+        const pool = createPool({ connectionString: url, max: 2 });
+        try {
+          await migrate(pool, atTheBaseline);
+          const account = await accountOf(pool, "a");
+          const journal = readJournal(MIGRATIONS) ?? [];
+
+          expect(await migrate(pool, MIGRATIONS)).toEqual({
+            state: "applied",
+            applied: journal.length - 2,
+          });
+
+          expect(await migrationsStatus(pool, MIGRATIONS)).toEqual({
+            state: "current",
+            applied: journal.length,
+            pending: [],
+          });
+          const { rows } = await pool.query("SELECT id FROM account");
+          expect(rows).toEqual([{ id: account }]);
+        } finally {
+          await pool.end();
+        }
+      });
+    } finally {
+      rmSync(atTheBaseline, { recursive: true, force: true });
+    }
+  });
+
+  it("rolls back only the migration a database refuses, keeps those before it, names it, frees the lock, and the next boot carries on from it (#722, ADR-075)", async () => {
+    const folder = migrationsBefore("0003_session_attest_key");
+    addMigrations(folder, [
+      // As a check meeting a row that staging never had.
+      {
+        tag: "0003_refused",
+        sql: 'CREATE TABLE "probe_before" (x int);--> statement-breakpoint\nALTER TABLE "account" ADD CONSTRAINT "account_probe_check" CHECK (false);',
+      },
+      { tag: "0004_after", sql: 'CREATE TABLE "probe_after" (x int);' },
+    ]);
+    const tables = async (pool: Queryable) =>
+      (
+        await pool.query<{ name: string }>(
+          "SELECT table_name AS name FROM information_schema.tables WHERE table_name LIKE 'probe_%' ORDER BY 1",
+        )
+      ).rows.map((row) => row.name);
+    const atTheBaseline = migrationsBefore("0002_announcements");
+    try {
+      await withTemporaryDatabase(async (url) => {
+        const pool = createPool({ connectionString: url, max: 2 });
+        // A session of its own: the pool's could hold the lock and take it again.
+        const other = createPool({ connectionString: url, max: 1 });
+        try {
+          await migrate(pool, atTheBaseline);
+          await accountOf(pool, "b");
+
+          await expect(migrate(pool, folder)).rejects.toMatchObject({
+            message:
+              "migration 0003_refused failed and was rolled back; this run applied 1 before it",
+            cause: { code: "23514", constraint: "account_probe_check" },
+          });
+
+          expect(await migrationsStatus(pool, folder)).toEqual({
+            state: "pending",
+            applied: 3,
+            pending: ["0003_refused", "0004_after"],
+          });
+          const { rows: kinds } = await pool.query(
+            "SELECT 'announcement' = ANY (enum_range(NULL::notice_kind)::text[]) AS added",
+          );
+          expect(kinds).toEqual([{ added: true }]);
+          expect(await tables(pool)).toEqual([]);
+          const { rows: lock } = await other.query(
+            "SELECT pg_try_advisory_lock($1) AS free, pg_advisory_unlock($1) AS released",
+            [MIGRATE_LOCK_KEY],
+          );
+          expect(lock).toEqual([{ free: true, released: true }]);
+
+          await pool.query("DELETE FROM account");
+          expect(await migrate(pool, folder)).toEqual({ state: "applied", applied: 2 });
+          expect((await migrationsStatus(pool, folder)).state).toBe("current");
+          expect(await tables(pool)).toEqual(["probe_after", "probe_before"]);
+        } finally {
+          await Promise.all([pool.end(), other.end()]);
+        }
+      });
+    } finally {
+      rmSync(folder, { recursive: true, force: true });
+      rmSync(atTheBaseline, { recursive: true, force: true });
+    }
+  });
+
+  // The boot prints a refusal to the log as it is, and a database's message,
+  // detail, hint and where can quote a row (lib/logger.ts's rule, #636).
+  it("keeps a refusal's database error to its kind, since its words can quote a person's row (#722, ADR-075)", async () => {
+    const folder = migrationsBefore("0002_announcements");
+    addMigrations(folder, [
+      {
+        tag: "0002_duplicates",
+        sql: `CREATE TABLE "probe_people" (email text);--> statement-breakpoint\nINSERT INTO "probe_people" VALUES ('person@example.com'), ('person@example.com');--> statement-breakpoint\nCREATE UNIQUE INDEX "probe_people_email" ON "probe_people" (email);`,
+      },
+    ]);
+    try {
+      await withTemporaryDatabase(async (url) => {
+        const pool = createPool({ connectionString: url, max: 1 });
+        try {
+          const refusal = await migrate(pool, folder).then(
+            () => undefined,
+            (error: unknown) => error,
+          );
+
+          expect(refusal).toMatchObject({
+            message:
+              "migration 0002_duplicates failed and was rolled back; this run applied 2 before it",
+          });
+          expect((refusal as Error).cause).toEqual({
+            code: "23505",
+            severity: "ERROR",
+            schema: "public",
+            table: "probe_people",
+            constraint: "probe_people_email",
+            routine: expect.any(String),
+          });
+          expect(inspect(refusal, { depth: 5 })).not.toContain("person@example.com");
+        } finally {
+          await pool.end();
+        }
+      });
+    } finally {
+      rmSync(folder, { recursive: true, force: true });
+    }
+  });
+
+  // drizzle-kit dates an entry by the clock of the machine that generated it.
+  // A database that has committed the one before would never apply it.
+  it.each([
+    { dated: "at the same moment as", by: 0 },
+    { dated: "before", by: -1 },
+  ])(
+    "refuses a journal with a migration dated $dated the one before it, and applies nothing (#722, ADR-075)",
+    async ({ by }) => {
+      const folder = migrationsBefore("0003_session_attest_key");
+      const [baseline, baselineSql, announcements] = readJournal(folder) ?? [];
+      expect(announcements?.tag).toBe("0002_announcements");
+      writeFileSync(
+        join(folder, "meta", "_journal.json"),
+        JSON.stringify({
+          version: "7",
+          entries: [
+            baseline,
+            baselineSql,
+            { ...announcements, when: (baselineSql?.when ?? 0) + by },
+          ],
+        }),
+      );
+      const atTheBaseline = migrationsBefore("0002_announcements");
+      try {
+        await withTemporaryDatabase(async (url) => {
+          const pool = createPool({ connectionString: url, max: 1 });
+          try {
+            await migrate(pool, atTheBaseline);
+
+            await expect(migrate(pool, folder)).rejects.toMatchObject({
+              message: "the journal's 0002_announcements is not dated after 0001_baseline_sql",
+            });
+
+            const { rows: journal } = await pool.query(
+              "SELECT count(*) AS n FROM drizzle.__drizzle_migrations",
+            );
+            expect(journal).toEqual([{ n: "2" }]);
+            const { rows: kinds } = await pool.query(
+              "SELECT 'announcement' = ANY (enum_range(NULL::notice_kind)::text[]) AS added",
+            );
+            expect(kinds).toEqual([{ added: false }]);
+          } finally {
+            await pool.end();
+          }
+        });
+      } finally {
+        rmSync(folder, { recursive: true, force: true });
+        rmSync(atTheBaseline, { recursive: true, force: true });
+      }
+    },
+  );
+
+  /** Migrations of a test's own after a folder's last, each a millisecond after the one before. */
+  function addMigrations(folder: string, added: { tag: string; sql: string }[]): void {
+    const entries = readJournal(folder) ?? [];
+    const last = entries.at(-1)?.when ?? 0;
+    for (const [i, migration] of added.entries()) {
+      writeFileSync(join(folder, `${migration.tag}.sql`), migration.sql);
+      entries.push({
+        idx: entries.length,
+        version: "7",
+        when: last + 1 + i,
+        tag: migration.tag,
+        breakpoints: true,
+      });
+    }
+    writeFileSync(join(folder, "meta", "_journal.json"), JSON.stringify({ version: "7", entries }));
+  }
 
   const accountOf = async (pool: Queryable, n: string) => {
     const { rows } = await pool.query<{ id: string }>(
@@ -903,6 +1123,7 @@ describe("migrate", () => {
           "sanction",
           "session",
           "star",
+          "unsubscribe_token",
         ]);
       } finally {
         await pool.end();

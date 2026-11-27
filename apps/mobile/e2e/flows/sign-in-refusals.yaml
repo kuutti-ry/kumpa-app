@@ -2,11 +2,12 @@
 # of personas.ts): a banned identity, an account deleted inside its waiting
 # time and those under 18 are refused at the callback, each in its own words;
 # the youngest who gets in and the oldest reach onboarding: the welcome step, a
-# friend's invitation code or, in a later run, a numbered step, which of them
-# depends on the phone and on how far they have come (#418, #581). Age is
+# friend's invitation code or, in a later run, a later step known by its
+# heading, none numbered after the bank, or home, which of them depends on the
+# phone and on how far they have come (#418, #581, #681). Age is
 # counted from the end of the birth month, so Venla, who turns 18 this month,
 # is refused on every day but its last.
-appId: fi.kuutti.app
+appId: fi.kumpa
 name: The bank login refuses the banned, the recently deleted and those under 18, and lets in 18 and 99
 ---
 - runFlow: ../common/open-app.yaml
@@ -15,7 +16,7 @@ name: The bank login refuses the banned, the recently deleted and those under 18
 - runFlow:
     file: ../common/bank-login.yaml
     env:
-      PERSONA: Tapio Heikkinen
+      PERSONA: Reijo Salonen
 - extendedWaitUntil:
     visible: "Sign-in did not complete|Kirjautuminen ei onnistunut|Inloggningen slutfördes inte"
     timeout: 30000
@@ -24,7 +25,7 @@ name: The bank login refuses the banned, the recently deleted and those under 18
 - runFlow:
     file: ../common/bank-login.yaml
     env:
-      PERSONA: Ilona Öhman
+      PERSONA: Marjatta Lund
 - extendedWaitUntil:
     visible: "You deleted your account recently.*|Poistit tilisi äskettäin.*|Du raderade ditt konto nyligen.*"
     timeout: 30000
@@ -56,7 +57,7 @@ name: The bank login refuses the banned, the recently deleted and those under 18
     env:
       PERSONA: Eetu Laine
 - extendedWaitUntil:
-    visible: "How we do things here|Näin täällä toimitaan|Så här gör vi här|Did a friend invite you\\?|Kutsuiko ystävä sinut\\?|Bjöd en vän in dig\\?|Step \\d+ of \\d+|Vaihe \\d+ / \\d+|Steg \\d+ av \\d+"
+    visible: "Accept terms of use|Hyväksy käyttöehdot|Godkänn användarvillkoren|Did a friend invite you\\?|Kutsuiko ystävä sinut\\?|Bjöd en vän in dig\\?|What should we call you\\?|Miksi sinua kutsutaan\\?|Vad ska vi kalla dig\\?|How do you describe yourself\\?|Miten kuvailet itseäsi\\?|Hur beskriver du dig själv\\?|Whom are you looking for\\?|Ketä etsit\\?|Vem söker du\\?|Where do you live\\?|Missä asut\\?|Var bor du\\?|What should your card show\\?|Mitä korttisi näyttää\\?|Vad ska ditt kort visa\\?|On your card: .*|Kortillasi: .*|På ditt kort: .*|What ages\\?|Minkä ikäisiä\\?|Vilka åldrar\\?|What are you here for\\?|Mitä etsit täältä\\?|Vad är du här för\\?|Two photos of you|Kaksi kuvaa sinusta|Två bilder på dig|Finish your profile|Viimeistele profiilisi|Gör klart din profil|Your profile|Profiilisi|Din profil"
     timeout: 30000
 
 - runFlow: ../common/sign-out.yaml
@@ -65,5 +66,5 @@ name: The bank login refuses the banned, the recently deleted and those under 18
     env:
       PERSONA: Siiri Koskinen
 - extendedWaitUntil:
-    visible: "How we do things here|Näin täällä toimitaan|Så här gör vi här|Did a friend invite you\\?|Kutsuiko ystävä sinut\\?|Bjöd en vän in dig\\?|Step \\d+ of \\d+|Vaihe \\d+ / \\d+|Steg \\d+ av \\d+"
+    visible: "Accept terms of use|Hyväksy käyttöehdot|Godkänn användarvillkoren|Did a friend invite you\\?|Kutsuiko ystävä sinut\\?|Bjöd en vän in dig\\?|What should we call you\\?|Miksi sinua kutsutaan\\?|Vad ska vi kalla dig\\?|How do you describe yourself\\?|Miten kuvailet itseäsi\\?|Hur beskriver du dig själv\\?|Whom are you looking for\\?|Ketä etsit\\?|Vem söker du\\?|Where do you live\\?|Missä asut\\?|Var bor du\\?|What should your card show\\?|Mitä korttisi näyttää\\?|Vad ska ditt kort visa\\?|On your card: .*|Kortillasi: .*|På ditt kort: .*|What ages\\?|Minkä ikäisiä\\?|Vilka åldrar\\?|What are you here for\\?|Mitä etsit täältä\\?|Vad är du här för\\?|Two photos of you|Kaksi kuvaa sinusta|Två bilder på dig|Finish your profile|Viimeistele profiilisi|Gör klart din profil|Your profile|Profiilisi|Din profil"
     timeout: 30000

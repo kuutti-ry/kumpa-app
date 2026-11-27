@@ -61,7 +61,7 @@ const REGISTER: Record<string, Entry> = {
   },
   audit_log: {
     erasure: "stays",
-    why: "Append-only record of what staff did, by its trigger; it outlives everybody.",
+    why: "What staff did, append-only by its trigger, five years from each row (ADR-076), whoever is erased.",
     stays: "action actor_identity_id at detail id subject_id subject_type",
     exported: { not: "No route exports it (docs/security-checklist.md)." },
   },
@@ -95,9 +95,10 @@ const REGISTER: Record<string, Entry> = {
   },
   conversation_participant: {
     erasure: "stays",
-    why: "account_id goes null: the counterpart reads a deleted user (#348).",
+    why: "account_id goes null: the counterpart reads a deleted user (#348). The parts the two likes named go from both rows (#463).",
     by: "eraseConversationsOf",
     stays: "account_id conversation_id id joined_at read_up_to side",
+    cleared: "anchor_field anchor_kind anchor_ref",
     exported: ["conversations"],
   },
   email_code: {
@@ -204,6 +205,13 @@ const REGISTER: Record<string, Entry> = {
   },
   session: { erasure: "goes", by: "deleteAccountSessions", exported: ["sessions"] },
   star: { erasure: "goes", by: "eraseStarsOf", exported: ["stars"] },
+  unsubscribe_token: {
+    erasure: "goes",
+    by: "eraseNotificationsOf",
+    exported: {
+      not: "The secret of the one-click unsubscribe in their own emails (#196): as a session's token, it is not repeated.",
+    },
+  },
   pond_counter: {
     erasure: "nobody",
     why: "The counts of everybody, one row, no history (ADR-013).",

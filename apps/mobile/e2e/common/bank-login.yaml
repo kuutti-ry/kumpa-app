@@ -1,25 +1,25 @@
-# From the sign-in screen, past the screens before the bank when they come
-# (#418), through the mock bank as PERSONA and back into the app
+# From the sign-in screen, past the first screen and the terms when they come
+# (#681), through the mock bank as PERSONA and back into the app
 # (#164, ADR-020 §2). It stops when the app has the link: signed in, or showing a
 # refusal, which is what the refusal flows assert on. The persona is named as the
 # mock bank's page names them (packages/db/src/seed/personas.ts, given + family).
 # No env header: a default there would override the PERSONA a caller passes.
 # The page opens in the system browser: Safari on iOS, Chrome on Android.
-appId: fi.kuutti.app
+appId: fi.kumpa
 ---
 # The sign-in button, or after a refusal that may pass the same button saying
-# "Try again" (#466), or on a phone that has not recorded the current wordings
-# the screens before the bank (#418, ADR-010 §15) where the button would be.
+# "Try again" (#466), or the first screen's I already have an account, or the
+# terms (#681, ADR-010 §22) on a phone that has not recorded the current wordings.
 - extendedWaitUntil:
-    visible: "Sign in with your bank|Kirjaudu pankkitunnuksilla|Logga in med din bank|Try again|Yritä uudelleen|Försök igen|How we do things here|Näin täällä toimitaan|Så här gör vi här|I'm in, and I accept both|Olen mukana ja hyväksyn molemmat|Jag är med och godkänner båda"
+    visible: "Sign in with your bank|Kirjaudu pankkitunnuksilla|Logga in med din bank|Try again|Yritä uudelleen|Försök igen|I already have an account|Minulla on jo tili|Jag har redan ett konto|Agree and continue|Hyväksy ja jatka|Godkänn och fortsätt"
     timeout: 15000
-# The screens before the bank when they come (before-sign-in.yaml), at the
+# The first screen and the terms when they come (before-sign-in.yaml), at the
 # top of each try. Then the button: a tap that lands while the screen still
 # settles is lost, so it is tapped again while the button is still there;
 # never once the browser is open. A fresh browser greets the first page with
 # its own screens, a moment after the page: wait for either, the page by its
 # heading. On a phone that has not recorded the wordings, the button after a
-# refusal leads back to the screens before the bank (#418): they are tapped
+# refusal leads back to the terms (#418, #681): they are tapped
 # through and the bank opened within the same try.
 - retry:
     maxRetries: 2
@@ -31,7 +31,7 @@ appId: fi.kuutti.app
           commands:
             - tapOn: "Sign in with your bank|Kirjaudu pankkitunnuksilla|Logga in med din bank|Try again|Yritä uudelleen|Försök igen"
       - extendedWaitUntil:
-          visible: "Mock bank|Continue|Jatka|Fortsätt|Use without an account|Accept & continue|Don't allow|No thanks|How we do things here|Näin täällä toimitaan|Så här gör vi här|I'm in, and I accept both|Olen mukana ja hyväksyn molemmat|Jag är med och godkänner båda"
+          visible: "Mock bank|Continue|Jatka|Fortsätt|Use without an account|Accept & continue|Don't allow|No thanks|Agree and continue|Hyväksy ja jatka|Godkänn och fortsätt"
           timeout: 20000
       - runFlow: before-sign-in.yaml
       - runFlow:
@@ -89,8 +89,8 @@ appId: fi.kuutti.app
           direction: DOWN
           centerElement: true
           timeout: 60000
-# Back in the app: a refusal, home, or an onboarding step, known by its number
-# or by the heading of the two that count none (#581).
+# Back in the app: a refusal, home, or an onboarding step, known by its
+# heading, none numbered after the bank (#581, #681).
 - waitForAnimationToEnd
 - retry:
     maxRetries: 2
@@ -101,7 +101,7 @@ appId: fi.kuutti.app
           commands:
             - tapOn: ".*${PERSONA}.*"
       - extendedWaitUntil:
-          visible: "Open|Avaa|Öppna|Sign-in did not complete|Kirjautuminen ei onnistunut|Inloggningen slutfördes inte|Your profile|Profiilisi|Din profil|Step \\d+ of \\d+|Vaihe \\d+ / \\d+|Steg \\d+ av \\d+|Did a friend invite you\\?|Kutsuiko ystävä sinut\\?|Bjöd en vän in dig\\?|How we do things here|Näin täällä toimitaan|Så här gör vi här"
+          visible: "Open|Avaa|Öppna|Sign-in did not complete|Kirjautuminen ei onnistunut|Inloggningen slutfördes inte|Your profile|Profiilisi|Din profil|What should we call you\\?|Miksi sinua kutsutaan\\?|Vad ska vi kalla dig\\?|How do you describe yourself\\?|Miten kuvailet itseäsi\\?|Hur beskriver du dig själv\\?|Whom are you looking for\\?|Ketä etsit\\?|Vem söker du\\?|Where do you live\\?|Missä asut\\?|Var bor du\\?|What should your card show\\?|Mitä korttisi näyttää\\?|Vad ska ditt kort visa\\?|On your card: .*|Kortillasi: .*|På ditt kort: .*|What ages\\?|Minkä ikäisiä\\?|Vilka åldrar\\?|What are you here for\\?|Mitä etsit täältä\\?|Vad är du här för\\?|Two photos of you|Kaksi kuvaa sinusta|Två bilder på dig|Finish your profile|Viimeistele profiilisi|Gör klart din profil|Did a friend invite you\\?|Kutsuiko ystävä sinut\\?|Bjöd en vän in dig\\?|Accept terms of use|Hyväksy käyttöehdot|Godkänn användarvillkoren"
           timeout: 20000
 # Only iOS asks: on Android the question would cost its 7 s on every sign-in.
 - runFlow:

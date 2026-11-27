@@ -35,6 +35,8 @@ export type LoginDeps = {
   logger: Logger;
   /** Where an admin login's browser is sent back to (#49). */
   adminAppUrl: string;
+  /** The return's verified https address, by platform, where this API serves that platform's file (links.ts). */
+  verifiedReturns?: Partial<Record<string, string>>;
 };
 
 /**
@@ -218,7 +220,7 @@ async function finishLogin(
         { acr: derived.reference.acr, amr: derived.reference.amr, outcome },
         "bank login",
       );
-      return new URL(appReturnUrl(code));
+      return new URL(appReturnUrl(code, deps.verifiedReturns?.[request.platform]));
     }
   }
   throw new Error("account erased twice during one login");

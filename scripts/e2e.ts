@@ -5,7 +5,7 @@
  *   pnpm e2e -- --device <udid>                one simulator, booted for the run and shut down after
  *   pnpm e2e -- apps/mobile/e2e/flows/x.yaml   one flow
  *   pnpm e2e -- --shard 2/4                    the second of four stretches of the order (CI's jobs)
- *   node scripts/e2e.ts --self-test            the command line's and the recovery's cases; runs nothing
+ *   node scripts/e2e.ts --self-test            the command line's, the order's and the recovery's cases; runs nothing
  *
  * The flows start from the cast's stories, so `pnpm demo:reset` comes first,
  * and the photo flows take their pictures from the release `pnpm demo:assets`
@@ -172,28 +172,9 @@ async function liveEnv(): Promise<string[]> {
  * whole, so a persona's flows stay on one device as far as the cut allows (#226).
  */
 function planRun(shard: string | undefined): { config: string[]; flows: string[] } {
-  const dir = resolve(ROOT, WORKSPACE);
-  const order: string[] = parse(readFileSync(join(dir, "config.yaml"), "utf8")).executionOrder
-    .flowsOrder;
-  const flows = new Map<string, { file: string; weight: number }>();
-  for (const file of readdirSync(join(dir, "flows")).filter((name) => /\.ya?ml$/.test(name))) {
-    const text = readFileSync(join(dir, "flows", file), "utf8");
-    const name: string = parseAllDocuments(text)[0]?.toJS()?.name ?? file.replace(/\.ya?ml$/, "");
-    flows.set(name, { file, weight: weightOf(text) });
-  }
-  const problems = [
-    ...[...flows]
-      .filter(([name]) => !order.includes(name))
-      .map(([, flow]) => `flows/${flow.file} is not in the order`),
-    ...order.filter((name) => !flows.has(name)).map((name) => `no flow is named "${name}"`),
-    ...order
-      .filter((name, i) => order.indexOf(name) !== i)
-      .map((name) => `"${name}" is in the order twice`),
-  ];
+  const { order, flows, problems } = readOrder(resolve(ROOT, WORKSPACE));
   if (problems.length > 0) {
-    console.error(
-      `e2e: ${WORKSPACE}/config.yaml's executionOrder and the flows differ:\n  ${problems.join("\n  ")}`,
-    );
+    console.error(`e2e: ${orderDiffers(problems)}`);
     process.exit(1);
   }
   if (shard === undefined) {
@@ -219,6 +200,80 @@ function planRun(shard: string | undefined): { config: string[]; flows: string[]
     `e2e: shard ${shard}, ${part.length} of ${order.length} flows: ${flowsOf.join(", ")}`,
   );
   return { config, flows: flowsOf };
+}
+
+/** config.yaml's order and the flows of the workspace at `dir` by their names, and where they differ. */
+function readOrder(dir: string): {
+  order: string[];
+  flows: Map<string, { file: string; weight: number }>;
+  problems: string[];
+} {
+  const order: string[] = parse(readFileSync(join(dir, "config.yaml"), "utf8")).executionOrder
+    .flowsOrder;
+  const flows = new Map<string, { file: string; weight: number }>();
+  for (const file of readdirSync(join(dir, "flows")).filter((name) => /\.ya?ml$/.test(name))) {
+    const text = readFileSync(join(dir, "flows", file), "utf8");
+    const name: string = parseAllDocuments(text)[0]?.toJS()?.name ?? file.replace(/\.ya?ml$/, "");
+    flows.set(name, { file, weight: weightOf(text) });
+  }
+  const problems = [
+    ...[...flows]
+      .filter(([name]) => !order.includes(name))
+      .map(([, flow]) => `flows/${flow.file} is not in the order`),
+    ...order.filter((name) => !flows.has(name)).map((name) => `no flow is named "${name}"`),
+    ...order
+      .filter((name, i) => order.indexOf(name) !== i)
+      .map((name) => `"${name}" is in the order twice`),
+  ];
+  return { order, flows, problems };
+}
+
+function orderDiffers(problems: string[]): string {
+  return `${WORKSPACE}/config.yaml's executionOrder and the flows differ:\n  ${problems.join("\n  ")}`;
+}
+
+/**
+ * The order held to the flows, in the self-test, which CI's lint job runs on every pull request:
+ * the e2e jobs run only on main and on a pull request labelled e2e, so a flow renamed and left
+ * under its old name in config.yaml merged unseen and stopped every shard after it (#761). The
+ * checker is shown its three refusals and a control on a workspace of its own, then the real one.
+ */
+function orderChecks(): { checks: number; failures: string[] } {
+  const failures: string[] = [];
+  const dir = mkdtempSync(join(tmpdir(), "kuutti-e2e-order-"));
+  const cases: Array<[string, string[], Record<string, string | null>, string[]]> = [
+    ["control: every flow once", ["A", "B"], { "a.yaml": "A", "b.yml": "B" }, []],
+    ["a flow with no name goes by its file's", ["A", "c"], { "a.yaml": "A", "c.yaml": null }, []],
+    [
+      "a flow renamed and the order on its old name",
+      ["A", "Old B"],
+      { "a.yaml": "A", "b.yaml": "B" },
+      ["flows/b.yaml is not in the order", 'no flow is named "Old B"'],
+    ],
+    [
+      "a name twice",
+      ["A", "B", "A"],
+      { "a.yaml": "A", "b.yaml": "B" },
+      ['"A" is in the order twice'],
+    ],
+  ];
+  for (const [what, order, files, want] of cases) {
+    rmSync(join(dir, "flows"), { recursive: true, force: true });
+    mkdirSync(join(dir, "flows"));
+    writeFileSync(join(dir, "config.yaml"), stringify({ executionOrder: { flowsOrder: order } }));
+    for (const [file, name] of Object.entries(files)) {
+      const head = name === null ? "appId: fi.kumpa\n" : `appId: fi.kumpa\nname: ${name}\n`;
+      writeFileSync(join(dir, "flows", file), `${head}---\n- launchApp\n`);
+    }
+    const got = readOrder(dir).problems;
+    if (JSON.stringify(got) !== JSON.stringify(want)) {
+      failures.push(`order, ${what}: ${JSON.stringify(got)}, not ${JSON.stringify(want)}`);
+    }
+  }
+  rmSync(dir, { recursive: true, force: true });
+  const real = readOrder(resolve(ROOT, WORKSPACE)).problems;
+  if (real.length > 0) failures.push(orderDiffers(real));
+  return { checks: cases.length + 1, failures };
 }
 
 /**
@@ -597,11 +652,15 @@ async function selfTest(): Promise<never> {
       `✖ self-test: --shard exited ${child.status} (${child.stderr.trim()}), copied ${copied}`,
     );
   }
+  const order = orderChecks();
+  for (const problem of order.failures) console.error(`✖ self-test: ${problem}`);
   const recovery = await recoveryChecks();
   for (const problem of recovery.failures) console.error(`✖ self-test: ${problem}`);
-  if (failed.length > 0 || !early || recovery.failures.length > 0) process.exit(1);
+  if (failed.length > 0 || !early || order.failures.length > 0 || recovery.failures.length > 0) {
+    process.exit(1);
+  }
   console.log(
-    `✔ e2e self-test: ${cases.length} command lines, refused before the copy; ${recovery.checks} checks of the recovery`,
+    `✔ e2e self-test: ${cases.length} command lines, refused before the copy; ${order.checks} checks of the order; ${recovery.checks} checks of the recovery`,
   );
   process.exit(0);
 }

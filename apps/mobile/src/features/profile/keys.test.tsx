@@ -200,9 +200,6 @@ describe("completenessText", () => {
     const t = await english();
     expect(completenessText(t, "display_name")).toBe("A name on the card");
     expect(completenessText(t, "photos")).toBe("At least 2 approved photos");
-    expect(completenessText(t, "bio_or_prompts")).toBe(
-      "A bio of 50 characters, a ready line, or two answered questions",
-    );
     expect(completenessText(t, "seeks")).toBe("Whom you are looking for");
     expect(completenessText(t, "age_window")).toBe("Your age window");
     const texts = CompletenessItem.options.map((item) => completenessText(t, item));

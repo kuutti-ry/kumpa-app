@@ -1,6 +1,6 @@
 # ADR-001: Infrastructure as code with OpenTofu
 
-- Status: proposed (built in `infra/` and applied to staging, and to production on 2026-10-24, ADR-049; accepting it is the maintainer's), amended 2026-09-13 (#6: admin access through IAM Identity Center), 2026-09-17 and 2026-09-18 (the domain; the placeholder page), 2026-09-28 (the site moved to a repository of its own) 2026-10-03 (#110: the organisation renamed) and 2026-11-16 (#697: the second domain `kumpa.fi`, its zone adopted; see History)
+- Status: proposed (built in `infra/` and applied to staging, and to production on 2026-10-24, ADR-049; accepting it is the maintainer's), amended 2026-09-13 (#6: admin access through IAM Identity Center), 2026-09-17 and 2026-09-18 (the domain; the placeholder page), 2026-09-28 (the site moved to a repository of its own) 2026-10-03 (#110: the organisation renamed), 2026-11-16 (#697: the second domain `kumpa.fi`, its zone adopted) and 2026-11-18 (#726: the misspelling `kunpa.fi`, registered at Zoner, its zone created in code; see History)
 - Date: 2026-09-12
 - Follows: TD-4 (single-vendor AWS, eu-central-1), TD-19 (RDS, SSM, instance role)
 
@@ -68,6 +68,8 @@ Retired 2026-09-28: the site has a repository of its own, `kuutti-ry/kuutti-app-
 
 Added 2026-11-16 (#697). A second domain, `kumpa.fi`, is registered through Route 53 in this account in the same way, and the bootstrap adopts the zone its registration created, also with an import block. That makes it the second sanctioned import of a zone. The same site is served there by the Amplify app under the same exception, and Amplify's records in that zone stay unmanaged. The domain is a secondary domain of the association's Google Workspace. On 2026-11-16 its MX, Google's verification and its SPF were made with the CLI for Gmail's activation and then imported, as kuutti.app's Google records were by #450 (ADR-043 §5). From then on they change in code, and a record that comes from outside, like Google's DKIM key, is declared and never clicked. The zone's DMARC and CAA were declared in code from the start.
 
+Added 2026-11-18 (#726). A third domain, `kunpa.fi`, the misspelling of `kumpa.fi` with an n, was registered on 2026-11-17 at Zoner, a Finnish registrar, and not through Route 53. It is the one registration outside this account: it does not move with the account (TD-4) and has a row of its own in `docs/runbooks/custody.md`. No registration made its zone, so the bootstrap creates it, the first zone that is created in code and not imported, and the zone's four name servers are entered at Zoner by hand, a step no provider performs, like the purchase itself. The Amplify app answers for the name with a redirect to `kumpa.fi` under the same exception, and its records in that zone stay unmanaged; the zone's other records say that the name has no mail. Whether the registration moves to Route 53 is the maintainer's; nothing here depends on where the name is registered.
+
 ### GitHub OIDC trust, specific to this repository
 
 `kuutti-app` was created after 15 July 2026, so it uses GitHub's immutable subject claims. The subject is `repo:kuutti-ry@<owner_id>/kuutti-app@<repo_id>:...`, not the name-based form shown in most documentation and examples. Trust policies therefore condition on the `repository_id` and `repository_owner_id` claims, which are stable and survive renames, rather than pattern-matching the name inside `sub`. A policy copied from an older example will fail to assume with an unhelpful error.
@@ -93,5 +95,6 @@ Added 2026-10-03. The organisation was renamed from `kuutti-fi` to `kuutti-ry` o
 
 ## History
 
+- 2026-11-18 (#726): the zone of `kunpa.fi`, the misspelling of `kumpa.fi`, created in `infra/bootstrap/dns.tf` with records that say it has no mail (The domain, the paragraph of that day). The name is registered at Zoner, whose own forwarding has no certificate for it, so the Amplify app answers for it.
 - 2026-11-16 (#697): the zone of `kumpa.fi` and its Google Workspace records adopted in `infra/bootstrap/dns.tf` (The domain, the paragraph of that day). The records were made with the CLI that morning, ahead of the code, for Gmail's activation.
 - 2026-10-24 (#397): the layout's `email/` module was never built. Mail's SES identity belongs to the domain, so it went to `bootstrap/mail.tf` with #385 (ADR-043 §5). The modules that came later, `admin` (ADR-025) and `research` (ADR-029), and the deployment they make are in `infra/README.md`'s layout and in `docs/architecture/`.

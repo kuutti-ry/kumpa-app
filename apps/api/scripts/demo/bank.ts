@@ -93,9 +93,9 @@ function rateLimited(response: Response): boolean {
  * for the rate, whether as a 429 or as a start sent back with
  * error=auth_rate_limited. The personas' own calls are counted per person and
  * leave the address's count (ADR-026 §2); what a reset spends of its address
- * is its starts, nineteen of the sign-in doors' sixty a minute in
+ * is its starts, twenty-five of the sign-in doors' sixty a minute in
  * development (§4, §5), and the requests before a persona is signed in, about
- * seventy of the address's window, so a second reset within one minute would
+ * ninety of the address's window, so a second reset within one minute would
  * otherwise stop half way (docs/demo/runbook.md).
  */
 function localApi(context: BankContext): void {
@@ -168,7 +168,7 @@ async function bankOf(context: BankContext, locale: Locale, challenge: string): 
   const bank = locationOf(start, "/auth/start");
   // A start the API refuses goes back to the app, as for a browser: said by
   // its code, rather than taken for a bank somewhere else.
-  const refused = bank.protocol === "kuutti:" ? bank.searchParams.get("error") : null;
+  const refused = bank.protocol === "fi.kumpa:" ? bank.searchParams.get("error") : null;
   if (refused) throw new DemoError(`/auth/start: the API refused the login with ${refused}`);
   // The claims are artificial, and still they go to the mock bank on this
   // computer and nowhere else: an API configured for a real broker would

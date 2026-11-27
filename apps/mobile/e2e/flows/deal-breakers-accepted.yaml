@@ -8,11 +8,11 @@
 # limit refuses nobody: that refusal is the screen's test and the API's, with a
 # lower number. Sanna answered all six fields and has none set; the flow takes
 # hers off again, so it leaves her as it found her.
-appId: fi.kuutti.app
+appId: fi.kumpa
 name: A deal-breaker starts on Everyone, says what it accepts on its row, and going back saves it
 ---
 - runFlow: ../common/sign-in.yaml
-- openLink: kuutti://profile/seek
+- openLink: fi.kumpa://profile/seek
 - extendedWaitUntil:
     visible: "These work both ways.*|Nämä toimivat molempiin suuntiin.*|De här gäller åt båda håll.*"
     timeout: 15000

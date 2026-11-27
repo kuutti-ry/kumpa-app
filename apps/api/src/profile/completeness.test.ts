@@ -2,11 +2,10 @@ import { describe, expect, it } from "vitest";
 import { ageInYears } from "./card.ts";
 import { type CompletenessSnapshot, completeness } from "./completeness.ts";
 
+// No bio, ready line or prompts: since #681 (option b) the words are no part
+// of the rule, so the snapshot does not carry them.
 const ready: CompletenessSnapshot = {
   displayName: "Aino",
-  bio: "x".repeat(50),
-  bioPreset: null,
-  answeredPrompts: 0,
   approvedPhotos: 3,
   seeks: "women",
   ageWindow: [25, 35],
@@ -16,35 +15,17 @@ describe("the completeness rule", () => {
   it.each([
     ["everything there", ready, []],
     ["no name", { ...ready, displayName: null }, ["display_name"]],
+    ["an empty name", { ...ready, displayName: "" }, ["display_name"]],
+    ["no photo", { ...ready, approvedPhotos: 0 }, ["photos"]],
     ["one photo", { ...ready, approvedPhotos: 1 }, ["photos"]],
     ["two photos are enough", { ...ready, approvedPhotos: 2 }, []],
-    [
-      "a short bio and one prompt",
-      { ...ready, bio: "x".repeat(49), answeredPrompts: 1 },
-      ["bio_or_prompts"],
-    ],
-    ["no bio but two prompts", { ...ready, bio: null, answeredPrompts: 2 }, []],
-    ["no bio and no prompt", { ...ready, bio: null, answeredPrompts: 0 }, ["bio_or_prompts"]],
-    // The maintainer (#239): "even if empty, but placeholder - show the card".
-    ["a ready line in place of a bio", { ...ready, bio: null, bioPreset: "photos_speak" }, []],
-    [
-      "a ready line with a blank bio's whitespace",
-      { ...ready, bio: "   ", bioPreset: "ask_me_instead" },
-      [],
-    ],
+    ["whom one seeks not answered", { ...ready, seeks: null }, ["seeks"]],
+    ["no age window", { ...ready, ageWindow: null }, ["age_window"]],
     ["onboarding not done", { ...ready, seeks: null, ageWindow: null }, ["seeks", "age_window"]],
     [
       "nothing at all",
-      {
-        displayName: null,
-        bio: null,
-        bioPreset: null,
-        answeredPrompts: 0,
-        approvedPhotos: 0,
-        seeks: null,
-        ageWindow: null,
-      },
-      ["display_name", "photos", "bio_or_prompts", "seeks", "age_window"],
+      { displayName: null, approvedPhotos: 0, seeks: null, ageWindow: null },
+      ["display_name", "photos", "seeks", "age_window"],
     ],
   ] as const)("%s", (_name, snapshot, missing) => {
     const verdict = completeness(snapshot);

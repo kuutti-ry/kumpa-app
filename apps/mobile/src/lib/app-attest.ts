@@ -7,9 +7,9 @@ import { Platform } from "react-native";
  * the Secure Enclave with Apple's attestation of it, and at each refresh that
  * key's assertion. The native half is Expo's `@expo/app-integrity`, reached
  * here by its module's name and not imported, so that this code moves no
- * fingerprint: a build that does not hold the module (every build until the
- * native batch adds it, #184), an Android phone and the web preview make
- * nothing, and the API says whether nothing will do.
+ * fingerprint: a build that does not hold the module (every build from
+ * before #184's native batch, which added it), an Android phone and the web
+ * preview make nothing, and the API says whether nothing will do.
  */
 type AppIntegrity = {
   /** Apple's own word on this device: not a simulator, for one. */

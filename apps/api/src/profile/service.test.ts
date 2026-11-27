@@ -86,15 +86,15 @@ describe("the card for a viewer who is not the owner", () => {
     ).rejects.toMatchObject({ status: 404, code: "not_found" });
   });
 
-  test("a subject with a profile and photos but not complete is a 404 and records nothing", async ({
+  test("a subject with a profile and a photo but not complete is a 404 and records nothing", async ({
     ctx,
   }) => {
-    // Onboarding is done, the photos are there; the bio is short and no prompt is answered.
+    // Onboarding is done and the profile written, but one approved photo is one short.
     const { deps } = await depsOf(ctx, { readPreferences: onboarded });
     const viewer = await signedInAccount(ctx.client);
     const subject = await signedInAccount(ctx.client);
     await profileRow(ctx, subject.accountId, { bio: "Hi." });
-    await approvedPhotos(ctx, subject.accountId, 3);
+    await approvedPhotos(ctx, subject.accountId, 1);
     await expect(
       buildCard(deps, { viewerAccountId: viewer.accountId, subjectAccountId: subject.accountId }),
     ).rejects.toMatchObject({ status: 404 });

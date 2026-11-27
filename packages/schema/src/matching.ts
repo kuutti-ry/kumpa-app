@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ExportedAnchor, LikeAnchor, LikedPart } from "./anchor.ts";
 import { DEAL_BREAKERS_CAP, DealBreakerField } from "./deal-breakers.ts";
 import { DistanceBand } from "./distance.ts";
 import { ProfileCard } from "./profile.ts";
@@ -10,8 +11,9 @@ import { exportPart } from "./report.ts";
 // change until the day ends. No answer carries a score, a seen time or
 // anybody's decision about the person, and the counts it carries are the
 // person's own: their likes left today (#524) and the conversations on their
-// turn (ADR-062 §5). A star is the person's own too (#575, ADR-064): no answer
-// tells anybody else of one, and none says how many stars anybody has.
+// turn (ADR-062 §5). A star is the person's own too (#575, ADR-064), put by
+// Later since #681: no answer tells anybody else of one, and none says how many
+// stars anybody has.
 
 /** The most cards one read hands over (ADR-062 §1): a bound of the contract, not a tunable; nobody meets it, the next read goes on. */
 export const QUEUE_PAGE = 10;
@@ -32,8 +34,8 @@ export type QueueDecision = z.infer<typeof QueueDecision>;
 /**
  * What a person chooses on a card, and reads back: a like, a pass, a fish,
  * which is a like with a mark (#378, stored as `like` with `fish`, ADR-039), or
- * a skip, Later on the button, which moves on and costs nobody anything
- * (ADR-062 §3).
+ * a skip, Later on the button, which moves on, costs nobody anything (ADR-062
+ * §3) and puts the person on the Later list, the star's (#681, ADR-064).
  */
 export const QueueChoice = z.enum(["like", "pass", "fish", "skip"]).meta({ id: "QueueChoice" });
 export type QueueChoice = z.infer<typeof QueueChoice>;
@@ -60,6 +62,12 @@ export const QueueEntry = z
      * say: {field}". Absent on an older API.
      */
     notAnswered: z.array(DealBreakerField).max(DEAL_BREAKERS_CAP).optional(),
+    /**
+     * On a `liked_you` or `fish` card, the part of the person's own card the
+     * waiting like named (#463, ADR-077), drawn from their profile as it stands:
+     * absent where it named none or the part has gone since, and on every other card.
+     */
+    likedYour: LikedPart.optional(),
   })
   .meta({ id: "QueueEntry" });
 export type QueueEntry = z.infer<typeof QueueEntry>;
@@ -175,12 +183,38 @@ export const QueueEntryParams = z
   .object({ day: z.iso.date(), position: z.coerce.number().int().min(1).max(QUEUE_POSITION_MAX) })
   .meta({ id: "QueueEntryParams" });
 
-/** A like, a pass, a fish or a skip; another one the same day replaces it. */
+/**
+ * A like, a pass, a fish or a skip; another one the same day replaces it.
+ * `later: true` asks the answer for its `later` (#681). An app that sends none
+ * gets the answer as it was before that key: the JavaScript built into a store
+ * build reads answers strictly and runs on the first launch after an install,
+ * whatever main has become since (#745).
+ */
 export const QueueDecisionUpdate = z
-  .object({ decision: QueueChoice })
+  .object({
+    decision: QueueChoice,
+    later: z.literal(true).optional(),
+    /** The part of the card a like or a fish is for (#463, ADR-077); never with a pass or a skip. */
+    anchor: LikeAnchor.optional(),
+  })
   .strict()
+  .refine((update) => !update.anchor || update.decision === "like" || update.decision === "fish", {
+    message: "only a like or a fish names a part of the card",
+    path: ["anchor"],
+  })
   .meta({ id: "QueueDecisionUpdate" });
 export type QueueDecisionUpdate = z.infer<typeof QueueDecisionUpdate>;
+
+/**
+ * Where a Later left the card's person (#681, ADR-064 History): on the Later
+ * list, `first` when they are the only one it shows, so the phone can say then
+ * that only the person sees it; `full` when the list shows matching_config
+ * stars_max people, so the card comes back another day as a skip did before;
+ * `not_listed` for a card the person was never served, which takes no place
+ * (ADR-064 §1). Nothing about anybody else.
+ */
+export const Later = z.enum(["first", "listed", "full", "not_listed"]).meta({ id: "Later" });
+export type Later = z.infer<typeof Later>;
 
 /**
  * The answer to a decision (#100): the conversation the card's like is part
@@ -189,7 +223,8 @@ export type QueueDecisionUpdate = z.infer<typeof QueueDecisionUpdate>;
  * match. `fishToSend` as the queue says it, after this decision: a fish sent
  * may spend the last, one changed to a like or a pass gives it back (#475).
  * `likesLeft` and `yourTurn` likewise, so the screen follows each decision
- * without a read.
+ * without a read. `later` only when the update asked for it (#745): for a
+ * skip, null for any other decision.
  */
 export const QueueDecisionAnswer = z
   .object({
@@ -197,6 +232,7 @@ export const QueueDecisionAnswer = z
     fishToSend,
     likesLeft,
     yourTurn,
+    later: Later.nullable().optional(),
   })
   .strict()
   .meta({ id: "QueueDecisionAnswer" });
@@ -212,17 +248,6 @@ export const STARS_CEILING = 100;
 
 /** A star by its id: the caller's own, or nobody's (rule 6). */
 export const StarParams = z.object({ id: z.uuid() }).meta({ id: "StarParams" });
-
-/**
- * A star put on a card (#575): its id, to clear or open it by, and whether it is
- * the only one the list shows, so the phone can say then that only the person
- * sees it. Nothing about anybody else.
- */
-export const StarAnswer = z
-  .object({ id: z.uuid(), first: z.boolean() })
-  .strict()
-  .meta({ id: "StarAnswer" });
-export type StarAnswer = z.infer<typeof StarAnswer>;
 
 /**
  * Somebody the person starred, as the list shows them (#575): the star's id, never
@@ -244,7 +269,7 @@ export const StarredPerson = z
   .meta({ id: "StarredPerson" });
 export type StarredPerson = z.infer<typeof StarredPerson>;
 
-/** The Starred list (#575, ADR-064): those who pass now, by when the person starred them, the latest first, and by nothing else. */
+/** The Later list (#575, ADR-064): those who pass now, by when the person starred them, the latest first, and by nothing else. */
 export const StarList = z
   .object({ items: z.array(StarredPerson).max(STARS_CEILING) })
   .strict()
@@ -275,6 +300,8 @@ export const ExportedQueueEntry = z
     /** The band the card carried (ADR-061 §5), in key and in words; null on an entry from before #514. */
     distance: DistanceBand.nullable(),
     distanceInWords: z.string().nullable(),
+    /** The part of the card the person's like named (#463, ADR-077); null with none. */
+    anchor: ExportedAnchor.nullable(),
   })
   .meta({ id: "ExportedQueueEntry" });
 export type ExportedQueueEntry = z.infer<typeof ExportedQueueEntry>;

@@ -27,10 +27,11 @@ import {
   sweepOrphanedObjects,
   sweepPendingPhotos,
 } from "./media/index.ts";
-import { createPush, type Push } from "./notifications/index.ts";
+import { createPush, type Push, unsubscribeBase } from "./notifications/index.ts";
 import {
   auditBoundary,
   endSuspensions,
+  pruneAuditLog,
   prunePhotoCheckNotes,
   pruneReports,
 } from "./safety/index.ts";
@@ -193,13 +194,16 @@ export async function boot({
   logger.info({ ios: config.IOS_ATTESTATION, team: config.IOS_TEAM_ID }, "app attestation");
   // The process's one push (#102, ADR-055): the app's message and match
   // pushes and the queue's, asking the same live registry who is in the app.
+  const unsubscribe = unsubscribeBase(config);
   const push = createPush({
     db: pool,
     logger,
     now: () => new Date(),
     ...(pusher ? { pusher } : {}),
-    // An announcement's email goes with its push (ADR-068 §5).
+    // An announcement's email goes with its push (ADR-068 §5), with its
+    // one-click unsubscribe (#196).
     ...(mailer ? { mailer } : {}),
+    ...(unsubscribe ? { unsubscribe } : {}),
     online: (accountId) => live.online(accountId),
   });
   const app = createApp({
@@ -253,11 +257,11 @@ export async function boot({
           now(),
         ),
     },
+    // The staff-action log keeps five years (#714, ADR-076, ADR-006 §6, TD-7): the
+    // database's own function deletes what is older, by the database's clock.
+    { name: "prune-audit-log", run: async () => ({ pruned: await pruneAuditLog(pool) }) },
     // Conversations silent for silent_match_archive_days are put away (#348, TD-13).
     archiveJob({ db: pool, logger, now }),
-    // shortcut: nothing prunes audit_log, which the privacy policy keeps five years
-    // (ADR-006 §6, TD-7) and its triggers keep for good; no row is five years old
-    // before October 2031, and #714 builds the prune that lifts this before then.
   ];
   // Photos the automatic check missed get one more look (#49); none without a moderator.
   const mediaDeps = media.deps;

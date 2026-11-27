@@ -7,11 +7,11 @@
 # the flow reads what the eye has instead. Sanna has none; the flow removes the
 # one it saves. Each run sends her one code of the five a Finnish day allows
 # (email_codes_per_day): a sixth run on the same day needs `pnpm demo:reset` first.
-appId: fi.kuutti.app
+appId: fi.kumpa
 name: A malformed e-mail is refused in words, a valid one is saved, and it can be removed
 ---
 - runFlow: ../common/sign-in.yaml
-- openLink: kuutti://account/email
+- openLink: fi.kumpa://account/email
 - extendedWaitUntil:
     visible: "A way to stay in touch|Tapa pitää yhteyttä|Ett sätt att hålla kontakten"
     timeout: 15000
@@ -29,9 +29,22 @@ name: A malformed e-mail is refused in words, a valid one is saved, and it can b
 - extendedWaitUntil:
     visible: "That does not look like an e-mail address\\.|Tuo ei näytä sähköpostiosoitteelta\\.|Det ser inte ut som en e-postadress\\."
     timeout: 15000
-- tapOn: "not-an-address"
-- eraseText: 30
+# Maestro's typing on a loaded emulator can double the letters (#681's run typed
+# "nnott--an--aadddrdreessss"): any malformed address is refused, so the field is
+# found again by its name, not by what was typed into it, and the valid address,
+# which has to be exactly itself, is typed once more if it did not land as is.
+- tapOn:
+    text: "E-mail address|Sähköpostiosoite|E-postadress"
+    index: 1
+- eraseText: 60
 - inputText: "sanna.demo@example.com"
+- runFlow:
+    when:
+      notVisible: "sanna\\.demo@example\\.com"
+    commands:
+      - eraseText: 60
+      - inputText: "sanna.demo@example.com"
+- assertVisible: "sanna\\.demo@example\\.com"
 - tapOn: "Send a confirmation code|Lähetä vahvistuskoodi|Skicka en bekräftelsekod"
 # Saved, and its code on the way without a tap of its own: the code's line
 # stands where Send stood, and nothing else is drawn of it.

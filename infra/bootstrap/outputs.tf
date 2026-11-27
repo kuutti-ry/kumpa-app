@@ -55,6 +55,11 @@ output "dns_name_servers" {
   value       = aws_route53_zone.main.name_servers
 }
 
+output "kunpa_name_servers" {
+  description = "The name servers of kunpa.fi's zone, entered by hand at Zoner, where the misspelling is registered (#726; README, The website)."
+  value       = aws_route53_zone.kunpa.name_servers
+}
+
 output "ses_identity_arn" {
   description = "The SES identity of the project domain (#385, ADR-043 §5). Each environment's instance role may send through it from noreply@ alone (modules/compute, SesSendAsNoreply)."
   value       = aws_sesv2_email_identity.main.arn

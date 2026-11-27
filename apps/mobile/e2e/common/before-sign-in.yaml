@@ -1,33 +1,60 @@
-# The screen before the bank (#418, ADR-010 §15), when it stands where the
-# sign-in button would: the norms with the terms and the privacy summary, both
-# accepted. The phone remembers them after its first sign-in, so most logins
-# never see it; the first flow on a fresh phone (each CI job's) always does,
-# and so does every try after a refusal until a sign-in records them, since
-# the app drops the answers of a refused attempt.
-# Asked as `notVisible`, in half a second, and tapped behind a flag the condition
-# clears (README). Ends at the sign-in button, with `output.beforeSignIn` saying
-# whether the screen came. Runs from bank-login.yaml.
-appId: fi.kuutti.app
+# The screens before the bank for somebody with an account (#681, ADR-010
+# §22): the first screen's "I already have an account", then "Accept terms of
+# use" unless this phone recorded the current wordings. The phone remembers
+# them after its first sign-in, so most logins pass straight to the bank; the
+# first flow on a fresh phone (each CI job's) always sees the terms, and so does
+# every try after a refusal until a sign-in records them, since the app drops
+# the acceptance of a refused attempt. A newcomer's way, Get started and the
+# four questions, is onboarding.yaml's own, and arrives here at the bank's
+# button with nothing left to tap.
+# Each screen is asked as `notVisible`, in half a second, and tapped behind a
+# flag the condition clears (README). Ends at the bank's button, with
+# `output.beforeSignIn` saying whether a screen came. Runs from bank-login.yaml.
+appId: fi.kumpa
 ---
 - evalScript: ${output.beforeSignIn = true}
 - runFlow:
     when:
-      notVisible: "How we do things here|Näin täällä toimitaan|Så här gör vi här|I'm in, and I accept both|Olen mukana ja hyväksyn molemmat|Jag är med och godkänner båda"
+      notVisible: "I already have an account|Minulla on jo tili|Jag har redan ett konto|Agree and continue|Hyväksy ja jatka|Godkänn och fortsätt"
     commands:
       - evalScript: ${output.beforeSignIn = false}
 - runFlow:
     when:
       true: ${output.beforeSignIn}
     commands:
-      # The norms' heading is the screen's one (#581).
-      - assertNotVisible: "Before you sign in|Ennen kuin kirjaudut|Innan du loggar in"
-      # Below the norms and both texts, under the fold on a phone.
-      - scrollUntilVisible:
-          element: "I'm in, and I accept both|Olen mukana ja hyväksyn molemmat|Jag är med och godkänner båda"
-          direction: DOWN
-          centerElement: true
-          timeout: 60000
-      - tapOn: "I'm in, and I accept both|Olen mukana ja hyväksyn molemmat|Jag är med och godkänner båda"
+      # The first screen says what Kumpa is, with no legal text (#681).
+      - evalScript: ${output.firstScreen = true}
+      - runFlow:
+          when:
+            notVisible: "I already have an account|Minulla on jo tili|Jag har redan ett konto"
+          commands:
+            - evalScript: ${output.firstScreen = false}
+      - runFlow:
+          when:
+            true: ${output.firstScreen}
+          commands:
+            - assertNotVisible: "Read the Terms of Use|Lue käyttöehdot|Läs användarvillkoren"
+            - tapOn: "I already have an account|Minulla on jo tili|Jag har redan ett konto"
+            - extendedWaitUntil:
+                visible: "Sign in with your bank|Kirjaudu pankkitunnuksilla|Logga in med din bank|Agree and continue|Hyväksy ja jatka|Godkänn och fortsätt"
+                timeout: 15000
+      # The terms in one line and two links, unless this phone recorded them.
+      - evalScript: ${output.termsScreen = true}
+      - runFlow:
+          when:
+            notVisible: "Agree and continue|Hyväksy ja jatka|Godkänn och fortsätt"
+          commands:
+            - evalScript: ${output.termsScreen = false}
+      - runFlow:
+          when:
+            true: ${output.termsScreen}
+          commands:
+            - scrollUntilVisible:
+                element: "Agree and continue|Hyväksy ja jatka|Godkänn och fortsätt"
+                direction: DOWN
+                centerElement: true
+                timeout: 60000
+            - tapOn: "Agree and continue|Hyväksy ja jatka|Godkänn och fortsätt"
       - extendedWaitUntil:
           visible: "Sign in with your bank|Kirjaudu pankkitunnuksilla|Logga in med din bank"
           timeout: 15000

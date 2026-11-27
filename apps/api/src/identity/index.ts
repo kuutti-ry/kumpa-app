@@ -18,7 +18,7 @@ export { type ErasureSummary, eraseAccount, exportAccount } from "./erasure.ts";
 export { foundThemCounts } from "./found-them.ts";
 export { hmacKeyFromHex } from "./hetu.ts";
 export { legalTextRoutes } from "./legal.ts";
-export { wellKnownRoutes } from "./links.ts";
+export { appLinkRoutes } from "./links.ts";
 export { brokerOptionsFromConfig, OidcBroker, teliaKeyIds } from "./oidc-broker.ts";
 export {
   CURRENT_CONSENT_VERSIONS,

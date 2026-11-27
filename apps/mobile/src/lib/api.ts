@@ -1,5 +1,6 @@
 import { type ApiPaths, ErrorResponse, HealthResponse } from "@kuutti/schema";
 import createClient, { type Middleware } from "openapi-fetch";
+import { readAnswer, readAnswerSafely } from "./answer";
 import { apiBaseUrl } from "./api-url";
 import {
   accessTokenIsStale,
@@ -28,7 +29,7 @@ export class ApiError extends Error {
  * sent the envelope: what every client throws for a refusal.
  */
 export function failed(response: { status: number }, error: unknown, what: string): ApiError {
-  const parsed = ErrorResponse.safeParse(error);
+  const parsed = readAnswerSafely(ErrorResponse, error);
   return new ApiError(
     `${what} answered ${response.status}`,
     response.status,
@@ -97,5 +98,5 @@ export async function fetchHealth(signal?: AbortSignal): Promise<HealthResponse>
   if (error !== undefined || data === undefined) {
     throw new ApiError(`API answered ${response.status}`, response.status);
   }
-  return HealthResponse.parse(data);
+  return readAnswer(HealthResponse, data);
 }

@@ -34,6 +34,10 @@ const TEXT_PAIRS: ReadonlyArray<readonly [foreground: string, background: string
   ["primary", "card"],
   ["destructive", "background"],
   ["destructive", "card"],
+  // Kumpa's pastel chips carry the ink's words (the poster's chips, ProfileCardView).
+  ["foreground", "chip-1"],
+  ["foreground", "chip-2"],
+  ["foreground", "chip-3"],
 ];
 
 /**

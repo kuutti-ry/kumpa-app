@@ -1,6 +1,7 @@
 import { formatDate, type PlainMessageKey } from "@kuutti/i18n";
 import type {
   DealBreakerField,
+  LikeAnchor,
   QueueChoice,
   QueueEntry,
   QueueResponse,
@@ -11,16 +12,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { AppState } from "react-native";
 import { fetchConversations } from "@/features/chat";
 import { codeOf, statusOf } from "@/lib/api";
-import {
-  clearStar,
-  decide,
-  fetchQueue,
-  openStar,
-  putStar,
-  relaxToday,
-  reportSeen,
-  undoRelaxation,
-} from "./client";
+import { decide, fetchQueue, openStar, relaxToday, reportSeen, undoRelaxation } from "./client";
 
 type QueueView =
   | { status: "loading" }
@@ -57,8 +49,9 @@ export type QueueNotice =
       | "errors.already_relaxed"
       | "errors.relaxations_changed"
       | "errors.card_budget_exceeded"
-      | "errors.stars_full"
-      | "queue.star.first"
+      | "errors.anchor_not_on_card"
+      | "queue.later.first"
+      | "queue.later.full"
       | "load.failed.press"
       | "queue.short.nobody"
       | "queue.gone"
@@ -100,7 +93,7 @@ const byPosition = (entries: readonly QueueEntry[]): QueueEntry[] =>
  * after that changes nothing of the new day. A card that is gone meanwhile (404)
  * leaves the screen.
  *
- * Given `star`, the id of a star on the Starred list (#575, ADR-064 §2), the same
+ * Given `star`, the id of a star on the Later list (#575, ADR-064 §2), the same
  * for that one card, as it stands in today's log, however it was left there, and
  * no read after it: its decision and its Undo are the queue's, and what comes next
  * is the way back to the list.
@@ -310,9 +303,14 @@ export function useQueue(star?: string) {
         : more;
 
   const choose = useCallback(
-    async ({ day, entry }: QueueCard, decision: QueueChoice) => {
+    async (
+      { day, entry }: QueueCard,
+      decision: QueueChoice,
+      anchor: LikeAnchor | null = null,
+    ): Promise<"anchor_not_on_card" | null> => {
       const { position } = entry;
-      // A like or a pass takes the star off (ADR-064 §3); a skip decides nothing.
+      // A like or a pass takes the person off the Later list (ADR-064 §3), and Later
+      // puts them on it (#681), with no id the phone needs: the card has left the queue.
       const decided = (queue: QueueResponse, as: QueueChoice) =>
         rewrite(queue, (entries) =>
           entries.map((each) =>
@@ -324,18 +322,22 @@ export function useQueue(star?: string) {
       setBusy(true);
       setNotice(null);
       try {
-        const answer = await decide(day, position, decision);
+        const answer = await decide(day, position, decision, anchor);
         const queue = onDay(day);
-        if (!queue) return;
+        if (!queue) return null;
         const { fishToSend, likesLeft, yourTurn } = answer;
         decided({ ...queue, fishToSend, likesLeft, yourTurn }, decision);
         setRevisit(null);
         setLast(answer.match ? null : position);
         setMatch(answer.match?.conversationId ?? null);
+        // The first on the list says who sees it (ADR-064 §7); at the most it may
+        // hold, the card comes back another day, as a skip does (#681).
+        if (answer.later === "first") setNotice("queue.later.first");
+        if (answer.later === "full") setNotice("queue.later.full");
       } catch (error) {
         // Nothing to say of another day's card: the new queue was read already.
         const queue = onDay(day);
-        if (!queue) return;
+        if (!queue) return null;
         const code = codeOf(error);
         if (code === "day_ended") {
           read("errors.day_ended");
@@ -366,62 +368,24 @@ export function useQueue(star?: string) {
             .then((list) => list.yourTurn.waiting)
             .catch(() => null);
           const held = onDay(day);
-          if (!held) return;
+          if (!held) return null;
           const waiting = now ?? held.yourTurn;
           showQueue({ ...held, yourTurn: waiting });
           setNotice({ waiting });
+        } else if (code === "anchor_not_on_card") {
+          // Nothing was saved: the part picked has left the card since it was read
+          // (#463, ADR-077). The card stays, and the screen clears the pick.
+          setNotice("errors.anchor_not_on_card");
+          return code;
         } else {
           setNotice("load.failed.press");
         }
       } finally {
         setBusy(false);
       }
+      return null;
     },
     [rewrite, onDay, read, drop, showQueue],
-  );
-
-  /**
-   * A star on the card, or off it (#575, ADR-064 §1): it decides nothing, so the
-   * card stays on the screen. The first the list shows says that only the person
-   * sees it (§7); one refused at the most a list may hold says so in words (§5). A
-   * star gone meanwhile is off; a card gone meanwhile leaves the screen.
-   */
-  const toggleStar = useCallback(
-    async ({ day, entry }: QueueCard) => {
-      const { position } = entry;
-      const marked = (id: string | null) => {
-        const queue = onDay(day);
-        if (!queue) return;
-        rewrite(queue, (entries) =>
-          entries.map((each) => (each.position === position ? { ...each, star: id } : each)),
-        );
-      };
-      setBusy(true);
-      setNotice(null);
-      try {
-        if (entry.star) {
-          await clearStar(entry.star);
-          marked(null);
-        } else {
-          const answer = await putStar(day, position);
-          marked(answer.id);
-          if (answer.first && onDay(day)) setNotice("queue.star.first");
-        }
-      } catch (error) {
-        if (!onDay(day)) return;
-        const code = codeOf(error);
-        if (code === "day_ended") read("errors.day_ended");
-        else if (code === "stars_full") setNotice("errors.stars_full");
-        else if (statusOf(error) === 404 && entry.star) marked(null);
-        else if (statusOf(error) === 404) {
-          drop(day, position);
-          setNotice("queue.gone");
-        } else setNotice("load.failed.press");
-      } finally {
-        setBusy(false);
-      }
-    },
-    [onDay, rewrite, read, drop],
   );
 
   /**
@@ -499,7 +463,6 @@ export function useQueue(star?: string) {
     match,
     notice,
     choose,
-    toggleStar,
     undo,
     drop,
     relax,

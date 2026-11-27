@@ -4,7 +4,7 @@
 # bank's page names them (packages/db/src/seed/personas.ts, given + family),
 # Sanna Korhonen unless the caller passes PERSONA. The default is written as a
 # fallback, not an env header: a header would override what the caller passes.
-appId: fi.kuutti.app
+appId: fi.kumpa
 ---
 - runFlow: open-app.yaml
 - runFlow: sign-out.yaml
@@ -17,7 +17,7 @@ appId: fi.kuutti.app
 # open-app.yaml. iOS has no such dialog; on Android its absence is asked as
 # `notVisible`, in half a second, where a `visible` that fails costs 7 s (README).
 - extendedWaitUntil:
-    visible: "Your profile|Profiilisi|Din profil|Step \\d+ of \\d+|Vaihe \\d+ / \\d+|Steg \\d+ av \\d+|Did a friend invite you\\?|Kutsuiko ystävä sinut\\?|Bjöd en vän in dig\\?|How we do things here|Näin täällä toimitaan|Så här gör vi här|.* isn't responding"
+    visible: "Your profile|Profiilisi|Din profil|What should we call you\\?|Miksi sinua kutsutaan\\?|Vad ska vi kalla dig\\?|How do you describe yourself\\?|Miten kuvailet itseäsi\\?|Hur beskriver du dig själv\\?|Whom are you looking for\\?|Ketä etsit\\?|Vem söker du\\?|Where do you live\\?|Missä asut\\?|Var bor du\\?|What should your card show\\?|Mitä korttisi näyttää\\?|Vad ska ditt kort visa\\?|On your card: .*|Kortillasi: .*|På ditt kort: .*|What ages\\?|Minkä ikäisiä\\?|Vilka åldrar\\?|What are you here for\\?|Mitä etsit täältä\\?|Vad är du här för\\?|Two photos of you|Kaksi kuvaa sinusta|Två bilder på dig|Finish your profile|Viimeistele profiilisi|Gör klart din profil|Did a friend invite you\\?|Kutsuiko ystävä sinut\\?|Bjöd en vän in dig\\?|Accept terms of use|Hyväksy käyttöehdot|Godkänn användarvillkoren|.* isn't responding"
     timeout: 30000
 - evalScript: ${output.notResponding = true}
 - runFlow:
@@ -33,5 +33,5 @@ appId: fi.kuutti.app
     commands:
       - tapOn: "Wait"
 - extendedWaitUntil:
-    visible: "Your profile|Profiilisi|Din profil|Step \\d+ of \\d+|Vaihe \\d+ / \\d+|Steg \\d+ av \\d+|Did a friend invite you\\?|Kutsuiko ystävä sinut\\?|Bjöd en vän in dig\\?|How we do things here|Näin täällä toimitaan|Så här gör vi här"
+    visible: "Your profile|Profiilisi|Din profil|What should we call you\\?|Miksi sinua kutsutaan\\?|Vad ska vi kalla dig\\?|How do you describe yourself\\?|Miten kuvailet itseäsi\\?|Hur beskriver du dig själv\\?|Whom are you looking for\\?|Ketä etsit\\?|Vem söker du\\?|Where do you live\\?|Missä asut\\?|Var bor du\\?|What should your card show\\?|Mitä korttisi näyttää\\?|Vad ska ditt kort visa\\?|On your card: .*|Kortillasi: .*|På ditt kort: .*|What ages\\?|Minkä ikäisiä\\?|Vilka åldrar\\?|What are you here for\\?|Mitä etsit täältä\\?|Vad är du här för\\?|Two photos of you|Kaksi kuvaa sinusta|Två bilder på dig|Finish your profile|Viimeistele profiilisi|Gör klart din profil|Did a friend invite you\\?|Kutsuiko ystävä sinut\\?|Bjöd en vän in dig\\?|Accept terms of use|Hyväksy käyttöehdot|Godkänn användarvillkoren"
     timeout: 30000

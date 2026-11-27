@@ -14,7 +14,7 @@
 # cannot take a card from it, and it holds whatever `queue` did: Iida has not
 # answered smoking either, and the others are still left out. A run that stops
 # half-way leaves the filter on Riikka: `pnpm demo:reset` first.
-appId: fi.kuutti.app
+appId: fi.kumpa
 name: With few people left, the queue's end offers the deal-breakers to relax for today in two groups, and reading them relaxes nothing
 ---
 - runFlow:
@@ -23,7 +23,7 @@ name: With few people left, the queue's end offers the deal-breakers to relax fo
       PERSONA: Riikka Kivelä
       PERSONA_ON_CARD: "true"
 # The person's own answer first: a deal-breaker waits for it (#149).
-- openLink: kuutti://profile/later/smoking
+- openLink: fi.kumpa://profile/later/smoking
 - extendedWaitUntil:
     visible:
       text: "Never|En koskaan|Aldrig"
@@ -43,7 +43,7 @@ name: With few people left, the queue's end offers the deal-breakers to relax fo
 
 # The deal-breaker, with the switch for those who did not answer off (README: a
 # switch whose label repeats the words beside it). Going back saves it.
-- openLink: kuutti://profile/deal-breakers/smoking
+- openLink: fi.kumpa://profile/deal-breakers/smoking
 - extendedWaitUntil:
     visible: "✓ Everyone|✓ Kaikki|✓ Alla"
     timeout: 15000
@@ -64,13 +64,13 @@ name: With few people left, the queue's end offers the deal-breakers to relax fo
 
 # The save goes as the screen goes (useSaveOnLeave): read back before the queue,
 # which would fill the day's log with the very people the filter leaves out.
-- openLink: kuutti://profile/deal-breakers/smoking
+- openLink: fi.kumpa://profile/deal-breakers/smoking
 - extendedWaitUntil:
     visible: "✓ Never|✓ Ei koskaan|✓ Aldrig"
     timeout: 15000
 
 # The end of the queue, and under it the offers, read a moment after.
-- openLink: kuutti://queue
+- openLink: fi.kumpa://queue
 - extendedWaitUntil:
     visible: "That's everybody for now\\.|Siinä kaikki tällä erää\\.|Det var alla för tillfället\\."
     timeout: 15000
@@ -112,11 +112,11 @@ name: With few people left, the queue's end offers the deal-breakers to relax fo
 - retry:
     maxRetries: 1
     commands:
-      - openLink: kuutti://
+      - openLink: fi.kumpa://
       - extendedWaitUntil:
           visible: "Your profile|Profiilisi|Din profil"
           timeout: 15000
-      - openLink: kuutti://profile/deal-breakers/smoking
+      - openLink: fi.kumpa://profile/deal-breakers/smoking
       - extendedWaitUntil:
           visible: "✓ Never|✓ Ei koskaan|✓ Aldrig"
           timeout: 15000
@@ -130,7 +130,7 @@ name: With few people left, the queue's end offers the deal-breakers to relax fo
 # Opened for its one answer (`once`), the screen draws smoking beside other
 # nicotine; otherwise it asks only the half still open (#616), and smoking's
 # answer is not on it.
-- openLink: kuutti://profile/later/smoking?once=1
+- openLink: fi.kumpa://profile/later/smoking?once=1
 - extendedWaitUntil:
     visible: "✓ Never|✓ En koskaan|✓ Aldrig"
     timeout: 15000

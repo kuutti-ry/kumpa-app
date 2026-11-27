@@ -6,7 +6,7 @@
 # bank before the run when this flow is among those to run (`pnpm e2e`; a
 # bare `maestro test` has no session for him and the script says so). Each
 # run adds a message of its own words, so it runs again without a reset.
-appId: fi.kuutti.app
+appId: fi.kumpa
 name: A message the other person writes arrives on an open conversation, and is marked read at once
 ---
 # Letters only, the run's own at the end: the send refuses what looks like a
@@ -17,7 +17,7 @@ name: A message the other person writes arrives on an open conversation, and is 
     file: ../common/sign-in.yaml
     env:
       PERSONA: Antti Nurmi
-- openLink: kuutti://chats
+- openLink: fi.kumpa://chats
 - extendedWaitUntil:
     visible: "Ville, \\d+, .*"
     timeout: 15000

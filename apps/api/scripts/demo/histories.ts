@@ -3,10 +3,12 @@ import { join } from "node:path";
 import type { Queryable } from "@kuutti/db";
 import {
   CAST_CONVERSATIONS,
+  CAST_LATER,
   CAST_LIKES,
   type ConversationsResult,
   castAccounts,
   type DemoPersona,
+  type LaterListsResult,
   MOCK_BANK_AMR,
   OLDER_TERMS_VERSION,
   PERSONA_CONVERSATIONS,
@@ -16,6 +18,7 @@ import {
   type QueueDaysResult,
   removeCastLeftovers,
   writeConversations,
+  writeLaterLists,
   writeQueueDays,
   writeWaitingLikes,
 } from "@kuutti/db/demo";
@@ -360,9 +363,10 @@ export async function giveQueueDays(
 
 /**
  * What the cast gives the members of the stories (#560): a fish and likes waiting,
- * so that a like back makes a match, and chats with something unread. Nothing where
- * no cast has been written (`pnpm demo:population -- --photos`), as in the e2e jobs.
- * Told before, it stays. What an erased member left with them goes first.
+ * so that a like back makes a match, chats with something unread, and people on
+ * Sanna's Later list (#681). Nothing where no cast has been written
+ * (`pnpm demo:population -- --photos`), as in the e2e jobs. Told before, it stays.
+ * What an erased member left with them goes first.
  */
 export async function giveCastStories(
   db: Queryable,
@@ -372,6 +376,7 @@ export async function giveCastStories(
   cast: number;
   leftovers?: number;
   likes?: QueueDaysResult;
+  later?: LaterListsResult;
   conversations?: ConversationsResult;
 }> {
   const cast = await castAccounts(db);
@@ -381,6 +386,7 @@ export async function giveCastStories(
     cast: cast.size,
     leftovers: await removeCastLeftovers(db, cast),
     likes: await writeWaitingLikes(db, CAST_LIKES, accounts, at),
+    later: await writeLaterLists(db, CAST_LATER, accounts, at),
     conversations: await writeConversations(db, accounts, at, CAST_CONVERSATIONS),
   };
 }

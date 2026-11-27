@@ -476,8 +476,14 @@ describe("PII in logs", () => {
     async (mode, family) => {
       const { logger, lines } = await captureLogger();
       // Built with media, so the photo routes run their own code and not the 503 of a bare app (#49).
+      // One client sweeps every route, more than the default window's 120 a
+      // minute since #196's two; the limits' own refusals are the next test's.
       const app = createApp({
-        config: testConfig({ TRUSTED_PROXY: mode, ORIGIN_SECRET: FIXTURES.originSecret }),
+        config: testConfig({
+          TRUSTED_PROXY: mode,
+          ORIGIN_SECRET: FIXTURES.originSecret,
+          RATE_LIMIT_PER_MINUTE: "1000",
+        }),
         logger,
         db: testPool(),
         media: testMediaDeps().deps,

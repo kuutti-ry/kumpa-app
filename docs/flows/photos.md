@@ -30,17 +30,17 @@ How a person adds photos to their profile, what the automatic check and the mode
 ```mermaid
 flowchart TB
   accTitle: Photos, part 1: adding a photo
-  accDescr: The person opens Your photos from the profile and, below the limit of max_photos, picks one picture from the phone's library. The app sends a copy without its camera and location data, and the API refuses what it cannot use or has no room for, or makes three sizes of a clean copy, keeps no original and hands the photo to the automatic check.
+  accDescr: The person opens Your photos from the profile and, below the limit of max_photos, picks as many pictures from the phone's library as there is room for. The app sends a copy of each, in the order picked, one after another, without its camera and location data, and the API refuses what it cannot use or has no room for, or makes three sizes of a clean copy, keeps no original and hands the photo to the automatic check.
   subgraph person["The person"]
     s1(["Opens Your photos, the Photos row of Your profile"])
-    s4["Chooses Add a photo and picks one picture from the phone's library"]
+    s4["Chooses Add a photo and picks pictures from the phone's library, as many as there is room for"]
   end
   subgraph app["The app"]
     s2{"Fewer photos than max_photos?"}
     s3(["Add a photo is unavailable, with the count beside it, until a photo is removed"])
     s5["The phone's own nudity check: not built yet, every picture passes, #184"]:::notbuilt
     s6["Saves a copy without the picture's camera and location data"]
-    s7["Sends it, saying Uploading… with the percent"]
+    s7["Sends each in turn, saying Uploading… with the percent, and which of how many"]
     s9(["Says why in words, and nothing of the picture is kept"])
   end
   subgraph api["The API"]
@@ -66,12 +66,12 @@ flowchart TB
 1. The person opens "Your photos" from "Your profile", its "Photos" row, starred as "Needed before your card can be shown" ([Profile](profile.md#part-1-the-profile-and-a-section)). The screen says "Hold a photo and drag it to change the order. A new photo is checked before anyone else sees it." Below the limit the count of photos is not drawn: a screen reader hears it each time it changes, the one word that a photo landed. The arrow at the top, "Back to your profile", and "Done" at the end both go back; the screen has no back gesture, which the drag would start. Onboarding's step 7 is this screen with no arrow, its Continue the only way on.
 2. Does the person have fewer photos than `max_photos`? Every photo counts, one not accepted too. Yes: 4. No: 3.
 3. Above "Add a photo" stands how many photos there are, of at most `max_photos`, and the button is unavailable; removing a photo (step 59) makes room. The flow ends here.
-4. The person chooses "Add a photo" and picks one picture from the phone's photo library; the app offers no camera, and says nothing until the upload starts. A cancelled choice changes nothing; when the app may not open the photos, it says "Kumpa could not open your photos. Allow access in the phone's settings and try again." Each notice of this screen closes with "OK".
-5. Not built yet (#184): the phone's own nudity check, which would refuse a nude picture before anything is sent, with "This photo cannot be used." Until the native build carries it, every picture passes.
+4. The person chooses "Add a photo" and picks pictures from the phone's photo library, as many as `max_photos` still leaves room for, in the order they want them; the app offers no camera, and says nothing until the upload starts. Each picture goes through steps 5 to 11 in the order picked, one after another. A cancelled choice changes nothing; when the app may not open the photos, it says "Kumpa could not open your photos. Allow access in the phone's settings and try again." Each notice of this screen closes with "OK".
+5. Not built yet (#184): the phone's own nudity check, which would refuse a nude picture before anything is sent, with "This photo cannot be used.", or, when several were picked, the others going on, once at the end, "One of the photos cannot be used." or "2 of the photos cannot be used.". Until the native build carries it, every picture passes.
 6. The app saves a copy of the picture, no larger than the size it uploads, without the camera and location data the original carried.
-7. The app sends the copy, saying "Uploading…" with the percent.
+7. The app sends the copy, saying "Uploading…" with the percent, or, when several were picked, "Uploading photo 1 of 3…" with the percent of that one. Each lands in the grid as its upload ends.
 8. Can the API use the picture, and is there room for it? It must be a JPEG, PNG or WebP it can read and not too large, the account must have fewer than `max_photos` photos, and the API must not be busy with too many photos at once. Yes: 10. No: 9.
-9. The app says why in words, such as "The photo is too large. Choose a smaller picture.", "This file is not a photo Kumpa can use. Choose a JPEG, PNG or WebP picture.", "You already have the maximum number of photos. Remove one to add another." or "Many photos are being processed right now. Try again in a moment."; anything else, "That did not go through. Try again." Nothing of the picture is kept: what a failure left in storage the API removes, and what even that misses the night sweeps (step 62). The flow ends here.
+9. The app says why in words, such as "The photo is too large. Choose a smaller picture.", "This file is not a photo Kumpa can use. Choose a JPEG, PNG or WebP picture.", "You already have the maximum number of photos. Remove one to add another." or "Many photos are being processed right now. Try again in a moment."; anything else, "That did not go through. Try again." When several were picked, the rest are not sent, and those that landed before it stay. Nothing of the picture is kept: what a failure left in storage the API removes, and what even that misses the night sweeps (step 62). The flow ends here.
 10. The API makes three sizes of a clean copy (a small one for the grid, the card's, and the full size), with none of the original's metadata, and keeps no original.
 11. The API keeps the photo last in the person's order, seen by its owner only, and hands it to the automatic check at once: part 2.
 
@@ -186,14 +186,14 @@ flowchart TB
     s34["Marks the first approved photo in the order Main photo"]
     s35["Your card shows the approved photos only, in the person's order"]
     s36["Shows one tip at a time by the photos, if one applies"]
-    s38["Your profile lists what is missing, and home says Yours still lacks something"]
+    s38["Your profile lists what is missing, and so does home's matching card, with Your profile"]
     s40(["Home's matching card says the profile is finished, and whether matching is open: see People on Kumpa"])
   end
   subgraph api["The API"]
     s37{"The approved photos a finished profile needs, and the rest done?"}
   end
   subgraph other["The other person"]
-    s41["Meets the card in People or Starred, its approved photos one at a time"]
+    s41["Meets the card in People or the Later list, its approved photos one at a time"]
     s42(["Is given the thumb and the card size of a card they were shown, never the full size"])
   end
   s33 --> s34
@@ -212,12 +212,12 @@ flowchart TB
 33. A photo of the person is approved, by the check (step 20) or by a moderator (step 72). Only an approved photo is ever given to another person in the app; a moderator sees the others in the queue (part 6).
 34. In "Your photos", the first approved photo in the person's order is marked "Main photo", the one others see first. A photo in review or not accepted is never the main one, wherever it stands.
 35. "See your card", the eye at the top of "Your profile", opens "Your card" with the approved photos only, in the person's order, the main one first: one at a time, tapped through on either half ("Previous photo", "Next photo"), each with its caption and, where the setting asks, its automatic description under it. The rest of the card is [Profile](profile.md#part-3-the-card-as-others-see-it)'s.
-36. "Your photos" shows one tip at a time by the photos, under "A tip for your photos", when one applies: the API reads it from what the check saw in the approved photos (sunglasses, a mirror selfie, a tight crop, poor light, a blur, other people, and on the main photo a lot of skin or a fish), each against its `photo_tip_` line in `matching_config`, and suggests more photos below `photo_tip_photos_suggested`. A tip is said once per main photo and remembered on the phone, "Got it" or not. It is advice only and never holds a photo back.
-37. Does the profile have the approved photos a finished profile needs, a number the code fixes ([ADR-009](../adr/009-profile-and-card.md) §4; how many onboarding's photos step asks for is under [Onboarding's Open](onboarding.md#open)), and the rest of it done: a name, a bio of enough characters, a ready line or two answered questions, whom one seeks and the age window? Yes: 40. No: 38.
-38. "Your profile" lists what is missing under "Before your card can be shown", the approved photos among it, and so does "Your card" over the card; home's matching card says "Matching opens for finished profiles. Yours still lacks something."
+36. "Your photos" shows one tip at a time by the photos, under "A tip for your photos", when one applies: the API reads it from what the check saw in the approved photos (sunglasses, a mirror selfie, a tight crop, poor light, a blur, other people, and on the main photo a lot of skin or a fish), each against its `photo_tip_` line in `matching_config`, and suggests more photos below `photo_tip_photos_suggested`. A tip about the main photo is said once for that main photo, and a tip about every photo once for the photos there are, so a new order brings none back and a photo added or removed says it again; both are remembered on the phone, "Got it" or not. It is advice only and never holds a photo back.
+37. Does the profile have the approved photos a finished profile needs, a number the code fixes ([ADR-009](../adr/009-profile-and-card.md) §4; how many onboarding's photos step asks for is under [Onboarding's Open](onboarding.md#open)), and the rest of it done: a name, whom one seeks and the age window? Yes: 40. No: 38.
+38. "Your profile" lists what is missing under "Before your card can be shown", the approved photos among it, and so does "Your card" over the card; home's matching card says "Matching opens for finished profiles. Yours still lacks something." over the same lines, with "Your profile" on it.
 39. The person adds more photos (part 1) or waits for those in review. The flow ends here.
 40. Home's matching card asks again whenever home or the app comes to the front, so nothing waits for the night: "Your profile is finished. Matching has not opened yet." until an admin opens matching, then "Matching is open for you." with "See people" ([People on Kumpa](people-on-kuutti.md#part-1-what-home-shows)). "Your card" now says "This is what others see."
-41. Once matching is open, the card, with its approved photos only, comes into the People of whoever it fits, both ways, and into Starred for whoever starred the person ([the queue](queue.md#part-2-a-card-and-its-decision)): the photos one at a time, the main one first, each asked for only when it first comes to the front. The main photo is also the person's face in a conversation list ([Chat](chat.md)), and a row of Starred shows the first approved photo the viewer was shown.
+41. Once matching is open, the card, with its approved photos only, comes into the People of whoever it fits, both ways, and into the Later list of whoever put the person there ([the queue](queue.md#part-2-a-card-and-its-decision), [the Later list](queue.md#part-4-the-later-list)): the photos one at a time, the main one first, each asked for only when it first comes to the front. The main photo is also the person's face in a conversation list ([Chat](chat.md)), and a row of the Later list shows the first approved photo the viewer was shown.
 42. Another person is given the thumb and the card size of an approved photo on a card the server showed them, while its owner is active and no block stands between the two, each fetch counted against the day's `photo_fetches_per_day` for its size, and never the full size, which is the owner's alone ([ADR-056](../adr/056-attestation-later-no-screenshot-notice.md) §3). A photo taken down (part 7), refused or removed is given to nobody from then on, and the photos of an owner on a break, shadow-banned, suspended or banned are given to nobody meanwhile. The flow ends here.
 
 ## Part 5: captions, order, full size, descriptions and removing
@@ -467,3 +467,6 @@ flowchart TB
 - 2026-11-13 (#657): approval waits for the picture to load; the nightly retry reaches every eligible pending photo once per run, including those behind failed checks.
 - 2026-11-13 (#380): approval waits for the actual image to load; its outcome receives focus, and a pending or completed take-down cannot be sent again through a stale page. The phone also ignores a late photo answer after a different photo was requested.
 - 2026-11-16 (#700, PR #701): the refusals of a photo name the app Kumpa.
+- 2026-11-18 (#681): Add a photo picks as many pictures as there is room for, sent one after another in the order picked, with which of how many is going; a tip about every photo is said once for the photos there are, so a new order brings none back.
+- 2026-11-19 (#681): a finished profile asks no words, so the approved photos open the card with the name, whom one seeks and the age window alone.
+- 2026-11-26 (#745): home's matching card lists what the profile lacks, as Your profile does, with the way there.

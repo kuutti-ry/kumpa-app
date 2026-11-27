@@ -335,6 +335,22 @@ describe("a tap on a push", () => {
     expect(router.push).toHaveBeenCalledTimes(1);
   });
 
+  // A key this build does not know is left out and the kind read (#745). No push names its
+  // conversation any more (the maintainer's of 25/10/2026); one that did would open the list,
+  // never that conversation.
+  it.each([
+    ["a key this build does not know", { kind: "message", version: 2 }],
+    ["a conversation", { kind: "message", conversationId: CONVERSATION }],
+    ["a word too many", { kind: "match", name: "Henna" }],
+  ])("opens the conversations and nothing more for a push with %s (#745)", async (_, data) => {
+    await renderWithTheme(<PushNotifications />);
+    await settle();
+    await act(async () => phone.__respond(tap(data)));
+    await waitFor(() => expect(router.push).toHaveBeenCalledWith("/chats"));
+    expect(router.push).toHaveBeenCalledTimes(1);
+    expect(notifications.clearLastNotificationResponse).toHaveBeenCalledTimes(1);
+  });
+
   it("on an announcement goes home, where its notice is, once (#573)", async () => {
     await renderWithTheme(<PushNotifications />);
     await settle();
@@ -355,9 +371,6 @@ describe("a tap on a push", () => {
   it.each([
     ["no kind", {}],
     ["a kind the app does not know", { kind: "promotion" }],
-    // No push names its conversation any more (the maintainer's of 25/10/2026).
-    ["a conversation", { kind: "message", conversationId: CONVERSATION }],
-    ["a word too many", { kind: "match", name: "Henna" }],
     // Still in a phone's list after the queue's push went (ADR-062 §12): the app has no such kind.
     ["the queue's old kind", { kind: "round" }],
     ["no data at all", undefined],

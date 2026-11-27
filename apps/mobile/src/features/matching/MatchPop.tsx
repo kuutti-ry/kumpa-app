@@ -24,9 +24,10 @@ function Round({ size, children }: { size: number; children: ReactNode }) {
 }
 
 /**
- * A match as a hello in the try's pill styles (outside production, the tech
- * screen's), from Sini's "It's a Match!" of 15/11/2026: the greeting large on
- * the style's ground (Organic Pop's soft shape of lavender running into lime,
+ * A match as a hello in the pill styles (Kumpa, the look every phone starts
+ * in, and the tech screen's Organic Pop, Glass and Bold Contrast), from Sini's
+ * "It's a Match!" of 15/11/2026: the greeting large on the style's ground
+ * (none in Kumpa, Organic Pop's soft shape of lavender running into lime,
  * Glass's frosted pane on bubbles, Bold Contrast's blocks of colour),
  * three strokes beside it, the two faces in circles that come together until
  * they overlap, and the one sentence that says what happened. Nothing loops and

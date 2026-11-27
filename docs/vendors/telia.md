@@ -7,25 +7,26 @@ What Telia's identification broker is to us, what we owe them and what they owe 
 Telia Tunnistus is a contracted service, not a self-service API. The association's agreement with Telia Finland Oyj (business ID 1475607-9) covers production; its Appendix 4 names the **technical contact**, the one person allowed to exchange keys with Telia, who is the maintainer. The pre-production environment (`tunnistus-pp.telia.fi`) is free and needs no agreement. A client that passes there is moved to production (`tunnistus.telia.fi`) on request, and billing starts with production.
 
 - Contacts: provisioning, metadata and technical questions, **id-maintenance@teliacompany.com**; faults 24/7, 0200 20 300.
+- The production client exists since 2026-11-24: `client_id` `8c3bff8e-e313-4b51-a550-6970176a8fbc`, display name Kumpa, redirect URIs `https://api.kumpa.fi/auth/callback` and `https://api.kuutti.app/auth/callback`; the id is the default of `telia_client_id` in `infra/envs/prod/variables.tf`. Telia enables it once the technical contact has signed the public keys, done the same day.
 - The pre-production client exists since 2026-10-08: `client_id` `b9b08a7a-ebb4-4a8c-a3e7-52824d3231e5`, redirect URI `https://api.staging.kuutti.app/auth/callback`; the id is the default of `telia_client_id` in `infra/envs/staging/variables.tf`.
 
 Sales entry, for the record: https://www.telia.fi/yrityksille/palvelut/tietoturva/tunnistautuminen (*Telia Tunnistus*, "ota yhteyttä").
 
 ## The bill (#471)
 
-Production is billed from the move to production; the pre-production bed is free. The package and its prices are in the agreement, in the association's mailbox. No production connection has been requested yet (#25). In the trust network the law caps what a bank may charge a broker at 3 cents for each identification it passes on (Act 617/2009 §12 c).
+Production is billed from the move to production; the pre-production bed is free. The package and its prices are in the agreement, in the association's mailbox. The production connection was requested and created on 2026-11-24, to be live on 2026-12-01 (#25). In the trust network the law caps what a bank may charge a broker at 3 cents for each identification it passes on (Act 617/2009 §12 c).
 
 What Kuutti counts: one API line `identified at the bank` for each callback whose broker answer is verified and fresh, before the rule decides anything, so a new account, a resume, the end of a break, a staff sign-in and a refusal each count once; a cancel at the bank, a failed token call and an answer older than its attempt (ADR-016 §2) do not. The observability module sums the lines as `BankIdentifications` in `Kuutti/<env>` and mails when a day reaches `bank_identifications_per_day` (`docs/runbooks/alerts.md`). The month's count, to choose the package from, is the metric's sum over the month (the alarm's row has the command).
 
-Months counted: none, since billing starts at the move to production and none has been requested.
+Months counted: none yet; billing starts with production traffic, planned from 2026-12-01.
 
 ## What Telia needs from us (guide section 2.1)
 
 | item | ours |
 |---|---|
 | public keys, RSA 2048 or longer, **two separate JWKs**: `"use": "sig"` (signs our request objects and client assertions) and `"use": "enc"` (Telia encrypts the ID token to it) | generated per `infra/README.md` Secrets; the private halves live in SSM `/kuutti/<env>/telia-signing-key` and `/kuutti/<env>/telia-encryption-key`; the public JWKs go to Telia by e-mail (an OpenID Federation entity statement is the alternative; not used yet) |
-| redirect URIs, HTTPS, **no wildcards** | staging `https://api.staging.kuutti.app/auth/callback`; production `https://api.kuutti.app/auth/callback` (#25) |
-| display name `ftn_spname`, at most 40 characters, shown to the user during login | `Kuutti` |
+| redirect URIs, HTTPS, **no wildcards** | staging `https://api.staging.kuutti.app/auth/callback`; production `https://api.kumpa.fi/auth/callback` and `https://api.kuutti.app/auth/callback` (#25, ADR-072 §6) |
+| display name `ftn_spname`, at most 40 characters, shown to the user during login | staging `Kuutti`; production `Kumpa` (the maintainer, 24/11/2026) |
 | technical contact (Appendix 4) | the maintainer, with the project mailbox in copy |
 
 Production keys are confirmed through Telia's e-signature service: the technical contact signs the offered keys (or the entity statement) with strong identification.
@@ -40,13 +41,15 @@ A client is registered by one mail from the project mailbox to id-maintenance@te
 
 Registered kids, staging, generated 2026-10-07 (public values; the API logs the same two at boot): `sig` `h3459Y74bDyIP_F8RPGkACWjOouvJzgdw0vGtZ9bi7I`, `enc` `faflNFy64dbC2qZ25QUUPN1bfBePnOpcJAaUfV3l-QQ`. The three staging secrets exist in SSM since the same day (`telia-signing-key`, `telia-encryption-key`, `hetu-hmac-key`).
 
+Registered kids, production, generated 2026-11-24 onto the offline medium: `sig` `UjRegjx_ywxoLwb8oB-nxg4yJPWScw87SaExW2PCc5k`, `enc` `pKqNs04P2zSKsuO_-NCEUpFaduFeusVjMvQMH3NO9-U`. Both private halves are in SSM since the same day (`/kuutti/prod/telia-signing-key`, `-encryption-key`, version 1); production's `hetu-hmac-key` exists since the same day (`docs/runbooks/custody.md`). It has to be there before an apply writes the client id, since the API refuses to boot with bank identification half configured.
+
 Telia answers with the `client_id`. It is public (every authorization URL carries it): set it as the default of `telia_client_id` in `infra/envs/staging/variables.tf` and merge; CI's apply then writes `oidc-issuer`, `oidc-client-id`, `oidc-redirect-uri` and `oidc-acr-values` under `/kuutti/staging/`. The two private keys must be in SSM before that (`telia-keys.sh … --put`): the API refuses to boot against a Telia issuer without them. Redeploy the API in Dokploy and read the boot line "bank identification": the two kids it logs must equal the kids of the JWKs Telia registered.
 
 The first login on the test bed (2026-10-08) showed what was left to watch: `acr` came back as `loatest2` (the adapter accepts the level asked for, so a login that completes proves it), `prompt=login` sent each attempt through the bank with a fresh `auth_time` (ADR-016's check passed), the JWE header's `kid` was ours, and the outer query of `client_id` and `request` was accepted.
 
 ### The second name, `kumpa.fi` (#703, ADR-072)
 
-The app is called Kumpa since 2026-11-16, and its hosts get names under `kumpa.fi` beside the `kuutti.app` ones (ADR-072). Telia matches the redirect URI exactly, so the bank's callback moves only once Telia has registered `https://api.staging.kumpa.fi/auth/callback` beside the present one; production's client carries `https://api.kumpa.fi/auth/callback` beside `https://api.kuutti.app/auth/callback` when it is requested. Until then, `oidc-redirect-uri`, `telia-keys.sh`'s metadata and the table above keep `kuutti.app`'s callback, and `ftn_spname` stays Kuutti (#700). Asking Telia is the maintainer's, and the correspondence stays off GitHub.
+The app is called Kumpa since 2026-11-16, and its hosts get names under `kumpa.fi` beside the `kuutti.app` ones (ADR-072). Telia matches the redirect URI exactly, so the bank's callback moves only once Telia has registered `https://api.staging.kumpa.fi/auth/callback` beside the present one; production's client carries `https://api.kumpa.fi/auth/callback` beside `https://api.kuutti.app/auth/callback` when it is requested. Production's metadata (`telia-keys.sh prod`) carries both callbacks and the name Kumpa from its first registration. The pre-production client keeps Kuutti and its one `kuutti.app` callback until the store reviews are through, then swaps (the maintainer, 24/11/2026); until each client's yes, `oidc-redirect-uri` keeps `kuutti.app`'s callback (#700). Asking Telia is the maintainer's, and the correspondence stays off GitHub.
 
 ## What Telia gives us
 
@@ -102,17 +105,19 @@ What the bed returned when each test user logged in to staging (#139, the simula
 
 | bank, user | code returned | birth | Kuutti's answer |
 |---|---|---|---|
-| Nordea `DEMOUSER1` | Onni's | 1.2.2000 | completed (onboarding from the first step) |
-| Nordea `DEMOUSER2` | Aino's | 29.12.1992 | completed |
+| Nordea `DEMOUSER1` | Onni's | 1.2.2000 | completed (resumed: a member) |
+| Nordea `DEMOUSER2` | Aino's | 29.12.1992 | completed (resumed: a member) |
 | Nordea `DEMOUSER3` | Noa's | 3.8.1983 | completed (resumed) |
 | Nordea `DEMOUSER4` | Sanna's | 17.6.1977 | completed (resumed) |
 | Säästöpankki `22222222` / `123456` | `010280-952L` (Kerttu's) | 1.2.1980 | completed (asked to accept the terms again) |
-| OP, prefilled, key code 1234 | Tapio's | 7.7.1970 | refused: banned, by design |
-| Aktia, prefilled | `010170-999R` (Ilona's) | 1.1.1970 | refused: deleted, with the earliest day, by design |
+| OP, prefilled, key code 1234 | Tapio's | 7.7.1970 | completed (resumed: a member) |
+| Aktia, prefilled | `010170-999R` (Ilona's) | 1.1.1970 | completed (resumed: a member) |
 | Ålandsbanken `12345678` / `123456` / `1234` | `410165-012D` | 1.2.1980 | refused: not a valid code (day 41) |
 | S-Pankki `12345678` / `123456` / `1234` | `750240-1228` | 1.2.1980 | refused: not a valid code (day 75) |
 | Danske `88888888` / `4545` | `010108-000Z` | 1.1.1908 | refused: not a valid code (individual number 000) |
-| Mobiilivarmenne emulator, `0401234567` | `010132-998W` | 1.1.1932 | completed (a new account, 94 years old) |
+| Mobiilivarmenne emulator, `0401234567` | `010132-998W` | 1.1.1932 | completed (resumed: Helmi, a member still without photos) |
+
+The codes and the births are what the bed returned in October. The last column is what the personas' stories make of each since 21/11/2026 (#560, the maintainer): every test user whose code the parser accepts is a member with a profile, so a reviewer of a store or a tester lands in the app whichever of them they type, and nobody who signs in through the bed lands in the sign-up steps. Until then `DEMOUSER1` started onboarding from its first step, OP's user was refused as banned and Aktia's as deleted, by the stories of that time; those states are now on people of the mock bank alone (`services/mock-idp/README.md`). The new answers are the stories' tests', not yet a walk on the bed.
 
 Two things changed on the bed since the published list: Danske now returns `010108-000Z` (not `280453-111A`), and Ålandsbanken and S-Pankki return codes with impossible days, so neither is Mikael (`010170-960x`) any more; the mock bank's Mikael has no working test user on staging. Every refusal of an invalid code reaches the person as the sign-in card's title, "Sign-in did not complete", over Try again (#581), which promises a retry that cannot help.
 
@@ -133,4 +138,4 @@ What the guide does not say in so many words, and how the design holds without i
 
 ## Custody
 
-The agreement, the contact, and the two private keys are rows in `docs/runbooks/custody.md`. Keys are generated onto the offline medium by `infra/scripts/telia-keys.sh` and put into SSM from there (`--put`, by file reference); they never sit in a shell history, a command line, a mailbox or a chat. Only the JWKs file it writes leaves the medium, and that holds public keys.
+The agreement, the contact, and the two private keys are rows in `docs/runbooks/custody.md`. Keys are generated onto the offline medium by `infra/scripts/telia-keys.sh` and put into SSM from there (`--put`, by file reference); they never sit in a shell history, a command line, a mailbox or a chat. Only the JWKs file it writes leaves the medium, and that holds public keys. `telia-keys.sh --self-test`, in CI's lint job, runs it over throwaway folders with a stand-in for `aws`: each environment's names and callbacks, the kids as RFC 7638 computes them, the modes, and the refusals.

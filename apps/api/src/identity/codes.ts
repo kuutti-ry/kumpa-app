@@ -29,9 +29,23 @@ export function hashOneTimeCode(code: string): string {
   return createHash("sha256").update(code).digest("hex");
 }
 
-/** Deep link the browser is sent to after the bank; the app's scheme is `kuutti`. */
-export function appReturnUrl(code: string): string {
-  return `kuutti://auth?code=${encodeURIComponent(code)}`;
+/**
+ * The app's own scheme (apps/mobile/app.json, held to this by links.test.ts):
+ * the store identifier, a domain of the association's written in reverse, as
+ * RFC 8252 §7.1 asks of a private scheme, since nobody owns a plain word
+ * (ADR-074 §7). A build that claims another scheme gets no return from here.
+ */
+export const APP_SCHEME = "fi.kumpa";
+const SCHEME_RETURN = `${APP_SCHEME}://auth`;
+
+/**
+ * Where the browser is sent after the bank, with the one-time code. On a
+ * platform whose verified link this API serves (links.ts, ADR-074 §2) that is
+ * the https address the system hands to Kumpa alone; otherwise, and from that
+ * address when the phone kept it in the browser, the app's scheme.
+ */
+export function appReturnUrl(code: string, verified?: string): string {
+  return `${verified ?? SCHEME_RETURN}?code=${encodeURIComponent(code)}`;
 }
 
 /**
@@ -42,7 +56,7 @@ export function appReturnUrl(code: string): string {
  * suspension's or a ban's reason from the closed list (#715, ADR-073 §2).
  */
 export function appErrorUrl(code: string, until?: string, reason?: string): string {
-  const url = new URL("kuutti://auth");
+  const url = new URL(SCHEME_RETURN);
   url.searchParams.set("error", code);
   if (until) url.searchParams.set("until", until);
   if (reason) url.searchParams.set("reason", reason);

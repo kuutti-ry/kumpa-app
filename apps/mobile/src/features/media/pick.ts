@@ -8,18 +8,27 @@ const JPEG_QUALITY = 0.9;
 
 export type PickedPhoto = { uri: string; width: number; height: number; mimeType: string };
 
+type PickedAsset = { uri: string; width: number; height: number };
+
 export type PickOutcome =
-  | { kind: "picked"; asset: { uri: string; width: number; height: number } }
+  | { kind: "picked"; assets: PickedAsset[] }
   | { kind: "cancelled" }
   | { kind: "denied" };
 
-/** Opens the phone's photo library for one still image. Denied covers a permission the person did not grant. */
-export async function pickPhoto(): Promise<PickOutcome> {
+/**
+ * Opens the phone's photo library for still images: up to `limit` of them,
+ * in the order they were picked (#681), one when `limit` is one or less.
+ * Denied covers a permission the person did not grant.
+ */
+export async function pickPhotos(limit = 1): Promise<PickOutcome> {
+  const most = Math.max(1, Math.floor(limit));
   let result: ImagePicker.ImagePickerResult;
   try {
     result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
-      allowsMultipleSelection: false,
+      // A limit of 0 is the system's own most, so the picker is given one only for several.
+      allowsMultipleSelection: most > 1,
+      ...(most > 1 ? { selectionLimit: most, orderedSelection: true } : {}),
       allowsEditing: false,
       quality: 1,
       exif: false,
@@ -28,9 +37,12 @@ export async function pickPhoto(): Promise<PickOutcome> {
     return { kind: "denied" };
   }
   if (result.canceled) return { kind: "cancelled" };
-  const asset = result.assets[0];
-  if (!asset) return { kind: "cancelled" };
-  return { kind: "picked", asset: { uri: asset.uri, width: asset.width, height: asset.height } };
+  // A picker that ignores the limit is held to it here.
+  const assets = (result.assets ?? [])
+    .slice(0, most)
+    .map(({ uri, width, height }) => ({ uri, width, height }));
+  if (assets.length === 0) return { kind: "cancelled" };
+  return { kind: "picked", assets };
 }
 
 /**
@@ -64,14 +76,25 @@ export type PreparedPick =
   | { kind: "refused_local" };
 
 /**
- * The chain on the phone before anything is sent (#48), for the photos screen
- * and the chat's composer (#350) alike: the library, the on-device check on
- * the picked file (before the resize and before any byte leaves the phone),
- * then the pre-resize.
+ * One picked picture made ready to send (#48): the on-device check on the
+ * picked file, before the resize and before any byte leaves the phone, then
+ * the pre-resize.
+ */
+export async function prepareChecked(
+  asset: PickedAsset,
+): Promise<Extract<PreparedPick, { kind: "picked" | "refused_local" }>> {
+  if ((await checkPhoto(asset.uri)) === "refuse") return { kind: "refused_local" };
+  return { kind: "picked", photo: await prepareForUpload(asset) };
+}
+
+/**
+ * The chain on the phone before anything is sent, for one picture: the chat's
+ * composer (#350). The photos screen picks several and prepares each in turn
+ * (`usePhotos`, #681).
  */
 export async function pickPrepared(): Promise<PreparedPick> {
-  const picked = await pickPhoto();
+  const picked = await pickPhotos(1);
   if (picked.kind !== "picked") return picked;
-  if ((await checkPhoto(picked.asset.uri)) === "refuse") return { kind: "refused_local" };
-  return { kind: "picked", photo: await prepareForUpload(picked.asset) };
+  const [asset] = picked.assets;
+  return asset ? prepareChecked(asset) : { kind: "cancelled" };
 }

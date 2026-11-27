@@ -125,6 +125,8 @@ describe("seed", () => {
           // Migration 0011's (ADR-033 History), whatever the seed's version 1 says.
           { key: "auto_shadow_ban_review_hours", value: 168, version: 2 },
           { key: "matching_open", value: true, version: 2 },
+          // Migration 0016's (#681): the Later list holds thirty.
+          { key: "stars_max", value: 30, version: 2 },
         ]);
       } finally {
         await pool.end();

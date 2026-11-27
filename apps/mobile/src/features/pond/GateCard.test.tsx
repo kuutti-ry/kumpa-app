@@ -1,7 +1,7 @@
 import type { GateResponse } from "@kuutti/schema";
 import { act, fireEvent } from "@testing-library/react-native";
 import { useLocales } from "expo-localization";
-import { AppState, View } from "react-native";
+import { AppState, Text, View } from "react-native";
 import { a11yProblems, type HostNode, pressables } from "@/test/a11y";
 import { FAILED_TO_LOAD } from "@/test/failed";
 import { renderWithTheme } from "@/test/render";
@@ -34,6 +34,30 @@ function answering(answers: Array<() => Response>) {
 }
 
 const settle = () => act(() => new Promise<void>((resolve) => setTimeout(resolve, 20)));
+
+/** What is drawn, in reading order: the words, and `#id` where a node with a test id stands. */
+const read = (node: HostNode | string): string[] =>
+  typeof node === "string"
+    ? [node]
+    : [
+        ...(node.props.testID ? [`#${node.props.testID}`] : []),
+        ...(node.children ?? []).flatMap(read),
+      ];
+
+/** The first node, depth first, that `match` picks. */
+function found(node: HostNode | string, match: (node: HostNode) => boolean): HostNode | null {
+  if (typeof node === "string") return null;
+  if (match(node)) return node;
+  for (const child of node.children ?? []) {
+    const hit = found(child, match);
+    if (hit) return hit;
+  }
+  return null;
+}
+
+/** The card itself, as drawn: what stands inside it and what after it. */
+const cardOf = (root: HostNode) =>
+  found(root, (node) => String(node.props.className ?? "").includes("max-w-md"));
 
 beforeEach(() => {
   (useLocales as jest.Mock).mockReturnValue([{ languageTag: "en-US" }]);
@@ -114,6 +138,63 @@ describe("GateCard", () => {
       await settle();
       expect(screen.getByText(words)).toBeTruthy();
       expect(screen.queryByTestId("queue") !== null).toBe(shown);
+    },
+  );
+
+  it.each([
+    ["open", "Matching is open for you.", false],
+    ["closed", "Your profile is finished. Matching has not opened yet.", false],
+    ["incomplete", "Matching opens for finished profiles. Yours still lacks something.", true],
+  ] as const)(
+    "carries what the home screen hands it for an unfinished profile only, under its sentence: %s (#745)",
+    async (state, words, shown) => {
+      answering([() => json(gate(state))]);
+      const screen = await renderWithTheme(
+        <GateCard whenIncomplete={<Text>{"At least 2 approved photos"}</Text>} />,
+      );
+      await settle();
+      const drawn = read(screen.toJSON() as HostNode);
+      expect(drawn.includes("At least 2 approved photos")).toBe(shown);
+      if (shown) expect(drawn).toEqual([words, "At least 2 approved photos"]);
+    },
+  );
+
+  it.each([
+    ["open", () => json(gate("open")), false],
+    ["closed", () => json(gate("closed")), false],
+    ["incomplete", () => json(gate("incomplete")), true],
+    ["unreadable", () => json({ error: { code: "internal_error" } }, 500), false],
+    ["still loading", () => new Promise<Response>(() => undefined), false],
+  ] as const)(
+    "draws the way to the profile in the card while the profile lacks something, and after it otherwise: %s (#745)",
+    async (_state, answer, inside) => {
+      globalThis.fetch = jest.fn(async () => answer()) as unknown as typeof fetch;
+      const screen = await renderWithTheme(
+        <GateCard
+          whenIncomplete={<Text>{"At least 2 approved photos"}</Text>}
+          toProfile={(inCard) => <View testID={inCard ? "in the card" : "after the card"} />}
+        />,
+      );
+      await settle();
+      const root = screen.toJSON() as HostNode;
+      const card = cardOf(root);
+      expect(card).not.toBeNull();
+      const way = inside ? "#in the card" : "#after the card";
+      // Drawn once, in one of the two places.
+      expect(read(root).filter((word) => word.startsWith("#"))).toEqual([way]);
+      const inCard = read(card as HostNode);
+      if (inside) {
+        // The card's last thing: after the sentence and what is missing.
+        expect(inCard).toEqual([
+          "Matching opens for finished profiles. Yours still lacks something.",
+          "At least 2 approved photos",
+          way,
+        ]);
+      } else {
+        expect(inCard).not.toContain(way);
+        // After everything the card says.
+        expect(read(root).slice(-1)).toEqual([way]);
+      }
     },
   );
 
@@ -215,11 +296,14 @@ describe("GateCard", () => {
     expect(screen.queryByText(FAILED_TO_LOAD)).toBeNull();
   });
 
-  it("refuses an answer that carries a number", async () => {
+  // A key this build does not know is left out (#745), so a number beside the state never
+  // reaches the card: the gate says no number (ADR-060 §4).
+  it("shows no number when an answer carries one (#745)", async () => {
     answering([() => json({ state: "closed", needed: 10 })]);
     const screen = await renderWithTheme(<GateCard />);
     await settle();
-    expect(screen.getByText(FAILED_TO_LOAD)).toBeTruthy();
+    expect(screen.getByText("Your profile is finished. Matching has not opened yet.")).toBeTruthy();
+    expect(screen.queryByText(/10/)).toBeNull();
   });
 
   it("has a label and a role on everything that can be pressed", async () => {

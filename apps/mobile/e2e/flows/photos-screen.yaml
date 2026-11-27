@@ -9,11 +9,11 @@
 # jest suite covers both. A caption (#296) is a line picked from a list, set on
 # the first photo and taken off again. Sanna has five approved photos; the
 # removal is declined, so she is left as found.
-appId: fi.kuutti.app
+appId: fi.kumpa
 name: A photo opens full size and back, and removing one asks first
 ---
 - runFlow: ../common/sign-in.yaml
-- openLink: kuutti://photos
+- openLink: fi.kumpa://photos
 - extendedWaitUntil:
     visible: "Main photo|Pääkuva|Huvudfoto"
     timeout: 15000

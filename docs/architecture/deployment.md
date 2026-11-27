@@ -11,7 +11,7 @@ infra/scripts/db-app-role.sh
 .github/workflows/demo-reset.yml
 -->
 
-Where each part of Kuutti runs, environment by environment: a developer's machine, staging and the services around its box, production as applied on 2026-10-24 (ADR-049), and the website. It is for a contributor who wants to know what a change will land on, and for a reviewer of `infra/`. Everything here is read from `infra/`, the workflows and the compose file on `main`; what is planned is dashed and names its issue. The deploy tool is drawn as it runs today, Dokploy, while Dokploy versus Kamal stays open. The view draws ADR-001, ADR-005, ADR-008, ADR-014, ADR-018, ADR-025, ADR-043, ADR-046, ADR-048, ADR-049, ADR-054, ADR-066, ADR-067, ADR-070 and ADR-072.
+Where each part of Kuutti runs, environment by environment: a developer's machine, staging and the services around its box, production as last applied, from a rehearsal tag, on 2026-11-17 (ADR-049), and the website. It is for a contributor who wants to know what a change will land on, and for a reviewer of `infra/`. Everything here is read from `infra/`, the workflows and the compose file on `main`; what is planned is dashed and names its issue. The deploy tool is drawn as it runs today, Dokploy, while Dokploy versus Kamal stays open. The view draws ADR-001, ADR-005, ADR-008, ADR-014, ADR-018, ADR-025, ADR-043, ADR-046, ADR-048, ADR-049, ADR-054, ADR-066, ADR-067, ADR-070 and ADR-072.
 
 ## Part 1: a developer's machine
 
@@ -215,58 +215,77 @@ A pull request deploys nothing before it merges (ADR-070, #705): no copy of the 
 ```mermaid
 flowchart TB
   accTitle: Deployment, part 5: production
-  accDescr: infra/envs/prod, applied on 2026-10-24 before the first release, composes the same network, box, database, alarms and parameters as staging, with a larger box from the next tag, a larger database class and deletion protection. Dokploy on the box runs one application, the API, pinned to a commit and with bank identification off. The media module is declared switched off; the admin panel's host is composed and comes with the next tag.
-  subgraph prodenv["infra/envs/prod: applied 2026-10-24, ADR-049"]
+  accDescr: infra/envs/prod, applied before the first release from rehearsal tags, the last on 2026-11-17, composes the same network, box, database, alarms and parameters as staging, with a larger box, a larger database class and deletion protection. api and dokploy, under kuutti.app and kumpa.fi, point at the box's Elastic IP, where Traefik holds a certificate for each name and Dokploy runs one application, the API, pinned to an attested commit and with bank identification off. The admin panel has its own bucket and distribution on admin.kuutti.app and admin.kumpa.fi, and calls the API. The store of the origin proof exists and is empty; the media module, with the API's distribution and its web ACL, is declared switched off.
+  subgraph prodenv["infra/envs/prod: last applied 2026-11-17, ADR-049"]
     n49["Route 53: api and dokploy, under kuutti.app and kumpa.fi, to the Elastic IP"]
-    n50["VPC: one public subnet, two private, no NAT"]
-    n51["EC2 t4g.medium from the next tag, t4g.small as applied, arm64, unlimited CPU credits, no swap; Dokploy (current; Kamal open) running the API"]
+    n50["VPC: one public subnet, two private, no NAT; 443 and 80 open to anyone"]
+    n51["EC2 t4g.medium, arm64, unlimited CPU credits, no swap; Traefik, a certificate per name; Dokploy (current; Kamal open) running the API"]
     n52["RDS PostgreSQL 17, single-AZ, db.t4g.small, deletion protection"]
-    n53["Parameters under /kuutti/prod/: no bank, HMAC or CloudFront key"]
+    n53["Parameters under /kuutti/prod/: Telia's two keys and the HMAC key, no CloudFront key, no origin secret"]
     n54["Alarms, topic and probe on api.kuutti.app"]
+    n56["The admin panel: S3 kuutti-admin-prod, CloudFront on admin.kuutti.app and admin.kumpa.fi"]
+    n70["Key value store kuutti-prod-origin-proof: empty until the cutover"]
     n55["Media, the API's distribution and its web ACL, declared with media_enabled off: not built yet, #25"]:::notbuilt
   end
-  n56["The admin panel on admin.kuutti.app and admin.kumpa.fi: composed, comes with the next tag, #25"]:::notbuilt
   n49 -->|"names"| n51
   n50 -->|"holds"| n51
   n51 -->|"5432, TLS"| n52
   n51 -->|"reads at boot"| n53
   n54 -->|"watches"| n51
+  n56 -->|"the panel, in a browser, calls api.kuutti.app"| n51
+  n70 -.->|"would be read at the edge"| n55
   n55 -.->|"would front"| n51
-  n56 -.->|"would call the API"| n51
   classDef notbuilt stroke-dasharray: 5 5
 ```
 
 ### Steps
 
-49. Route 53: `api.kuutti.app` and `dokploy.kuutti.app` as A records to production's Elastic IP, and `api.kumpa.fi` and `dokploy.kumpa.fi` beside them in their own zone from the next tag (ADR-072). Once media is on, both become aliases of production's distribution, Dokploy's as its extra alias (#198), and `origin.api` takes `api`'s place at the Elastic IP, so production's cutover needs no follow-up before its ingress switch.
-50. The same network module as staging, with its own /16: one public subnet, two private, no NAT, 443 open to the world while `cloudfront_only_ingress` is off.
-51. The same compute module: a `t4g.medium` from the next tag and the `t4g.small` of 2026-10-24 until then, arm64, with unlimited CPU credits (the module's default, where staging asks for standard). No Session Manager preferences, which staging owns for the account. Its role `kuutti-api-prod` reads `/kuutti/prod/` alone and may mail any address; a policy simulation on 2026-10-24 denied it `/kuutti/staging/`. No swap, so that swap never pages a hetu or the HMAC key to the disk (rule 1, ADR-046), which is what the larger box is for: with the API running, the `t4g.small` had about 270 MiB available on 2026-10-24, against the memory alarm's 200. Dokploy (current; Kamal open) as on staging, its owner made through the port forward while nothing public reached it (ADR-048, checked from outside at the first boot). Its one application, `api`, runs the API pinned to a commit whose image's attestation was verified, deployed by hand (ADR-049 §2).
-52. RDS PostgreSQL 17, single-AZ, `db.t4g.small`, with deletion protection and a final snapshot.
-53. The parameters: `app-env` `production`, `moderation` `rekognition`, `mail` `ses`, no `push` yet (it comes with Expo's access token, #102), `admin-app-url` `https://admin.kuutti.app`, `cors-allowed-origins` that and `https://admin.kumpa.fi`, `trusted-proxy` `traefik`. The bank's production issuer and its level are written only together with Telia's production client id, which is null today, so the API boots with bank identification off. `db-app-password` is the one secret, made by `db-app-role.sh`; no HMAC, Telia or CloudFront key exists for production yet (ADR-049 §1).
-54. The same observability module: the alarms, the topic and the outside probe, on `api.kuutti.app`.
-55. The media module is declared, but `media_enabled` is off: no bucket, no distribution and no web ACL (ADR-067, 2,000 requests in five minutes as on staging), until production's own cutover. Its edge alarm comes with it.
-56. The panel's host: `modules/admin` on `admin.kuutti.app`, the address production's parameters already name, and `admin.kumpa.fi` as its second name, composed since 2026-10-31 and created by the next tag's apply (#25). `admin-deploy.yml` writes the build to it ([Delivery](delivery.md), part 3).
+49. Route 53: `api.kuutti.app` and `dokploy.kuutti.app` as A records to production's Elastic IP, with a TTL of five minutes, and since 2026-11-17 `api.kumpa.fi` and `dokploy.kumpa.fi` beside them in their own zone, with the same target (#703, ADR-072). Once media is on, `api` and `dokploy` under both domains become aliases of production's distribution, Dokploy's as its extra aliases (#198), and `origin.api` takes `api`'s place at the Elastic IP, so production's cutover needs no follow-up before its ingress switch. The panel's names are its own distribution's (step 56).
+50. The same network module as staging, with its own /16: one public subnet, two private, no NAT. The box's security group admits 443 and 80 from anywhere while `cloudfront_only_ingress` is off, and port 22 from nobody, since its list is empty; Session Manager is the way in.
+51. The same compute module: a `t4g.medium` since 2026-11-05, when the apply of `v0.108.2-rehearsal.1` resized the `t4g.small` of 2026-10-24 in place (ADR-049 §4), arm64, with unlimited CPU credits (the module's default, where staging asks for standard). No Session Manager preferences, which staging owns for the account. Its role `kuutti-api-prod` reads `/kuutti/prod/` and is denied every other prefix, `/kuutti/staging/` included, and may send as `noreply@kuutti.app` or `noreply@kumpa.fi`, each through its domain's identity, to any address. No swap, so that swap never pages a hetu or the HMAC key to the disk (rule 1, ADR-046), which is what the larger box is for: with the API running, the `t4g.small` had about 270 MiB available on 2026-10-24, against the memory alarm's 200, and the `t4g.medium` had 2,145 to 2,358 MiB from 2026-11-17 to 2026-11-20. Traefik holds a Let's Encrypt certificate of its own for each of the four names of step 49, by HTTP-01 on port 80. Dokploy (current; Kamal open) as on staging, its owner made through the port forward while nothing public reached it (ADR-048, checked from outside at the first boot). `dokploy-setup.sh prod`, run again on 2026-11-17 after the apply that made the `kumpa.fi` records, gave the API's application both API hosts and pinned each name of `api` and `dokploy` to the API or to Dokploy (part 2, step 19). Its one application, `api`, runs the API pinned to a commit whose image's attestation was verified, deployed by hand (ADR-049 §2): since 2026-11-17, `main`'s image of the commit `v0.126.0-rehearsal.1` was cut on, which `/health` names under both of the API's names.
+52. RDS PostgreSQL 17, single-AZ, `db.t4g.small`, with deletion protection and a final snapshot, `kuutti-prod-final`. The rest is staging's data module: gp3 storage from 20 GB growing to 100, encrypted, 35 days of point-in-time recovery, TLS forced, not publicly reachable.
+53. The parameters: `app-env` `production`, `moderation` `rekognition`, `mail` `ses`, no `push` yet (it comes with Expo's access token, #102), `admin-app-url` `https://admin.kuutti.app`, `cors-allowed-origins` that and, since 2026-11-17, `https://admin.kumpa.fi`, `trusted-proxy` `traefik`. The bank's production issuer and its level are written only together with Telia's production client id, which `infra/envs/prod` names since 2026-11-24; the last apply predates it, so the API boots with bank identification off until the next one. `db-app-password` is the one secret made by a script, `db-app-role.sh`; Telia's two keys, `telia-signing-key` and `telia-encryption-key`, and `hetu-hmac-key` were written with the CLI from the offline medium on 2026-11-24 (`telia-keys.sh`, `infra/README.md` Secrets); no CloudFront key, origin secret or Sentry DSN exists for production yet (ADR-049 §1), so error reporting is off as well (#201). Beside them, written with the CLI on 2026-11-18 and not resources: `ios-team-id` and `android-cert-fingerprints`, the two of the verified links (ADR-074).
+54. The same observability module: ten alarms in eu-central-1, among them `kuutti-prod-memory-low` on the box's own push, `kuutti-prod-bank-identifications` since 2026-11-05 and `kuutti-prod-api-refusals` since 2026-11-17, and the probe's `kuutti-prod-api-unreachable` in us-east-1, all OK on 2026-11-20. The topic `kuutti-prod-alerts` and its twin in us-east-1 mail the repository variable `ALERT_EMAIL`, both subscriptions confirmed on 2026-11-05. The outside probe asks `https://api.kuutti.app/health` for `"status":"ok"`, since production has no proof of its distribution to ask for (ADR-066).
+55. The media module is declared, but `media_enabled` is off: no media bucket, no API distribution and no web ACL (ADR-067, 2,000 requests in five minutes as on staging), until production's own cutover, so the API boots with photos off. Its edge alarm comes with it.
+56. The panel's host, `modules/admin` (ADR-025), as on staging (part 3, steps 34 and 35): the bucket `kuutti-admin-prod-<account>` and a distribution on `admin.kuutti.app`, the address production's parameters name, created by the apply of `v0.108.2-rehearsal.1` on 2026-11-05, with `admin.kumpa.fi` as its second name since that of `v0.125.0-rehearsal.1` on 2026-11-17 (ADR-072): an ACM certificate from us-east-1 that names both, A and AAAA aliases in each zone, and the panel's response headers, whose CSP lets it connect to `https://api.kuutti.app` alone, under either name. The API answers the preflight of both origins (step 53). `admin-deploy.yml` writes the build to it, started by hand from a rehearsal tag, since the release gate stops `deploy prod` before it (ADR-049 §2): from `v0.108.2-rehearsal.1` on 2026-11-05 and from `v0.126.0-rehearsal.1` on 2026-11-17 ([Delivery](delivery.md), part 3). Saiga's faces are in its `fonts/`, uploaded by hand (ADR-052).
+70. The key value store `kuutti-prod-origin-proof` (ADR-066), made by the apply of 2026-11-17 and empty on 2026-11-20. It is the environment's, outside `modules/media`, so that the cutover can write its key `origin-secret` by hand, with the SecureString of the same name, before the tag that turns the distribution on and `trusted_proxy` to `cloudfront` (part 2, step 63). Nothing reads it before then: the CloudFront Function that would is module media's.
 
-Production is applied by `infra-prod.yml` on a `v*` tag, behind the `prod` environment's reviewer ([Delivery](delivery.md), part 3). Staging was applied first. Production was applied on 2026-10-24 from the tag `v0.64.8-rehearsal.1`, before the first release and without bank identification, and stays up (ADR-049). Between tags it lags `main`: a pull request plans it, and only the next tag and its approval apply it (ADR-049 §5).
+Production is applied by `infra-prod.yml` on a `v*` tag, behind the `prod` environment's reviewer ([Delivery](delivery.md), part 3). Staging was applied first. Production was first applied on 2026-10-24 from the tag `v0.64.8-rehearsal.1`, before the first release and without bank identification, and stays up (ADR-049). `v0.108.2-rehearsal.1` applied it again on 2026-11-05, and `v0.125.0-rehearsal.1` on 2026-11-17, which is what this part draws; the run of `v0.126.0-rehearsal.1`, cut that day for the panel and the API, was cancelled, since nothing under `infra` or `.github` differed from the tag before it. Between tags it lags `main`: a pull request plans it, and only the next tag and its approval apply it (ADR-049 §5).
 
 ## Part 6: the website
 
 ```mermaid
 flowchart TB
   accTitle: Deployment, part 6: the website
-  accDescr: The website's own repository deploys to an Amplify Hosting app made in the console, which serves kuutti.app and kumpa.fi with certificates and records Amplify wrote into their zones.
+  accDescr: The website's own repository deploys to an Amplify Hosting app made in the console, which serves kuutti.app and kumpa.fi with certificates and records Amplify wrote into their zones, answers for the misspelling kunpa.fi, registered at Zoner, with a redirect to kumpa.fi, and answers the site's status panel with production's health, which it fetches from api.kumpa.fi.
   n57["kuutti-ry/kumpa-app-site: amplify.yml and customHttp.yml"]
   n58["Amplify Hosting app kumpa-app-site, eu-central-1, made in the console"]
   n59["kuutti.app and kumpa.fi: certificates and records written by Amplify"]
+  n67["kunpa.fi and www.kunpa.fi, the misspelling: a 301 to the same path on kumpa.fi, #726"]
+  n68["Zoner, the registrar of kunpa.fi: carries the name servers of its Route 53 zone, entered by hand"]
+  n69["Production's API at api.kumpa.fi: its /health, Part 5"]
+  n71["waitlist.kumpa.fi, regional API Gateway and Lambda (#53)"]
+  n72["DynamoDB in Frankfurt, signups and challenges in separate tables"]
   n57 -->|"a push to main deploys"| n58
   n58 -->|"serves"| n59
+  n58 -->|"redirects"| n67
+  n68 -->|"delegates the name to its zone"| n67
+  n58 -->|"fetches /health for /status/health.json"| n69
+  n59 -.->|"the browser requests a challenge, solves it and submits the signup"| n71
+  n71 -.->|"consume the one-time proof and record the signup"| n72
 ```
 
 ### Steps
 
 57. The website's own repository, `kuutti-ry/kumpa-app-site`: its `amplify.yml` is the build spec and its `customHttp.yml` the headers.
 58. The Amplify Hosting app `kumpa-app-site` in eu-central-1, connected to that repository through the Amplify GitHub App: the console-made exception of ADR-001, since the connection is a browser consent no provider performs. A push to the site's `main` deploys it.
-59. `kuutti.app`, the home, and `kumpa.fi`, the same site since 2026-11-16: Amplify issued the certificates and wrote the validation and alias records into each zone itself, outside OpenTofu. The redirects from `www` and the cost tag are commands in `infra/README.md`, run after the console.
+59. `kuutti.app`, the home, and `kumpa.fi`, the same site since 2026-11-16: Amplify issued the certificates and wrote the validation and alias records into each zone itself, outside OpenTofu. The redirects from `www`, the status rewrite (step 69) and the cost tag are commands in `infra/README.md`, run after the console.
+67. `kunpa.fi`, the misspelling of `kumpa.fi` with an n, and `www.kunpa.fi` (#726): a third custom domain of the same app, which serves no page. Amplify holds a certificate for both names and answers a request over https with a 301 to the same path and query on `https://kumpa.fi`, by two rules beside the ones for `www`; a request over http is first sent to https under the same name. Its zone is the one the bootstrap creates and does not adopt (`infra/bootstrap/dns.tf`): it holds the alias, `www` and validation records Amplify wrote, and a null MX, an SPF that admits nobody, a reject DMARC and a CAA for Amazon's issuers, since the name has no mail.
+68. Zoner, a Finnish registrar, where `kunpa.fi` is registered since 2026-11-17, the one registration outside Route 53. Its Nameserver page carries the four name servers of the zone (the bootstrap's output `kunpa_name_servers`), entered by hand. Zoner's own forwarding is not used: it answers on http alone, with a certificate for its own name over https.
+69. Production's API at `api.kumpa.fi`, the box of Part 5. The site's status panel reads `/status/health.json` on the site's own origin, the only one its content security policy lets it reach. The app's fifth rule, a 200 rewrite set on 2026-11-20, answers that path on `kuutti.app` and `kumpa.fi` with what Amplify fetches from `https://api.kumpa.fi/health`, with no credential. It stays one exact path: the site's origin on the API's CORS allowlist would be answered on every route, and a wildcard would make the site a browser client of the product (rule 8). At production's cutover (#25), `api.kumpa.fi` becomes an alias of the API's distribution, whose edge rule counts `/health` by the address CloudFront took the connection from (ADR-067), here Amplify's. A flood of the site's path could then earn that address five minutes of 429s, which the panel shows as unknown, so the cutover checks the path again.
+
+71. The website's script automatically requests a challenge at `POST /challenge`, computes its SHA-256 proof and submits it to `POST /join` with the email and language. The two POST routes on the default stage invoke the collector Lambda. Production provisions the certificate, DNS, regional API and Lambda independently of the product API.
+72. The Lambda can write a signup, and create and consume challenge rows. The separate production tables expire signups after 365 days and challenges after ten minutes. The operator handles withdrawals and the launch-related updates as described in [Website launch notifications](../../infra/README.md#website-launch-notifications).
 
 ## Where it lives
 
@@ -280,8 +299,8 @@ flowchart TB
 ## Open
 
 - Production's ingress (#25, #198): its box admits 443 from anywhere until its cutover, which sets `media_enabled`, `cloudfront_only_ingress` and `trusted_proxy` together and so waits for the viewer address's proof below, unless the maintainer accepts the shared edge bucket in production too (`infra/README.md`, Media).
-- Production's viewer address (#25, ADR-066 §6): production stays on `traefik` until its cutover, which fills its store and SSM first and checks the proof between the tag's apply and its deploy.
-- Production (#25) runs without bank identification (ADR-049) and without swap (ADR-046). Until the next tag is applied it is the `t4g.small` of 2026-10-24, and its `admin-app-url` names `https://admin.kuutti.app`, a host not created yet.
-- SES (#196): the account is in SES's sandbox until the maintainer asks AWS for production access, so production as well delivers only to verified identities, the addresses of `kuutti.app` among them.
-- The second names (#703, ADR-072): drawn as declared. They exist once the maintainer has applied the bootstrap, staging through `infra.yml` and production at its next tag, and run `dokploy-setup.sh` after each. The switch to `kumpa.fi` waits for Telia's answer and the Workspace alias, and `kuutti.app`'s hosts retire once no installed build calls them (§7, §8).
+- Production's viewer address (#25, ADR-066 §6): production stays on `traefik` until its cutover, which fills its store, there and empty since 2026-11-17 (step 70), and SSM first and checks the proof between the tag's apply and its deploy.
+- Production (#25) runs without bank identification (ADR-049) and without swap (ADR-046), on the `t4g.medium` since 2026-11-05 (step 51). Its API and its panel are deployed by hand from rehearsal tags until a tag passes the release gate ([Delivery](delivery.md), part 3).
+- SES (#196): the account is in SES's sandbox until the maintainer asks AWS for production access, so production as well delivers only to verified identities, the addresses of `kuutti.app` and of `kumpa.fi` among them; both domains are verified identities.
+- The second names (#703, ADR-072) exist in both environments since 2026-11-17: the maintainer applied the bootstrap, staging through `infra.yml` and production at `v0.125.0-rehearsal.1`, and ran `dokploy-setup.sh` after each. The switch to `kumpa.fi` waits for Telia's answer and the Workspace alias, and `kuutti.app`'s hosts retire once no installed build calls them (§7, §8).
 - Dokploy versus Kamal is open (CLAUDE.md, Decisions); Dokploy's configuration is the one part of the box outside code.

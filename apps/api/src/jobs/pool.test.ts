@@ -272,13 +272,13 @@ describe("who is complete", () => {
     expect(await statusOf(ctx, messagesOnly)).toBe("incomplete");
   });
 
-  test("a ready line in place of a bio counts as a finished profile, and neither does not (#239)", async ({
+  test("a profile with no words, no bio, ready line or answered question, is finished (#681, option b)", async ({
     ctx,
   }) => {
-    const [line] = await people(ctx.client, 1, { ...ALIKE, bio: "ready_line" });
-    const [neither] = await people(ctx.client, 1, { ...ALIKE, bio: "none" });
-    expect((await subjectsOfPond(ctx.client, NOON)).map((s) => s.id)).toEqual([line]);
-    expect(await statusOf(ctx, neither)).toBe("incomplete");
+    const [wordless] = await people(ctx.client, 1, { ...ALIKE, bio: "none" });
+    const [short] = await people(ctx.client, 1, { ...ALIKE, bio: "none", photos: 1 });
+    expect((await subjectsOfPond(ctx.client, NOON)).map((s) => s.id)).toEqual([wordless]);
+    expect(await statusOf(ctx, short)).toBe("incomplete");
   });
 
   test("a reader of the person alone says the same", async ({ ctx }) => {

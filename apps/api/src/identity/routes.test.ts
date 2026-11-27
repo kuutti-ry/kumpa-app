@@ -114,7 +114,7 @@ async function callback(app: ReturnType<typeof createApp>, state: string, code =
 async function codeFrom(res: Response): Promise<string> {
   expect(res.status).toBe(302);
   const location = res.headers.get("location") ?? "";
-  expect(location.startsWith("kuutti://auth?code=")).toBe(true);
+  expect(location.startsWith("fi.kumpa://auth?code=")).toBe(true);
   return new URL(location).searchParams.get("code") ?? "";
 }
 
@@ -170,7 +170,7 @@ function refusal(res: Response): {
 } {
   expect(res.status).toBe(302);
   const location = new URL(res.headers.get("location") ?? "");
-  expect(location.protocol).toBe("kuutti:");
+  expect(location.protocol).toBe("fi.kumpa:");
   const reason = location.searchParams.get("reason");
   return {
     error: location.searchParams.get("error"),
@@ -909,6 +909,63 @@ describe("the count of bank identifications (#471)", () => {
   });
 });
 
+describe("the return on the verified link (#184, ADR-074)", () => {
+  const FINGERPRINT = Array.from({ length: 32 }, () => "AB").join(":");
+  const TEAM = "HM4J7X495K";
+
+  /** A sign-in from `platform`, up to the callback's answer. */
+  async function returnOf(app: ReturnType<typeof createApp>, platform: "ios" | "android") {
+    const started = await app.request(
+      `/auth/start?platform=${platform}&locale=fi&code_challenge=${CHALLENGE}`,
+    );
+    const state = new URL(started.headers.get("location") ?? "").searchParams.get("state") ?? "";
+    return callback(app, state);
+  }
+
+  test.for([
+    [
+      "Android where the fingerprints are set",
+      { ANDROID_CERT_FINGERPRINTS: FINGERPRINT },
+      "android",
+      "ios",
+    ],
+    ["an iPhone where the team is set", { IOS_TEAM_ID: TEAM }, "ios", "android"],
+  ] as const)(
+    "%s returns on the https link of the callback's host, the other platform on the scheme",
+    async ([, config, verified, other], { ctx }) => {
+      const { app, logs } = await appWith(ctx, ADULT_HETU, { config });
+      const res = await returnOf(app, verified);
+      expect(res.status).toBe(302);
+      const location = new URL(res.headers.get("location") ?? "");
+      expect(`${location.origin}${location.pathname}`).toBe("https://api.test/auth/return");
+      expect([...location.searchParams.keys()]).toEqual(["code"]);
+      const code = location.searchParams.get("code") ?? "";
+      expect(code).toMatch(/^[A-Za-z0-9_-]{43}$/);
+
+      // A browser that kept the link is sent on to the scheme with the same
+      // code, and no line of either request holds it.
+      const kept = await app.request(`${location.pathname}${location.search}`);
+      expect(kept.headers.get("location")).toBe(`fi.kumpa://auth?code=${code}`);
+      expect(JSON.stringify(logs())).not.toContain(code);
+      // The code is the attempt's own, whichever way it came.
+      expect((await exchange(app, code)).status).toBe(200);
+
+      await codeFrom(await returnOf(app, other));
+    },
+  );
+
+  test("a refusal returns on the scheme, whatever is set: it carries nothing to keep", async ({
+    ctx,
+  }) => {
+    const { app } = await appWith(ctx, MINOR_HETU, {
+      config: { ANDROID_CERT_FINGERPRINTS: FINGERPRINT, IOS_TEAM_ID: TEAM },
+    });
+    for (const platform of ["android", "ios"] as const) {
+      expect(refusal(await returnOf(app, platform)).error).toBe("auth_under_18");
+    }
+  });
+});
+
 describe("the exchange", () => {
   async function loggedIn(ctx: { client: Parameters<typeof createApp>[0]["db"] }) {
     const { app } = await appWith(ctx, ADULT_HETU);
@@ -1024,7 +1081,7 @@ const exchangeFrom = (app: ReturnType<typeof createApp>, address: string, code: 
 const sentTo = (res: Response) => {
   expect(res.status).toBe(302);
   const location = res.headers.get("location") ?? "";
-  return location.startsWith("kuutti:") ? location : new URL(location).origin;
+  return location.startsWith("fi.kumpa:") ? location : new URL(location).origin;
 };
 
 const attempts = async (ctx: Db) =>
@@ -1046,7 +1103,7 @@ describe("the sign-in doors (ADR-026 §4)", () => {
     const before = await attempts(ctx);
 
     const refused = await startFrom(app, HERE);
-    expect(sentTo(refused)).toBe("kuutti://auth?error=auth_rate_limited");
+    expect(sentTo(refused)).toBe("fi.kumpa://auth?error=auth_rate_limited");
     const wait = Number(refused.headers.get("retry-after"));
     expect(wait).toBeGreaterThan(0);
     expect(wait).toBeLessThanOrEqual(60);
@@ -1077,10 +1134,10 @@ describe("the sign-in doors (ADR-026 §4)", () => {
     expect(
       (await startFrom(app, HERE, `platform=ios&locale=de&code_challenge=${CHALLENGE}`)).status,
     ).toBe(400);
-    expect(sentTo(await startFrom(app, HERE))).toBe("kuutti://auth?error=auth_rate_limited");
+    expect(sentTo(await startFrom(app, HERE))).toBe("fi.kumpa://auth?error=auth_rate_limited");
     // The doors stand before the validation: past the window nothing is read.
     expect(sentTo(await startFrom(app, HERE, `platform=web&code_challenge=${CHALLENGE}`))).toBe(
-      "kuutti://auth?error=auth_rate_limited",
+      "fi.kumpa://auth?error=auth_rate_limited",
     );
     expect(broker.started).toEqual([]);
     expect(await attempts(ctx)).toBe(0);
@@ -1121,7 +1178,7 @@ describe("the sign-in doors (ADR-026 §4)", () => {
     // The staff start counts in the same window as the app's: it is the second.
     const staffStart = await app.request("/admin/auth/start", { headers: from(HERE) });
     expect(new URL(staffStart.headers.get("location") ?? "").origin).toBe("https://broker.test");
-    expect(sentTo(await startFrom(app, HERE))).toBe("kuutti://auth?error=auth_rate_limited");
+    expect(sentTo(await startFrom(app, HERE))).toBe("fi.kumpa://auth?error=auth_rate_limited");
     const staffRefused = await app.request("/admin/auth/start", { headers: from(HERE) });
     expect(staffRefused.status).toBe(302);
     expect(new URL(staffRefused.headers.get("location") ?? "").hash).toBe(
@@ -1165,7 +1222,7 @@ describe("the sign-in doors (ADR-026 §4)", () => {
       expect(sentTo(await startFrom(app, sixtyFour))).toBe("https://broker.test");
     }
     expect(sentTo(await startFrom(app, "2001:db8:4711:ab42:1:2:3:4"))).toBe(
-      "kuutti://auth?error=auth_rate_limited",
+      "fi.kumpa://auth?error=auth_rate_limited",
     );
     expect(sentTo(await startFrom(app, "2001:db8:4711:ac00::1"))).toBe("https://broker.test");
     expect(broker.started).toHaveLength(257);
@@ -1405,7 +1462,7 @@ describe("the table's ceiling (ADR-026 §6)", () => {
     );
     const { app, broker, logs } = await appWith(ctx, ADULT_HETU);
     const refused = await app.request(`/auth/start?platform=ios&code_challenge=${CHALLENGE}`);
-    expect(sentTo(refused)).toBe("kuutti://auth?error=auth_rate_limited");
+    expect(sentTo(refused)).toBe("fi.kumpa://auth?error=auth_rate_limited");
     expect(refused.headers.get("retry-after")).toBe("60");
     // A staff start goes back to the panel the same way.
     const staff = await app.request("/admin/auth/start");

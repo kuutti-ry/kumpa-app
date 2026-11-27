@@ -1,18 +1,18 @@
 # Deleting the account (#51, TD-7, ADR-007): Settings asks first, keeping the
 # account closes the question with nothing deleted, and "Delete everything"
 # erases the account at once and signs the person out. The same person's next
-# bank login is refused for the cooldown, with the date. Aino is a newcomer:
+# bank login is refused for the cooldown, with the date. Sofia is a newcomer:
 # her first login registers her, so the flow needs nobody else's state, and
 # `pnpm demo:reset` forgets her identity, the cooldown with it.
-appId: fi.kuutti.app
+appId: fi.kumpa
 name: Deleting the account asks first, signs the person out, and the next login is refused until the cooldown ends
 ---
 - runFlow:
     file: ../common/sign-in.yaml
     env:
-      PERSONA: Aino Virtanen
+      PERSONA: Sofia Heino
 # Settings is reachable before onboarding is done.
-- openLink: kuutti://settings
+- openLink: fi.kumpa://settings
 # The deletion opens under Your account, the last row of the list (#287,
 # #511), last of its buttons below a hairline.
 - runFlow:
@@ -34,19 +34,19 @@ name: Deleting the account asks first, signs the person out, and the next login 
 - assertNotVisible: "Delete your account\\?|Poistetaanko tilisi\\?|Ta bort ditt konto\\?"
 - assertVisible: "Delete my account|Poista tilini|Ta bort mitt konto"
 
-# Deleted: signed out at once.
+# Deleted: signed out at once, to the app's first screen (#681, ADR-010 §22).
 - tapOn: "Delete my account|Poista tilini|Ta bort mitt konto"
 - tapOn: "Delete everything|Poista kaikki|Ta bort allt"
-- openLink: kuutti://
+- openLink: fi.kumpa://
 - extendedWaitUntil:
-    visible: "Sign in with your bank|Kirjaudu pankkitunnuksilla|Logga in med din bank"
+    visible: "I already have an account|Minulla on jo tili|Jag har redan ett konto"
     timeout: 30000
 
 # The same person again: refused until the cooldown ends.
 - runFlow:
     file: ../common/bank-login.yaml
     env:
-      PERSONA: Aino Virtanen
+      PERSONA: Sofia Heino
 - extendedWaitUntil:
     visible: "You deleted your account recently.*|Poistit tilisi äskettäin.*|Du raderade ditt konto nyligen.*"
     timeout: 30000

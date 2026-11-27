@@ -1,15 +1,16 @@
-import { type Queryable, transaction } from "@kuutti/db";
+import type { Queryable } from "@kuutti/db";
 import {
   type DealBreaker,
+  type Later,
   type QueueResponse,
   STARS_CEILING,
-  type StarAnswer,
   type StarredPerson,
 } from "@kuutti/schema";
 import { AppError } from "../lib/errors.ts";
 import { finnishDay } from "../lib/finnish-day.ts";
 import { matchingConfigNumber } from "../lib/matching-config.ts";
 import { wasShown } from "../media/index.ts";
+import type { PartsOf } from "./anchor.ts";
 import {
   addPlaces,
   budgetsOf,
@@ -17,23 +18,22 @@ import {
   ENTRY_COLUMNS,
   type EntryRow,
   entriesOf,
-  lockCard,
   type Matches,
   notFound,
   type Place,
   type QueueDeps,
-  SERVABLE,
-  todayOrRefuse,
+  withLikedYour,
 } from "./queue.ts";
 
-// The stars (#575, ADR-064): somebody marked for later, without a like or a pass.
-// A star is the person's own and nothing else reads it: the queue leaves a starred
-// person out of that person's own cards (`todayOf`, `nextCards`), and their list
-// and the card it opens are here. It reaches nobody, and feeds no order, no count
-// and no event. Every statement names the caller (rule 6), and no route takes
-// another person's id: a star is put on a card by its place, and read, opened and
-// cleared by its own id, which answers 404 to anybody but its owner. Raw
-// parameterised SQL through Queryable, as `queue.ts`, under whose locks it writes.
+// The stars (#575, ADR-064): somebody saved to come back to, put by Later since
+// #681. A star is the person's own and nothing else reads it: the queue leaves a
+// starred person out of that person's own cards (`todayOf`, `nextCards`), and
+// their Later list and the card it opens are here. It reaches nobody, and feeds no
+// order, no count and no event. Every statement names the caller (rule 6), and no
+// route takes another person's id: a star is put by a skip on a card's place, and
+// read, opened and cleared by its own id, which answers 404 to anybody but its
+// owner. Raw parameterised SQL through Queryable, as `queue.ts`, under whose locks
+// it writes.
 
 /** The most stars a person's list may hold (ADR-064 §5); 0 is off, and STARS_CEILING stands either way. */
 const STARS_MAX_KEY = "stars_max";
@@ -52,68 +52,48 @@ export type Stars = {
   ) => Promise<ReadonlySet<string>>;
   place: (accountId: string, candidateId: string) => Promise<Place | null>;
   people: (accountId: string) => Promise<StarredPerson[]>;
+  /** What of a card a like may name (#463, ADR-077), as the queue's `parts`: a card opened from the list says what a waiting like named. */
+  parts: PartsOf;
 };
 
-const full = () => new AppError(409, "stars_full", "The person's list of stars is full");
-
 /**
- * A star on today's card (ADR-064 §1): it spends nothing and moves no card, and
- * the same star again answers the one that stands. Like a decision it holds the
- * two accounts in id order and then the queue's row, so an erasure under way
- * finishes first, one that comes later waits, and two devices cannot both pass
- * the count. A card holding a like or a pass takes none, since those take the star
- * off (§3), one that can no longer be shown takes none, and neither does one the
- * person was never served, since the list says a name and an age and no budget
- * would count them (ADR-008): all are the 404 of a card gone. Past the most a list may hold it answers `stars_full`: the
- * count is of those the list shows now (§5), so it never says full to somebody
- * who sees fewer.
+ * Later's place on the list (#681, ADR-064 History), in `decide`'s transaction,
+ * which holds the two accounts in id order and then the queue's row, so an
+ * erasure under way finishes first, one that comes later waits, and two devices
+ * cannot both pass the count. The same person again keeps the star that stands.
+ * A card the person was never served takes none, since the list says a name and
+ * an age and no budget would count them (ADR-008): `not_listed`. Past the most a
+ * list may hold it puts none and says `full`, and the skip stands alone, back
+ * another day: the count is of those the list shows now (§5), so it never says
+ * full to somebody who sees fewer.
  */
-export async function putStar(
-  deps: QueueDeps,
+export async function putOnLaterList(
+  tx: Queryable,
   stars: Pick<Stars, "shown">,
-  input: { accountId: string; day: string; position: number },
-): Promise<StarAnswer> {
-  const { at, today } = todayOrRefuse(deps, input.day);
-  return transaction(deps.db, async (tx) => {
-    const { candidateId } = await lockCard(tx, {
-      accountId: input.accountId,
-      today,
-      position: input.position,
-    });
-    const open = await tx.query(
-      `SELECT 1 FROM queue_entry e JOIN queue_day r ON r.id = e.queue_day_id
-        WHERE r.account_id = $1 AND r.day = $2 AND e.position = $3
-          AND (e.decision IS NULL OR e.decision = 'skip') AND ${SERVABLE}`,
-      [input.accountId, today, input.position],
-    );
-    if (open.rows.length === 0) throw notFound();
-    const served = await wasShown(tx, {
-      viewerAccountId: input.accountId,
-      subjectAccountId: candidateId,
-    });
-    if (!served) throw notFound();
-    const held = await tx.query<{ id: string; candidate_id: string }>(
-      "SELECT id, candidate_id FROM star WHERE account_id = $1",
-      [input.accountId],
-    );
-    const standing = held.rows.find((row) => row.candidate_id === candidateId);
-    if (standing) return { id: standing.id, first: false };
-    if (held.rows.length >= STARS_CEILING) throw full();
-    const shown = await stars.shown(
-      tx,
-      input.accountId,
-      held.rows.map((row) => row.candidate_id),
-    );
-    const max = await matchingConfigNumber(tx, STARS_MAX_KEY);
-    if (max > 0 && shown.size >= max) throw full();
-    const written = await tx.query<{ id: string }>(
-      "INSERT INTO star (account_id, candidate_id, created_at) VALUES ($1, $2, $3) RETURNING id",
-      [input.accountId, candidateId, at],
-    );
-    const id = written.rows[0]?.id;
-    if (!id) throw new Error("putStar: the star is not there");
-    return { id, first: shown.size === 0 };
-  });
+  input: { accountId: string; candidateId: string; at: Date },
+): Promise<Later> {
+  const { accountId, candidateId } = input;
+  const served = await wasShown(tx, { viewerAccountId: accountId, subjectAccountId: candidateId });
+  if (!served) return "not_listed";
+  const held = await tx.query<{ candidate_id: string }>(
+    "SELECT candidate_id FROM star WHERE account_id = $1",
+    [accountId],
+  );
+  if (held.rows.some((row) => row.candidate_id === candidateId)) return "listed";
+  if (held.rows.length >= STARS_CEILING) return "full";
+  const shown = await stars.shown(
+    tx,
+    accountId,
+    held.rows.map((row) => row.candidate_id),
+  );
+  const max = await matchingConfigNumber(tx, STARS_MAX_KEY);
+  if (max > 0 && shown.size >= max) return "full";
+  await tx.query("INSERT INTO star (account_id, candidate_id, created_at) VALUES ($1, $2, $3)", [
+    accountId,
+    candidateId,
+    input.at,
+  ]);
+  return shown.size === 0 ? "first" : "listed";
 }
 
 /** The person takes a star off, wherever they are: the card's or the list's. 404 for one that is not theirs, or gone. */
@@ -155,7 +135,7 @@ async function entryOfCandidate(
 export async function openStar(
   deps: QueueDeps,
   matches: Pick<Matches, "yourTurn">,
-  stars: Pick<Stars, "shown" | "place">,
+  stars: Pick<Stars, "shown" | "place" | "parts">,
   cardOf: CardOf,
   dealBreakers: readonly DealBreaker[],
   input: { accountId: string; id: string },
@@ -179,7 +159,13 @@ export async function openStar(
     row = await entryOfCandidate(deps.db, accountId, day, candidateId);
   }
   if (!row) throw notFound();
-  const entries = await entriesOf(accountId, [row], cardOf, dealBreakers);
+  const entries = await withLikedYour(
+    deps.db,
+    stars.parts,
+    accountId,
+    day,
+    await entriesOf(accountId, [row], cardOf, dealBreakers),
+  );
   if (entries.length === 0) throw notFound();
   return { day, entries, ...(await budgetsOf(deps.db, matches, accountId, day)) };
 }

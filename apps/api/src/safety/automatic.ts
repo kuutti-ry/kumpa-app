@@ -306,7 +306,7 @@ function queueReadLog(now: () => Date) {
 
 /**
  * The check after a served read of the queue, or a starred card opened from
- * the Starred list (#86, ADR-041, ADR-064 §4): cards served, then the reads
+ * the Later list (#86, ADR-041, ADR-064 §4): cards served, then the reads
  * themselves. One per app, since it holds the reads; app.ts hands it to the
  * queue's and the stars' routes, so the matching slice never imports safety.
  */

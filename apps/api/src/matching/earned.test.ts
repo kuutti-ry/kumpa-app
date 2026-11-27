@@ -3,6 +3,7 @@ import { QueueDecisionAnswer, QueueResponse } from "@kuutti/schema";
 import fc from "fast-check";
 import { type App, createApp } from "../app.ts";
 import { finnishDay } from "../lib/finnish-day.ts";
+import { withMatchingConfig } from "../test/account.ts";
 import { errorCode as codeOf } from "../test/answers.ts";
 import { interleaved } from "../test/chat.ts";
 import { STOPPED_CLOCK as T } from "../test/global-setup.ts";
@@ -83,14 +84,8 @@ const choose = (app: App, who: Person, position: number, decision: string) =>
   });
 
 /** The day's likes as a new version of like_budget_balanced, which has versions of its own already. */
-async function likeBudget(db: Queryable, n: number) {
-  await db.query(
-    `INSERT INTO matching_config (version, key, value, created_by)
-     SELECT max(version) + 1, 'like_budget_balanced', $1::jsonb, 'test'
-       FROM matching_config WHERE key = 'like_budget_balanced'`,
-    [JSON.stringify(n)],
-  );
-}
+const likeBudget = (db: Queryable, n: number) =>
+  withMatchingConfig(db, { like_budget_balanced: n });
 
 /** What the answer to a decision says of the caller's fish after it (#475). */
 
@@ -548,6 +543,7 @@ describe("two devices", () => {
       await first.query("COMMIT");
       expect(await racing.outcome).toEqual({
         match: null,
+        later: null,
         fishToSend: false,
         likesLeft: 9,
         yourTurn: 0,
