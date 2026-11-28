@@ -35,6 +35,14 @@ export function normaliseInvitationCode(typed: string): string {
   return typed.toUpperCase().replace(/[\s-]/g, "").replace(/O/g, "0").replace(/[IL]/g, "1");
 }
 
+/**
+ * A channel's name on the one link (#653, ADR-044 §13): `/i?from=<channel>`,
+ * which the stores count installs by. Held to its shape alone, with no list of
+ * channels anywhere: lower-case letters, digits and hyphens, at most thirty,
+ * Apple's limit for a campaign token.
+ */
+export const CHANNEL_NAME_PATTERN = /^[a-z0-9-]{1,30}$/;
+
 /** A normalised code in the two groups it is shown in. */
 export function groupInvitationCode(code: string): string {
   return `${code.slice(0, GROUP_LENGTH)}-${code.slice(GROUP_LENGTH)}`;

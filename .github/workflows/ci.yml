@@ -52,6 +52,11 @@ jobs:
       # nothing fetched can become code in a generated file (#514, ADR-061 §4).
       - name: places writes the lists and refuses what it should
         run: node scripts/places.ts --self-test
+      # A printed channel's QR code (#768): the website's address, the one link's
+      # shape for the channel, error correction M or better, the quiet zone, a
+      # scratch folder, never the network.
+      - name: qr writes a channel's code and refuses what the link would drop
+        run: node scripts/qr.ts --self-test
       # The website's visitor count over made-up logs, never AWS or RIPEstat: whom
       # it counts, what it leaves out, and the answers it refuses.
       - name: site-traffic counts made-up logs and refuses what it should

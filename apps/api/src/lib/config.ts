@@ -132,6 +132,14 @@ const Env = z.object({
   // values, unset until each listing is out (#193), the website meanwhile.
   APP_STORE_URL: z.url({ protocol: /^https$/ }).optional(),
   PLAY_STORE_URL: z.url({ protocol: /^https$/ }).optional(),
+  // Apple's provider token for campaign links (#653): public, every campaign
+  // link shows it, and App Store Connect generates it only once the app has
+  // analytics. Unset, a channel's iPhone goes to the store untagged.
+  APP_STORE_PROVIDER_TOKEN: z
+    .string()
+    .trim()
+    .regex(/^[A-Za-z0-9]{1,40}$/, "letters and digits")
+    .optional(),
   // The key of HMAC-SHA256(hetu), 32 bytes as hex, from /kuutti/<env>/hetu-hmac-key
   // (rule 2: fetched at boot, never rotated, one offline copy). Without it the
   // auth routes answer 503; the login never runs with a key from anywhere else.

@@ -1,3 +1,9 @@
+import {
+  CHANNEL_NAME_PATTERN,
+  INVITATION_CODE_PATTERN,
+  normaliseInvitationCode,
+} from "@kuutti/schema";
+import fc from "fast-check";
 import { createApp } from "../app.ts";
 import { captureLogger, describe, expect, test, testConfig } from "../test/harness.ts";
 import { hashOf, invitationOf } from "../test/invitations.ts";
@@ -112,11 +118,163 @@ describe("the one link", () => {
   });
 });
 
+// A channel on the one link (#653, ADR-044 §13): the stores count installs per
+// link on their side, and Kuutti keeps nothing.
+
+const TOKEN = "118302700";
+const TAGGED = { ...STORES, APP_STORE_PROVIDER_TOKEN: TOKEN };
+const THIRTY = `${"a".repeat(29)}1`;
+
+function queryOf(location: string | null) {
+  const url = new URL(location ?? "");
+  return { base: `${url.origin}${url.pathname}`, query: Object.fromEntries(url.searchParams) };
+}
+
+describe("a channel on the one link", () => {
+  test("an iPhone goes to the App Store with Apple's campaign tokens", async ({ ctx }) => {
+    const { app } = await appWith(ctx, TAGGED);
+    const { status, location } = await follow(app, "/i?from=channel-7", UA.iPhone);
+    expect(status).toBe(302);
+    expect(queryOf(location)).toEqual({
+      base: APP_STORE,
+      query: { pt: TOKEN, ct: "channel-7", mt: "8" },
+    });
+  });
+
+  test("an iPhone goes to the App Store untagged while there is no provider token", async ({
+    ctx,
+  }) => {
+    const { app } = await appWith(ctx, STORES);
+    expect((await follow(app, "/i?from=channel-7", UA.iPhone)).location).toBe(APP_STORE);
+  });
+
+  test("an Android phone goes to Play with the channel as the UTM source inside the referrer", async ({
+    ctx,
+  }) => {
+    const { app } = await appWith(ctx, TAGGED);
+    const { status, location } = await follow(app, "/i?from=channel-7", UA.android);
+    expect(status).toBe(302);
+    expect(location).toBe(`${PLAY}&referrer=utm_source%3Dchannel-7`);
+  });
+
+  test("a computer goes to the website, and so does every phone with no listing yet", async ({
+    ctx,
+  }) => {
+    const listed = await appWith(ctx, TAGGED);
+    expect((await follow(listed.app, "/i?from=channel-7", UA.desktop)).location).toBe(SITE_URL);
+    const unlisted = await appWith(ctx, { APP_STORE_PROVIDER_TOKEN: TOKEN });
+    for (const ua of [UA.iPhone, UA.android]) {
+      expect((await follow(unlisted.app, "/i?from=channel-7", ua)).location).toBe(SITE_URL);
+    }
+  });
+
+  test.for([
+    ["one character", "a"],
+    ["thirty characters", THIRTY],
+    ["digits and hyphens alone", "2027-01"],
+  ] as const)("a name of %s is taken", async ([, name], { ctx }) => {
+    const { app } = await appWith(ctx, TAGGED);
+    expect(queryOf((await follow(app, `/i?from=${name}`, UA.iPhone)).location).query.ct).toBe(name);
+    expect(
+      queryOf((await follow(app, `/i?from=${name}`, UA.android)).location).query.referrer,
+    ).toBe(`utm_source=${name}`);
+  });
+
+  test.for([
+    ["empty", "from="],
+    ["thirty-one characters", `from=${THIRTY}x`],
+    ["in capitals", "from=Channel"],
+    ["with a space", "from=channel%207"],
+    ["with an underscore", "from=channel_7"],
+    ["with a letter outside a to z", "from=k%C3%A4vely"],
+    ["carrying a referrer of its own", "from=x%26referrer%3DABCDEFGHJK"],
+    ["carrying a store's token of its own", "from=x%26pt%3D1"],
+  ] as const)(
+    "a name that is %s is dropped, and the phone goes to its store untagged",
+    async ([, query], { ctx }) => {
+      const { app } = await appWith(ctx, TAGGED);
+      expect((await follow(app, `/i?${query}`, UA.iPhone)).location).toBe(APP_STORE);
+      expect((await follow(app, `/i?${query}`, UA.android)).location).toBe(PLAY);
+    },
+  );
+
+  test("a query that is not from changes nothing", async ({ ctx }) => {
+    const { app } = await appWith(ctx, TAGGED);
+    expect((await follow(app, "/i?ct=x&pt=1&referrer=ABCDEFGHJK", UA.iPhone)).location).toBe(
+      APP_STORE,
+    );
+    expect((await follow(app, "/i?ct=x&pt=1&referrer=ABCDEFGHJK", UA.android)).location).toBe(PLAY);
+  });
+
+  test("a channel never rides beside a code: the code goes on, the channel is dropped", async ({
+    ctx,
+  }) => {
+    const { app } = await appWith(ctx, TAGGED);
+    expect((await follow(app, "/i/ABCDE-FGHJK?from=channel-7", UA.iPhone)).location).toBe(
+      APP_STORE,
+    );
+    expect((await follow(app, "/i/ABCDE-FGHJK?from=channel-7", UA.android)).location).toBe(
+      `${PLAY}&referrer=ABCDEFGHJK`,
+    );
+    expect((await follow(app, "/i/ABCDE?from=channel-7", UA.android)).location).toBe(PLAY);
+  });
+
+  test("the referrer a channel takes to Play never reads as a code, whatever the name", async ({
+    ctx,
+  }) => {
+    // Names such as `abcde-fghjk` read as a code on their own; the route's
+    // `utm_source=` is what keeps them out of the app's code field. The runs and
+    // a failure's shrinking are more requests than one address's minute allows.
+    const { app } = await appWith(ctx, { ...TAGGED, RATE_LIMIT_PER_MINUTE: 10_000 });
+    await fc.assert(
+      fc.asyncProperty(fc.stringMatching(CHANNEL_NAME_PATTERN), async (channel) => {
+        const { location } = await follow(app, `/i?from=${channel}`, UA.android);
+        const referrer = new URL(location ?? "").searchParams.get("referrer") ?? "";
+        expect(INVITATION_CODE_PATTERN.test(normaliseInvitationCode(referrer))).toBe(false);
+        expect(referrer).toBe(`utm_source=${channel}`);
+      }),
+      { seed: 20261128 },
+    );
+  });
+
+  test("the request's log line names the route, never the channel", async ({ ctx }) => {
+    const { app, lines } = await appWith(ctx, TAGGED);
+    await follow(app, "/i?from=channel-7", UA.iPhone);
+    await follow(app, "/i?from=channel-7", UA.android);
+    const logged = JSON.stringify(lines());
+    expect(logged).toContain('"/i"');
+    expect(logged).not.toContain("channel-7");
+  });
+});
+
 describe("the stores' addresses", () => {
   test.for([
     ["APP_STORE_URL", "http://apps.apple.com/app/id1"],
     ["PLAY_STORE_URL", "not an address"],
   ] as const)("%s refuses anything but https", ([key, value]) => {
     expect(() => testConfig({ [key]: value })).toThrow(key);
+  });
+
+  test.for([
+    ["empty", ""],
+    ["with a space", "1183 02700"],
+    ["with a query of its own", "1&ct=x"],
+    ["longer than forty", "1".repeat(41)],
+  ] as const)("APP_STORE_PROVIDER_TOKEN refuses one that is %s", ([, value]) => {
+    expect(() => testConfig({ APP_STORE_PROVIDER_TOKEN: value })).toThrow(
+      "APP_STORE_PROVIDER_TOKEN",
+    );
+  });
+
+  test("APP_STORE_PROVIDER_TOKEN takes letters and digits, forty at most", () => {
+    for (const value of ["1", "abcXYZ123", "1".repeat(40)]) {
+      expect(testConfig({ APP_STORE_PROVIDER_TOKEN: value }).APP_STORE_PROVIDER_TOKEN).toBe(value);
+    }
+  });
+
+  test("APP_STORE_PROVIDER_TOKEN is read without a file's newline", () => {
+    expect(testConfig({ APP_STORE_PROVIDER_TOKEN: " 118302700\n" }).APP_STORE_PROVIDER_TOKEN).toBe(
+      "118302700",
+    );
   });
 });
