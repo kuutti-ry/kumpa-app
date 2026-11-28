@@ -1,6 +1,6 @@
 # A channel's link and its printed code
 
-A channel is one place Kumpa is handed out: a poster, a sticker, a partner's page or letter. Each gets a link of its own, so that the stores can count on their side how many installs came through it. Kumpa keeps nothing of who followed which link: no row, no log line naming the channel, nothing in the app (#653, #768, ADR-044 §13). This runbook covers:
+A channel is one place Kumpa is handed out: a poster, a sticker, a partner's page or letter. Each gets a link of its own, so that the stores can count on their side how many installs came through it. The API keeps nothing of who followed which link: no row, no log line naming the channel, nothing in the app (#653, #768, ADR-044 §13). The website's access log does hold each scan of a printed code, as it holds every visit to the site: the path with the channel, the visitor's address and the phone's User-Agent, which Amplify keeps until the app is deleted (`infra/README.md`, The website). This runbook covers:
 
 - how a channel's link and its printed code are made;
 - the website's rule that carries the printed address;
@@ -11,7 +11,7 @@ A channel is one place Kumpa is handed out: a poster, a sticker, a partner's pag
 
 The link is `https://kumpa.fi/q/<channel>`, on paper and anywhere else. `<channel>` is one to thirty lower-case letters a to z, digits and hyphens (thirty is Apple's limit for a campaign): `2027-posters`, not `Posters 2027`.
 
-There is no list of channels anywhere. A name exists by being handed out, and a name somebody makes up only stays under the stores' thresholds. Choose names that say nothing about the people who would follow them, since the stores show the name next to its numbers.
+There is no list of channels anywhere. A name exists by being handed out, and a name somebody makes up only stays under the stores' thresholds. Choose names that say nothing about the people who would follow them: the stores show the name next to its numbers, and the website's access log keeps it beside each visitor's address. A code for an evening whose audience says something about the people there is named for the date or the place, never for what the evening is about.
 
 Where the link goes:
 

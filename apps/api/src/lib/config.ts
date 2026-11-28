@@ -137,6 +137,7 @@ const Env = z.object({
   // analytics. Unset, a channel's iPhone goes to the store untagged.
   APP_STORE_PROVIDER_TOKEN: z
     .string()
+    .trim()
     .regex(/^[A-Za-z0-9]{1,40}$/, "letters and digits")
     .optional(),
   // The key of HMAC-SHA256(hetu), 32 bytes as hex, from /kuutti/<env>/hetu-hmac-key

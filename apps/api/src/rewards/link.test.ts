@@ -271,4 +271,10 @@ describe("the stores' addresses", () => {
       expect(testConfig({ APP_STORE_PROVIDER_TOKEN: value }).APP_STORE_PROVIDER_TOKEN).toBe(value);
     }
   });
+
+  test("APP_STORE_PROVIDER_TOKEN is read without a file's newline", () => {
+    expect(testConfig({ APP_STORE_PROVIDER_TOKEN: " 118302700\n" }).APP_STORE_PROVIDER_TOKEN).toBe(
+      "118302700",
+    );
+  });
 });
