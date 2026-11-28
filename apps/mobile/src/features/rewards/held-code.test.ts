@@ -211,6 +211,10 @@ describe("the code to put in the field", () => {
   it.each([
     ["an install nobody referred", "utm_source=google-play&utm_medium=organic"],
     ["a campaign's words", `utm_source=friend&utm_content=${CODE}`],
+    // What the one link hands Play for /i?from=<channel> (#653), even for a
+    // channel whose name is ten of a code's letters.
+    ["a channel's link", "utm_source=channel-7"],
+    ["a channel's link named like a code", `utm_source=${CODE.toLowerCase()}`],
     ["nothing", ""],
   ])("keeps nothing of %s, and does not ask Play again", async (_what, said) => {
     const { heldInvitationCode, referrer, store } = start("android");

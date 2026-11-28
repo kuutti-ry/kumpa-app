@@ -1,7 +1,7 @@
 {
   "name": "kuutti",
   "private": true,
-  "version": "0.138.3",
+  "version": "0.139.0",
   "type": "module",
   "description": "Kuutti monorepo root. Workspace members arrive with the M1 scaffold (#2).",
   "license": "SEE LICENSE IN LICENSE-EXCEPTION",
@@ -48,13 +48,15 @@
     "demo:reset": "pnpm --filter @kuutti/api run demo:reset",
     "demo:stories": "pnpm --filter @kuutti/api run demo:stories",
     "demo:assets": "pnpm --filter @kuutti/api run demo:assets",
-    "places": "node scripts/places.ts"
+    "places": "node scripts/places.ts",
+    "qr": "node scripts/qr.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.3",
     "@kuutti-ry/tunnistus-oidc": "^0.1.2",
     "eas-cli": "26.0.0",
     "knip": "6.43.0",
+    "lean-qr": "2.7.4",
     "yaml": "2.9.1"
   }
 }
